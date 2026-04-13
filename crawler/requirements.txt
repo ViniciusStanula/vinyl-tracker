@@ -1,0 +1,6 @@
+requests
+beautifulsoup4
+lxml
+curl_cffi
+psycopg2-binary
+python-slugify
