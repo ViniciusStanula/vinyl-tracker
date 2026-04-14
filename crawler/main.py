@@ -28,10 +28,11 @@ from utils import gerar_slug
 # ─────────────────────────────────────────────────────────────
 #  Configuration
 # ─────────────────────────────────────────────────────────────
-ASSOCIATE_TAG     = "groovesnrecor-20"
-MAX_PAGES_DEFAULT = 1000       # a página geral tem mais produtos que as de categoria
-DELAY_SECONDS     = 3
-MIN_PRICE_BRL     = 10.0
+ASSOCIATE_TAG      = "groovesnrecor-20"
+MAX_PAGES_DEFAULT  = 1000      # a página geral tem mais produtos que as de categoria
+MAX_PAGES_CATEGORY = 50        # limite por URL de categoria (Amazon raramente passa de 20)
+DELAY_SECONDS      = 3
+MIN_PRICE_BRL      = 10.0
 
 # URL principal — todos os vinis ordenados por popularidade
 VINYL_URL_PATH = (
@@ -43,6 +44,31 @@ VINYL_URL_PATH = (
 )
 
 BASE_URL = "https://www.amazon.com.br"
+
+# URLs de categorias de gênero — cada uma é paginada separadamente
+CATEGORY_URLS = [
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416074011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416075011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416076011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416077011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416078011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416079011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416080011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416082011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416085011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19532539011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416086011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416087011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416089011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416090011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416091011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416130011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011&dc&rnid=18726358011",
+]
 
 BROWSER_IDENTITIES = [
     "chrome136", "chrome133a", "chrome131", "chrome124", "chrome120",
@@ -206,6 +232,13 @@ def build_page_url(page: int) -> str:
     url = re.sub(r"[&?]qid=\d+", "", url)
     qid = int(time.time())
     return url + f"&qid={qid}&page={page}&ref=sr_pg_{page}"
+
+
+def build_category_page_url(base_url: str, page: int) -> str:
+    url = re.sub(r"[&?]page=\d+", "", base_url)
+    url = re.sub(r"[&?]qid=\d+", "", url)
+    qid = int(time.time())
+    return url + f"&qid={qid}&page={page}"
 
 
 def make_session():
@@ -420,17 +453,31 @@ def extract_price(card) -> float | None:
     Extrai o preço de compra do card.
 
     Prioridade:
-      0. Container apex-core-price-identifier → accessibility label (estrutura real)
-      1. .s-price-instructions-style — container principal do preço nos resultados de busca
-      2. Accessibility labels soltos no card (fallback)
-      3. Seletores explícitos do buy-box (excluindo seções secundárias)
-      4. Primeiro bloco .a-price não parcelado e fora de seções secundárias
-      5. Regex no texto completo do card (último recurso)
+      0. [data-cy="price-recipe"] → span.a-price[xl][base] → .a-offscreen (seletor confirmado)
+      1. Container apex-core-price-identifier → accessibility label (estrutura real)
+      2. .s-price-instructions-style — container principal do preço nos resultados de busca
+      3. Accessibility labels soltos no card (fallback)
+      4. Seletores explícitos do buy-box (excluindo seções secundárias)
+      5. Primeiro bloco .a-price não parcelado e fora de seções secundárias
+      6. Regex no texto completo do card (último recurso)
 
     Seções secundárias (data-cy="secondary-offer-recipe" etc.) exibem preços de
     formatos alternativos (ex: CD) — esses nunca devem ser capturados como preço principal.
     """
-    # ── Prioridade 0: apex-core-price-identifier (estrutura real confirmada) ──
+    # ── Prioridade 0: data-cy="price-recipe" (seletor confirmado pela análise do HTML) ──
+    price_recipe = card.select_one('[data-cy="price-recipe"]')
+    if price_recipe:
+        offscreen = price_recipe.select_one(
+            '.a-price[data-a-size="xl"][data-a-color="base"] .a-offscreen'
+        )
+        if offscreen:
+            text = offscreen.get_text(strip=True).replace("\xa0", "").strip()
+            p = parse_price_br(text)
+            if p and p >= MIN_PRICE_BRL:
+                log.debug("Price via price-recipe a-offscreen: %.2f", p)
+                return p
+
+    # ── Prioridade 1: apex-core-price-identifier (estrutura real confirmada) ──
     apex = card.select_one(".apex-core-price-identifier")
     if apex:
         a11y = apex.select_one("#apex-pricetopay-accessibility-label, [id$='-pricetopay-accessibility-label']")
@@ -447,7 +494,7 @@ def extract_price(card) -> float | None:
                 log.debug("Price via apex-core-price-identifier priceToPay: %.2f", p)
                 return p
 
-    # ── Prioridade 1: price-instructions-style container (principal nos resultados) ──
+    # ── Prioridade 2: price-instructions-style container (principal nos resultados) ──
     # Amazon changed the class prefix from "s-" to "puis-"; match both.
     price_section = card.select_one(
         ".s-price-instructions-style, .puis-price-instructions-style"
@@ -460,7 +507,7 @@ def extract_price(card) -> float | None:
                     log.debug("Price via price-instructions-style: %.2f", p)
                     return p
 
-    # ── Prioridade 2: accessibility labels soltos ──────────────────────────
+    # ── Prioridade 3: accessibility labels soltos ──────────────────────────
     for a11y_sel in (
         "#apex-pricetopay-accessibility-label",
         "[id$='-pricetopay-accessibility-label']",
@@ -474,7 +521,7 @@ def extract_price(card) -> float | None:
                 log.debug("Price via a11y label '%s': %.2f", a11y_sel, p)
                 return p
 
-    # ── Prioridade 3: seletores explícitos do buy-box (fora de seções secundárias) ──
+    # ── Prioridade 4: seletores explícitos do buy-box (fora de seções secundárias) ──
     for sel in (
         ".priceToPay",
         ".apex-pricetopay-value",
@@ -489,7 +536,7 @@ def extract_price(card) -> float | None:
                     log.debug("Price via selector '%s': %.2f", sel, p)
                     return p
 
-    # ── Prioridade 4: primeiro bloco .a-price fora de seções secundárias ─────
+    # ── Prioridade 5: primeiro bloco .a-price fora de seções secundárias ─────
     for block in card.select(".a-price"):
         if _is_in_secondary_section(block):
             continue
@@ -500,7 +547,7 @@ def extract_price(card) -> float | None:
             log.debug("Price via first-valid block: %.2f", p)
             return p
 
-    # ── Prioridade 5: regex no texto completo (último recurso) ────────────
+    # ── Prioridade 6: regex no texto completo (último recurso) ────────────
     card_text = card.get_text(" ", strip=True)
     for m in re.finditer(r"R\$\s*[\d.,]+", card_text):
         p = parse_price_br(m.group())
@@ -631,53 +678,126 @@ def has_next_page(soup) -> bool:
 # ─────────────────────────────────────────────────────────────
 #  Main crawl loop
 # ─────────────────────────────────────────────────────────────
-def crawl(max_pages: int, delay: float) -> list[dict]:
-    """Crawleia a página geral de vinis por popularidade."""
-    session, backend = make_session()
-    log.info("Starting — backend: %s | max_pages: %d", backend, max_pages)
-    warm_up(session)
+def crawl_single_url(
+    session,
+    url_builder,
+    label: str,
+    max_pages: int,
+    delay: float,
+    seen_asins: set,
+    max_consecutive_empty: int = 5,
+):
+    """
+    Crawls a single paginated URL until exhausted or max_pages reached.
 
-    seen_asins: set[str] = set()
-    all_items: list[dict] = []
+    url_builder(page) → URL string
+    seen_asins is mutated in-place — ASINs collected here are added so the
+    caller can share it across multiple crawl_single_url calls to deduplicate
+    across sources within the same run.
+
+    Returns (new_items, session).
+    """
+    items: list[dict] = []
     consecutive_empty = 0
-    MAX_CONSECUTIVE_EMPTY = 20  # stop after 20 pages with no new products
 
     for page in range(1, max_pages + 1):
-        log.info("Page %d/%d", page, max_pages)
-        url = build_page_url(page)
+        url = url_builder(page)
+        log.info("[%s] Page %d", label, page)
         soup, session = safe_get(session, url)
 
         if soup is None:
-            log.warning("Page %d failed, skipping.", page)
+            log.warning("[%s] Page %d failed, skipping.", label, page)
             continue
 
         new_on_page = 0
         for item in parse_page(soup):
             if item["asin"] not in seen_asins:
                 seen_asins.add(item["asin"])
-                all_items.append(item)
+                items.append(item)
                 new_on_page += 1
 
         if new_on_page == 0:
             consecutive_empty += 1
-            log.info("No new products on page %d (%d/%d consecutive).",
-                     page, consecutive_empty, MAX_CONSECUTIVE_EMPTY)
-            if consecutive_empty >= MAX_CONSECUTIVE_EMPTY:
-                log.info("Reached end of catalogue — stopping at page %d.", page)
+            log.info(
+                "[%s] No new products on page %d (%d/%d consecutive).",
+                label, page, consecutive_empty, max_consecutive_empty,
+            )
+            if consecutive_empty >= max_consecutive_empty:
+                log.info("[%s] End of results — stopping at page %d.", label, page)
                 break
         else:
             consecutive_empty = 0
 
         if not has_next_page(soup):
-            log.info("No next page — stopping at page %d.", page)
+            log.info("[%s] No next page — stopping at page %d.", label, page)
             break
 
         if page < max_pages:
             sleep_time = delay + random.uniform(0.5, 1.5)
-            log.info("Waiting %.1fs...", sleep_time)
+            log.info("[%s] Waiting %.1fs...", label, sleep_time)
             time.sleep(sleep_time)
 
-    log.info("Crawl done — %d unique products.", len(all_items))
+    return items, session
+
+
+def crawl(max_pages: int, delay: float) -> list[dict]:
+    """
+    Orchestrates the full crawl:
+      1. Main popularity-ranked URL (up to max_pages pages).
+      2. Each genre category URL (up to MAX_PAGES_CATEGORY pages each).
+
+    A single seen_asins set is shared across all sources so that an ASIN
+    found in the main crawl is never re-processed from a category crawl,
+    preventing duplicate HistoricoPreco rows within the same run.
+    """
+    session, backend = make_session()
+    log.info("Starting — backend: %s | max_pages (main): %d", backend, max_pages)
+    warm_up(session)
+
+    seen_asins: set[str] = set()
+    all_items: list[dict] = []
+
+    # ── 1. Main popularity URL ─────────────────────────────────────────────
+    log.info("═" * 50)
+    log.info("Crawling main popularity URL...")
+    items, session = crawl_single_url(
+        session,
+        build_page_url,
+        "main",
+        max_pages,
+        delay,
+        seen_asins,
+        max_consecutive_empty=20,
+    )
+    all_items.extend(items)
+    log.info("Main URL complete — %d products.", len(items))
+
+    # ── 2. Genre category URLs ─────────────────────────────────────────────
+    for i, cat_url in enumerate(CATEGORY_URLS, 1):
+        log.info("═" * 50)
+        log.info(
+            "Crawling category %d/%d  ...%s",
+            i, len(CATEGORY_URLS), cat_url[-50:],
+        )
+        time.sleep(random.uniform(2.0, 4.0))
+
+        def _url_builder(page, _base=cat_url):
+            return build_category_page_url(_base, page)
+
+        items, session = crawl_single_url(
+            session,
+            _url_builder,
+            f"cat-{i}",
+            MAX_PAGES_CATEGORY,
+            delay,
+            seen_asins,
+            max_consecutive_empty=5,
+        )
+        all_items.extend(items)
+        log.info("Category %d complete — %d new products.", i, len(items))
+
+    log.info("═" * 50)
+    log.info("Full crawl done — %d unique products total.", len(all_items))
     return all_items
 
 
