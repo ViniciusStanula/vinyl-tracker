@@ -9,7 +9,6 @@ Responsabilities:
 """
 import os
 import logging
-from datetime import datetime
 
 import psycopg2
 import psycopg2.extras
@@ -125,12 +124,13 @@ def upsert_batch(conn, items: list[dict]) -> int:
     return len(items)
 
 
-def limpar_historico_antigo(conn, days: int = 90) -> int:
+def limpar_historico_antigo(conn, days: int = 365) -> int:
     """
     Deletes HistoricoPreco records older than `days` days.
-    Called at the end of each crawl run to keep the DB within free tier limits.
+    Called at the end of each crawl run to keep the DB tidy.
 
-    With 5,000 discs × 2 crawls/day, keeping 90 days caps storage at ~90MB.
+    With 5,000 discs × 2 crawls/day, keeping 365 days stores ~365MB.
+    Stay within the free tier (500MB) or upgrade to Supabase Pro for more.
     Returns the number of rows deleted.
     """
     with conn.cursor() as cur:

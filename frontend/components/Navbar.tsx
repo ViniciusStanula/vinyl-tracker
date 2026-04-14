@@ -25,7 +25,7 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <VinylIcon />
           <span className="font-bold text-white text-base tracking-tight hidden sm:block">
-            Vinil Deals
+            Garimpa Vinil
           </span>
         </Link>
 

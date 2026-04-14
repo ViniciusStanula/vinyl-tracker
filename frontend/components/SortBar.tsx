@@ -15,7 +15,7 @@ export default function SortBar() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const current = searchParams.get("sort") ?? "desconto";
 
   function handleSort(value: string) {
@@ -35,11 +35,11 @@ export default function SortBar() {
         <button
           key={opt.value}
           onClick={() => handleSort(opt.value)}
-          className={`text-xs px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+          className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${
             current === opt.value
               ? "bg-amber-500 text-zinc-950 font-semibold"
               : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
-          }`}
+          } ${isPending ? "opacity-50 cursor-wait" : ""}`}
         >
           {opt.label}
         </button>

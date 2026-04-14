@@ -128,6 +128,47 @@ def is_vinyl(title: str, card=None) -> bool:
     return True
 
 
+def _to_title_case(name: str) -> str:
+    """Title-cases a name, keeping small connector words lowercase."""
+    SMALL = {"of", "the", "and", "or", "in", "on", "at", "to", "a", "an",
+             "de", "da", "do", "e", "y", "los", "las", "el", "la"}
+    words = name.split()
+    result = []
+    for i, word in enumerate(words):
+        lower = word.lower()
+        result.append(lower if (i > 0 and lower in SMALL) else word.capitalize())
+    return " ".join(result)
+
+
+def normalize_artist(name: str) -> str:
+    """
+    Normalizes an artist name coming from Amazon to a clean human-readable form.
+
+    Handles two common formats:
+      1. Inverted "LAST,FIRST" or "LAST, FIRST" → "First Last"
+         e.g. "SWIFT,TAYLOR" → "Taylor Swift"
+      2. ALL CAPS names (more than 4 alpha chars) → Title Case
+         e.g. "LED ZEPPELIN" → "Led Zeppelin"
+         (Short all-caps like "ABBA" or "AC/DC" are left alone.)
+    """
+    if not name or name == _UNKNOWN_ARTIST:
+        return name
+
+    # Case 1: inverted "LAST,FIRST" format
+    if "," in name:
+        parts = [p.strip() for p in name.split(",", 1)]
+        if len(parts) == 2 and all(parts):
+            candidate = f"{parts[1]} {parts[0]}"
+            return _to_title_case(candidate)
+
+    # Case 2: ALL CAPS (more than 4 alpha chars — preserves ABBA, AC/DC etc.)
+    letters = [c for c in name if c.isalpha()]
+    if len(letters) > 4 and all(c.isupper() for c in letters):
+        return _to_title_case(name)
+
+    return name
+
+
 _ARTIST_REJECT_PHRASES = (
     "ouça com amazon music", "ouça com music unlimited", "listen with amazon music",
     "adicionar ao carrinho", "add to cart", "comprar agora", "buy now",
@@ -294,6 +335,28 @@ def extract_artist(card) -> str:
     return _UNKNOWN_ARTIST
 
 
+def _is_in_secondary_section(el) -> bool:
+    """
+    Returns True if el is nested inside a secondary/alternative-format section.
+    Amazon uses these to show CD/Streaming alternatives at the bottom of a card;
+    their prices must not be confused with the main vinyl price.
+    """
+    for ancestor in el.parents:
+        if not hasattr(ancestor, "get"):
+            break
+        # data-cy attribute used by Amazon for secondary offer sections
+        if ancestor.get("data-cy") in (
+            "secondary-offer-recipe",
+            "format-list-recipe",
+            "secondary-price-recipe",
+        ):
+            return True
+        cls = " ".join(ancestor.get("class", []))
+        if "s-secondary" in cls or "secondary-offer" in cls:
+            return True
+    return False
+
+
 def _price_block_is_instalment(block) -> bool:
     block_classes = " ".join(block.get("class", []))
     if any(c in block_classes for c in ("a-text-price", "s-installment")):
@@ -355,12 +418,15 @@ def extract_price(card) -> float | None:
     Extrai o preço de compra do card.
 
     Prioridade:
-      0. Container apex-core-price-identifier → accessibility label dentro dele
-         (estrutura identificada no HTML real da Amazon BR)
-      1. Accessibility labels soltos no card (fallback)
-      2. Seletores explícitos do buy-box
-      3. Primeiro bloco .a-price não parcelado
-      4. Regex no texto completo do card (último recurso)
+      0. Container apex-core-price-identifier → accessibility label (estrutura real)
+      1. .s-price-instructions-style — container principal do preço nos resultados de busca
+      2. Accessibility labels soltos no card (fallback)
+      3. Seletores explícitos do buy-box (excluindo seções secundárias)
+      4. Primeiro bloco .a-price não parcelado e fora de seções secundárias
+      5. Regex no texto completo do card (último recurso)
+
+    Seções secundárias (data-cy="secondary-offer-recipe" etc.) exibem preços de
+    formatos alternativos (ex: CD) — esses nunca devem ser capturados como preço principal.
     """
     # ── Prioridade 0: apex-core-price-identifier (estrutura real confirmada) ──
     apex = card.select_one(".apex-core-price-identifier")
@@ -372,7 +438,6 @@ def extract_price(card) -> float | None:
             if p and p >= MIN_PRICE_BRL:
                 log.debug("Price via apex-core-price-identifier a11y: %.2f", p)
                 return p
-        # Tenta o .priceToPay dentro do apex como segundo recurso
         price_span = apex.select_one(".priceToPay, .apex-pricetopay-value")
         if price_span and not _price_block_is_instalment(price_span):
             p = _read_price_block(price_span)
@@ -380,36 +445,49 @@ def extract_price(card) -> float | None:
                 log.debug("Price via apex-core-price-identifier priceToPay: %.2f", p)
                 return p
 
-    # ── Prioridade 1: accessibility labels soltos ──────────────────────────
+    # ── Prioridade 1: .s-price-instructions-style (container principal nos resultados) ──
+    price_section = card.select_one(".s-price-instructions-style")
+    if price_section:
+        for block in price_section.select(".a-price"):
+            if not _price_block_is_instalment(block):
+                p = _read_price_block(block)
+                if p and p >= MIN_PRICE_BRL:
+                    log.debug("Price via s-price-instructions-style: %.2f", p)
+                    return p
+
+    # ── Prioridade 2: accessibility labels soltos ──────────────────────────
     for a11y_sel in (
         "#apex-pricetopay-accessibility-label",
         "[id$='-pricetopay-accessibility-label']",
         "[id$='-accessibility-label'].aok-offscreen",
     ):
         el = card.select_one(a11y_sel)
-        if el:
+        if el and not _is_in_secondary_section(el):
             text = el.get_text(strip=True).replace("\xa0", "").strip()
             p = parse_price_br(text)
             if p and p >= MIN_PRICE_BRL:
                 log.debug("Price via a11y label '%s': %.2f", a11y_sel, p)
                 return p
 
-    # ── Prioridade 2: seletores explícitos do buy-box ─────────────────────
+    # ── Prioridade 3: seletores explícitos do buy-box (fora de seções secundárias) ──
     for sel in (
         ".priceToPay",
         ".apex-pricetopay-value",
         ".a-price[data-a-color='base']",
-        ".s-price-instructions-style .a-price[data-a-color='base']",
     ):
-        block = card.select_one(sel)
-        if block and not _price_block_is_instalment(block):
-            p = _read_price_block(block)
-            if p and p >= MIN_PRICE_BRL:
-                log.debug("Price via selector '%s': %.2f", sel, p)
-                return p
+        for block in card.select(sel):
+            if _is_in_secondary_section(block):
+                continue
+            if not _price_block_is_instalment(block):
+                p = _read_price_block(block)
+                if p and p >= MIN_PRICE_BRL:
+                    log.debug("Price via selector '%s': %.2f", sel, p)
+                    return p
 
-    # ── Prioridade 3: primeiro bloco .a-price não parcelado ───────────────
+    # ── Prioridade 4: primeiro bloco .a-price fora de seções secundárias ─────
     for block in card.select(".a-price"):
+        if _is_in_secondary_section(block):
+            continue
         if _price_block_is_instalment(block):
             continue
         p = _read_price_block(block)
@@ -417,7 +495,7 @@ def extract_price(card) -> float | None:
             log.debug("Price via first-valid block: %.2f", p)
             return p
 
-    # ── Prioridade 4: regex no texto completo (último recurso) ────────────
+    # ── Prioridade 5: regex no texto completo (último recurso) ────────────
     card_text = card.get_text(" ", strip=True)
     for m in re.finditer(r"R\$\s*[\d.,]+", card_text):
         p = parse_price_br(m.group())
@@ -514,7 +592,7 @@ def parse_page(soup) -> list[dict]:
         results.append({
             "asin":      asin,
             "titulo":    title,
-            "artista":   extract_artist(card),
+            "artista":   normalize_artist(extract_artist(card)),
             "slug":      gerar_slug(title, asin),
             "imgUrl":    extract_image(card),
             "url":       affiliate_link(asin),

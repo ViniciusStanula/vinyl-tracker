@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import GraficoPreco from "@/components/GraficoPreco";
+import { slugifyArtist } from "@/lib/slugify";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,8 @@ export async function generateMetadata({
   const disco = await prisma.disco.findUnique({ where: { slug } });
   if (!disco) return {};
   return {
-    title: `${disco.titulo} — Vinil Deals`,
-    description: `Histórico de preços de ${disco.titulo} por ${disco.artista} na Amazon Brasil.`,
+    title: `${disco.titulo} — ${disco.artista} em Vinil | Histórico de Preços`,
+    description: `Compre ${disco.titulo} de ${disco.artista} pelo melhor preço. Veja o histórico de preços e as melhores ofertas disponíveis agora.`,
   };
 }
 
@@ -26,11 +27,13 @@ export default async function DiscoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
   const disco = await prisma.disco.findUnique({
     where: { slug },
     include: {
       precos: {
+        where: { capturadoEm: { gte: oneYearAgo } },
         orderBy: { capturadoEm: "asc" },
       },
     },
@@ -49,13 +52,32 @@ export default async function DiscoPage({
   const desconto = media > 0 ? ((media - precoAtual) / media) * 100 : 0;
   const emPromocao = valores.length >= 3 && desconto >= 10;
 
+  // Record when the historical min and max occurred
+  const minRecord =
+    disco.precos.length > 0
+      ? disco.precos.reduce((a, b) =>
+          Number(a.precoBrl) <= Number(b.precoBrl) ? a : b
+        )
+      : null;
+  const maxRecord =
+    disco.precos.length > 0
+      ? disco.precos.reduce((a, b) =>
+          Number(a.precoBrl) >= Number(b.precoBrl) ? a : b
+        )
+      : null;
+
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const fmtMonth = (d: Date) => {
+    const m = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+    const y = d.getFullYear().toString().slice(-2);
+    return `${m}/${y}`;
+  };
 
   const rating = disco.rating ? Number(disco.rating) : null;
   const stars = rating ? Math.round(rating) : 0;
 
-  // Prepare chart data
   const chartPrecos = disco.precos.map((p) => ({
     data: p.capturadoEm.toLocaleDateString("pt-BR", {
       day: "2-digit",
@@ -65,27 +87,28 @@ export default async function DiscoPage({
     valor: Number(p.precoBrl),
   }));
 
+  // Price history displayed newest-first, with delta vs. previous capture
+  const precosDisplay = [...disco.precos].reverse();
+
   return (
     <main className="max-w-3xl mx-auto px-4 py-8">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-300 mb-6 transition-colors"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      {/* Breadcrumbs */}
+      <nav className="flex items-center gap-1.5 text-sm text-zinc-500 mb-6 flex-wrap">
+        <Link href="/" className="hover:text-zinc-300 transition-colors">
+          Início
+        </Link>
+        <span>›</span>
+        <Link
+          href={`/artista/${slugifyArtist(disco.artista)}`}
+          className="hover:text-zinc-300 transition-colors"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        Voltar
-      </Link>
+          {disco.artista}
+        </Link>
+        <span>›</span>
+        <span className="text-zinc-400 truncate max-w-[200px] sm:max-w-xs">
+          {disco.titulo}
+        </span>
+      </nav>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-6 mb-8">
@@ -98,6 +121,7 @@ export default async function DiscoPage({
               sizes="176px"
               className="object-cover"
               unoptimized
+              priority
             />
           </div>
         )}
@@ -105,7 +129,7 @@ export default async function DiscoPage({
         <div className="flex-1 flex flex-col justify-between">
           <div>
             <Link
-              href={`/?artista=${encodeURIComponent(disco.artista)}`}
+              href={`/artista/${slugifyArtist(disco.artista)}`}
               className="text-zinc-500 hover:text-amber-400 text-sm transition-colors"
             >
               {disco.artista}
@@ -146,7 +170,10 @@ export default async function DiscoPage({
                 </span>
               )}
             </div>
-            <p className="text-zinc-600 text-xs">vs. média {fmt(media)}</p>
+            {/* Avg context — explicit period so users understand the reference */}
+            <p className="text-zinc-500 text-xs">
+              vs. média histórica {fmt(media)}
+            </p>
 
             <a
               href={disco.url}
@@ -183,30 +210,35 @@ export default async function DiscoPage({
           </span>
         </h2>
 
-        {/* Stats */}
+        {/* Stats — min and max include the date they occurred */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           <div className="bg-zinc-800 rounded-lg p-3 text-center">
             <p className="text-xs text-zinc-500 mb-1">Atual</p>
-            <p className="font-bold text-zinc-100 text-sm">
-              {fmt(precoAtual)}
-            </p>
+            <p className="font-bold text-zinc-100 text-sm">{fmt(precoAtual)}</p>
           </div>
           <div className="bg-zinc-800 rounded-lg p-3 text-center">
             <p className="text-xs text-zinc-500 mb-1">Mínimo</p>
-            <p className="font-bold text-emerald-400 text-sm">
-              {fmt(precoMin)}
-            </p>
+            <p className="font-bold text-emerald-400 text-sm">{fmt(precoMin)}</p>
+            {minRecord && (
+              <p className="text-[10px] text-zinc-600 mt-0.5">
+                {fmtMonth(minRecord.capturadoEm)}
+              </p>
+            )}
           </div>
           <div className="bg-zinc-800 rounded-lg p-3 text-center">
             <p className="text-xs text-zinc-500 mb-1">Máximo</p>
             <p className="font-bold text-red-400 text-sm">{fmt(precoMax)}</p>
+            {maxRecord && (
+              <p className="text-[10px] text-zinc-600 mt-0.5">
+                {fmtMonth(maxRecord.capturadoEm)}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Interactive chart */}
         <GraficoPreco precos={chartPrecos} />
 
-        {/* Collapsible table */}
+        {/* Collapsible table with price delta column */}
         {valores.length > 1 && (
           <details className="mt-4">
             <summary className="text-xs text-zinc-500 cursor-pointer hover:text-zinc-300 select-none transition-colors">
@@ -218,22 +250,45 @@ export default async function DiscoPage({
                   <tr className="text-zinc-600 border-b border-zinc-800">
                     <th className="pb-2 font-medium">Data</th>
                     <th className="pb-2 font-medium text-right">Preço</th>
+                    <th className="pb-2 font-medium text-right">Variação</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[...disco.precos].reverse().map((p, i) => (
-                    <tr key={i} className="border-b border-zinc-800/50">
-                      <td className="py-1.5 text-zinc-500">
-                        {p.capturadoEm.toLocaleDateString("pt-BR")}
-                      </td>
-                      <td className="py-1.5 text-right font-medium text-zinc-200">
-                        {Number(p.precoBrl).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
-                      </td>
-                    </tr>
-                  ))}
+                  {precosDisplay.map((p, i) => {
+                    const prev = precosDisplay[i + 1];
+                    const curr = Number(p.precoBrl);
+                    const delta = prev ? curr - Number(prev.precoBrl) : null;
+                    return (
+                      <tr key={i} className="border-b border-zinc-800/50">
+                        <td className="py-1.5 text-zinc-500">
+                          {p.capturadoEm.toLocaleDateString("pt-BR")}
+                        </td>
+                        <td className="py-1.5 text-right font-medium text-zinc-200">
+                          {curr.toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })}
+                        </td>
+                        <td
+                          className={`py-1.5 text-right ${
+                            delta === null
+                              ? "text-zinc-700"
+                              : delta > 0
+                              ? "text-red-400"
+                              : delta < 0
+                              ? "text-emerald-400"
+                              : "text-zinc-600"
+                          }`}
+                        >
+                          {delta === null
+                            ? "—"
+                            : delta === 0
+                            ? "="
+                            : `${delta > 0 ? "▲" : "▼"} ${Math.abs(delta).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

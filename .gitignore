@@ -15,3 +15,5 @@ __pycache__/
 
 # Crawler
 crawler/vinyl_crawler.log
+
+.vercel

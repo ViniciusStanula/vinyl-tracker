@@ -9,7 +9,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Vinil Deals — Melhores ofertas em discos de vinil",
+  title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
   description:
     "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços e alertas de promoção.",
 };
