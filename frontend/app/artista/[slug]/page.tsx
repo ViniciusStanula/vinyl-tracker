@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import DiscoCard from "@/components/DiscoCard";
+import SortBar from "@/components/SortBar";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { slugifyArtist } from "@/lib/slugify";
+import { Suspense } from "react";
 
-export const revalidate = 21600; // ISR: revalidate every 6 hours
+export const dynamic = "force-dynamic";
+
+type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
 
 /**
  * Returns all distinct artist name variants that map to the given slug,
@@ -51,10 +55,16 @@ export async function generateMetadata({
 
 export default async function ArtistaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ sort?: string; precoMax?: string }>;
 }) {
   const { slug } = await params;
+  const { sort = "desconto", precoMax: precoMaxStr } = await searchParams;
+  const precoMax =
+    precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
+
   const resolved = await resolveArtista(slug);
   if (!resolved) notFound();
   const { canonical: artista, variants: artistaVariants } = resolved;
@@ -70,7 +80,6 @@ export default async function ArtistaPage({
         take: 60,
       },
     },
-    orderBy: { updatedAt: "desc" },
   });
 
   if (discos.length === 0) notFound();
@@ -93,6 +102,29 @@ export default async function ArtistaPage({
     };
   });
 
+  // Apply price filter
+  const filtrados =
+    precoMax !== null && !isNaN(precoMax)
+      ? discosProcessados.filter((d) => d.precoAtual <= precoMax)
+      : discosProcessados;
+
+  // Apply sort
+  const sorted = [...filtrados].sort((a, b) => {
+    switch (sort as Sort) {
+      case "menor-preco":
+        return a.precoAtual - b.precoAtual;
+      case "maior-preco":
+        return b.precoAtual - a.precoAtual;
+      case "avaliados":
+        return (b.rating ?? 0) - (a.rating ?? 0);
+      case "az":
+        return a.titulo.localeCompare(b.titulo, "pt-BR");
+      case "desconto":
+      default:
+        return b.desconto - a.desconto;
+    }
+  });
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
       <nav className="flex items-center gap-1.5 text-sm text-zinc-500 mb-6 flex-wrap">
@@ -103,19 +135,35 @@ export default async function ArtistaPage({
         <span className="text-zinc-400">{artista}</span>
       </nav>
 
-      <header className="mb-8">
+      <header className="mb-6">
         <h1 className="text-3xl font-bold text-zinc-100">{artista}</h1>
         <p className="mt-1 text-zinc-500 text-sm">
-          {discosProcessados.length}{" "}
-          {discosProcessados.length === 1 ? "disco" : "discos"} rastreados
+          {sorted.length}{" "}
+          {sorted.length === 1 ? "disco" : "discos"}
+          {precoMax !== null && !isNaN(precoMax)
+            ? ` até R$ ${precoMax.toLocaleString("pt-BR")}`
+            : " rastreados"}
         </p>
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {discosProcessados.map((disco) => (
-          <DiscoCard key={disco.id} disco={disco} />
-        ))}
+      <div className="mb-4">
+        <Suspense>
+          <SortBar />
+        </Suspense>
       </div>
+
+      {sorted.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {sorted.map((disco) => (
+            <DiscoCard key={disco.id} disco={disco} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-24 text-zinc-600">
+          <p className="text-4xl mb-4">🎵</p>
+          <p>Nenhum disco encontrado com esse filtro.</p>
+        </div>
+      )}
     </main>
   );
 }

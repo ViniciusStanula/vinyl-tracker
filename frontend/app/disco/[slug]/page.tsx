@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import GraficoPreco from "@/components/GraficoPreco";
-import ShareButton from "@/components/ShareButton";
 import { slugifyArtist } from "@/lib/slugify";
 
 export const dynamic = "force-dynamic";
@@ -265,7 +264,6 @@ export default async function DiscoPage({
                   />
                 </svg>
               </a>
-              <ShareButton titulo={disco.titulo} artista={disco.artista} />
             </div>
             <p className="text-zinc-600 text-xs mt-2">
               Atualizado há {updateLabel} · Preços podem variar
