@@ -93,25 +93,39 @@ export default async function DiscoPage({
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  const fmtDate = (d: Date) => d.toLocaleDateString("pt-BR");
+  const BRT = "America/Sao_Paulo";
 
-  // Label for the "Atual" stat card
+  const fmtDate = (d: Date) =>
+    d.toLocaleDateString("pt-BR", { timeZone: BRT });
+
+  const fmtTime = (d: Date) =>
+    d.toLocaleTimeString("pt-BR", { timeZone: BRT, hour: "2-digit", minute: "2-digit" });
+
+  const fmtDateTime = (d: Date) => `${fmtDate(d)}, ${fmtTime(d)}`;
+
+  // Label for the "Atual" stat card — compare dates in BRT
   const dataAtual = disco.precos.at(-1)?.capturadoEm;
   const isHoje =
     dataAtual
-      ? dataAtual.toDateString() === new Date().toDateString()
+      ? dataAtual.toLocaleDateString("pt-BR", { timeZone: BRT }) ===
+        new Date().toLocaleDateString("pt-BR", { timeZone: BRT })
       : false;
-  const dataAtualLabel = isHoje ? "Hoje" : dataAtual ? fmtDate(dataAtual) : "—";
+  const dataAtualLabel = isHoje
+    ? `Hoje, ${fmtTime(dataAtual!)}`
+    : dataAtual
+    ? fmtDateTime(dataAtual)
+    : "—";
 
   const rating = disco.rating ? Number(disco.rating) : null;
   const stars = rating ? Math.round(rating) : 0;
 
   const chartPrecos = disco.precos.map((p) => ({
     data: p.capturadoEm.toLocaleDateString("pt-BR", {
+      timeZone: BRT,
       day: "2-digit",
       month: "2-digit",
     }),
-    dataFull: p.capturadoEm.toLocaleDateString("pt-BR"),
+    dataFull: fmtDateTime(p.capturadoEm),
     valor: Number(p.precoBrl),
   }));
 
@@ -300,7 +314,7 @@ export default async function DiscoPage({
             <p className="font-bold text-emerald-400 text-sm">{fmt(precoMin)}</p>
             {minRecord && (
               <p className="text-[10px] text-zinc-500 mt-0.5">
-                {fmtDate(minRecord.capturadoEm)}
+                {fmtDateTime(minRecord.capturadoEm)}
               </p>
             )}
           </div>
@@ -314,7 +328,7 @@ export default async function DiscoPage({
             <p className="font-bold text-red-400 text-sm">{fmt(precoMax)}</p>
             {maxRecord && (
               <p className="text-[10px] text-zinc-500 mt-0.5">
-                {fmtDate(maxRecord.capturadoEm)}
+                {fmtDateTime(maxRecord.capturadoEm)}
               </p>
             )}
           </div>
@@ -345,7 +359,7 @@ export default async function DiscoPage({
                     return (
                       <tr key={i} className="border-b border-zinc-800/50">
                         <td className="py-1.5 text-zinc-500">
-                          {p.capturadoEm.toLocaleDateString("pt-BR")}
+                          {fmtDateTime(p.capturadoEm)}
                         </td>
                         <td className="py-1.5 text-right font-medium text-zinc-200">
                           {curr.toLocaleString("pt-BR", {
@@ -381,7 +395,7 @@ export default async function DiscoPage({
       </section>
 
       <p className="text-xs text-zinc-600 text-center">
-        Atualizado em {disco.updatedAt.toLocaleDateString("pt-BR")} · Dados
+        Atualizado em {fmtDateTime(disco.updatedAt)} (horário de Brasília) · Dados
         via Amazon.com.br
       </p>
 

@@ -20,7 +20,7 @@ import time
 import random
 import logging
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 
 from database import upsert_batch, limpar_historico_antigo, get_connection
 from utils import gerar_slug
@@ -626,7 +626,7 @@ def parse_page(soup) -> list[dict]:
     """Extrai todos os vinis de uma página de resultados."""
     cards = soup.select('[data-component-type="s-search-result"]')
     results = []
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     skipped = {"no_asin": 0, "no_title": 0, "not_vinyl": 0, "no_price": 0}
 
     for card in cards:
