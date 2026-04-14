@@ -22,6 +22,6 @@ jobs:
         run: pip install -r crawler/requirements.txt
 
       - name: Executar crawler
-        run: python crawler/main.py
+        run: python crawler/main.py --max-pages 2
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
