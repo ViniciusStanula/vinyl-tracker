@@ -142,7 +142,7 @@ export default async function DiscoPage({
       d."imgUrl",
       l.preco AS "precoAtual",
       a.media AS "mediaPreco",
-      ROUND(((a.media - l.preco) / NULLIF(a.media, 0)) * 100, 1)::float AS desconto
+      ((a.media - l.preco) / NULLIF(a.media, 0)) * 100 AS desconto
     FROM "Disco" d
     JOIN latest l ON l."discoId" = d.id
     JOIN avgd a ON a."discoId" = d.id
