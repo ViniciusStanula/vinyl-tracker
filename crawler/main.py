@@ -203,6 +203,12 @@ _ARTIST_REJECT_PHRASES = (
     "em até", "in up to", "x de r$", "x r$", "sem juros",
     # Amazon social proof badges
     "compras no mês", "compras nos últimos", "bought in past", "bought last month",
+    # Amazon promotional noise picked up by fallback selectors
+    "amazon music",           # "90 dias de Amazon Music grátis incluso"
+    "oferta",                 # "30(6 Ofertas de Novos) Mais Opções de Comprar$ 278"
+    "mais opções de comprar", # same
+    "opções de comprar",      # same
+    "dias de",                # "90 dias de ..."
 )
 _UNKNOWN_ARTIST = "Artista não identificado"
 
@@ -364,7 +370,11 @@ def extract_artist(card) -> str:
         if not el:
             continue
         text = el.get_text(strip=True)
-        text = re.sub(r"^(por|by|de)\s+", "", text, flags=re.IGNORECASE).strip()
+        # strip "por/by/de" prefix even when not followed by a space
+        # e.g. "por$uicideboy$" → "$uicideboy$"
+        text = re.sub(r"^(por|by|de)(?=\s|[^a-zA-ZÀ-ÿ])", "", text, flags=re.IGNORECASE).strip()
+        # strip trailing year/format suffix e.g. "|2022" or "| 2022 (Deluxe Edition)"
+        text = re.sub(r"\s*\|\s*\d{4}\b.*$", "", text).strip()
         if _is_plausible_artist(text):
             return text
     return _UNKNOWN_ARTIST
