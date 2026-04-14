@@ -21,6 +21,7 @@ export default function SortBar() {
   function handleSort(value: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("sort", value);
+    params.delete("page"); // reset to page 1 when sort changes
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
     });

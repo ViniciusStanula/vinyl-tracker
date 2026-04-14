@@ -20,6 +20,7 @@ export default function SearchBar() {
       } else {
         params.delete("q");
       }
+      params.delete("page"); // reset to page 1 on every new search
       startTransition(() => {
         router.push(`${pathname}?${params.toString()}`);
       });
