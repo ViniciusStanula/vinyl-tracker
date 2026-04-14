@@ -30,7 +30,7 @@ from utils import gerar_slug
 # ─────────────────────────────────────────────────────────────
 ASSOCIATE_TAG     = "groovesnrecor-20"
 MAX_PAGES_DEFAULT = 1000       # a página geral tem mais produtos que as de categoria
-DELAY_SECONDS     = 5
+DELAY_SECONDS     = 3
 MIN_PRICE_BRL     = 10.0
 
 # URL principal — todos os vinis ordenados por popularidade
@@ -639,6 +639,8 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
 
     seen_asins: set[str] = set()
     all_items: list[dict] = []
+    consecutive_empty = 0
+    MAX_CONSECUTIVE_EMPTY = 20  # stop after 20 pages with no new products
 
     for page in range(1, max_pages + 1):
         log.info("Page %d/%d", page, max_pages)
@@ -649,10 +651,22 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
             log.warning("Page %d failed, skipping.", page)
             continue
 
+        new_on_page = 0
         for item in parse_page(soup):
             if item["asin"] not in seen_asins:
                 seen_asins.add(item["asin"])
                 all_items.append(item)
+                new_on_page += 1
+
+        if new_on_page == 0:
+            consecutive_empty += 1
+            log.info("No new products on page %d (%d/%d consecutive).",
+                     page, consecutive_empty, MAX_CONSECUTIVE_EMPTY)
+            if consecutive_empty >= MAX_CONSECUTIVE_EMPTY:
+                log.info("Reached end of catalogue — stopping at page %d.", page)
+                break
+        else:
+            consecutive_empty = 0
 
         if not has_next_page(soup):
             log.info("No next page — stopping at page %d.", page)
