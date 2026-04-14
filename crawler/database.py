@@ -8,7 +8,9 @@ Responsabilities:
   - Clean up HistoricoPreco records older than 90 days
 """
 import os
+import socket
 import logging
+import urllib.parse
 
 import psycopg2
 import psycopg2.extras
@@ -20,6 +22,11 @@ def get_connection():
     """
     Returns a psycopg2 connection using DATABASE_URL from environment.
     Use the Transaction Pooler URL from Supabase (port 6543).
+
+    Resolves the hostname to an IPv4 address and passes it via libpq's
+    ``hostaddr`` parameter so GitHub Actions (which can't reach Supabase
+    over IPv6) connects successfully.  The original hostname is kept in
+    ``host`` for SSL certificate validation (SNI).
     """
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
@@ -28,6 +35,21 @@ def get_connection():
             "Export it before running:\n"
             "  export DATABASE_URL='postgresql://postgres:[SENHA]@...supabase.com:6543/postgres'"
         )
+
+    # Force IPv4 to avoid IPv6 connectivity failures on GitHub Actions.
+    # libpq's hostaddr overrides DNS resolution while host= still handles SSL SNI.
+    try:
+        parsed = urllib.parse.urlparse(database_url)
+        hostname = parsed.hostname
+        if hostname:
+            ipv4_results = socket.getaddrinfo(hostname, None, socket.AF_INET)
+            if ipv4_results:
+                ipv4 = ipv4_results[0][4][0]
+                log.debug("Resolved %s → %s (IPv4)", hostname, ipv4)
+                return psycopg2.connect(database_url, hostaddr=ipv4)
+    except Exception as exc:
+        log.warning("IPv4 resolution failed (%s) — falling back to default DNS", exc)
+
     return psycopg2.connect(database_url)
 
 

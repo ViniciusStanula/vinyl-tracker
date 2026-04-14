@@ -609,7 +609,18 @@ def parse_page(soup) -> list[dict]:
 
 
 def has_next_page(soup) -> bool:
-    return soup.select_one("a.s-pagination-next") is not None
+    """
+    Returns True while more pages should be fetched.
+
+    Amazon's pagination UI sometimes omits the next-page link deep in
+    paginated results even though more pages exist.  We keep going as long
+    as the current page contained product cards, stopping only when a page
+    comes back empty (genuine end-of-catalogue).
+    """
+    if soup.select_one("a.s-pagination-next") is not None:
+        return True
+    # No explicit next-link — stop only if this page was also empty.
+    return bool(soup.select('[data-component-type="s-search-result"]'))
 
 
 # ─────────────────────────────────────────────────────────────
