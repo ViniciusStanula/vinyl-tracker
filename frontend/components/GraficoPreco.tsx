@@ -66,6 +66,11 @@ export default function GraficoPreco({ precos }: Props) {
     return { x: tx(idx), label: precos[idx].data };
   });
 
+  // Indices for min and max annotation markers
+  const minIdx = valores.reduce((best, v, i) => v < valores[best] ? i : best, 0);
+  const maxIdx = valores.reduce((best, v, i) => v > valores[best] ? i : best, 0);
+  const hasRange = vMin !== vMax;
+
   const hovered = hoveredIdx !== null ? precos[hoveredIdx] : null;
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -135,6 +140,54 @@ export default function GraficoPreco({ precos }: Props) {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+
+        {/* Min annotation — green dot + label */}
+        {hasRange && (
+          <g>
+            <circle
+              cx={tx(minIdx)}
+              cy={ty(vMin)}
+              r="5"
+              fill="#10b981"
+              stroke="#09090b"
+              strokeWidth="1.5"
+            />
+            <text
+              x={tx(minIdx)}
+              y={ty(vMin) + 15}
+              textAnchor="middle"
+              fill="#10b981"
+              fontSize="8"
+              fontWeight="600"
+            >
+              Mín.
+            </text>
+          </g>
+        )}
+
+        {/* Max annotation — red dot + label */}
+        {hasRange && (
+          <g>
+            <circle
+              cx={tx(maxIdx)}
+              cy={ty(vMax)}
+              r="5"
+              fill="#f87171"
+              stroke="#09090b"
+              strokeWidth="1.5"
+            />
+            <text
+              x={tx(maxIdx)}
+              y={ty(vMax) - 9}
+              textAnchor="middle"
+              fill="#f87171"
+              fontSize="8"
+              fontWeight="600"
+            >
+              Máx.
+            </text>
+          </g>
+        )}
 
         {/* Hover crosshair */}
         {hoveredIdx !== null && (
