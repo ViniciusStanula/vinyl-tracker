@@ -9,8 +9,8 @@ import { Suspense } from "react";
 
 export const revalidate = 3600;
 
-// Configurable page size — change this constant to adjust across the whole app
-export const PAGE_SIZE = 25;
+// Configurable page size — 24 = 6 full rows at 4-col grid
+export const PAGE_SIZE = 24;
 
 export const metadata = {
   title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
@@ -48,6 +48,7 @@ export default async function HomePage({
     sort?: string;
     artista?: string;
     page?: string;
+    precoMax?: string;
   }>;
 }) {
   const {
@@ -55,10 +56,12 @@ export default async function HomePage({
     sort = "desconto",
     artista,
     page: pageStr,
+    precoMax: precoMaxStr,
   } = await searchParams;
 
   const page = Math.max(1, parseInt(pageStr ?? "1", 10));
   const searchTerm = q?.trim() ?? "";
+  const precoMax = precoMaxStr ? Number(precoMaxStr) : null;
 
   // ── WHERE fragments ────────────────────────────────────────────────────────
   // Values interpolated into Prisma.sql are parameterised (safe from injection).
@@ -69,6 +72,11 @@ export default async function HomePage({
   const whereArtista = artista
     ? Prisma.sql`AND d.artista = ${artista}`
     : Prisma.sql``;
+
+  const wherePrecoMax =
+    precoMax !== null && !isNaN(precoMax)
+      ? Prisma.sql`AND hp_latest."precoBrl" <= ${precoMax}`
+      : Prisma.sql``;
 
   // ── ORDER BY (mapped from a fixed enum — no injection risk) ────────────────
   const orderByClause = ((): Prisma.Sql => {
@@ -84,14 +92,18 @@ export default async function HomePage({
 
   // ── Run count + data queries in parallel ───────────────────────────────────
   const [countResult, rows] = await Promise.all([
-    // COUNT: only discos that have at least one price record
+    // COUNT: join latest price so we can filter by precoMax
     prisma.$queryRaw<[{ total: bigint }]>`
       SELECT COUNT(*) AS total
       FROM   "Disco" d
       INNER JOIN LATERAL (
-        SELECT 1 FROM "HistoricoPreco" WHERE "discoId" = d.id LIMIT 1
-      ) hp_check ON true
-      WHERE  TRUE ${whereSearch} ${whereArtista}
+        SELECT "precoBrl"
+        FROM   "HistoricoPreco"
+        WHERE  "discoId" = d.id
+        ORDER  BY "capturadoEm" DESC
+        LIMIT  1
+      ) hp_latest ON true
+      WHERE  TRUE ${whereSearch} ${whereArtista} ${wherePrecoMax}
     `,
 
     // DATA: paginated, sorted, with discount computed in-DB
@@ -126,7 +138,7 @@ export default async function HomePage({
           WHERE  "capturadoEm" >= NOW() - INTERVAL '30 days'
           GROUP  BY "discoId"
         ) hp_avg ON hp_avg."discoId" = d.id
-        WHERE TRUE ${whereSearch} ${whereArtista}
+        WHERE TRUE ${whereSearch} ${whereArtista} ${wherePrecoMax}
       )
       SELECT
         *,
@@ -157,6 +169,7 @@ export default async function HomePage({
           ? Number(row.rating)
           : null,
       precoAtual,
+      mediaPreco,
       emPromocao: totalPrecos >= 3 && desconto >= 0.1,
       desconto,
     };
@@ -231,7 +244,7 @@ export default async function HomePage({
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
-          searchParams={{ q, sort, artista }}
+          searchParams={{ q, sort, artista, precoMax: precoMaxStr }}
         />
       )}
     </main>

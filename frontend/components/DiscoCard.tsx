@@ -12,6 +12,7 @@ export interface DiscoCardProps {
   url: string;
   rating: number | null;
   precoAtual: number;
+  mediaPreco: number;
   emPromocao: boolean;
   desconto: number; // fraction, positive = price below historical average
 }
@@ -29,20 +30,20 @@ export default function DiscoCard({
     minimumFractionDigits: 2,
   });
 
-  const descontoPercent = Math.round(disco.desconto * 100);
+  const originalPriceFormatted = disco.mediaPreco.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  });
 
-  // "Menor Preço" when ≥10% below average; "Melhor Desconto" when 5–9% below
-  const badge =
-    disco.emPromocao
-      ? { label: "Menor Preço", cls: "bg-emerald-500 text-white" }
-      : disco.desconto >= 0.05
-      ? { label: "Melhor Desconto", cls: "bg-amber-500 text-zinc-950" }
-      : null;
+  const descontoPercent = Math.round(disco.desconto * 100);
+  const showOriginalPrice = descontoPercent > 0;
+  const isHotDeal = descontoPercent >= 30;
 
   const artistaSlug = slugifyArtist(disco.artista);
 
   return (
-    <div className="relative group bg-zinc-900 rounded-xl overflow-hidden hover:bg-zinc-800 transition-colors">
+    <div className="relative group bg-zinc-900 rounded-xl overflow-hidden hover:bg-zinc-800 transition-colors flex flex-col">
       {/* Full-card link */}
       <Link
         href={`/disco/${disco.slug}`}
@@ -51,7 +52,7 @@ export default function DiscoCard({
       />
 
       {/* Album art */}
-      <div className="relative aspect-square bg-zinc-800">
+      <div className="relative aspect-square bg-zinc-800 shrink-0">
         {disco.imgUrl ? (
           <Image
             src={disco.imgUrl}
@@ -68,16 +69,34 @@ export default function DiscoCard({
           </div>
         )}
 
-        {/* Badge as full-width bottom banner on the image */}
-        {badge && (
-          <div
-            className={`absolute bottom-0 left-0 right-0 ${badge.cls} text-[11px] font-bold py-1 text-center`}
-          >
-            {badge.label}
+        {/* Discount badge — top-left */}
+        {descontoPercent > 0 && (
+          <div className="absolute top-2 left-2 z-20 bg-red-600 text-white text-[11px] font-bold px-1.5 py-0.5 rounded">
+            -{descontoPercent}%
           </div>
         )}
 
-        {/* Quick Amazon link — appears on hover (desktop), z-20 above the card overlay */}
+        {/* Oferta imperdível badge — below discount badge */}
+        {isHotDeal && (
+          <div className="absolute top-8 left-2 z-20 bg-amber-500 text-zinc-950 text-[10px] font-bold px-1.5 py-0.5 rounded">
+            🔥 Oferta
+          </div>
+        )}
+
+        {/* Rating pill — bottom-right overlay */}
+        {disco.rating && (
+          <div className="absolute bottom-2 right-2 z-20 flex items-center gap-0.5 bg-zinc-950/80 text-amber-400 text-[11px] font-semibold px-1.5 py-0.5 rounded-full">
+            <svg
+              className="w-3 h-3 fill-current"
+              viewBox="0 0 20 20"
+            >
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            {disco.rating.toFixed(1)}
+          </div>
+        )}
+
+        {/* Quick Amazon link — appears on hover */}
         <a
           href={disco.url}
           target="_blank"
@@ -90,8 +109,8 @@ export default function DiscoCard({
       </div>
 
       {/* Info */}
-      <div className="p-3">
-        {/* Artist — links to artist page, above title */}
+      <div className="p-3 flex flex-col flex-1">
+        {/* Artist */}
         <Link
           href={`/artista/${artistaSlug}`}
           className="relative z-20 block text-zinc-500 hover:text-amber-400 text-xs truncate transition-colors"
@@ -110,44 +129,23 @@ export default function DiscoCard({
           </span>
         )}
 
-        <div className="mt-2 flex items-end justify-between gap-2">
-          <div>
-            <div className="flex items-baseline gap-1.5">
-              <p className="text-amber-400 font-bold text-base leading-none">
-                {priceFormatted}
-              </p>
-              {descontoPercent > 0 && (
-                <span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
-                  -{descontoPercent}%
-                </span>
-              )}
-            </div>
-            {disco.rating && (
-              <p className="text-zinc-500 text-xs mt-1">
-                ★ {disco.rating.toFixed(1)}
-              </p>
-            )}
-          </div>
+        {/* Price hierarchy */}
+        <div className="mt-2 flex-1 flex flex-col justify-end">
+          {showOriginalPrice && (
+            <p className="text-zinc-500 text-xs line-through">
+              {originalPriceFormatted}
+            </p>
+          )}
+          <p className="text-amber-400 font-bold text-lg leading-tight">
+            {priceFormatted}
+          </p>
 
-          {/* Arrow button — z-20 to stay above the full-card overlay */}
+          {/* CTA — outline style, full width */}
           <Link
             href={`/disco/${disco.slug}`}
-            className="relative z-20 shrink-0 w-8 h-8 bg-amber-500 hover:bg-amber-400 rounded-full flex items-center justify-center text-zinc-950 transition-colors"
-            aria-label={`Ver ${disco.titulo}`}
+            className="relative z-20 mt-3 w-full text-center text-xs font-medium text-zinc-400 border border-zinc-700 hover:border-amber-500 hover:text-amber-400 rounded-lg py-1.5 transition-colors"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M17 8l4 4m0 0l-4 4m4-4H3"
-              />
-            </svg>
+            Ver Histórico
           </Link>
         </div>
       </div>

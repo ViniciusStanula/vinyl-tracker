@@ -29,7 +29,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <div className="flex-1 max-w-lg">
+        <div className="flex-1 max-w-2xl">
           <Suspense>
             <SearchBar />
           </Suspense>

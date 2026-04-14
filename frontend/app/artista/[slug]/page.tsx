@@ -87,6 +87,7 @@ export default async function ArtistaPage({
       ...disco,
       rating: disco.rating ? Number(disco.rating) : null,
       precoAtual,
+      mediaPreco: media,
       emPromocao: precos.length >= 3 && desconto >= 0.1,
       desconto,
     };

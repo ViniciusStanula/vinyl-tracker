@@ -4,6 +4,7 @@ type SearchParams = {
   q?: string;
   sort?: string;
   artista?: string;
+  precoMax?: string;
 };
 
 function buildUrl(page: number, sp: SearchParams): string {
@@ -12,6 +13,7 @@ function buildUrl(page: number, sp: SearchParams): string {
   // Only include sort when it's not the default so URLs stay clean
   if (sp.sort && sp.sort !== "desconto") params.set("sort", sp.sort);
   if (sp.artista) params.set("artista", sp.artista);
+  if (sp.precoMax) params.set("precoMax", sp.precoMax);
   if (page > 1) params.set("page", String(page));
   const qs = params.toString();
   return qs ? `/?${qs}` : "/";
