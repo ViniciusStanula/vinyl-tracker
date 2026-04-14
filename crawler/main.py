@@ -175,6 +175,8 @@ _ARTIST_REJECT_PHRASES = (
     "prime", "frete grátis", "em estoque", "disponível",
     "vendido por", "sold by", "patrocinado", "sponsored",
     "em até", "in up to", "x de r$", "x r$", "sem juros",
+    # Amazon social proof badges
+    "compras no mês", "compras nos últimos", "bought in past", "bought last month",
 )
 _UNKNOWN_ARTIST = "Artista não identificado"
 
@@ -445,14 +447,17 @@ def extract_price(card) -> float | None:
                 log.debug("Price via apex-core-price-identifier priceToPay: %.2f", p)
                 return p
 
-    # ── Prioridade 1: .s-price-instructions-style (container principal nos resultados) ──
-    price_section = card.select_one(".s-price-instructions-style")
+    # ── Prioridade 1: price-instructions-style container (principal nos resultados) ──
+    # Amazon changed the class prefix from "s-" to "puis-"; match both.
+    price_section = card.select_one(
+        ".s-price-instructions-style, .puis-price-instructions-style"
+    )
     if price_section:
         for block in price_section.select(".a-price"):
             if not _price_block_is_instalment(block):
                 p = _read_price_block(block)
                 if p and p >= MIN_PRICE_BRL:
-                    log.debug("Price via s-price-instructions-style: %.2f", p)
+                    log.debug("Price via price-instructions-style: %.2f", p)
                     return p
 
     # ── Prioridade 2: accessibility labels soltos ──────────────────────────
