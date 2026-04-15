@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import DiscoCard from "@/components/DiscoCard";
 import SortBar from "@/components/SortBar";
+import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { slugifyArtist } from "@/lib/slugify";
@@ -87,6 +88,8 @@ export default async function ArtistaPage({
 
   if (discos.length === 0) notFound();
 
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
   const discosProcessados = discos.map((disco) => {
     const precos = disco.precos.map((p) => Number(p.precoBrl));
     const precoAtual = precos[0] ?? 0;
@@ -95,6 +98,14 @@ export default async function ArtistaPage({
         ? precos.reduce((a, b) => a + b, 0) / precos.length
         : precoAtual;
     const desconto = media > 0 ? (media - precoAtual) / media : 0;
+
+    // Build sparkline from last 10 price points within the 30-day window
+    const sparkline = [...disco.precos]
+      .filter((p) => p.capturadoEm >= thirtyDaysAgo)
+      .sort((a, b) => a.capturadoEm.getTime() - b.capturadoEm.getTime())
+      .slice(-10)
+      .map((p) => Number(p.precoBrl));
+
     return {
       ...disco,
       rating: disco.rating ? Number(disco.rating) : null,
@@ -102,6 +113,7 @@ export default async function ArtistaPage({
       mediaPreco: media,
       emPromocao: precos.length >= 3 && desconto >= 0.1,
       desconto,
+      sparkline,
     };
   });
 
@@ -156,17 +168,24 @@ export default async function ArtistaPage({
       </div>
 
       {sorted.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {sorted.map((disco) => (
-            <DiscoCard key={disco.id} disco={disco} />
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          {sorted.map((disco, index) => (
+            <DiscoCard key={disco.id} disco={disco} priority={index < 4} />
           ))}
         </div>
       ) : (
         <div className="text-center py-24 text-zinc-600">
-          <p className="text-4xl mb-4">🎵</p>
-          <p>Nenhum disco encontrado com esse filtro.</p>
+          <p className="text-5xl mb-4">🎵</p>
+          <p className="text-zinc-400 text-lg font-medium mb-2">
+            Nenhum disco encontrado
+          </p>
+          <p className="text-zinc-600 text-sm">
+            Tente ajustar os filtros.
+          </p>
         </div>
       )}
+
+      <BackToTop />
     </main>
   );
 }

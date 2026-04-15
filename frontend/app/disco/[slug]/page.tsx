@@ -3,6 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import GraficoPreco from "@/components/GraficoPreco";
+import DiscoCard from "@/components/DiscoCard";
+import BackToTop from "@/components/BackToTop";
 import { slugifyArtist } from "@/lib/slugify";
 
 export const dynamic = "force-dynamic";
@@ -27,9 +29,13 @@ type RelatedDeal = {
   artista: string;
   slug: string;
   imgUrl: string | null;
+  url: string;
+  estilo: string | null;
+  rating: string | null;
   precoAtual: number;
   mediaPreco: number;
   desconto: number;
+  sparkline: unknown;
 };
 
 export default async function DiscoPage({
@@ -153,17 +159,54 @@ export default async function DiscoPage({
       d.artista,
       d.slug,
       d."imgUrl",
-      l.preco AS "precoAtual",
-      a.media AS "mediaPreco",
-      ((a.media - l.preco) / NULLIF(a.media, 0)) * 100 AS desconto
+      d.url,
+      d.estilo,
+      d.rating,
+      l.preco                                              AS "precoAtual",
+      a.media                                              AS "mediaPreco",
+      (a.media - l.preco) / NULLIF(a.media, 0)            AS desconto,
+      (
+        SELECT COALESCE(
+          json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"),
+          '[]'::json
+        )
+        FROM (
+          SELECT "precoBrl", "capturadoEm"
+          FROM   "HistoricoPreco"
+          WHERE  "discoId" = d.id
+            AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
+          ORDER  BY "capturadoEm" ASC
+          LIMIT  10
+        ) sp
+      ) AS sparkline
     FROM "Disco" d
     JOIN latest l ON l."discoId" = d.id
     JOIN avgd a ON a."discoId" = d.id
     WHERE d.id != ${disco.id}
-      AND ((a.media - l.preco) / NULLIF(a.media, 0)) * 100 >= 10
+      AND (a.media - l.preco) / NULLIF(a.media, 0) >= 0.1
     ORDER BY RANDOM()
     LIMIT 4
   `;
+
+  // Process related deals into DiscoCard-compatible shape
+  const processedDeals = relatedDeals.map((deal) => {
+    let sparkline: number[] = [];
+    if (Array.isArray(deal.sparkline)) {
+      sparkline = (deal.sparkline as unknown[]).map(Number).filter((n) => !isNaN(n));
+    } else if (typeof deal.sparkline === "string") {
+      try {
+        sparkline = (JSON.parse(deal.sparkline) as unknown[]).map(Number).filter((n) => !isNaN(n));
+      } catch {
+        sparkline = [];
+      }
+    }
+    return {
+      ...deal,
+      rating: deal.rating ? Number(deal.rating) : null,
+      emPromocao: true, // query already filters >= 10% discount with 3+ data points
+      sparkline,
+    };
+  });
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-8">
@@ -400,59 +443,20 @@ export default async function DiscoPage({
       </p>
 
       {/* Related deals — prevents the page from dead-ending */}
-      {relatedDeals.length > 0 && (
+      {processedDeals.length > 0 && (
         <section className="mt-10">
           <h2 className="text-lg font-semibold text-zinc-100 mb-4">
             Outros discos em oferta
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {relatedDeals.map((deal) => (
-              <Link
-                key={deal.id}
-                href={`/disco/${deal.slug}`}
-                className="group bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 hover:border-zinc-600 transition-colors flex flex-col"
-              >
-                {/* Thumbnail */}
-                <div className="relative aspect-square bg-zinc-800 shrink-0">
-                  {deal.imgUrl ? (
-                    <Image
-                      src={deal.imgUrl}
-                      alt={deal.titulo}
-                      fill
-                      sizes="(max-width: 640px) 50vw, 25vw"
-                      className="object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-zinc-600 text-4xl select-none">
-                      ♫
-                    </div>
-                  )}
-                  {deal.desconto >= 1 && (
-                    <div className="absolute top-2 left-2 bg-red-600 text-white text-[11px] font-bold px-1.5 py-0.5 rounded">
-                      -{Math.round(deal.desconto)}%
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="p-3 flex-1 flex flex-col">
-                  <p className="text-zinc-500 text-xs truncate">{deal.artista}</p>
-                  <p className="text-zinc-100 text-sm font-semibold leading-snug line-clamp-2 mt-0.5 flex-1">
-                    {deal.titulo}
-                  </p>
-                  <p className="text-amber-400 font-bold mt-2">
-                    {deal.precoAtual.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </p>
-                </div>
-              </Link>
+            {processedDeals.map((deal) => (
+              <DiscoCard key={deal.id} disco={deal} />
             ))}
           </div>
         </section>
       )}
+
+      <BackToTop />
     </main>
   );
 }
