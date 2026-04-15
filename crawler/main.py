@@ -1291,6 +1291,19 @@ def main():
             log.warning("No products found. Nothing to write.")
         else:
             # ── Phase 2: Upsert crawl results ──────────────────────────────
+            # The crawl can take 15+ minutes; the DB connection may have been
+            # dropped by Supabase during that idle period.  Ping first and
+            # reconnect if needed so upsert_batch doesn't fail with SSL EOF.
+            try:
+                conn.cursor().execute("SELECT 1")
+            except Exception:
+                log.warning("DB connection lost during crawl — reconnecting...")
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                conn = get_connection()
+
             t0 = time.monotonic()
             written = upsert_batch(conn, all_items)
             log.info("Phase 2 upsert: %.0fs — %d records written.", time.monotonic() - t0, written)

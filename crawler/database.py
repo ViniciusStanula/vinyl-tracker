@@ -46,11 +46,24 @@ def get_connection():
             if ipv4_results:
                 ipv4 = ipv4_results[0][4][0]
                 log.debug("Resolved %s → %s (IPv4)", hostname, ipv4)
-                return psycopg2.connect(database_url, hostaddr=ipv4)
+                return psycopg2.connect(
+                    database_url,
+                    hostaddr=ipv4,
+                    keepalives=1,
+                    keepalives_idle=60,
+                    keepalives_interval=10,
+                    keepalives_count=5,
+                )
     except Exception as exc:
         log.warning("IPv4 resolution failed (%s) — falling back to default DNS", exc)
 
-    return psycopg2.connect(database_url)
+    return psycopg2.connect(
+        database_url,
+        keepalives=1,
+        keepalives_idle=60,
+        keepalives_interval=10,
+        keepalives_count=5,
+    )
 
 
 def upsert_batch(conn, items: list[dict]) -> int:
