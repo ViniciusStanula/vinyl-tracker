@@ -1,26 +1,30 @@
 "use client";
 
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition, useRef } from "react";
 
 export default function SearchBar() {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function navigate(value: string) {
-    const params = new URLSearchParams(searchParams.toString());
+    // Search always targets the home page — preserve sort/artista/precoMax params
+    // but drop page and always land on /, even when called from an internal page.
+    const params = new URLSearchParams();
+    const sort = searchParams.get("sort");
+    const artista = searchParams.get("artista");
+    const precoMax = searchParams.get("precoMax");
+    if (sort) params.set("sort", sort);
+    if (artista) params.set("artista", artista);
+    if (precoMax) params.set("precoMax", precoMax);
     if (value) {
       params.set("q", value);
-    } else {
-      params.delete("q");
     }
-    params.delete("page");
     startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`);
+      router.push(`/?${params.toString()}`);
     });
   }
 
