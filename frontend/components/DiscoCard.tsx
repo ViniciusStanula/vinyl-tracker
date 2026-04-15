@@ -70,15 +70,20 @@ export default function DiscoCard({
   const artistaSlug      = slugifyArtist(disco.artista);
   const sparkline        = disco.sparkline ?? [];
 
-  // Deal quality label — derived from sparkline min or emPromocao flag
-  const sparklineMin    = sparkline.length >= 2 ? Math.min(...sparkline) : null;
-  const isNearMin       = sparklineMin !== null && disco.precoAtual <= sparklineMin * 1.02;
-  const isGoodDeal      = disco.emPromocao || isNearMin;
-  const dealLabel       = isGoodDeal
-    ? "Menor preço histórico"
-    : sparkline.length >= 3
-    ? "Preço médio"
-    : null;
+  // 3-state price status based on sparkline history
+  const sparklineMin = sparkline.length >= 2 ? Math.min(...sparkline) : null;
+  const sparklineAvg =
+    sparkline.length >= 2
+      ? sparkline.reduce((a, b) => a + b, 0) / sparkline.length
+      : null;
+  const statusPreco: "menor" | "aumento" | "estavel" | null =
+    sparklineMin !== null && sparklineAvg !== null
+      ? disco.precoAtual <= sparklineMin
+        ? "menor"
+        : disco.precoAtual > sparklineAvg * 1.03
+        ? "aumento"
+        : "estavel"
+      : null;
 
   return (
     <div className="relative group bg-zinc-900 rounded-xl overflow-hidden flex flex-col">
@@ -189,14 +194,20 @@ export default function DiscoCard({
             {fmt(disco.precoAtual)}
           </p>
 
-          {/* Deal quality label */}
-          {dealLabel !== null && (
-            <p
-              className={`text-[11px] mt-0.5 font-medium ${
-                isGoodDeal ? "text-emerald-400" : "text-zinc-500"
-              }`}
-            >
-              {dealLabel}
+          {/* Price status label */}
+          {statusPreco === "menor" && (
+            <p className="text-[11px] mt-0.5 font-medium text-emerald-400">
+              🟢 Menor preço histórico
+            </p>
+          )}
+          {statusPreco === "aumento" && (
+            <p className="text-[11px] mt-0.5 font-medium text-red-400">
+              🔴 Aumento de preço
+            </p>
+          )}
+          {statusPreco === "estavel" && (
+            <p className="text-[11px] mt-0.5 font-medium text-blue-400">
+              🔵 Preço estável
             </p>
           )}
 

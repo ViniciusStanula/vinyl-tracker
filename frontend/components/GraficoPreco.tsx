@@ -32,9 +32,8 @@ export default function GraficoPreco({ precos }: Props) {
   const valores = precos.map((p) => p.valor);
   const vMin = Math.min(...valores);
   const vMax = Math.max(...valores);
-  const pad = (vMax - vMin) * 0.12 || vMax * 0.08 || 1;
-  const yMin = vMin - pad;
-  const yMax = vMax + pad;
+  const yMin = vMin * 0.80;
+  const yMax = vMax * 1.10;
   const yRange = yMax - yMin;
 
   const tx = (i: number) =>

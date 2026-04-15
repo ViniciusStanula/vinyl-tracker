@@ -82,8 +82,15 @@ export default async function DiscoPage({
         )
       : null;
 
-  // Current price equals the all-time min → show the pill
-  const ehMenorPrecoHistorico = valores.length >= 2 && precoAtual <= precoMin;
+  // 3-state price status (evaluated in priority order)
+  const statusPreco: "menor" | "aumento" | "estavel" | null =
+    valores.length >= 2
+      ? precoAtual <= precoMin
+        ? "menor"
+        : precoAtual > media * 1.03
+        ? "aumento"
+        : "estavel"
+      : null;
 
   // Hours since last update
   const horasUpdate = Math.floor(
@@ -285,9 +292,19 @@ export default async function DiscoPage({
                   {desconto >= 0 ? "▼" : "▲"} {Math.abs(desconto).toFixed(1)}%
                 </span>
               )}
-              {ehMenorPrecoHistorico && (
+              {statusPreco === "menor" && (
                 <span className="text-xs bg-emerald-600 text-white font-bold px-3 py-1 rounded-full">
-                  Menor Preço Histórico
+                  🟢 Menor Preço Histórico
+                </span>
+              )}
+              {statusPreco === "aumento" && (
+                <span className="text-xs bg-red-900/70 text-red-400 font-bold px-3 py-1 rounded-full border border-red-800">
+                  🔴 Aumento de Preço
+                </span>
+              )}
+              {statusPreco === "estavel" && (
+                <span className="text-xs bg-blue-900/70 text-blue-400 font-bold px-3 py-1 rounded-full border border-blue-800">
+                  🔵 Preço Estável
                 </span>
               )}
             </div>
