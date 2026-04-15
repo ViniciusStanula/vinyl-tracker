@@ -29,7 +29,7 @@ def _cursor(conn):
     to override the role-level statement_timeout is with SET LOCAL inside
     every transaction block.
     """
-    with _cursor(conn) as cur:
+    with conn.cursor() as cur:
         cur.execute("SET LOCAL statement_timeout = 0")
         yield cur
 
