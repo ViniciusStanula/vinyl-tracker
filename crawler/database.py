@@ -218,8 +218,27 @@ def ensure_schema_extras(conn) -> None:
         — Number of days spanned by the product's price history.
     """
     with conn.cursor() as cur:
-        # Disable statement timeout for DDL — Supabase's transaction pooler
-        # enforces a short default timeout that kills ALTER TABLE / CREATE INDEX.
+        # Fast path: check the catalog first. After the first successful run
+        # all columns exist and we can skip DDL entirely (no lock needed).
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_name = 'Disco'
+              AND column_name IN (
+                'disponivel','deal_score','last_flagged_at','last_flagged_price',
+                'avg_30d','avg_90d','low_30d','low_all_time','confidence_level','history_days'
+              )
+            """
+        )
+        existing = cur.fetchone()[0]
+        if existing == 10:
+            log.debug("ensure_schema_extras: schema already complete, skipping DDL.")
+            return
+
+        # Columns are missing — run DDL.
+        # lock_timeout prevents hanging when Vercel/other clients hold a read lock;
+        # statement_timeout = 0 disables Supabase's short per-statement cap.
+        cur.execute("SET LOCAL lock_timeout = '10s'")
         cur.execute("SET LOCAL statement_timeout = 0")
         cur.execute(
             """
@@ -245,7 +264,7 @@ def ensure_schema_extras(conn) -> None:
             """
         )
     conn.commit()
-    log.debug("ensure_schema_extras: all extra columns and indexes ensured.")
+    log.info("ensure_schema_extras: schema migration applied.")
 
 
 def fetch_active_deals(conn, limit: int = 500) -> list[dict]:

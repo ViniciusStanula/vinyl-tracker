@@ -1254,6 +1254,13 @@ def main():
     try:
         ensure_schema_extras(conn)
         log.info("Schema OK.")
+    except Exception as exc:
+        log.warning("Schema check failed (will retry next run): %s", exc)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    try:
 
         # ── Phase 0: Re-validate active deals (highest priority) ──────────
         # Query for records currently flagged as deals and re-crawl them
