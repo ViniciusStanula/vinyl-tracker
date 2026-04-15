@@ -218,6 +218,9 @@ def ensure_schema_extras(conn) -> None:
         — Number of days spanned by the product's price history.
     """
     with conn.cursor() as cur:
+        # Disable statement timeout for DDL — Supabase's transaction pooler
+        # enforces a short default timeout that kills ALTER TABLE / CREATE INDEX.
+        cur.execute("SET LOCAL statement_timeout = 0")
         cur.execute(
             """
             ALTER TABLE "Disco"
