@@ -146,6 +146,106 @@ def upsert_batch(conn, items: list[dict]) -> int:
     return len(items)
 
 
+def ensure_schema_extras(conn) -> None:
+    """
+    Idempotently adds columns required by the stale-records check that are
+    not part of the Prisma schema (managed here via raw DDL so no migration
+    tooling is needed).
+
+    Currently adds:
+      Disco.disponivel BOOLEAN NOT NULL DEFAULT TRUE
+        — FALSE means the product page returned 404 or showed out-of-stock
+          on the last individual fetch.  Records with disponivel = FALSE are
+          still queried for stale checks so they can come back online.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            ALTER TABLE "Disco"
+            ADD COLUMN IF NOT EXISTS disponivel BOOLEAN NOT NULL DEFAULT TRUE
+            """
+        )
+    conn.commit()
+    log.debug("ensure_schema_extras: disponivel column ensured.")
+
+
+def fetch_stale_records(
+    conn,
+    seen_asins: set[str],
+    limit: int = 500,
+) -> list[dict]:
+    """
+    Returns Disco rows whose ASINs were NOT encountered during this crawl run.
+
+    Rows are ordered oldest-updated first so that over successive runs every
+    record gets cycled through even when limit < total stale count.
+
+    Each returned dict has: asin, id, titulo.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT asin, id, titulo
+            FROM "Disco"
+            WHERE asin != ALL(%s)
+            ORDER BY "updatedAt" ASC
+            LIMIT %s
+            """,
+            (list(seen_asins) if seen_asins else ["__none__"], limit),
+        )
+        return [
+            {"asin": row[0], "id": row[1], "titulo": row[2]}
+            for row in cur.fetchall()
+        ]
+
+
+def mark_stale_price(
+    conn,
+    disco_id: str,
+    price_brl: float,
+    captured_at,
+) -> None:
+    """
+    Inserts a new HistoricoPreco entry for a stale record whose product page
+    confirmed it is still available, and resets disponivel to TRUE (in case it
+    had previously been marked unavailable).
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO "HistoricoPreco" (id, "discoId", "precoBrl", "capturadoEm")
+            VALUES (gen_random_uuid(), %s, %s, %s)
+            """,
+            (disco_id, price_brl, captured_at),
+        )
+        cur.execute(
+            """
+            UPDATE "Disco"
+            SET disponivel = TRUE, "updatedAt" = NOW()
+            WHERE id = %s
+            """,
+            (disco_id,),
+        )
+    conn.commit()
+
+
+def mark_unavailable(conn, disco_id: str) -> None:
+    """
+    Marks a Disco record as unavailable (product page 404 or out-of-stock).
+    Does NOT insert a HistoricoPreco entry.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE "Disco"
+            SET disponivel = FALSE, "updatedAt" = NOW()
+            WHERE id = %s
+            """,
+            (disco_id,),
+        )
+    conn.commit()
+
+
 def limpar_historico_antigo(conn, days: int = 365) -> int:
     """
     Deletes HistoricoPreco records older than `days` days.

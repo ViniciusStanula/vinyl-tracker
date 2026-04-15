@@ -22,7 +22,15 @@ import logging
 import argparse
 from datetime import datetime, timezone
 
-from database import upsert_batch, limpar_historico_antigo, get_connection
+from database import (
+    upsert_batch,
+    limpar_historico_antigo,
+    get_connection,
+    ensure_schema_extras,
+    fetch_stale_records,
+    mark_stale_price,
+    mark_unavailable,
+)
 from utils import gerar_slug
 
 # ─────────────────────────────────────────────────────────────
@@ -306,6 +314,155 @@ def safe_get(session, url: str, retries: int = 3):
             return None, session
         return BeautifulSoup(resp.text, "lxml"), session
     return None, session
+
+
+# ─────────────────────────────────────────────────────────────
+#  Product-page fetch + parse (stale-records check)
+# ─────────────────────────────────────────────────────────────
+def fetch_product_page(session, url: str, retries: int = 3):
+    """
+    Fetches a single Amazon product detail page.
+
+    Returns (soup_or_none, http_status_or_none, session).
+
+    Callers must inspect http_status:
+      404          → product definitively gone; mark unavailable
+      None         → transient error (rate-limit, network, CAPTCHA); skip this run
+      2xx / other  → soup is populated; parse normally
+    """
+    from bs4 import BeautifulSoup
+
+    for attempt in range(1, retries + 1):
+        try:
+            resp = session.get(url, timeout=25)
+            if resp.status_code == 404:
+                return None, 404, session
+            if resp.status_code in (503, 429):
+                log.warning(
+                    "Rate-limited (%s) on product page, backing off...",
+                    resp.status_code,
+                )
+                time.sleep(random.uniform(6, 12))
+                session, _ = make_session()
+                warm_up(session)
+                continue
+            resp.raise_for_status()
+        except Exception as exc:
+            log.warning(
+                "Request error fetching product page (attempt %d/%d): %s",
+                attempt, retries, exc,
+            )
+            if attempt < retries:
+                time.sleep(random.uniform(4, 8))
+                session, _ = make_session()
+                continue
+            return None, None, session
+
+        if any(s in resp.text for s in [
+            "Robot Check", "Verificação de robô", "Digite os caracteres",
+        ]):
+            log.warning("CAPTCHA detected on product page, skipping.")
+            return None, None, session
+
+        return BeautifulSoup(resp.text, "lxml"), resp.status_code, session
+
+    return None, None, session
+
+
+# In-stock keywords for Amazon Brazil product pages (span.a-color-success / #availability)
+_INSTOCK_KW = ("em estoque", "in stock", "disponível", "disponivel")
+_OUTOFSTOCK_KW = (
+    "atualmente indisponível", "currently unavailable",
+    "fora de estoque", "out of stock",
+    "não disponível", "not available",
+)
+
+
+def parse_product_page(soup) -> tuple[float | None, bool]:
+    """
+    Extracts price and availability from an Amazon product detail page.
+
+    Returns (price_brl, in_stock).
+
+    price_brl is None when the price widget is absent (e.g. "sold by third
+    party only" pages where the add-to-cart block isn't rendered).
+    in_stock reflects the #availability / span.a-color-success text;
+    defaults to False when no availability signal is found.
+    """
+    # ── Availability ──────────────────────────────────────────────────────
+    in_stock = False
+
+    avail_el = soup.select_one("#availability")
+    if avail_el:
+        avail_text = avail_el.get_text(" ", strip=True).lower()
+        if any(kw in avail_text for kw in _INSTOCK_KW):
+            in_stock = True
+        elif any(kw in avail_text for kw in _OUTOFSTOCK_KW):
+            in_stock = False
+        else:
+            # Ambiguous availability text — treat as in-stock so we don't
+            # incorrectly mark records unavailable.
+            in_stock = True
+    else:
+        # Fallback: green badge anywhere on the page
+        for el in soup.select("span.a-color-success"):
+            text = el.get_text(" ", strip=True).lower()
+            if any(kw in text for kw in _INSTOCK_KW):
+                in_stock = True
+                break
+
+    # Hard out-of-stock override: explicit widget IDs Amazon uses
+    for sel in ("#outOfStock", "#soldByThirdParty"):
+        el = soup.select_one(sel)
+        if el and el.get_text(strip=True):
+            text = el.get_text(" ", strip=True).lower()
+            if any(kw in text for kw in _OUTOFSTOCK_KW):
+                in_stock = False
+
+    # ── Price ─────────────────────────────────────────────────────────────
+    price: float | None = None
+
+    # Priority 1: priceToPay / apex-pricetopay-value containers
+    # These are the canonical "buy box" price widgets on product pages.
+    for container_sel in (".priceToPay", ".apex-pricetopay-value"):
+        container = soup.select_one(container_sel)
+        if not container:
+            continue
+
+        # 1a. a-offscreen sibling contains the human-readable string "R$217,73"
+        offscreen = container.select_one(".a-offscreen")
+        if offscreen:
+            p = parse_price_br(offscreen.get_text(strip=True).replace("\xa0", ""))
+            if p and p >= MIN_PRICE_BRL:
+                price = p
+                break
+
+        # 1b. whole + fraction spans
+        whole_el = container.select_one(".a-price-whole")
+        frac_el  = container.select_one(".a-price-fraction")
+        if whole_el:
+            whole_text = "".join(
+                t for t in whole_el.strings
+                if t.strip() and t.strip() not in (",", ".")
+            ).strip().replace(".", "")
+            frac_text = frac_el.get_text(strip=True) if frac_el else "00"
+            p = parse_price_br(f"{whole_text},{frac_text}")
+            if p and p >= MIN_PRICE_BRL:
+                price = p
+                break
+
+    # Priority 2: any standalone a-offscreen that starts with "R$"
+    # (covers pages where the buy-box uses a different container class)
+    if price is None:
+        for el in soup.select(".a-offscreen"):
+            text = el.get_text(strip=True).replace("\xa0", "")
+            if text.startswith("R$") or re.match(r"^\d+[,.]", text):
+                p = parse_price_br(text)
+                if p and p >= MIN_PRICE_BRL:
+                    price = p
+                    break
+
+    return price, in_stock
 
 
 # ─────────────────────────────────────────────────────────────
@@ -812,6 +969,85 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
 
 
 # ─────────────────────────────────────────────────────────────
+#  Stale-records check
+# ─────────────────────────────────────────────────────────────
+def crawl_stale_records(
+    session,
+    stale: list[dict],
+    delay: float,
+    conn,
+    dry_run: bool,
+) -> tuple[int, int, int]:
+    """
+    Fetches individual product pages for records that were absent from the
+    category crawl and updates the database accordingly.
+
+    For each stale record:
+      - HTTP 404            → mark_unavailable()
+      - Out-of-stock page   → mark_unavailable()
+      - In-stock + price    → mark_stale_price()  (new HistoricoPreco row)
+      - In-stock, no price  → logged as a warning; DB not touched this run
+      - Transient error     → logged; DB not touched (will retry next run)
+
+    Returns (updated, unavailable, errors).
+    """
+    now = datetime.now(timezone.utc)
+    updated = unavailable = errors = 0
+    total = len(stale)
+
+    for i, record in enumerate(stale, 1):
+        asin    = record["asin"]
+        disco_id = record["id"]
+        label   = record.get("titulo", "")[:50]
+        url     = affiliate_link(asin)
+
+        log.info("[stale %d/%d] ASIN %s — %s", i, total, asin, label)
+
+        soup, status, session = fetch_product_page(session, url)
+
+        if status == 404:
+            log.info("  → 404 — marking unavailable")
+            if not dry_run:
+                mark_unavailable(conn, disco_id)
+            unavailable += 1
+
+        elif soup is None:
+            # Transient error (rate-limit, network, CAPTCHA) — skip silently
+            log.warning("  → Fetch failed (status=%s) — skipping this run", status)
+            errors += 1
+
+        else:
+            price, in_stock = parse_product_page(soup)
+
+            if not in_stock:
+                log.info("  → Out of stock — marking unavailable")
+                if not dry_run:
+                    mark_unavailable(conn, disco_id)
+                unavailable += 1
+
+            elif price is None:
+                log.warning("  → In stock but price not found — skipping DB update")
+                errors += 1
+
+            else:
+                log.info("  → In stock  R$ %.2f — inserting price", price)
+                if not dry_run:
+                    mark_stale_price(conn, disco_id, price, now)
+                updated += 1
+
+        if i < total:
+            sleep_time = delay + random.uniform(0.5, 1.5)
+            log.debug("  Waiting %.1fs...", sleep_time)
+            time.sleep(sleep_time)
+
+    log.info(
+        "Stale-records check done — %d updated | %d unavailable | %d skipped",
+        updated, unavailable, errors,
+    )
+    return updated, unavailable, errors
+
+
+# ─────────────────────────────────────────────────────────────
 #  CLI
 # ─────────────────────────────────────────────────────────────
 def parse_args():
@@ -820,6 +1056,14 @@ def parse_args():
     parser.add_argument("--delay", type=float, default=DELAY_SECONDS, metavar="S")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument(
+        "--stale-max", type=int, default=500, metavar="N",
+        help="Max stale records to re-fetch per run (0 = unlimited, default: 500)",
+    )
+    parser.add_argument(
+        "--skip-stale", action="store_true",
+        help="Skip the stale-records check entirely",
+    )
     return parser.parse_args()
 
 
@@ -845,12 +1089,38 @@ def main():
         log.info("DRY RUN — Sample of first 3 items:")
         for item in all_items[:3]:
             log.info("  ASIN: %s | %s | R$ %.2f", item["asin"], item["titulo"][:50], item["precoBrl"])
+        log.info("DRY RUN — skipping stale-records check (requires DB connection).")
         return
 
     conn = get_connection()
     try:
+        # ── Normal crawl results ───────────────────────────────────────────
         written = upsert_batch(conn, all_items)
         log.info("Upserted %d records to PostgreSQL.", written)
+
+        # ── Stale-records check ────────────────────────────────────────────
+        if args.skip_stale:
+            log.info("Stale-records check skipped (--skip-stale).")
+        else:
+            ensure_schema_extras(conn)
+
+            seen_asins = {item["asin"] for item in all_items}
+            stale_limit = args.stale_max if args.stale_max > 0 else 10_000
+            stale = fetch_stale_records(conn, seen_asins, limit=stale_limit)
+
+            log.info("═" * 60)
+            log.info(
+                "Stale-records check — %d records not seen in this run (limit %d).",
+                len(stale), stale_limit,
+            )
+
+            if stale:
+                session, _ = make_session()
+                crawl_stale_records(session, stale, args.delay, conn, dry_run=False)
+            else:
+                log.info("No stale records — all known records appeared in this crawl.")
+
+        # ── History cleanup ────────────────────────────────────────────────
         limpar_historico_antigo(conn)
         log.info("History cleanup complete.")
     finally:
