@@ -88,6 +88,18 @@ export default async function ArtistaPage({
 
   if (discos.length === 0) notFound();
 
+  // Fetch deal_score and confidence_level for these discos.
+  // These columns live outside the Prisma schema (managed by the crawler),
+  // so a targeted raw query is the lightest way to pull them in.
+  const discoIds = discos.map((d) => d.id);
+  type DealMeta = { id: string; deal_score: number | null; confidence_level: string | null };
+  const dealMetaRows = await prisma.$queryRaw<DealMeta[]>`
+    SELECT id::text, deal_score, confidence_level
+    FROM "Disco"
+    WHERE id::text = ANY(${discoIds})
+  `;
+  const dealMeta = Object.fromEntries(dealMetaRows.map((r) => [r.id, r]));
+
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const discosProcessados = discos.map((disco) => {
@@ -106,14 +118,22 @@ export default async function ArtistaPage({
       .slice(-10)
       .map((p) => Number(p.precoBrl));
 
+    const meta = dealMeta[disco.id];
+    const dealScore = meta?.deal_score !== null && meta?.deal_score !== undefined
+      ? Number(meta.deal_score)
+      : null;
+
     return {
       ...disco,
-      rating: disco.rating ? Number(disco.rating) : null,
+      rating:          disco.rating ? Number(disco.rating) : null,
       precoAtual,
-      mediaPreco: media,
-      emPromocao: precos.length >= 3 && desconto >= 0.1,
+      mediaPreco:      media,
+      // emPromocao mirrors the scorer: a product is on promotion iff deal_score is set
+      emPromocao:      dealScore !== null,
       desconto,
       sparkline,
+      dealScore,
+      confidenceLevel: meta?.confidence_level ?? null,
     };
   });
 

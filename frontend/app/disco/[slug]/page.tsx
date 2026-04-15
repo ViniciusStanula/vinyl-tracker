@@ -36,6 +36,8 @@ type RelatedDeal = {
   mediaPreco: number;
   desconto: number;
   sparkline: unknown;
+  dealScore: number | null;
+  confidenceLevel: string | null;
 };
 
 export default async function DiscoPage({
@@ -145,7 +147,9 @@ export default async function DiscoPage({
   // Price history displayed newest-first, with delta vs. previous capture
   const precosDisplay = [...disco.precos].reverse();
 
-  // Related deals — 4 other records currently below their historical average
+  // Related deals — 4 other records with an active deal score.
+  // Uses deal_score IS NOT NULL so the query is consistent with the scorer's
+  // multi-window logic rather than re-implementing a weaker inline version.
   const relatedDeals = await prisma.$queryRaw<RelatedDeal[]>`
     WITH latest AS (
       SELECT DISTINCT ON ("discoId")
@@ -156,9 +160,8 @@ export default async function DiscoPage({
     avgd AS (
       SELECT "discoId", AVG("precoBrl")::float AS media
       FROM "HistoricoPreco"
-      WHERE "capturadoEm" >= NOW() - INTERVAL '365 days'
+      WHERE "capturadoEm" >= NOW() - INTERVAL '30 days'
       GROUP BY "discoId"
-      HAVING COUNT(*) >= 3
     )
     SELECT
       d.id,
@@ -169,9 +172,15 @@ export default async function DiscoPage({
       d.url,
       d.estilo,
       d.rating,
+      d.deal_score                                         AS "dealScore",
+      d.confidence_level                                   AS "confidenceLevel",
       l.preco                                              AS "precoAtual",
-      a.media                                              AS "mediaPreco",
-      (a.media - l.preco) / NULLIF(a.media, 0)            AS desconto,
+      COALESCE(a.media, l.preco)                           AS "mediaPreco",
+      CASE
+        WHEN COALESCE(a.media, 0) > 0
+        THEN (COALESCE(a.media, l.preco) - l.preco) / COALESCE(a.media, l.preco)
+        ELSE 0
+      END                                                  AS desconto,
       (
         SELECT COALESCE(
           json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"),
@@ -187,11 +196,11 @@ export default async function DiscoPage({
         ) sp
       ) AS sparkline
     FROM "Disco" d
-    JOIN latest l ON l."discoId" = d.id
-    JOIN avgd a ON a."discoId" = d.id
+    INNER JOIN latest l ON l."discoId" = d.id
+    LEFT  JOIN avgd   a ON a."discoId" = d.id
     WHERE d.id != ${disco.id}
-      AND (a.media - l.preco) / NULLIF(a.media, 0) >= 0.1
-    ORDER BY RANDOM()
+      AND d.deal_score IS NOT NULL
+    ORDER BY d.deal_score DESC, RANDOM()
     LIMIT 4
   `;
 
@@ -209,8 +218,10 @@ export default async function DiscoPage({
     }
     return {
       ...deal,
-      rating: deal.rating ? Number(deal.rating) : null,
-      emPromocao: true, // query already filters >= 10% discount with 3+ data points
+      rating:          deal.rating ? Number(deal.rating) : null,
+      emPromocao:      true, // query already filters deal_score IS NOT NULL
+      dealScore:       deal.dealScore !== null && deal.dealScore !== undefined ? Number(deal.dealScore) : null,
+      confidenceLevel: deal.confidenceLevel ?? null,
       sparkline,
     };
   });

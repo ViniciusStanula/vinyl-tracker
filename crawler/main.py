@@ -34,6 +34,7 @@ from database import (
     mark_stale_price,
     mark_unavailable,
 )
+from deal_scorer import score_deals
 from utils import gerar_slug
 
 # ─────────────────────────────────────────────────────────────
@@ -1242,6 +1243,24 @@ def main():
             t0 = time.monotonic()
             written = upsert_batch(conn, all_items)
             log.info("Phase 2 upsert: %.0fs — %d records written.", time.monotonic() - t0, written)
+
+            # ── Phase 2.5: Deal scoring ─────────────────────────────────────
+            # Runs after every upsert so deal_score reflects the freshest prices.
+            # score_deals computes multi-window benchmarks (avg_30d, avg_90d,
+            # low_30d, low_all_time) in a single SQL query, applies tiered scoring
+            # rules with cooldown logic in Python, then batch-updates Disco.
+            log.info("═" * 60)
+            t0 = time.monotonic()
+            scoring_summary = score_deals(conn)
+            log.info(
+                "Phase 2.5 scoring: %.0fs — flagged=%d | maintained=%d"
+                " | cleared=%d | cooldown_skipped=%d",
+                time.monotonic() - t0,
+                scoring_summary["flagged"],
+                scoring_summary["scored"],
+                scoring_summary["cleared"],
+                scoring_summary["skipped"],
+            )
 
             # ── Phase 3: Stale-records check ───────────────────────────────
             if args.skip_stale:

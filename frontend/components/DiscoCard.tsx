@@ -16,6 +16,10 @@ export interface DiscoCardProps {
   emPromocao: boolean;
   desconto: number;
   sparkline?: number[];
+  /** Scoring tier: 1 = Boa Oferta, 2 = Ótima Oferta, 3 = Melhor Preço, null = no deal */
+  dealScore?: number | null;
+  /** Backend confidence tier; "low_confidence" triggers a data-warning indicator */
+  confidenceLevel?: string | null;
 }
 
 /** 40×16 px SVG sparkline showing the 30-day price trend. */
@@ -64,7 +68,8 @@ export default function DiscoCard({
 
   const descontoPercent  = Math.round(disco.desconto * 100);
   const showOriginalPrice = descontoPercent > 0;
-  const isHotDeal        = descontoPercent >= 30;
+  const dealScore        = disco.dealScore ?? null;
+  const confidenceLevel  = disco.confidenceLevel ?? null;
   const rating           = disco.rating;
   const stars            = rating ? Math.round(rating) : 0;
   const artistaSlug      = slugifyArtist(disco.artista);
@@ -120,10 +125,20 @@ export default function DiscoCard({
           </div>
         )}
 
-        {/* Hot deal badge — always below the discount badge */}
-        {isHotDeal && (
+        {/* Deal tier badge — shown when the scorer has assigned a tier */}
+        {dealScore === 3 && (
           <div className="absolute top-10 left-2 z-20 bg-amber-500 text-zinc-950 text-[10px] font-bold px-1.5 py-0.5 rounded">
-            🔥 Oferta
+            🥇 Melhor Preço
+          </div>
+        )}
+        {dealScore === 2 && (
+          <div className="absolute top-10 left-2 z-20 bg-zinc-300 text-zinc-950 text-[10px] font-bold px-1.5 py-0.5 rounded">
+            🥈 Ótima Oferta
+          </div>
+        )}
+        {dealScore === 1 && (
+          <div className="absolute top-10 left-2 z-20 bg-amber-800/80 text-amber-100 text-[10px] font-bold px-1.5 py-0.5 rounded">
+            🥉 Boa Oferta
           </div>
         )}
 
@@ -208,6 +223,13 @@ export default function DiscoCard({
           {statusPreco === "estavel" && (
             <p className="text-[11px] mt-0.5 font-medium text-blue-400">
               🔵 Preço estável
+            </p>
+          )}
+
+          {/* Low-confidence warning — shown when deal is scored on sparse data */}
+          {confidenceLevel === "low_confidence" && dealScore !== null && (
+            <p className="text-[10px] mt-0.5 text-amber-600">
+              ⚠️ Poucos dados disponíveis
             </p>
           )}
 

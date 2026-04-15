@@ -36,6 +36,9 @@ type DiscoRow = {
   totalPrecos: string;
   desconto: string;
   sparkline: unknown; // json_agg → JS array or string depending on pg driver version
+  dealScore: string | null;        // SMALLINT from Disco.deal_score
+  confidenceLevel: string | null;  // VARCHAR from Disco.confidence_level
+  historyDays: string | null;      // INTEGER from Disco.history_days
 };
 
 export type ProcessedDisco = {
@@ -53,6 +56,12 @@ export type ProcessedDisco = {
   emPromocao: boolean;
   desconto: number;
   sparkline: number[];
+  /** Scoring tier: 1 = Boa Oferta, 2 = Ótima Oferta, 3 = Melhor Preço, null = no deal */
+  dealScore: number | null;
+  /** Backend confidence tier identifier; use CONFIDENCE_LABELS in the frontend for display */
+  confidenceLevel: string | null;
+  /** Days of price history available (used to render trust indicators) */
+  historyDays: number | null;
 };
 
 export async function queryDiscos(params: {
@@ -102,6 +111,9 @@ export async function queryDiscos(params: {
           d.url,
           d.rating,
           d."reviewCount",
+          d.deal_score        AS "dealScore",
+          d.confidence_level  AS "confidenceLevel",
+          d.history_days      AS "historyDays",
           hp_latest."precoBrl"                              AS "precoAtual",
           COALESCE(hp_avg.media, hp_latest."precoBrl")      AS "mediaPreco",
           COALESCE(hp_avg.cnt, 0)::INTEGER                  AS "totalPrecos",
@@ -157,7 +169,6 @@ export async function queryDiscos(params: {
   const items = rows.map((row): ProcessedDisco => {
     const precoAtual  = Number(row.precoAtual);
     const mediaPreco  = Number(row.mediaPreco);
-    const totalPrecos = Number(row.totalPrecos);
     const desconto    = Number(row.desconto);
 
     let sparkline: number[] = [];
@@ -171,21 +182,31 @@ export async function queryDiscos(params: {
       }
     }
 
+    const dealScore =
+      row.dealScore !== null && row.dealScore !== undefined
+        ? Number(row.dealScore)
+        : null;
+
     return {
-      id:        row.id,
-      slug:      row.slug,
-      titulo:    row.titulo,
-      artista:   row.artista,
-      estilo:    row.estilo,
-      imgUrl:    row.imgUrl,
-      url:       row.url,
-      rating:      row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
-      reviewCount: row.reviewCount !== null && row.reviewCount !== undefined ? Number(row.reviewCount) : null,
+      id:             row.id,
+      slug:           row.slug,
+      titulo:         row.titulo,
+      artista:        row.artista,
+      estilo:         row.estilo,
+      imgUrl:         row.imgUrl,
+      url:            row.url,
+      rating:         row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
+      reviewCount:    row.reviewCount !== null && row.reviewCount !== undefined ? Number(row.reviewCount) : null,
       precoAtual,
       mediaPreco,
-      emPromocao: totalPrecos >= 3 && desconto >= 0.1,
+      // emPromocao is driven by the deal scorer: a product is on promotion iff
+      // deal_score IS NOT NULL (meaning it passed all multi-window scoring gates).
+      emPromocao:     dealScore !== null,
       desconto,
       sparkline,
+      dealScore,
+      confidenceLevel: row.confidenceLevel ?? null,
+      historyDays:    row.historyDays !== null && row.historyDays !== undefined ? Number(row.historyDays) : null,
     };
   });
 

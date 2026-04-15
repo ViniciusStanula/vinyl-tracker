@@ -175,65 +175,81 @@ def upsert_batch(conn, items: list[dict]) -> int:
 
 def ensure_schema_extras(conn) -> None:
     """
-    Idempotently adds columns required by the stale-records check that are
-    not part of the Prisma schema (managed here via raw DDL so no migration
-    tooling is needed).
+    Idempotently adds columns that are not part of the Prisma schema
+    (managed here via raw DDL so no migration tooling is needed).
 
-    Currently adds:
+    Columns added:
       Disco.disponivel BOOLEAN NOT NULL DEFAULT TRUE
-        — FALSE means the product page returned 404 or showed out-of-stock
-          on the last individual fetch.  Records with disponivel = FALSE are
-          still queried for stale checks so they can come back online.
+        — FALSE when the product page returned 404 or showed out-of-stock.
+          Records with disponivel = FALSE are still queried for stale checks
+          so they can come back online.
+
+      Disco.deal_score SMALLINT
+        — Computed deal tier: 1 = Boa Oferta, 2 = Ótima Oferta,
+          3 = Melhor Preço. NULL means no active deal.
+
+      Disco.last_flagged_at TIMESTAMPTZ
+        — UTC timestamp of the most recent deal flag (used for cooldown).
+
+      Disco.last_flagged_price DECIMAL(10,2)
+        — Price at time of last flag (used for early-re-flag detection).
+
+      Disco.avg_30d / avg_90d / low_30d / low_all_time DECIMAL(10,2)
+        — Rolling price benchmarks updated by the deal scorer after each crawl.
+
+      Disco.confidence_level VARCHAR(30)
+        — Scoring confidence tier: insufficient_data | low_confidence |
+          moderate_confidence | high_confidence.
+
+      Disco.history_days INTEGER
+        — Number of days spanned by the product's price history.
     """
     with conn.cursor() as cur:
         cur.execute(
             """
             ALTER TABLE "Disco"
-            ADD COLUMN IF NOT EXISTS disponivel BOOLEAN NOT NULL DEFAULT TRUE
+                ADD COLUMN IF NOT EXISTS disponivel       BOOLEAN      NOT NULL DEFAULT TRUE,
+                ADD COLUMN IF NOT EXISTS deal_score       SMALLINT,
+                ADD COLUMN IF NOT EXISTS last_flagged_at  TIMESTAMPTZ,
+                ADD COLUMN IF NOT EXISTS last_flagged_price DECIMAL(10, 2),
+                ADD COLUMN IF NOT EXISTS avg_30d          DECIMAL(10, 2),
+                ADD COLUMN IF NOT EXISTS avg_90d          DECIMAL(10, 2),
+                ADD COLUMN IF NOT EXISTS low_30d          DECIMAL(10, 2),
+                ADD COLUMN IF NOT EXISTS low_all_time     DECIMAL(10, 2),
+                ADD COLUMN IF NOT EXISTS confidence_level VARCHAR(30),
+                ADD COLUMN IF NOT EXISTS history_days     INTEGER
+            """
+        )
+        # Partial index for fast active-deal lookups (Phase 0 re-validation)
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS "Disco_deal_score_idx"
+                ON "Disco" (deal_score)
+                WHERE deal_score IS NOT NULL
             """
         )
     conn.commit()
-    log.debug("ensure_schema_extras: disponivel column ensured.")
+    log.debug("ensure_schema_extras: all extra columns and indexes ensured.")
 
 
 def fetch_active_deals(conn, limit: int = 500) -> list[dict]:
     """
     Returns Disco records that are currently on an active deal.
 
-    A deal is active when the most-recent recorded price is at least 10% below
-    the 30-day average AND there are at least 3 price records in the last 30
-    days (enough history to make the comparison meaningful).
-
-    This mirrors the emPromocao logic in the frontend's queryDiscos.ts so the
-    crawler and the UI agree on what counts as a deal.
+    A deal is active when deal_score IS NOT NULL — i.e. the deal scorer
+    (deal_scorer.score_deals) has evaluated the product and assigned a tier.
+    Results are ordered by deal_score DESC so the highest-quality deals are
+    re-validated first in Phase 0.
 
     Each returned dict has: asin, id, titulo.
-    Ordered by deepest discount first so the most urgent checks run earliest.
     """
     with conn.cursor() as cur:
         cur.execute(
             """
-            WITH latest AS (
-                SELECT DISTINCT ON ("discoId") "discoId", "precoBrl"
-                FROM "HistoricoPreco"
-                ORDER BY "discoId", "capturadoEm" DESC
-            ),
-            avg30 AS (
-                SELECT "discoId",
-                       AVG("precoBrl") AS media,
-                       COUNT(*)        AS cnt
-                FROM "HistoricoPreco"
-                WHERE "capturadoEm" >= NOW() - INTERVAL '30 days'
-                GROUP BY "discoId"
-                HAVING COUNT(*) >= 3
-            )
-            SELECT d.asin, d.id, d.titulo
-            FROM "Disco" d
-            INNER JOIN latest l ON l."discoId" = d.id
-            INNER JOIN avg30  a ON a."discoId"  = d.id
-            WHERE a.media > 0
-              AND (a.media - l."precoBrl") / a.media >= 0.10
-            ORDER BY (a.media - l."precoBrl") / a.media DESC
+            SELECT asin, id, titulo
+            FROM "Disco"
+            WHERE deal_score IS NOT NULL
+            ORDER BY deal_score DESC, "updatedAt" ASC
             LIMIT %s
             """,
             (limit,),
