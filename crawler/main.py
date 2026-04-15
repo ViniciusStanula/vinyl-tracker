@@ -1248,9 +1248,12 @@ def main():
             log.info("  ASIN: %s | %s | R$ %.2f", item["asin"], item["titulo"][:50], item["precoBrl"])
         return
 
+    log.info("Connecting to database...")
     conn = get_connection()
+    log.info("Connected. Running schema check...")
     try:
         ensure_schema_extras(conn)
+        log.info("Schema OK.")
 
         # ── Phase 0: Re-validate active deals (highest priority) ──────────
         # Query for records currently flagged as deals and re-crawl them
