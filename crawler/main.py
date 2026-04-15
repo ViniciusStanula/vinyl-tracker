@@ -29,6 +29,7 @@ from database import (
     limpar_historico_antigo,
     get_connection,
     ensure_schema_extras,
+    fetch_active_deals,
     fetch_stale_records,
     mark_stale_price,
     mark_unavailable,
@@ -1170,6 +1171,10 @@ def parse_args():
         "--skip-stale", action="store_true",
         help="Skip the stale-records check entirely",
     )
+    parser.add_argument(
+        "--skip-deal-revalidation", action="store_true",
+        help="Skip the pre-crawl deal re-validation phase",
+    )
     return parser.parse_args()
 
 
@@ -1187,58 +1192,85 @@ def main():
 
     t_start = time.monotonic()
 
-    t0 = time.monotonic()
-    all_items = crawl(args.max_pages, args.delay)
-    log.info("Phase crawl: %.0fs", time.monotonic() - t0)
-
-    if not all_items:
-        log.warning("No products found. Nothing to write.")
-        return
-
     if args.dry_run:
+        log.info("DRY RUN — skipping DB phases; running crawl only.")
+        t0 = time.monotonic()
+        all_items = crawl(args.max_pages, args.delay)
+        log.info("Phase crawl: %.0fs", time.monotonic() - t0)
         log.info("DRY RUN — Sample of first 3 items:")
         for item in all_items[:3]:
             log.info("  ASIN: %s | %s | R$ %.2f", item["asin"], item["titulo"][:50], item["precoBrl"])
-        log.info("DRY RUN — skipping stale-records check (requires DB connection).")
         return
 
     conn = get_connection()
     try:
-        # ── Normal crawl results ───────────────────────────────────────────
-        t0 = time.monotonic()
-        written = upsert_batch(conn, all_items)
-        log.info("Phase upsert: %.0fs — %d records written.", time.monotonic() - t0, written)
+        ensure_schema_extras(conn)
 
-        # ── Stale-records check ────────────────────────────────────────────
-        if args.skip_stale:
-            log.info("Stale-records check skipped (--skip-stale).")
+        # ── Phase 0: Re-validate active deals (highest priority) ──────────
+        # Query for records currently flagged as deals and re-crawl them
+        # immediately so that the DB reflects the freshest prices before we
+        # spend time discovering new ones.
+        if args.skip_deal_revalidation:
+            log.info("Deal re-validation skipped (--skip-deal-revalidation).")
         else:
-            ensure_schema_extras(conn)
-
-            seen_asins = {item["asin"] for item in all_items}
-            stale_limit = args.stale_max if args.stale_max > 0 else 10_000
-            stale = fetch_stale_records(conn, seen_asins, limit=stale_limit)
-
             log.info("═" * 60)
+            t0 = time.monotonic()
+            active_deals = fetch_active_deals(conn)
             log.info(
-                "Stale-records check — %d records not seen in this run (limit %d).",
-                len(stale), stale_limit,
+                "Phase 0 — Deal re-validation: %d active deals to re-check.",
+                len(active_deals),
             )
-
-            if stale:
-                t0 = time.monotonic()
+            if active_deals:
                 crawl_stale_records(
-                    stale, args.delay, conn,
+                    active_deals, args.delay, conn,
                     dry_run=False, max_workers=args.stale_workers,
                 )
-                log.info("Phase stale: %.0fs", time.monotonic() - t0)
+                log.info("Phase 0 done: %.0fs", time.monotonic() - t0)
             else:
-                log.info("No stale records — all known records appeared in this crawl.")
+                log.info("No active deals found — skipping re-validation.")
 
-        # ── History cleanup ────────────────────────────────────────────────
+        # ── Phase 1: Regular crawl ─────────────────────────────────────────
+        log.info("═" * 60)
+        t0 = time.monotonic()
+        all_items = crawl(args.max_pages, args.delay)
+        log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
+
+        if not all_items:
+            log.warning("No products found. Nothing to write.")
+        else:
+            # ── Phase 2: Upsert crawl results ──────────────────────────────
+            t0 = time.monotonic()
+            written = upsert_batch(conn, all_items)
+            log.info("Phase 2 upsert: %.0fs — %d records written.", time.monotonic() - t0, written)
+
+            # ── Phase 3: Stale-records check ───────────────────────────────
+            if args.skip_stale:
+                log.info("Stale-records check skipped (--skip-stale).")
+            else:
+                seen_asins = {item["asin"] for item in all_items}
+                stale_limit = args.stale_max if args.stale_max > 0 else 10_000
+                stale = fetch_stale_records(conn, seen_asins, limit=stale_limit)
+
+                log.info("═" * 60)
+                log.info(
+                    "Phase 3 stale-records — %d records not seen in this run (limit %d).",
+                    len(stale), stale_limit,
+                )
+
+                if stale:
+                    t0 = time.monotonic()
+                    crawl_stale_records(
+                        stale, args.delay, conn,
+                        dry_run=False, max_workers=args.stale_workers,
+                    )
+                    log.info("Phase 3 stale: %.0fs", time.monotonic() - t0)
+                else:
+                    log.info("No stale records — all known records appeared in this crawl.")
+
+        # ── Phase 4: History cleanup ───────────────────────────────────────
         t0 = time.monotonic()
         limpar_historico_antigo(conn)
-        log.info("Phase cleanup: %.0fs", time.monotonic() - t0)
+        log.info("Phase 4 cleanup: %.0fs", time.monotonic() - t0)
     finally:
         conn.close()
 

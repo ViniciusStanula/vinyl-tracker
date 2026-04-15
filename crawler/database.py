@@ -196,6 +196,54 @@ def ensure_schema_extras(conn) -> None:
     log.debug("ensure_schema_extras: disponivel column ensured.")
 
 
+def fetch_active_deals(conn, limit: int = 500) -> list[dict]:
+    """
+    Returns Disco records that are currently on an active deal.
+
+    A deal is active when the most-recent recorded price is at least 10% below
+    the 30-day average AND there are at least 3 price records in the last 30
+    days (enough history to make the comparison meaningful).
+
+    This mirrors the emPromocao logic in the frontend's queryDiscos.ts so the
+    crawler and the UI agree on what counts as a deal.
+
+    Each returned dict has: asin, id, titulo.
+    Ordered by deepest discount first so the most urgent checks run earliest.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            WITH latest AS (
+                SELECT DISTINCT ON ("discoId") "discoId", "precoBrl"
+                FROM "HistoricoPreco"
+                ORDER BY "discoId", "capturadoEm" DESC
+            ),
+            avg30 AS (
+                SELECT "discoId",
+                       AVG("precoBrl") AS media,
+                       COUNT(*)        AS cnt
+                FROM "HistoricoPreco"
+                WHERE "capturadoEm" >= NOW() - INTERVAL '30 days'
+                GROUP BY "discoId"
+                HAVING COUNT(*) >= 3
+            )
+            SELECT d.asin, d.id, d.titulo
+            FROM "Disco" d
+            INNER JOIN latest l ON l."discoId" = d.id
+            INNER JOIN avg30  a ON a."discoId"  = d.id
+            WHERE a.media > 0
+              AND (a.media - l."precoBrl") / a.media >= 0.10
+            ORDER BY (a.media - l."precoBrl") / a.media DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [
+            {"asin": row[0], "id": str(row[1]), "titulo": row[2]}
+            for row in cur.fetchall()
+        ]
+
+
 def fetch_stale_records(
     conn,
     seen_asins: set[str],
