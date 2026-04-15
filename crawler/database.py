@@ -80,7 +80,8 @@ def upsert_batch(conn, items: list[dict]) -> int:
                 item.get("estilo") or None,
                 item.get("imgUrl") or None,
                 item["url"],
-                item.get("rating"),      # float or None
+                item.get("rating"),        # float or None
+                item.get("reviewCount"),   # int or None
             )
             for item in items
         ]
@@ -90,20 +91,21 @@ def upsert_batch(conn, items: list[dict]) -> int:
             """
             INSERT INTO "Disco" (
                 id, asin, titulo, artista, slug, estilo, "imgUrl", url, rating,
-                "createdAt", "updatedAt"
+                "reviewCount", "createdAt", "updatedAt"
             )
             VALUES (
-                gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s,
+                gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 NOW(), NOW()
             )
             ON CONFLICT (asin) DO UPDATE SET
-                titulo     = EXCLUDED.titulo,
-                artista    = EXCLUDED.artista,
-                estilo     = COALESCE(EXCLUDED.estilo, "Disco".estilo),
-                "imgUrl"   = EXCLUDED."imgUrl",
-                url        = EXCLUDED.url,
-                rating     = EXCLUDED.rating,
-                "updatedAt" = NOW()
+                titulo        = EXCLUDED.titulo,
+                artista       = EXCLUDED.artista,
+                estilo        = COALESCE(EXCLUDED.estilo, "Disco".estilo),
+                "imgUrl"      = EXCLUDED."imgUrl",
+                url           = EXCLUDED.url,
+                rating        = EXCLUDED.rating,
+                "reviewCount" = COALESCE(EXCLUDED."reviewCount", "Disco"."reviewCount"),
+                "updatedAt"   = NOW()
             """,
             disco_rows,
             page_size=500,
@@ -204,11 +206,15 @@ def mark_stale_price(
     disco_id: str,
     price_brl: float,
     captured_at,
+    review_count: int | None = None,
 ) -> None:
     """
     Inserts a new HistoricoPreco entry for a stale record whose product page
     confirmed it is still available, and resets disponivel to TRUE (in case it
     had previously been marked unavailable).
+
+    If review_count is provided it overwrites the stored value; otherwise the
+    existing count is preserved via COALESCE.
     """
     with conn.cursor() as cur:
         cur.execute(
@@ -221,10 +227,12 @@ def mark_stale_price(
         cur.execute(
             """
             UPDATE "Disco"
-            SET disponivel = TRUE, "updatedAt" = NOW()
+            SET disponivel    = TRUE,
+                "reviewCount" = COALESCE(%s, "reviewCount"),
+                "updatedAt"   = NOW()
             WHERE id = %s
             """,
-            (disco_id,),
+            (review_count, disco_id),
         )
     conn.commit()
 

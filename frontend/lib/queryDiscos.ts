@@ -17,7 +17,7 @@ function buildOrderBy(sort: string): Prisma.Sql {
     case "avaliados":   return Prisma.sql`COALESCE(rating::numeric, 0) DESC`;
     case "az":          return Prisma.sql`titulo ASC`;
     case "desconto":
-    default:            return Prisma.sql`desconto DESC NULLS LAST`;
+    default:            return Prisma.sql`desconto DESC NULLS LAST, COALESCE("reviewCount", 0) DESC`;
   }
 }
 
@@ -30,6 +30,7 @@ type DiscoRow = {
   imgUrl: string | null;
   url: string;
   rating: string | null;
+  reviewCount: string | null;
   precoAtual: string;
   mediaPreco: string;
   totalPrecos: string;
@@ -46,6 +47,7 @@ export type ProcessedDisco = {
   imgUrl: string | null;
   url: string;
   rating: number | null;
+  reviewCount: number | null;
   precoAtual: number;
   mediaPreco: number;
   emPromocao: boolean;
@@ -99,6 +101,7 @@ export async function queryDiscos(params: {
           d."imgUrl",
           d.url,
           d.rating,
+          d."reviewCount",
           hp_latest."precoBrl"                              AS "precoAtual",
           COALESCE(hp_avg.media, hp_latest."precoBrl")      AS "mediaPreco",
           COALESCE(hp_avg.cnt, 0)::INTEGER                  AS "totalPrecos",
@@ -176,7 +179,8 @@ export async function queryDiscos(params: {
       estilo:    row.estilo,
       imgUrl:    row.imgUrl,
       url:       row.url,
-      rating:    row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
+      rating:      row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
+      reviewCount: row.reviewCount !== null && row.reviewCount !== undefined ? Number(row.reviewCount) : null,
       precoAtual,
       mediaPreco,
       emPromocao: totalPrecos >= 3 && desconto >= 0.1,

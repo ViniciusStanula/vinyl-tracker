@@ -378,16 +378,17 @@ _OUTOFSTOCK_KW = (
 )
 
 
-def parse_product_page(soup) -> tuple[float | None, bool]:
+def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
     """
-    Extracts price and availability from an Amazon product detail page.
+    Extracts price, availability, and review count from an Amazon product page.
 
-    Returns (price_brl, in_stock).
+    Returns (price_brl, in_stock, review_count).
 
     price_brl is None when the price widget is absent (e.g. "sold by third
     party only" pages where the add-to-cart block isn't rendered).
     in_stock reflects the #availability / span.a-color-success text;
     defaults to False when no availability signal is found.
+    review_count is None when the review widget is absent.
     """
     # ── Availability ──────────────────────────────────────────────────────
     in_stock = False
@@ -462,7 +463,35 @@ def parse_product_page(soup) -> tuple[float | None, bool]:
                     price = p
                     break
 
-    return price, in_stock
+    # ── Review count ──────────────────────────────────────────────────────
+    review_count: int | None = None
+
+    # #acrCustomerReviewText → "1.235 avaliações de clientes"
+    # span[data-hook="total-review-count"] → same text on some page variants
+    for sel in (
+        "#acrCustomerReviewText",
+        '[data-hook="total-review-count"]',
+        '[aria-label*="classificações"]',
+        '[aria-label*="avaliações de clientes"]',
+        '[aria-label*="ratings"]',
+        '[aria-label*="customer reviews"]',
+    ):
+        el = soup.select_one(sel)
+        if not el:
+            continue
+        text = el.get("aria-label", "") or el.get_text(strip=True)
+        m = re.search(r"([\d.,]+)", text)
+        if m:
+            count_str = m.group(1).replace(".", "").replace(",", "")
+            try:
+                val = int(count_str)
+                if val > 0:
+                    review_count = val
+                    break
+            except ValueError:
+                pass
+
+    return price, in_stock, review_count
 
 
 # ─────────────────────────────────────────────────────────────
@@ -753,6 +782,38 @@ def extract_rating(card) -> float | None:
     return None  # None em vez de "" — o banco aceita NULL
 
 
+def extract_review_count(card) -> int | None:
+    """
+    Extracts the number of customer reviews from a search-result card.
+
+    Amazon Brazil renders the count in a span whose aria-label reads e.g.
+    "1.235 classificações" (dot = thousands separator in pt-BR).
+    Falls back to the plain visible text inside the same span.
+    """
+    for sel in (
+        '[aria-label*="classificações"]',
+        '[aria-label*="avaliações de clientes"]',
+        '[aria-label*="ratings"]',
+        '[aria-label*="customer reviews"]',
+    ):
+        el = card.select_one(sel)
+        if not el:
+            continue
+        # Prefer the aria-label; fall back to visible text (both carry the count)
+        text = el.get("aria-label", "") or el.get_text(strip=True)
+        m = re.search(r"([\d.,]+)", text)
+        if m:
+            # Remove thousands separators (pt-BR uses "." as thousands sep)
+            count_str = m.group(1).replace(".", "").replace(",", "")
+            try:
+                val = int(count_str)
+                if val > 0:
+                    return val
+            except ValueError:
+                pass
+    return None
+
+
 def extract_image(card) -> str:
     for sel in ["img.s-image", "img[data-image-index]", ".s-product-image-container img"]:
         el = card.select_one(sel)
@@ -809,14 +870,15 @@ def parse_page(soup) -> list[dict]:
             continue
 
         results.append({
-            "asin":      asin,
-            "titulo":    title,
-            "artista":   normalize_artist(extract_artist(card)),
-            "slug":      gerar_slug(title, asin),
-            "imgUrl":    extract_image(card),
-            "url":       affiliate_link(asin),
-            "rating":    extract_rating(card),
-            "precoBrl":  price,
+            "asin":        asin,
+            "titulo":      title,
+            "artista":     normalize_artist(extract_artist(card)),
+            "slug":        gerar_slug(title, asin),
+            "imgUrl":      extract_image(card),
+            "url":         affiliate_link(asin),
+            "rating":      extract_rating(card),
+            "reviewCount": extract_review_count(card),
+            "precoBrl":    price,
             "capturadoEm": now,
         })
 
@@ -1017,7 +1079,7 @@ def crawl_stale_records(
             errors += 1
 
         else:
-            price, in_stock = parse_product_page(soup)
+            price, in_stock, review_count = parse_product_page(soup)
 
             if not in_stock:
                 log.info("  → Out of stock — marking unavailable")
@@ -1030,9 +1092,12 @@ def crawl_stale_records(
                 errors += 1
 
             else:
-                log.info("  → In stock  R$ %.2f — inserting price", price)
+                log.info(
+                    "  → In stock  R$ %.2f  reviews=%s — inserting price",
+                    price, review_count,
+                )
                 if not dry_run:
-                    mark_stale_price(conn, disco_id, price, now)
+                    mark_stale_price(conn, disco_id, price, now, review_count)
                 updated += 1
 
         if i < total:

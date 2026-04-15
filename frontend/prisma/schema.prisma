@@ -15,9 +15,10 @@ model Disco {
   estilo    String?
   imgUrl    String?
   url       String
-  rating    Decimal? @db.Decimal(3, 1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  rating      Decimal? @db.Decimal(3, 1)
+  reviewCount Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   precos HistoricoPreco[]
 
