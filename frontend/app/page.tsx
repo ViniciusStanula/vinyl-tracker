@@ -28,11 +28,11 @@ type DiscoRow = {
   estilo: string | null;
   imgUrl: string | null;
   url: string;
-  rating: unknown;
-  precoAtual: unknown;
-  mediaPreco: unknown;
-  totalPrecos: unknown;
-  desconto: unknown; // computed in CTE
+  rating: string | null;    // pg returns DECIMAL columns as strings
+  precoAtual: string;       // pg returns DECIMAL columns as strings
+  mediaPreco: string;       // pg returns DECIMAL columns as strings
+  totalPrecos: string;      // pg returns INTEGER columns as strings via $queryRaw
+  desconto: string;         // computed in CTE, returned as string
 };
 
 /** Escape LIKE meta-characters in user-supplied text. */

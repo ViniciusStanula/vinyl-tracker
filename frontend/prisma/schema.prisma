@@ -34,6 +34,6 @@ model HistoricoPreco {
   precoBrl    Decimal  @db.Decimal(10, 2)
   capturadoEm DateTime @default(now())
 
-  @@index([discoId])
+  @@index([discoId, capturadoEm(sort: Desc)])
   @@index([capturadoEm(sort: Desc)])
 }

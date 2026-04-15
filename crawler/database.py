@@ -5,7 +5,7 @@ Responsabilities:
   - Connect to Supabase via DATABASE_URL env var
   - Upsert Disco records (insert or update metadata)
   - Insert HistoricoPreco records (always append, never update)
-  - Clean up HistoricoPreco records older than 90 days
+  - Clean up HistoricoPreco records older than 365 days
 """
 import os
 import socket
@@ -159,7 +159,7 @@ def limpar_historico_antigo(conn, days: int = 365) -> int:
         cur.execute(
             """
             DELETE FROM "HistoricoPreco"
-            WHERE "capturadoEm" < NOW() - INTERVAL '%s days'
+            WHERE "capturadoEm" < NOW() - (%s * INTERVAL '1 day')
             """,
             (days,)
         )

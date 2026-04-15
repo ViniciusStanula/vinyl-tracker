@@ -4,7 +4,7 @@ import SortBar from "@/components/SortBar";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { slugifyArtist } from "@/lib/slugify";
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +14,11 @@ type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
  * Returns all distinct artist name variants that map to the given slug,
  * plus a canonical display name (the one that looks cleanest — no commas,
  * prefer mixed-case over ALL CAPS).
+ *
+ * Wrapped with React cache() so that generateMetadata and the page component
+ * share a single DB query per request instead of issuing two identical ones.
  */
-async function resolveArtista(
+const resolveArtista = cache(async function resolveArtista(
   slug: string
 ): Promise<{ canonical: string; variants: string[] } | null> {
   const todos = await prisma.disco.findMany({
@@ -36,7 +39,7 @@ async function resolveArtista(
   })[0];
 
   return { canonical, variants };
-}
+});
 
 export async function generateMetadata({
   params,
