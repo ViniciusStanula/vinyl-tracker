@@ -23,7 +23,7 @@ jobs:
         run: pip install -r crawler/requirements.txt
 
       - name: Run crawler
-        run: python crawler/main.py --stale-max 200 --stale-workers 2
+        run: python crawler/main.py --max-pages 300 --stale-max 150 --stale-workers 4
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}

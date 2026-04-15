@@ -41,9 +41,10 @@ from utils import gerar_slug
 #  Configuration
 # ─────────────────────────────────────────────────────────────
 ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
-MAX_PAGES_DEFAULT  = 1000      # a página geral tem mais produtos que as de categoria
-MAX_PAGES_CATEGORY = 50        # limite por URL de categoria (Amazon raramente passa de 20)
-DELAY_SECONDS      = 3
+MAX_PAGES_DEFAULT    = 100     # main popularity URL — generous ceiling, early-exit handles the rest
+MAX_PAGES_CATEGORY   = 20      # per genre URL — Amazon rarely exceeds 15 pages
+DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi browser impersonation
+MAX_CATEGORY_WORKERS = 3       # parallel threads for genre category crawling
 MIN_PRICE_BRL      = 10.0
 
 # URL principal — todos os vinis ordenados por popularidade
@@ -287,9 +288,18 @@ def make_session():
 def warm_up(session) -> None:
     try:
         session.get("https://www.amazon.com.br/", timeout=15)
-        time.sleep(random.uniform(1.5, 3.0))
+        time.sleep(random.uniform(0.5, 1.5))
         session.get("https://www.amazon.com.br/CD-e-Vinil/b/?node=7791937011", timeout=15)
-        time.sleep(random.uniform(1.0, 2.0))
+        time.sleep(random.uniform(0.3, 0.8))
+    except Exception:
+        pass
+
+
+def _quick_warmup(session) -> None:
+    """Lightweight session init for parallel workers — just fetches the homepage."""
+    try:
+        session.get("https://www.amazon.com.br/", timeout=12)
+        time.sleep(random.uniform(0.3, 0.8))
     except Exception:
         pass
 
@@ -973,14 +983,40 @@ def crawl_single_url(
     return items, session
 
 
+def _crawl_one_category(cat_url: str, label: str, delay: float) -> list[dict]:
+    """
+    Thread worker: crawl a single genre category URL end-to-end.
+
+    Each worker gets its own session (different browser identity) and its own
+    local seen-ASINs set.  Global deduplication against the main URL results
+    happens on the calling thread after all futures complete.
+    """
+    session, _ = make_session()
+    # Stagger worker starts so all 3 don't hit Amazon simultaneously.
+    time.sleep(random.uniform(0.5, 3.0))
+    _quick_warmup(session)
+    local_seen: set[str] = set()
+    items, _ = crawl_single_url(
+        session,
+        lambda page, base=cat_url: build_category_page_url(base, page),
+        label,
+        MAX_PAGES_CATEGORY,
+        delay,
+        local_seen,
+        max_consecutive_empty=3,
+    )
+    return items
+
+
 def crawl(max_pages: int, delay: float) -> list[dict]:
     """
     Orchestrates the full crawl:
-      1. Main popularity-ranked URL (up to max_pages pages).
-      2. Each genre category URL (up to MAX_PAGES_CATEGORY pages each).
+      1. Main popularity-ranked URL (up to max_pages pages), sequential.
+      2. All genre category URLs crawled in parallel (MAX_CATEGORY_WORKERS
+         concurrent threads), each with its own session.
 
-    A single seen_asins set is shared across all sources so that an ASIN
-    found in the main crawl is never re-processed from a category crawl,
+    Final deduplication is done in-memory after merging results: ASINs
+    already seen in the main crawl are skipped from category results,
     preventing duplicate HistoricoPreco rows within the same run.
     """
     session, backend = make_session()
@@ -1000,34 +1036,43 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
         max_pages,
         delay,
         seen_asins,
-        max_consecutive_empty=20,
+        max_consecutive_empty=5,
     )
     all_items.extend(items)
     log.info("Main URL complete — %d products.", len(items))
 
-    # ── 2. Genre category URLs ─────────────────────────────────────────────
-    for i, cat_url in enumerate(CATEGORY_URLS, 1):
-        log.info("═" * 50)
-        log.info(
-            "Crawling category %d/%d  ...%s",
-            i, len(CATEGORY_URLS), cat_url[-50:],
-        )
-        time.sleep(random.uniform(2.0, 4.0))
+    # ── 2. Genre category URLs (parallel) ─────────────────────────────────
+    log.info("═" * 50)
+    log.info(
+        "Crawling %d category URLs with %d parallel workers...",
+        len(CATEGORY_URLS), MAX_CATEGORY_WORKERS,
+    )
+    cat_items_all: list[dict] = []
+    with ThreadPoolExecutor(max_workers=MAX_CATEGORY_WORKERS) as pool:
+        futures = {
+            pool.submit(_crawl_one_category, cat_url, f"cat-{i}", delay): i
+            for i, cat_url in enumerate(CATEGORY_URLS, 1)
+        }
+        for future in as_completed(futures):
+            cat_idx = futures[future]
+            try:
+                cat_items = future.result()
+                log.info("Category %d complete — %d products.", cat_idx, len(cat_items))
+                cat_items_all.extend(cat_items)
+            except Exception as exc:
+                log.warning("Category %d worker raised: %s", cat_idx, exc)
 
-        def _url_builder(page, _base=cat_url):
-            return build_category_page_url(_base, page)
-
-        items, session = crawl_single_url(
-            session,
-            _url_builder,
-            f"cat-{i}",
-            MAX_PAGES_CATEGORY,
-            delay,
-            seen_asins,
-            max_consecutive_empty=5,
-        )
-        all_items.extend(items)
-        log.info("Category %d complete — %d new products.", i, len(items))
+    # Merge category results, deduplicating against main-URL seen_asins.
+    new_from_categories = 0
+    for item in cat_items_all:
+        if item["asin"] not in seen_asins:
+            seen_asins.add(item["asin"])
+            all_items.append(item)
+            new_from_categories += 1
+    log.info(
+        "Categories done — %d new products (after dedup against main).",
+        new_from_categories,
+    )
 
     log.info("═" * 50)
     log.info("Full crawl done — %d unique products total.", len(all_items))
