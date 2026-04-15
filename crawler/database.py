@@ -49,6 +49,7 @@ def get_connection():
                 return psycopg2.connect(
                     database_url,
                     hostaddr=ipv4,
+                    options="-c statement_timeout=0",
                     keepalives=1,
                     keepalives_idle=60,
                     keepalives_interval=10,
@@ -59,6 +60,7 @@ def get_connection():
 
     return psycopg2.connect(
         database_url,
+        options="-c statement_timeout=0",
         keepalives=1,
         keepalives_idle=60,
         keepalives_interval=10,
@@ -236,10 +238,9 @@ def ensure_schema_extras(conn) -> None:
             return
 
         # Columns are missing — run DDL.
-        # lock_timeout prevents hanging when Vercel/other clients hold a read lock;
-        # statement_timeout = 0 disables Supabase's short per-statement cap.
+        # lock_timeout prevents hanging when Vercel/other clients hold a read lock.
+        # statement_timeout=0 is already set at the connection level via options.
         cur.execute("SET LOCAL lock_timeout = '10s'")
-        cur.execute("SET LOCAL statement_timeout = 0")
         cur.execute(
             """
             ALTER TABLE "Disco"
