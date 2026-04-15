@@ -339,13 +339,17 @@ def mark_stale_price(
 def mark_unavailable(conn, disco_id: str) -> None:
     """
     Marks a Disco record as unavailable (product page 404 or out-of-stock).
+    Also clears deal_score so the product stops appearing as a deal — we
+    cannot confirm the price is still valid when the page is unreachable.
     Does NOT insert a HistoricoPreco entry.
     """
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE "Disco"
-            SET disponivel = FALSE, "updatedAt" = NOW()
+            SET disponivel  = FALSE,
+                deal_score  = NULL,
+                "updatedAt" = NOW()
             WHERE id = %s
             """,
             (disco_id,),

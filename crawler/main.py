@@ -1226,6 +1226,12 @@ def main():
                     active_deals, args.delay, conn,
                     dry_run=False, max_workers=args.stale_workers,
                 )
+                # Re-score immediately after re-validation so that deals whose
+                # prices just went up (or products that became unavailable) are
+                # cleared before Phase 1 runs.  Without this, a deal that Phase 0
+                # invalidated would stay visible if Phase 1 returns no results and
+                # Phase 2.5 never executes.
+                score_deals(conn)
                 log.info("Phase 0 done: %.0fs", time.monotonic() - t0)
             else:
                 log.info("No active deals found — skipping re-validation.")
