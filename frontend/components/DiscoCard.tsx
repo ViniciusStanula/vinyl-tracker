@@ -118,9 +118,9 @@ export default function DiscoCard({
           {disco.artista}
         </Link>
 
-        <h3 className="text-zinc-100 text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] mt-0.5">
+        <h2 className="text-zinc-100 text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] mt-0.5">
           {disco.titulo}
-        </h3>
+        </h2>
 
         {/* Genre tag */}
         {disco.estilo && (
