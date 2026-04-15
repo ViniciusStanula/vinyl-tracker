@@ -1,44 +1,17 @@
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
-import DiscoCard from "@/components/DiscoCard";
+import { queryDiscos } from "@/lib/queryDiscos";
 import SortBar from "@/components/SortBar";
-import GridFadeIn from "@/components/GridFadeIn";
-import Pagination from "@/components/Pagination";
+import InfiniteGrid from "@/components/InfiniteGrid";
+import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import { Suspense } from "react";
 
 export const revalidate = 3600;
-
-// Configurable page size — 24 = 6 full rows at 4-col grid
-export const PAGE_SIZE = 24;
 
 export const metadata = {
   title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
   description:
     "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços atualizado 2× ao dia.",
 };
-
-type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
-
-type DiscoRow = {
-  id: string;
-  titulo: string;
-  artista: string;
-  slug: string;
-  estilo: string | null;
-  imgUrl: string | null;
-  url: string;
-  rating: string | null;    // pg returns DECIMAL columns as strings
-  precoAtual: string;       // pg returns DECIMAL columns as strings
-  mediaPreco: string;       // pg returns DECIMAL columns as strings
-  totalPrecos: string;      // pg returns INTEGER columns as strings via $queryRaw
-  desconto: string;         // computed in CTE, returned as string
-};
-
-/** Escape LIKE meta-characters in user-supplied text. */
-function likePct(term: string): string {
-  return `%${term.replace(/[%_\\]/g, "\\$&")}%`;
-}
 
 export default async function HomePage({
   searchParams,
@@ -59,121 +32,19 @@ export default async function HomePage({
     precoMax: precoMaxStr,
   } = await searchParams;
 
-  const page = Math.max(1, parseInt(pageStr ?? "1", 10));
-  const searchTerm = q?.trim() ?? "";
-  const precoMax = precoMaxStr ? Number(precoMaxStr) : null;
+  const page        = Math.max(1, parseInt(pageStr ?? "1", 10));
+  const searchTerm  = q?.trim() ?? "";
+  const precoMax    = precoMaxStr ? Number(precoMaxStr) : null;
 
-  // ── WHERE fragments ────────────────────────────────────────────────────────
-  // Values interpolated into Prisma.sql are parameterised (safe from injection).
-  const whereSearch = searchTerm
-    ? Prisma.sql`AND (d.titulo ILIKE ${likePct(searchTerm)} OR d.artista ILIKE ${likePct(searchTerm)})`
-    : Prisma.sql``;
-
-  const whereArtista = artista
-    ? Prisma.sql`AND d.artista = ${artista}`
-    : Prisma.sql``;
-
-  const wherePrecoMax =
-    precoMax !== null && !isNaN(precoMax)
-      ? Prisma.sql`AND hp_latest."precoBrl" <= ${precoMax}`
-      : Prisma.sql``;
-
-  // ── ORDER BY (mapped from a fixed enum — no injection risk) ────────────────
-  const orderByClause = ((): Prisma.Sql => {
-    switch (sort as Sort) {
-      case "menor-preco": return Prisma.sql`"precoAtual" ASC`;
-      case "maior-preco": return Prisma.sql`"precoAtual" DESC`;
-      case "avaliados":   return Prisma.sql`COALESCE(rating::numeric, 0) DESC`;
-      case "az":          return Prisma.sql`titulo ASC`;
-      case "desconto":
-      default:            return Prisma.sql`desconto DESC NULLS LAST`;
-    }
-  })();
-
-  // ── Run count + data queries in parallel ───────────────────────────────────
-  const [countResult, rows] = await Promise.all([
-    // COUNT: join latest price so we can filter by precoMax
-    prisma.$queryRaw<[{ total: bigint }]>`
-      SELECT COUNT(*) AS total
-      FROM   "Disco" d
-      INNER JOIN LATERAL (
-        SELECT "precoBrl"
-        FROM   "HistoricoPreco"
-        WHERE  "discoId" = d.id
-        ORDER  BY "capturadoEm" DESC
-        LIMIT  1
-      ) hp_latest ON true
-      WHERE  TRUE ${whereSearch} ${whereArtista} ${wherePrecoMax}
-    `,
-
-    // DATA: paginated, sorted, with discount computed in-DB
-    prisma.$queryRaw<DiscoRow[]>`
-      WITH base AS (
-        SELECT
-          d.id,
-          d.titulo,
-          d.artista,
-          d.slug,
-          d.estilo,
-          d."imgUrl",
-          d.url,
-          d.rating,
-          hp_latest."precoBrl"                              AS "precoAtual",
-          COALESCE(hp_avg.media, hp_latest."precoBrl")      AS "mediaPreco",
-          COALESCE(hp_avg.cnt, 0)::INTEGER                  AS "totalPrecos"
-        FROM   "Disco" d
-        INNER JOIN LATERAL (
-          SELECT "precoBrl"
-          FROM   "HistoricoPreco"
-          WHERE  "discoId" = d.id
-          ORDER  BY "capturadoEm" DESC
-          LIMIT  1
-        ) hp_latest ON true
-        LEFT JOIN (
-          SELECT
-            "discoId",
-            AVG("precoBrl")      AS media,
-            COUNT(*)::INTEGER    AS cnt
-          FROM   "HistoricoPreco"
-          WHERE  "capturadoEm" >= NOW() - INTERVAL '30 days'
-          GROUP  BY "discoId"
-        ) hp_avg ON hp_avg."discoId" = d.id
-        WHERE TRUE ${whereSearch} ${whereArtista} ${wherePrecoMax}
-      )
-      SELECT
-        *,
-        CASE WHEN "mediaPreco" > 0
-          THEN ("mediaPreco" - "precoAtual") / "mediaPreco"
-          ELSE 0
-        END AS desconto
-      FROM  base
-      ORDER BY ${orderByClause}
-      LIMIT  ${PAGE_SIZE}
-      OFFSET ${(page - 1) * PAGE_SIZE}
-    `,
-  ]);
-
-  const total = Number(countResult[0].total);
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-
-  const processados = rows.map((row) => {
-    const precoAtual = Number(row.precoAtual);
-    const mediaPreco = Number(row.mediaPreco);
-    const totalPrecos = Number(row.totalPrecos);
-    const desconto = Number(row.desconto);
-    return {
-      ...row,
-      rating:
-        row.rating !== null && row.rating !== undefined
-          ? Number(row.rating)
-          : null,
-      precoAtual,
-      mediaPreco,
-      emPromocao: totalPrecos >= 3 && desconto >= 0.1,
-      desconto,
-    };
+  const { items, total, totalPages } = await queryDiscos({
+    searchTerm,
+    sort,
+    artista,
+    precoMax,
+    page,
   });
+
+  const currentPage = Math.min(page, totalPages);
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
@@ -221,32 +92,34 @@ export default async function HomePage({
         )}
       </div>
 
-      {/* Grid — keyed on filter+page state so GridFadeIn remounts on each change */}
-      {processados.length > 0 ? (
-        <GridFadeIn
-          key={`${sort}-${q ?? ""}-${artista ?? ""}-${currentPage}`}
-        >
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {processados.map((disco, index) => (
-              <DiscoCard key={disco.id} disco={disco} priority={index < 6} />
-            ))}
-          </div>
-        </GridFadeIn>
-      ) : (
-        <div className="text-center py-24 text-zinc-600">
-          <p className="text-4xl mb-4">🎵</p>
-          <p>Nenhum disco encontrado.</p>
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination
+      {/* Grid + Pagination / Infinite scroll */}
+      {items.length > 0 ? (
+        <InfiniteGrid
+          initialItems={items}
           currentPage={currentPage}
           totalPages={totalPages}
           searchParams={{ q, sort, artista, precoMax: precoMaxStr }}
+          animationKey={`${sort}-${q ?? ""}-${artista ?? ""}-${currentPage}`}
         />
+      ) : (
+        <div className="text-center py-24 text-zinc-600">
+          <p className="text-5xl mb-4">🎵</p>
+          <p className="text-zinc-400 text-lg font-medium mb-2">
+            Nenhum disco encontrado
+          </p>
+          <p className="text-zinc-600 text-sm mb-6">
+            Tente ajustar os filtros ou buscar por outro artista.
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm px-5 py-2.5 rounded-full transition-colors"
+          >
+            Ver todos os discos
+          </Link>
+        </div>
       )}
+
+      <BackToTop />
     </main>
   );
 }
