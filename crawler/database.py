@@ -65,7 +65,7 @@ def get_connection():
                 return psycopg2.connect(
                     database_url,
                     hostaddr=ipv4,
-                    options="-c statement_timeout=0",
+                    options="-c statement_timeout=0 -c idle_in_transaction_session_timeout=60000",
                     keepalives=1,
                     keepalives_idle=60,
                     keepalives_interval=10,
@@ -76,7 +76,7 @@ def get_connection():
 
     return psycopg2.connect(
         database_url,
-        options="-c statement_timeout=0",
+        options="-c statement_timeout=0 -c idle_in_transaction_session_timeout=60000",
         keepalives=1,
         keepalives_idle=60,
         keepalives_interval=10,
