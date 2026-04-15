@@ -12,10 +12,26 @@ import socket
 import logging
 import urllib.parse
 
+import contextlib
+
 import psycopg2
 import psycopg2.extras
 
 log = logging.getLogger(__name__)
+
+
+@contextlib.contextmanager
+def _cursor(conn):
+    """
+    Opens a cursor and immediately disables the statement timeout for the
+    current transaction.  Supabase's PgBouncer (transaction mode) resets
+    session-level settings between transactions, so the only reliable way
+    to override the role-level statement_timeout is with SET LOCAL inside
+    every transaction block.
+    """
+    with _cursor(conn) as cur:
+        cur.execute("SET LOCAL statement_timeout = 0")
+        yield cur
 
 
 def get_connection():
@@ -82,7 +98,7 @@ def upsert_batch(conn, items: list[dict]) -> int:
     if not items:
         return 0
 
-    with conn.cursor() as cur:
+    with _cursor(conn) as cur:
         # ── Step 1: upsert Disco metadata ────────────────────────────────
         # ON CONFLICT (asin) → update mutable fields only.
         # slug and createdAt are never overwritten once set.
@@ -219,7 +235,7 @@ def ensure_schema_extras(conn) -> None:
       Disco.history_days INTEGER
         — Number of days spanned by the product's price history.
     """
-    with conn.cursor() as cur:
+    with _cursor(conn) as cur:
         # Fast path: check the catalog first. After the first successful run
         # all columns exist and we can skip DDL entirely (no lock needed).
         cur.execute(
@@ -279,7 +295,7 @@ def fetch_active_deals(conn, limit: int = 500) -> list[dict]:
 
     Each returned dict has: asin, id, titulo.
     """
-    with conn.cursor() as cur:
+    with _cursor(conn) as cur:
         cur.execute(
             """
             SELECT asin, id, titulo
@@ -309,7 +325,7 @@ def fetch_stale_records(
 
     Each returned dict has: asin, id, titulo.
     """
-    with conn.cursor() as cur:
+    with _cursor(conn) as cur:
         cur.execute(
             """
             SELECT asin, id, titulo
@@ -345,7 +361,7 @@ def mark_stale_price(
     If review_count is provided it overwrites the stored value; otherwise the
     existing count is preserved via COALESCE.
     """
-    with conn.cursor() as cur:
+    with _cursor(conn) as cur:
         cur.execute(
             """
             INSERT INTO "HistoricoPreco" (id, "discoId", "precoBrl", "capturadoEm")
@@ -379,7 +395,7 @@ def mark_unavailable(conn, disco_id: str) -> None:
     cannot confirm the price is still valid when the page is unreachable.
     Does NOT insert a HistoricoPreco entry.
     """
-    with conn.cursor() as cur:
+    with _cursor(conn) as cur:
         cur.execute(
             """
             UPDATE "Disco"
@@ -402,7 +418,7 @@ def limpar_historico_antigo(conn, days: int = 365) -> int:
     Stay within the free tier (500MB) or upgrade to Supabase Pro for more.
     Returns the number of rows deleted.
     """
-    with conn.cursor() as cur:
+    with _cursor(conn) as cur:
         cur.execute(
             """
             DELETE FROM "HistoricoPreco"
