@@ -15,11 +15,13 @@ Schedule (GitHub Actions):
 Dependencies:
     pip install requests beautifulsoup4 lxml curl_cffi psycopg2-binary python-slugify
 """
+import os
 import re
 import time
 import random
 import logging
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 from database import (
@@ -36,7 +38,7 @@ from utils import gerar_slug
 # ─────────────────────────────────────────────────────────────
 #  Configuration
 # ─────────────────────────────────────────────────────────────
-ASSOCIATE_TAG      = "groovesnrecor-20"
+ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
 MAX_PAGES_DEFAULT  = 1000      # a página geral tem mais produtos que as de categoria
 MAX_PAGES_CATEGORY = 50        # limite por URL de categoria (Amazon raramente passa de 20)
 DELAY_SECONDS      = 3
@@ -1033,23 +1035,65 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
 # ─────────────────────────────────────────────────────────────
 #  Stale-records check
 # ─────────────────────────────────────────────────────────────
+def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
+    """
+    Worker function: fetches a single product page in its own session.
+    Called from a ThreadPoolExecutor — must be stateless w.r.t. the DB
+    connection (all DB writes happen back on the main thread).
+
+    Returns a result dict with keys: record, outcome, price, review_count.
+    outcome is one of: "updated", "unavailable", "error".
+    """
+    # Stagger worker starts so they don't fire simultaneously.
+    time.sleep(worker_idx * random.uniform(1.0, 2.0))
+
+    url = affiliate_link(record["asin"])
+    session, _ = make_session()
+    soup, status, _ = fetch_product_page(session, url)
+
+    result = {"record": record, "outcome": "error", "price": None, "review_count": None}
+
+    if status == 404:
+        result["outcome"] = "unavailable"
+    elif soup is None:
+        result["outcome"] = "error"
+    else:
+        price, in_stock, review_count = parse_product_page(soup)
+        if not in_stock:
+            result["outcome"] = "unavailable"
+        elif price is None:
+            result["outcome"] = "error"
+        else:
+            result["outcome"] = "updated"
+            result["price"] = price
+            result["review_count"] = review_count
+
+    # Per-worker delay so the combined request rate stays at ≤ max_workers/delay req/s.
+    time.sleep(delay + random.uniform(0.5, 1.5))
+    return result
+
+
 def crawl_stale_records(
-    session,
     stale: list[dict],
     delay: float,
     conn,
     dry_run: bool,
+    max_workers: int = 2,
 ) -> tuple[int, int, int]:
     """
-    Fetches individual product pages for records that were absent from the
-    category crawl and updates the database accordingly.
+    Fetches individual product pages for records absent from the category crawl
+    and updates the database accordingly.
+
+    Uses ThreadPoolExecutor(max_workers) to overlap I/O waits.  DB writes are
+    performed sequentially on the calling thread so no connection locking is
+    needed (psycopg2 connections are not thread-safe).
 
     For each stale record:
       - HTTP 404            → mark_unavailable()
       - Out-of-stock page   → mark_unavailable()
-      - In-stock + price    → mark_stale_price()  (new HistoricoPreco row)
-      - In-stock, no price  → logged as a warning; DB not touched this run
-      - Transient error     → logged; DB not touched (will retry next run)
+      - In-stock + price    → mark_stale_price()
+      - In-stock, no price  → warning; DB not touched this run
+      - Transient error     → warning; DB not touched (will retry next run)
 
     Returns (updated, unavailable, errors).
     """
@@ -1057,53 +1101,46 @@ def crawl_stale_records(
     updated = unavailable = errors = 0
     total = len(stale)
 
-    for i, record in enumerate(stale, 1):
-        asin    = record["asin"]
-        disco_id = record["id"]
-        label   = record.get("titulo", "")[:50]
-        url     = affiliate_link(asin)
+    log.info("Stale-records: %d records, %d parallel workers", total, max_workers)
 
-        log.info("[stale %d/%d] ASIN %s — %s", i, total, asin, label)
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {
+            pool.submit(_fetch_one_stale, record, delay, idx % max_workers): record
+            for idx, record in enumerate(stale)
+        }
 
-        soup, status, session = fetch_product_page(session, url)
+        completed = 0
+        for future in as_completed(futures):
+            completed += 1
+            try:
+                res = future.result()
+            except Exception as exc:
+                log.warning("[stale %d/%d] Worker raised: %s", completed, total, exc)
+                errors += 1
+                continue
 
-        if status == 404:
-            log.info("  → 404 — marking unavailable")
-            if not dry_run:
-                mark_unavailable(conn, disco_id)
-            unavailable += 1
+            record   = res["record"]
+            outcome  = res["outcome"]
+            asin     = record["asin"]
+            disco_id = record["id"]
+            label    = record.get("titulo", "")[:50]
 
-        elif soup is None:
-            # Transient error (rate-limit, network, CAPTCHA) — skip silently
-            log.warning("  → Fetch failed (status=%s) — skipping this run", status)
-            errors += 1
+            log.info(
+                "[stale %d/%d] ASIN %s — %s → %s",
+                completed, total, asin, label, outcome,
+            )
 
-        else:
-            price, in_stock, review_count = parse_product_page(soup)
-
-            if not in_stock:
-                log.info("  → Out of stock — marking unavailable")
+            if outcome == "unavailable":
                 if not dry_run:
                     mark_unavailable(conn, disco_id)
                 unavailable += 1
-
-            elif price is None:
-                log.warning("  → In stock but price not found — skipping DB update")
-                errors += 1
-
-            else:
-                log.info(
-                    "  → In stock  R$ %.2f  reviews=%s — inserting price",
-                    price, review_count,
-                )
+            elif outcome == "updated":
+                log.info("  R$ %.2f  reviews=%s", res["price"], res["review_count"])
                 if not dry_run:
-                    mark_stale_price(conn, disco_id, price, now, review_count)
+                    mark_stale_price(conn, disco_id, res["price"], now, res["review_count"])
                 updated += 1
-
-        if i < total:
-            sleep_time = delay + random.uniform(0.5, 1.5)
-            log.debug("  Waiting %.1fs...", sleep_time)
-            time.sleep(sleep_time)
+            else:
+                errors += 1
 
     log.info(
         "Stale-records check done — %d updated | %d unavailable | %d skipped",
@@ -1122,8 +1159,12 @@ def parse_args():
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument(
-        "--stale-max", type=int, default=500, metavar="N",
-        help="Max stale records to re-fetch per run (0 = unlimited, default: 500)",
+        "--stale-max", type=int, default=200, metavar="N",
+        help="Max stale records to re-fetch per run (0 = unlimited, default: 200)",
+    )
+    parser.add_argument(
+        "--stale-workers", type=int, default=2, metavar="N",
+        help="Parallel workers for stale-records fetching (default: 2)",
     )
     parser.add_argument(
         "--skip-stale", action="store_true",
@@ -1144,7 +1185,11 @@ def main():
              args.max_pages, args.delay, args.dry_run)
     log.info("═" * 60)
 
+    t_start = time.monotonic()
+
+    t0 = time.monotonic()
     all_items = crawl(args.max_pages, args.delay)
+    log.info("Phase crawl: %.0fs", time.monotonic() - t0)
 
     if not all_items:
         log.warning("No products found. Nothing to write.")
@@ -1160,8 +1205,9 @@ def main():
     conn = get_connection()
     try:
         # ── Normal crawl results ───────────────────────────────────────────
+        t0 = time.monotonic()
         written = upsert_batch(conn, all_items)
-        log.info("Upserted %d records to PostgreSQL.", written)
+        log.info("Phase upsert: %.0fs — %d records written.", time.monotonic() - t0, written)
 
         # ── Stale-records check ────────────────────────────────────────────
         if args.skip_stale:
@@ -1180,17 +1226,23 @@ def main():
             )
 
             if stale:
-                session, _ = make_session()
-                crawl_stale_records(session, stale, args.delay, conn, dry_run=False)
+                t0 = time.monotonic()
+                crawl_stale_records(
+                    stale, args.delay, conn,
+                    dry_run=False, max_workers=args.stale_workers,
+                )
+                log.info("Phase stale: %.0fs", time.monotonic() - t0)
             else:
                 log.info("No stale records — all known records appeared in this crawl.")
 
         # ── History cleanup ────────────────────────────────────────────────
+        t0 = time.monotonic()
         limpar_historico_antigo(conn)
-        log.info("History cleanup complete.")
+        log.info("Phase cleanup: %.0fs", time.monotonic() - t0)
     finally:
         conn.close()
 
+    log.info("Total runtime: %.0fs", time.monotonic() - t_start)
     log.info("Done. ✓")
 
 

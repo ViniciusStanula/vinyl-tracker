@@ -1,6 +1,6 @@
-requests
-beautifulsoup4
-lxml
-curl_cffi
-psycopg2-binary
-python-slugify
+requests==2.33.1
+beautifulsoup4==4.14.3
+lxml==6.0.4
+curl_cffi==0.15.0
+psycopg2-binary==2.9.11
+python-slugify==8.0.4

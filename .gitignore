@@ -17,3 +17,6 @@ __pycache__/
 crawler/vinyl_crawler.log
 
 .vercel
+
+# Claude Code local settings (may contain credentials in Bash permission strings)
+.claude/
