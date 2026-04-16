@@ -431,13 +431,24 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
                 in_stock = True
                 break
 
-    # Hard out-of-stock override: explicit widget IDs Amazon uses
-    for sel in ("#outOfStock", "#soldByThirdParty"):
-        el = soup.select_one(sel)
-        if el and el.get_text(strip=True):
-            text = el.get_text(" ", strip=True).lower()
-            if any(kw in text for kw in _OUTOFSTOCK_KW):
-                in_stock = False
+    # Qualified buy box pin: if Amazon renders #qualifiedBuybox the product has
+    # an active offer and is definitively in stock.  Set in_stock=True now so
+    # that no downstream check (hard-override selectors, unqualified-buybox
+    # detection, etc.) can flip it back to False on a page that is clearly
+    # purchasable.
+    if soup.select_one("#qualifiedBuybox"):
+        in_stock = True
+
+    # Hard out-of-stock override: explicit widget IDs Amazon uses.
+    # Only applied when #qualifiedBuybox is absent — if the qualified buy box
+    # is present these selectors are stale template shells, not real OOS signals.
+    if not soup.select_one("#qualifiedBuybox"):
+        for sel in ("#outOfStock", "#soldByThirdParty"):
+            el = soup.select_one(sel)
+            if el and el.get_text(strip=True):
+                text = el.get_text(" ", strip=True).lower()
+                if any(kw in text for kw in _OUTOFSTOCK_KW):
+                    in_stock = False
 
     # Unqualified buy box: product is listed but sold only by third-party
     # sellers — no price is rendered in the page HTML (only a "Ver todas as
@@ -447,8 +458,9 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
     # NOTE: check #unqualifiedBuyBox (inner widget), NOT #unqualifiedBuyBox_feature_div
     # (outer wrapper). Amazon renders the _feature_div shell on every page even when
     # empty; the inner #unqualifiedBuyBox div only appears when the page genuinely
-    # has no qualified seller.
-    if soup.select_one("#unqualifiedBuyBox"):
+    # has no qualified seller.  Also skip this check when #qualifiedBuybox is
+    # present — the two are mutually exclusive and the qualified box wins.
+    if soup.select_one("#unqualifiedBuyBox") and not soup.select_one("#qualifiedBuybox"):
         log.debug(
             "parse_product_page: unqualified buy box detected "
             "(third-party sellers only) — marking unavailable"
