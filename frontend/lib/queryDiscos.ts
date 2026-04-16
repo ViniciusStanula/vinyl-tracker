@@ -130,7 +130,7 @@ export async function queryDiscos(params: {
               FROM   "HistoricoPreco"
               WHERE  "discoId" = d.id
                 AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
-              ORDER  BY "capturadoEm" ASC
+              ORDER  BY "capturadoEm" DESC
               LIMIT  10
             ) sp
           ) AS sparkline
