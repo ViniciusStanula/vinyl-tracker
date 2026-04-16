@@ -310,8 +310,9 @@ def fetch_active_deals(conn, limit: int = 500) -> list[dict]:
 
     A deal is active when deal_score IS NOT NULL — i.e. the deal scorer
     (deal_scorer.score_deals) has evaluated the product and assigned a tier.
-    Results are ordered by deal_score DESC so the highest-quality deals are
-    re-validated first in Phase 0.
+    All active deals are returned on every call (no recency filter) because
+    deal prices can change within minutes. Results are ordered by deal_score
+    DESC so the highest-quality deals are re-validated first in Phase 0.
 
     Each returned dict has: asin, id, titulo.
     """
@@ -321,10 +322,6 @@ def fetch_active_deals(conn, limit: int = 500) -> list[dict]:
             SELECT asin, id, COALESCE(titulo, '') AS titulo
             FROM "Disco"
             WHERE deal_score IS NOT NULL
-              AND (
-                last_crawled_at IS NULL
-                OR last_crawled_at < NOW() - INTERVAL '4 hours'
-              )
             ORDER BY deal_score DESC, "updatedAt" ASC
             LIMIT %s
             """,
