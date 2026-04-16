@@ -216,10 +216,16 @@ def score_deals(conn) -> dict:
                 SELECT
                     h."discoId",
                     COUNT(*)                                           AS total_points,
-                    CEIL(
-                        EXTRACT(EPOCH FROM
-                            (MAX(h."capturadoEm") - MIN(h."capturadoEm"))
-                        ) / 86400.0
+                    -- GREATEST(1, ...) prevents history_days=0 when all recorded
+                    -- prices share the same timestamp (e.g. batch import or same-run
+                    -- multi-insert).  Any product with at least one price is treated
+                    -- as having 1 day of history so it isn't silently excluded.
+                    GREATEST(1,
+                        CEIL(
+                            EXTRACT(EPOCH FROM
+                                (MAX(h."capturadoEm") - MIN(h."capturadoEm"))
+                            ) / 86400.0
+                        )
                     )::INTEGER                                         AS history_days,
                     MIN(h."precoBrl")::float                           AS low_all_time,
                     AVG(h."precoBrl")::float                           AS avg_all_time,
@@ -257,11 +263,17 @@ def score_deals(conn) -> dict:
                 s.low_all_time,
                 s.low_30d,
                 s.avg_90d,
-                -- Adaptive avg_30d: use all-time average when history is < 30 days
-                CASE
-                    WHEN s.history_days >= 30 THEN s.avg_30d_strict
-                    ELSE s.avg_all_time
-                END                            AS avg_30d
+                -- Adaptive avg_30d: prefer the 30-day strict window; fall back to
+                -- all-time average when avg_30d_strict is NULL.  This handles two
+                -- cases cleanly:
+                --   a) history_days < 30 → avg_30d_strict may be non-NULL (prices
+                --      were recorded recently but not yet 30 days ago); COALESCE
+                --      returns it directly, which is the correct reference price.
+                --   b) history_days >= 30 but no prices in the last 30 days (stale
+                --      product, e.g. unavailable for a month) → avg_30d_strict is
+                --      NULL; fall back to avg_all_time so scoring still runs rather
+                --      than converting NULL → 0.0 and silently skipping the product.
+                COALESCE(s.avg_30d_strict, s.avg_all_time) AS avg_30d
             FROM "Disco" d
             INNER JOIN stats  s ON s."discoId" = d.id
             INNER JOIN latest l ON l."discoId" = d.id

@@ -123,10 +123,13 @@ def affiliate_link(asin: str) -> str:
 def parse_price_br(text: str) -> float | None:
     if not text:
         return None
-    text = re.sub(r"R\$\s*|\xa0|\s", "", text)
-    text = text.replace(".", "").replace(",", ".")
-    m = re.search(r"\d+\.?\d*", text)
-    return float(m.group()) if m else None
+    cleaned = re.sub(r"R\$\s*|\xa0|\s", "", text)
+    cleaned = cleaned.replace(".", "").replace(",", ".")
+    m = re.search(r"\d+\.?\d*", cleaned)
+    if m is None:
+        log.debug("parse_price_br: no numeric value found in %r (cleaned: %r)", text, cleaned)
+        return None
+    return float(m.group())
 
 
 def is_vinyl(title: str, card=None) -> bool:
@@ -577,6 +580,7 @@ def extract_artist(card) -> str:
         text = re.sub(r"\s*\|\s*\d{4}\b.*$", "", text).strip()
         if _is_plausible_artist(text):
             return text
+    log.debug("extract_artist: no plausible artist found; returning fallback")
     return _UNKNOWN_ARTIST
 
 
@@ -792,7 +796,7 @@ def extract_rating(card) -> float | None:
                     if 0.0 <= value <= 5.0:
                         return round(value, 1)
                 except ValueError:
-                    pass
+                    log.debug("extract_rating: failed to parse %r as float", raw)
     return None  # None em vez de "" — o banco aceita NULL
 
 
@@ -845,6 +849,8 @@ def extract_image(card) -> str:
                 )
                 if best:
                     url = best[0]
+                else:
+                    log.debug("extract_image: srcset present but no valid 2-part entries found")
         if url and not url.startswith("data:"):
             url = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", url)
             return url
@@ -1109,6 +1115,11 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
         if not in_stock:
             result["outcome"] = "unavailable"
         elif price is None:
+            log.info(
+                "Stale check: ASIN %s is in-stock but price could not be parsed"
+                " — skipping DB update this run",
+                record["asin"],
+            )
             result["outcome"] = "error"
         else:
             result["outcome"] = "updated"
@@ -1357,6 +1368,23 @@ def main():
                         dry_run=False, max_workers=args.stale_workers,
                     )
                     log.info("Phase 3 stale: %.0fs", time.monotonic() - t0)
+
+                    # Re-score after Phase 3: stale-records can change prices and
+                    # availability, so deal scores may have changed.  Without this,
+                    # products that came back in-stock (or dropped in price) during
+                    # Phase 3 won't receive deal badges until the next full run.
+                    log.info("═" * 60)
+                    t0 = time.monotonic()
+                    scoring_summary = score_deals(conn)
+                    log.info(
+                        "Phase 3.5 scoring: %.0fs — flagged=%d | maintained=%d"
+                        " | cleared=%d | cooldown_skipped=%d",
+                        time.monotonic() - t0,
+                        scoring_summary["flagged"],
+                        scoring_summary["scored"],
+                        scoring_summary["cleared"],
+                        scoring_summary["skipped"],
+                    )
                 else:
                     log.info("No stale records — all known records appeared in this crawl.")
 

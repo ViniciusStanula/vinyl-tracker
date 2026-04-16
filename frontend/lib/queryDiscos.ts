@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 
 export const PAGE_SIZE = 24;
 
-type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
+type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az" | "deals";
 
 /** Escape LIKE meta-characters in user-supplied text. */
 function likePct(term: string): string {
@@ -16,6 +16,7 @@ function buildOrderBy(sort: string): Prisma.Sql {
     case "maior-preco": return Prisma.sql`"precoAtual" DESC`;
     case "avaliados":   return Prisma.sql`COALESCE(rating::numeric, 0) DESC`;
     case "az":          return Prisma.sql`titulo ASC`;
+    case "deals":       return Prisma.sql`deal_score DESC NULLS LAST, desconto DESC NULLS LAST`;
     case "desconto":
     default:            return Prisma.sql`desconto DESC NULLS LAST, COALESCE("reviewCount", 0) DESC`;
   }
@@ -168,10 +169,18 @@ export async function queryDiscos(params: {
   const total = Number(countResult[0].total);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const items = rows.map((row): ProcessedDisco => {
+  const items = rows.flatMap((row): ProcessedDisco[] => {
     const precoAtual  = Number(row.precoAtual);
     const mediaPreco  = Number(row.mediaPreco);
     const desconto    = Number(row.desconto);
+
+    // Guard against NaN from corrupted DB values — Number("abc") === NaN which
+    // would propagate silently through all price calculations and UI rendering.
+    if (isNaN(precoAtual) || isNaN(mediaPreco) || isNaN(desconto)) {
+      // eslint-disable-next-line no-console
+      console.warn("[queryDiscos] NaN numeric field for disco id=%s — skipping row", row.id);
+      return [];
+    }
 
     let sparkline: number[] = [];
     if (Array.isArray(row.sparkline)) {
@@ -217,7 +226,7 @@ export async function queryDiscos(params: {
       dealScore,
       confidenceLevel: row.confidenceLevel ?? null,
       historyDays:    row.historyDays !== null && row.historyDays !== undefined ? Number(row.historyDays) : null,
-    };
+    }];
   });
 
   return { items, total, totalPages };

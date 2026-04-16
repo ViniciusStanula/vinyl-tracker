@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTransition, useState, useEffect } from "react";
 
 const SORT_OPTIONS = [
+  { label: "Melhores Ofertas", value: "deals" },
   { label: "Maior Desconto", value: "desconto" },
   { label: "Menor Preço", value: "menor-preco" },
   { label: "Maior Preço", value: "maior-preco" },

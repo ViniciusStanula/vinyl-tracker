@@ -318,9 +318,13 @@ def fetch_active_deals(conn, limit: int = 500) -> list[dict]:
     with _cursor(conn) as cur:
         cur.execute(
             """
-            SELECT asin, id, titulo
+            SELECT asin, id, COALESCE(titulo, '') AS titulo
             FROM "Disco"
             WHERE deal_score IS NOT NULL
+              AND (
+                last_crawled_at IS NULL
+                OR last_crawled_at < NOW() - INTERVAL '4 hours'
+              )
             ORDER BY deal_score DESC, "updatedAt" ASC
             LIMIT %s
             """,
@@ -348,7 +352,7 @@ def fetch_stale_records(
     with _cursor(conn) as cur:
         cur.execute(
             """
-            SELECT asin, id, titulo
+            SELECT asin, id, COALESCE(titulo, '') AS titulo
             FROM "Disco"
             WHERE asin != ALL(%s)
             ORDER BY "updatedAt" ASC
