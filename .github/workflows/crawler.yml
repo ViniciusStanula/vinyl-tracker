@@ -2,13 +2,19 @@ name: Vinyl Crawler
 
 on:
   schedule:
-    - cron: '0 * * * *'   # every hour — adjust to '0 */2 * * *' for every-2h
-  workflow_dispatch:       # manual trigger from the GitHub Actions UI
+    - cron: '0 */2 * * *'  # every 2 hours — expanded category list needs more runtime
+  workflow_dispatch:        # manual trigger from the GitHub Actions UI
+
+# Prevent concurrent runs: if a previous crawl is still going when the next
+# one is scheduled, let the in-progress run finish rather than cancelling it.
+concurrency:
+  group: crawler
+  cancel-in-progress: false
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 60    # hard kill if something stalls
+    timeout-minutes: 120   # expanded from 60 — category crawl now covers 69 URLs
     permissions:
       issues: write        # needed for the "open issue on failure" step
 
