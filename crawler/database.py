@@ -153,21 +153,24 @@ def upsert_batch(conn, items: list[dict]) -> int:
         )
         asin_to_id = {row[0]: row[1] for row in cur.fetchall()}
 
-        # ── Step 3: skip HistoricoPreco writes when price is unchanged ────
-        # Fetch the most recent recorded price for every disco in this batch.
-        # A single DISTINCT ON query is cheaper than N individual lookups.
+        # ── Step 3: write HistoricoPreco, deduplicating within a 23-hour window ─
+        # Always record a price at least once every 24 hours, even when unchanged.
+        # This builds up data points for the deal scorer's confidence tiers and
+        # lets the frontend sparkline show stable price periods as flat lines.
+        # Within the same 23-hour window, skip writes where the price is identical
+        # to avoid inflating the table with redundant hourly duplicates.
         disco_ids = list(asin_to_id.values())
         cur.execute(
             """
-            SELECT DISTINCT ON ("discoId") "discoId", "precoBrl"
+            SELECT DISTINCT ON ("discoId") "discoId", "precoBrl", "capturadoEm"
             FROM "HistoricoPreco"
             WHERE "discoId" = ANY(%s)
             ORDER BY "discoId", "capturadoEm" DESC
             """,
             (disco_ids,),
         )
-        last_price: dict[str, float] = {
-            str(row[0]): float(row[1]) for row in cur.fetchall()
+        last_entry: dict[str, tuple[float, object]] = {
+            str(row[0]): (float(row[1]), row[2]) for row in cur.fetchall()
         }
 
         preco_rows = []
@@ -176,16 +179,25 @@ def upsert_batch(conn, items: list[dict]) -> int:
             disco_id = asin_to_id.get(item["asin"])
             if disco_id is None:
                 continue
-            new_price = item["precoBrl"]
-            prev = last_price.get(str(disco_id))
-            if prev is not None and abs(new_price - prev) < 0.01:
-                skipped_unchanged += 1
-                continue
-            preco_rows.append((str(disco_id), new_price, item["capturadoEm"]))
+            new_price    = item["precoBrl"]
+            captured_at  = item["capturadoEm"]
+            prev         = last_entry.get(str(disco_id))
+            if prev is not None:
+                prev_price, prev_time = prev
+                price_unchanged    = abs(new_price - prev_price) < 0.01
+                try:
+                    age_seconds = (captured_at - prev_time).total_seconds()
+                except TypeError:
+                    age_seconds = 0
+                recorded_today = age_seconds < 23 * 3600
+                if price_unchanged and recorded_today:
+                    skipped_unchanged += 1
+                    continue
+            preco_rows.append((str(disco_id), new_price, captured_at))
 
         if skipped_unchanged:
             log.debug(
-                "Skipped %d unchanged prices (out of %d items).",
+                "Skipped %d same-day unchanged prices (out of %d items).",
                 skipped_unchanged, len(items),
             )
 

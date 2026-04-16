@@ -86,7 +86,7 @@ log = logging.getLogger(__name__)
 DEAL_THRESHOLD_PCT    = 0.10   # 10% below average to qualify
 MIN_ABSOLUTE_DROP     = 2.00   # minimum R$2 absolute price drop
 DEAL_COOLDOWN_HOURS   = 6      # hours before re-flagging the same product
-MIN_HISTORY_POINTS    = 24     # minimum data points to attempt scoring
+MIN_HISTORY_POINTS    = 3      # minimum recorded price events to attempt scoring
 ROLLING_WINDOW_SHORT  = 30     # days for primary average (avg_30d)
 ROLLING_WINDOW_LONG   = 90     # days for secondary average (avg_90d)
 LOW_PROXIMITY_MARGIN  = 0.02   # within 2% of period low to reach DEAL_TIER_BEST
@@ -118,15 +118,22 @@ CONFIDENCE_LABELS = {
 }
 
 
-def _confidence_tier(total_points: int) -> str:
-    """Map a total data point count to a confidence tier identifier."""
-    if total_points < 24:
-        return CONFIDENCE_INSUFFICIENT
-    if total_points < 48:
-        return CONFIDENCE_LOW
-    if total_points < 168:
-        return CONFIDENCE_MODERATE
-    return CONFIDENCE_HIGH
+def _confidence_tier(total_points: int, history_days: int) -> str:
+    """
+    Map price history coverage to a confidence tier.
+
+    Uses history_days (days since first recorded price) as the primary signal
+    and total_points (number of recorded price events) as a secondary gate.
+    This correctly handles stable-priced products: a vinyl that stayed at R$320
+    for 45 days has solid coverage even if it only has a handful of data points.
+    """
+    if total_points < MIN_HISTORY_POINTS or history_days < 1:
+        return CONFIDENCE_INSUFFICIENT   # brand new or no data
+    if history_days < 14 or total_points < 10:
+        return CONFIDENCE_LOW            # < 2 weeks tracked — max Tier 1
+    if history_days < 45 or total_points < 30:
+        return CONFIDENCE_MODERATE       # 2 weeks–45 days — Tier 1 or 3
+    return CONFIDENCE_HIGH               # 45+ days with 30+ events — all tiers
 
 
 def _compute_raw_score(
@@ -287,7 +294,7 @@ def score_deals(conn) -> dict:
             float(p["last_flagged_price"]) if p["last_flagged_price"] is not None else None
         )
 
-        confidence = _confidence_tier(total_points)
+        confidence = _confidence_tier(total_points, history_days)
         raw_score  = _compute_raw_score(current_price, avg_30d, avg_90d, low_30d, confidence)
 
         # Apply cooldown only when transitioning NULL → non-NULL (new deal detection).
