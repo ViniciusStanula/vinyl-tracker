@@ -476,7 +476,7 @@ def ensure_category_tables(conn, category_seed: list[tuple[str, str]]) -> None:
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS "DiscoCategorias" (
-                disco_id      UUID        NOT NULL REFERENCES "Disco"(id)     ON DELETE CASCADE,
+                disco_id      TEXT        NOT NULL REFERENCES "Disco"(id)     ON DELETE CASCADE,
                 categoria_id  INTEGER     NOT NULL REFERENCES "Categoria"(id) ON DELETE CASCADE,
                 first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),

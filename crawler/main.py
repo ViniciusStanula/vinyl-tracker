@@ -1606,9 +1606,11 @@ def main():
     log.info("Connecting to database...")
     conn = get_connection()
     log.info("Connected. Running schema check...")
+    category_tables_ready = False
     try:
         ensure_schema_extras(conn)
         ensure_category_tables(conn, list(zip(CATEGORY_URLS, CATEGORY_NAMES)))
+        category_tables_ready = True
         log.info("Schema OK.")
     except Exception as exc:
         log.warning("Schema check failed (will retry next run): %s", exc)
@@ -1674,9 +1676,12 @@ def main():
             written = upsert_batch(conn, all_items)
             log.info("Phase 2 upsert: %.0fs — %d records written.", time.monotonic() - t0, written)
 
-            t0 = time.monotonic()
-            assoc_written = upsert_category_associations(conn, asin_categories)
-            log.info("Phase 2 categories: %.0fs — %d associations written.", time.monotonic() - t0, assoc_written)
+            if category_tables_ready:
+                t0 = time.monotonic()
+                assoc_written = upsert_category_associations(conn, asin_categories)
+                log.info("Phase 2 categories: %.0fs — %d associations written.", time.monotonic() - t0, assoc_written)
+            else:
+                log.warning("Skipping category associations — schema setup failed at startup.")
 
             # ── Phase 2.5: Deal scoring ─────────────────────────────────────
             # Runs after every upsert so deal_score reflects the freshest prices.
