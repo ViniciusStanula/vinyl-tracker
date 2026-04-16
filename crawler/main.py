@@ -439,6 +439,16 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
             if any(kw in text for kw in _OUTOFSTOCK_KW):
                 in_stock = False
 
+    # Unqualified buy box: product is listed but sold only by third-party
+    # sellers — no price is rendered in the page HTML (only a "Ver todas as
+    # opções de compra" button).  We cannot extract a price, so return early.
+    if soup.select_one("#unqualifiedBuyBox_feature_div"):
+        log.debug(
+            "parse_product_page: unqualified buy box detected "
+            "(third-party sellers only) — no price available"
+        )
+        return None, in_stock, None
+
     # ── Review count ──────────────────────────────────────────────────────
     # Extracted before price so it's available in early OOS returns below.
     review_count: int | None = None
