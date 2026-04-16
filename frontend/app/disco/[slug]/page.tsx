@@ -295,7 +295,7 @@ export default async function DiscoPage({
           </div>
 
           <div className="mt-5">
-            {/* Price + badges row */}
+            {/* Price + discount badge */}
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <span
                 className="text-4xl sm:text-5xl font-black text-gold leading-none tabular-nums"
@@ -316,22 +316,24 @@ export default async function DiscoPage({
                   {desconto >= 0 ? "▼" : "▲"} {Math.abs(desconto).toFixed(1)}%
                 </span>
               )}
-              {statusPreco === "menor" && (
-                <span className="text-xs bg-deal text-cream font-bold px-3 py-1 rounded-full">
-                  ↓ Menor Preço Histórico
-                </span>
-              )}
-              {statusPreco === "aumento" && (
-                <span className="text-xs bg-cut/20 text-cut font-bold px-3 py-1 rounded-full border border-cut/40">
-                  ↑ Aumento de Preço
-                </span>
-              )}
-              {statusPreco === "estavel" && (
-                <span className="text-xs bg-groove text-parchment font-semibold px-3 py-1 rounded-full border border-wax/50">
-                  → Preço Estável
-                </span>
-              )}
             </div>
+
+            {/* Status label — own line so it never wraps into the price */}
+            {statusPreco === "menor" && (
+              <span className="inline-block text-xs bg-deal text-cream font-bold px-3 py-1 rounded-full mb-1">
+                ↓ Menor Preço Histórico
+              </span>
+            )}
+            {statusPreco === "aumento" && (
+              <span className="inline-block text-xs bg-cut/20 text-cut font-bold px-3 py-1 rounded-full border border-cut/40 mb-1">
+                ↑ Aumento de Preço
+              </span>
+            )}
+            {statusPreco === "estavel" && (
+              <span className="inline-block text-xs bg-groove text-parchment font-semibold px-3 py-1 rounded-full border border-wax/50 mb-1">
+                → Preço Estável
+              </span>
+            )}
 
             {/* Historical average with strikethrough */}
             <p className="text-dust text-sm">
@@ -373,21 +375,11 @@ export default async function DiscoPage({
           style={{ fontFamily: "var(--font-fraunces, serif)" }}
         >
           Evolução do preço
-          <span className="text-dust text-sm font-normal ml-2">
-            ({valores.length}{" "}
-            {valores.length === 1 ? "registro" : "registros"})
-          </span>
+          <span className="text-dust text-sm font-normal ml-2">· {dataAtualLabel}</span>
         </h2>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          {/* Atual */}
-          <div className="bg-groove rounded-lg p-3 border-l-4 border-wax">
-            <p className="text-[11px] text-dust mb-1">Atual</p>
-            <p className="font-bold text-cream text-sm tabular-nums">{fmt(precoAtual)}</p>
-            <p className="text-[10px] text-dust mt-0.5">{dataAtualLabel}</p>
-          </div>
-
+        <div className="grid grid-cols-2 gap-3 mb-5">
           {/* Mínimo */}
           <div className="bg-groove rounded-lg p-3 border-l-4 border-deal">
             <p className="text-[11px] text-dust mb-1 flex items-center gap-1">
@@ -465,11 +457,6 @@ export default async function DiscoPage({
           </details>
         )}
       </section>
-
-      <p className="text-xs text-ash text-center">
-        Atualizado em {fmtDateTime(disco.updatedAt)} (horário de Brasília) · Dados
-        via Amazon.com.br
-      </p>
 
       {/* Related deals */}
       {processedDeals.length > 0 && (
