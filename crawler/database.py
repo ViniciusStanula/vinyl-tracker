@@ -453,6 +453,115 @@ def mark_unavailable(conn, disco_id: str) -> None:
     conn.commit()
 
 
+def ensure_category_tables(conn, category_seed: list[tuple[str, str]]) -> None:
+    """
+    Idempotently creates the Categoria and DiscoCategorias tables and seeds
+    Categoria with the known genre URLs.
+
+    category_seed: list of (url, nome) pairs, one per entry in CATEGORY_URLS.
+    Safe to call on every startup — CREATE TABLE IF NOT EXISTS and
+    INSERT ... ON CONFLICT DO NOTHING make it a no-op after the first run.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS "Categoria" (
+                id         SERIAL        PRIMARY KEY,
+                nome       TEXT          NOT NULL,
+                url        TEXT          NOT NULL UNIQUE,
+                created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS "DiscoCategorias" (
+                disco_id      UUID        NOT NULL REFERENCES "Disco"(id)     ON DELETE CASCADE,
+                categoria_id  INTEGER     NOT NULL REFERENCES "Categoria"(id) ON DELETE CASCADE,
+                first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (disco_id, categoria_id)
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS "DiscoCategorias_categoria_id_idx"
+                ON "DiscoCategorias" (categoria_id)
+            """
+        )
+        psycopg2.extras.execute_batch(
+            cur,
+            """
+            INSERT INTO "Categoria" (url, nome)
+            VALUES (%s, %s)
+            ON CONFLICT (url) DO NOTHING
+            """,
+            category_seed,
+            page_size=200,
+        )
+    conn.commit()
+    log.debug("ensure_category_tables: tables ready.")
+
+
+def upsert_category_associations(
+    conn,
+    asin_categories: dict[str, set[str]],
+) -> int:
+    """
+    Records which categories each product was found in during this crawl run.
+
+    asin_categories: maps ASIN → set of category URLs where it appeared.
+    Uses upsert so first_seen_at is preserved on repeat visits and
+    last_seen_at is always bumped to NOW().
+    Returns the number of (disco, categoria) rows written.
+    """
+    if not asin_categories:
+        return 0
+
+    with _cursor(conn) as cur:
+        cur.execute('SELECT url, id FROM "Categoria"')
+        url_to_cat_id: dict[str, int] = {row[0]: row[1] for row in cur.fetchall()}
+
+        asins = list(asin_categories.keys())
+        cur.execute(
+            'SELECT asin, id FROM "Disco" WHERE asin = ANY(%s)',
+            (asins,),
+        )
+        asin_to_id = {row[0]: row[1] for row in cur.fetchall()}
+
+        rows = []
+        for asin, cat_urls in asin_categories.items():
+            disco_id = asin_to_id.get(asin)
+            if disco_id is None:
+                continue
+            for cat_url in cat_urls:
+                cat_id = url_to_cat_id.get(cat_url)
+                if cat_id is None:
+                    log.warning("Category URL not in DB (skipping): %.80s", cat_url)
+                    continue
+                rows.append((str(disco_id), cat_id))
+
+        if not rows:
+            return 0
+
+        psycopg2.extras.execute_batch(
+            cur,
+            """
+            INSERT INTO "DiscoCategorias" (disco_id, categoria_id, first_seen_at, last_seen_at)
+            VALUES (%s, %s, NOW(), NOW())
+            ON CONFLICT (disco_id, categoria_id) DO UPDATE
+                SET last_seen_at = EXCLUDED.last_seen_at
+            """,
+            rows,
+            page_size=500,
+        )
+        log.debug("Upserted %d DiscoCategorias rows.", len(rows))
+
+    conn.commit()
+    return len(rows)
+
+
 def limpar_historico_antigo(conn, days: int = 365) -> int:
     """
     Deletes HistoricoPreco records older than `days` days.

@@ -29,6 +29,8 @@ from database import (
     limpar_historico_antigo,
     get_connection,
     ensure_schema_extras,
+    ensure_category_tables,
+    upsert_category_associations,
     fetch_active_deals,
     fetch_stale_records,
     mark_stale_price,
@@ -182,6 +184,132 @@ CATEGORY_URLS = [
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011%2Cn%3A19416225011&dc&rnid=19416093011",  # Trilhas Sonoras de Filme
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011%2Cn%3A19416226011&dc&rnid=19416093011",  # Trilhas Sonoras de Videogames
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011%2Cn%3A19416224011&dc&rnid=19416093011",  # Trilhas Sonoras Para Televisão
+]
+
+# Human-readable names for each URL in CATEGORY_URLS (same order).
+# Used to seed the Categoria table on first run.
+CATEGORY_NAMES: list[str] = [
+    # Blues
+    "Blues",
+    "Blues Moderno",
+    "Blues Regional",
+    "Blues Tradicional",
+    # Clássica
+    "Clássica",
+    "Música de Câmara",
+    "Ópera",
+    "Orquestra, Concertos e Sinfonias",
+    # Country
+    "Country",
+    "Bluegrass",
+    "Country Alternativo e Americano",
+    "Country Clássico",
+    "Country Contemporâneo",
+    "Country Rock",
+    "Western Swing",
+    # Dance e Eletrônica
+    "Dance e Eletrônica",
+    "Ambiente",
+    "Drum & Bass",
+    "Eletrônica",
+    "House",
+    "Techno",
+    "Trip Hop",
+    # Diversos
+    "Diversos",
+    "Karaokê",
+    "Natal e Casamento",
+    "Poesia, Recitação e Entrevistas",
+    # Easy Listening
+    "Easy Listening",
+    # Folk
+    "Folk",
+    # Hard Rock e Metal
+    "Hard Rock e Metal",
+    "Death Metal",
+    "Hard Rock",
+    "Heavy Metal",
+    "Industrial",
+    "Metal Alternativo",
+    # Indie e Alternativa
+    "Indie e Alternativa",
+    "Gótica e Industrial",
+    "Hardcore e Punk",
+    "Indie e Lo-Fi",
+    "New Wave e Pós-Punk",
+    "Rock Alternativo",
+    "Rock Britânico e Britpop",
+    # Música Internacional
+    "Música Internacional",
+    "Africana",
+    "Europa",
+    "Extremo Oriente e Ásia",
+    "Latina",
+    # Jazz
+    "Jazz",
+    "Acid Jazz",
+    "Bebop",
+    "Cool Jazz",
+    "Jazz Latino",
+    "Jazz e Ragtime Tradicionais",
+    "Soul-Jazz e Boogaloo",
+    "Swing Jazz",
+    # Musicais e Cabaré
+    "Musicais e Cabaré",
+    "Musicais",
+    "Pop Vocal Tradicional",
+    # Música Nacional
+    "Música Nacional",
+    "Rock Nacional",
+    "Samba",
+    # Música, Peças e Histórias Infantis
+    "Música, Peças e Histórias Infantis",
+    # New Age e Meditação
+    "New Age e Meditação",
+    # Pop
+    "Pop",
+    "Cantores-Compositores",
+    "Dança Pop",
+    "Disco",
+    "Pop Rock",
+    "Pop Vocal Tradicional",
+    "Rhythm e Blues Contemporâneo",
+    "Soft Rock",
+    "Synthpop",
+    # R&B
+    "R&B",
+    "Funk Americano",
+    "Rhythm e Blues Contemporâneo",
+    "Soul",
+    # Rap e Hip-Hop
+    "Rap e Hip-Hop",
+    "Baixo",
+    "Gangsta e Hardcore",
+    "Rap Experimental",
+    # Reggae
+    "Reggae",
+    # Religião e Gospel
+    "Religião e Gospel",
+    "Gospel",
+    "Rock Cristão",
+    # Rock
+    "Rock",
+    "Blues Rock",
+    "Cantores-Compositores",
+    "Country Rock",
+    "Folk Rock",
+    "Oldies e Retrô",
+    "Progressivo",
+    "Rock Alternativo",
+    "Rock Britânico e Britpop",
+    "Rock Clássico",
+    # Trilhas Sonoras
+    "Trilhas Sonoras",
+    "Musicais",
+    "Originais de Filmes",
+    "Trilhas Sonoras de Filme",
+    "Trilhas Sonoras de Videogames",
+    "Trilhas Sonoras Para Televisão",
 ]
 
 BROWSER_IDENTITIES = [
@@ -1208,6 +1336,8 @@ def _crawl_one_category(cat_url: str, label: str, delay: float) -> list[dict]:
         local_seen,
         max_consecutive_empty=3,
     )
+    for item in items:
+        item["source_category_url"] = cat_url
     return items
 
 
@@ -1265,6 +1395,14 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
             except Exception as exc:
                 log.warning("Category %d worker raised: %s", cat_idx, exc)
 
+    # Build category associations before dedup — an ASIN seen in the main URL
+    # crawl can still appear in a category and should have that association recorded.
+    asin_categories: dict[str, set[str]] = {}
+    for item in cat_items_all:
+        cat_url = item.get("source_category_url")
+        if cat_url:
+            asin_categories.setdefault(item["asin"], set()).add(cat_url)
+
     # Merge category results, deduplicating against main-URL seen_asins.
     new_from_categories = 0
     for item in cat_items_all:
@@ -1273,13 +1411,14 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
             all_items.append(item)
             new_from_categories += 1
     log.info(
-        "Categories done — %d new products (after dedup against main).",
-        new_from_categories,
+        "Categories done — %d new products (after dedup against main), "
+        "%d unique ASINs with category tags.",
+        new_from_categories, len(asin_categories),
     )
 
     log.info("═" * 50)
     log.info("Full crawl done — %d unique products total.", len(all_items))
-    return all_items
+    return all_items, asin_categories
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1457,7 +1596,7 @@ def main():
     if args.dry_run:
         log.info("DRY RUN — skipping DB phases; running crawl only.")
         t0 = time.monotonic()
-        all_items = crawl(args.max_pages, args.delay)
+        all_items, _ = crawl(args.max_pages, args.delay)
         log.info("Phase crawl: %.0fs", time.monotonic() - t0)
         log.info("DRY RUN — Sample of first 3 items:")
         for item in all_items[:3]:
@@ -1469,6 +1608,7 @@ def main():
     log.info("Connected. Running schema check...")
     try:
         ensure_schema_extras(conn)
+        ensure_category_tables(conn, list(zip(CATEGORY_URLS, CATEGORY_NAMES)))
         log.info("Schema OK.")
     except Exception as exc:
         log.warning("Schema check failed (will retry next run): %s", exc)
@@ -1510,7 +1650,7 @@ def main():
         # ── Phase 1: Regular crawl ─────────────────────────────────────────
         log.info("═" * 60)
         t0 = time.monotonic()
-        all_items = crawl(args.max_pages, args.delay)
+        all_items, asin_categories = crawl(args.max_pages, args.delay)
         log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
 
         if not all_items:
@@ -1533,6 +1673,10 @@ def main():
             t0 = time.monotonic()
             written = upsert_batch(conn, all_items)
             log.info("Phase 2 upsert: %.0fs — %d records written.", time.monotonic() - t0, written)
+
+            t0 = time.monotonic()
+            assoc_written = upsert_category_associations(conn, asin_categories)
+            log.info("Phase 2 categories: %.0fs — %d associations written.", time.monotonic() - t0, assoc_written)
 
             # ── Phase 2.5: Deal scoring ─────────────────────────────────────
             # Runs after every upsert so deal_score reflects the freshest prices.
