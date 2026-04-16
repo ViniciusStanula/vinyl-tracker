@@ -112,6 +112,7 @@ _RATING_TEXT_RE = re.compile(
     re.IGNORECASE,
 )
 _PRICE_START_RE = re.compile(r"^R\$|^\$|^\d+[.,]")
+_VINYL_LABEL_RE = re.compile(r"vinil|vinyl", re.IGNORECASE)
 
 # ─────────────────────────────────────────────────────────────
 #  Helpers
@@ -437,54 +438,10 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
             if any(kw in text for kw in _OUTOFSTOCK_KW):
                 in_stock = False
 
-    # ── Price ─────────────────────────────────────────────────────────────
-    price: float | None = None
-
-    # Priority 1: priceToPay / apex-pricetopay-value containers
-    # These are the canonical "buy box" price widgets on product pages.
-    for container_sel in (".priceToPay", ".apex-pricetopay-value"):
-        container = soup.select_one(container_sel)
-        if not container:
-            continue
-
-        # 1a. a-offscreen sibling contains the human-readable string "R$217,73"
-        offscreen = container.select_one(".a-offscreen")
-        if offscreen:
-            p = parse_price_br(offscreen.get_text(strip=True).replace("\xa0", ""))
-            if p and p >= MIN_PRICE_BRL:
-                price = p
-                break
-
-        # 1b. whole + fraction spans
-        whole_el = container.select_one(".a-price-whole")
-        frac_el  = container.select_one(".a-price-fraction")
-        if whole_el:
-            whole_text = "".join(
-                t for t in whole_el.strings
-                if t.strip() and t.strip() not in (",", ".")
-            ).strip().replace(".", "")
-            frac_text = frac_el.get_text(strip=True) if frac_el else "00"
-            p = parse_price_br(f"{whole_text},{frac_text}")
-            if p and p >= MIN_PRICE_BRL:
-                price = p
-                break
-
-    # Priority 2: any standalone a-offscreen that starts with "R$"
-    # (covers pages where the buy-box uses a different container class)
-    if price is None:
-        for el in soup.select(".a-offscreen"):
-            text = el.get_text(strip=True).replace("\xa0", "")
-            if text.startswith("R$") or re.match(r"^\d+[,.]", text):
-                p = parse_price_br(text)
-                if p and p >= MIN_PRICE_BRL:
-                    price = p
-                    break
-
     # ── Review count ──────────────────────────────────────────────────────
+    # Extracted before price so it's available in early OOS returns below.
     review_count: int | None = None
 
-    # #acrCustomerReviewText → "1.235 avaliações de clientes"
-    # span[data-hook="total-review-count"] → same text on some page variants
     for sel in (
         "#acrCustomerReviewText",
         '[data-hook="total-review-count"]',
@@ -507,6 +464,113 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
                     break
             except ValueError:
                 pass
+
+    # ── Format detection (multi-format pages: Vinyl + CD + MP3) ──────────
+    # On pages that offer multiple formats, the buy-box reflects whichever
+    # format is currently selected — which may be CD, not vinyl.  We must
+    # anchor price extraction to the vinyl format explicitly.
+    #
+    # Strategy:
+    #   1. Check #twister .top-level rows for a row labelled "vinil/vinyl"
+    #      and extract its price directly (most reliable anchor).
+    #   2. Check #tmmSwatches .swatchElement.selected to see which format
+    #      is active.  If vinyl is selected, the buy-box price is the vinyl
+    #      price and we can fall through to normal buy-box extraction.
+    #   3. If #outOfStockBuyBox_feature_div is present and no vinyl table
+    #      price was found, vinyl is OOS — return null, never a sibling price.
+    #   4. If another format (CD/MP3) is selected and no vinyl table price
+    #      was found, we cannot trust the buy-box — return null.
+    #   5. Single-format pages (no #tmmSwatches) are unaffected.
+
+    has_format_switcher = bool(soup.select_one("#tmmSwatches"))
+
+    # Step 1: scan MediaMatrix format table for a vinyl-specific price.
+    tmm_vinyl_price: float | None = None
+    if has_format_switcher:
+        for row in soup.select("#twister .top-level"):
+            if _VINYL_LABEL_RE.search(row.get_text(" ", strip=True)):
+                offscreen = row.select_one(".a-offscreen")
+                if offscreen:
+                    p = parse_price_br(offscreen.get_text(strip=True).replace("\xa0", ""))
+                    if p and p >= MIN_PRICE_BRL:
+                        tmm_vinyl_price = p
+                        log.debug(
+                            "parse_product_page: vinyl price from format table: %.2f", p
+                        )
+                        break
+
+    # Step 2: which format is currently selected?
+    selected_swatch = soup.select_one("#tmmSwatches .swatchElement.selected")
+    if selected_swatch is not None:
+        selected_is_vinyl = bool(
+            _VINYL_LABEL_RE.search(selected_swatch.get_text(" ", strip=True))
+        )
+    else:
+        # No swatch widget → single-format page; treat as vinyl.
+        selected_is_vinyl = True
+
+    # Step 3 & 4: OOS / wrong format guard.
+    if has_format_switcher and tmm_vinyl_price is None:
+        vinyl_oos = bool(soup.select_one("#outOfStockBuyBox_feature_div"))
+        if vinyl_oos:
+            log.debug(
+                "parse_product_page: vinyl OOS (#outOfStockBuyBox_feature_div) "
+                "— returning null price"
+            )
+            return None, False, review_count
+        if not selected_is_vinyl:
+            log.debug(
+                "parse_product_page: multi-format page, selected swatch is not "
+                "vinyl and no vinyl row in format table — returning null price"
+            )
+            return None, in_stock, review_count
+
+    # ── Price ─────────────────────────────────────────────────────────────
+    price: float | None = None
+
+    # Priority 0: vinyl-specific price from the MediaMatrix format table.
+    if tmm_vinyl_price is not None:
+        price = tmm_vinyl_price
+
+    # Priority 1: priceToPay / apex-pricetopay-value buy-box containers.
+    # Safe to use here because either: (a) single-format page, or (b) the
+    # vinyl swatch is selected so the buy-box already shows the vinyl price.
+    if price is None:
+        for container_sel in (".priceToPay", ".apex-pricetopay-value"):
+            container = soup.select_one(container_sel)
+            if not container:
+                continue
+
+            offscreen = container.select_one(".a-offscreen")
+            if offscreen:
+                p = parse_price_br(offscreen.get_text(strip=True).replace("\xa0", ""))
+                if p and p >= MIN_PRICE_BRL:
+                    price = p
+                    break
+
+            whole_el = container.select_one(".a-price-whole")
+            frac_el  = container.select_one(".a-price-fraction")
+            if whole_el:
+                whole_text = "".join(
+                    t for t in whole_el.strings
+                    if t.strip() and t.strip() not in (",", ".")
+                ).strip().replace(".", "")
+                frac_text = frac_el.get_text(strip=True) if frac_el else "00"
+                p = parse_price_br(f"{whole_text},{frac_text}")
+                if p and p >= MIN_PRICE_BRL:
+                    price = p
+                    break
+
+    # Priority 2: generic .a-offscreen fallback — only on single-format pages.
+    # On multi-format pages this selector would capture a sibling format's price.
+    if price is None and not has_format_switcher:
+        for el in soup.select(".a-offscreen"):
+            text = el.get_text(strip=True).replace("\xa0", "")
+            if text.startswith("R$") or re.match(r"^\d+[,.]", text):
+                p = parse_price_br(text)
+                if p and p >= MIN_PRICE_BRL:
+                    price = p
+                    break
 
     return price, in_stock, review_count
 
