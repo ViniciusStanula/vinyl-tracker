@@ -23,7 +23,7 @@ export default function GraficoPreco({ precos }: Props) {
 
   if (precos.length < 2) {
     return (
-      <p className="text-center py-6 text-zinc-600 text-sm">
+      <p className="text-center py-6 text-dust text-sm">
         Aguardando mais registros para exibir o gráfico.
       </p>
     );
@@ -84,8 +84,8 @@ export default function GraficoPreco({ precos }: Props) {
       >
         <defs>
           <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#d98f0e" stopOpacity="0.30" />
+            <stop offset="100%" stopColor="#d98f0e" stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
@@ -97,7 +97,7 @@ export default function GraficoPreco({ precos }: Props) {
               y1={tick.y}
               x2={W - PAD.right}
               y2={tick.y}
-              stroke="#3f3f46"
+              stroke="#2b1e17"
               strokeWidth="0.5"
               strokeDasharray="3,3"
             />
@@ -105,7 +105,7 @@ export default function GraficoPreco({ precos }: Props) {
               x={PAD.left - 6}
               y={tick.y + 3.5}
               textAnchor="end"
-              fill="#71717a"
+              fill="#6e4e38"
               fontSize="8.5"
             >
               {tick.label}
@@ -120,7 +120,7 @@ export default function GraficoPreco({ precos }: Props) {
             x={tick.x}
             y={H - PAD.bottom + 14}
             textAnchor="middle"
-            fill="#52525b"
+            fill="#5a4232"
             fontSize="8"
           >
             {tick.label}
@@ -134,7 +134,7 @@ export default function GraficoPreco({ precos }: Props) {
         <path
           d={linePath}
           fill="none"
-          stroke="#f59e0b"
+          stroke="#d98f0e"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -147,15 +147,15 @@ export default function GraficoPreco({ precos }: Props) {
               cx={tx(minIdx)}
               cy={ty(vMin)}
               r="5"
-              fill="#10b981"
-              stroke="#09090b"
+              fill="#35c47a"
+              stroke="#0c0a08"
               strokeWidth="1.5"
             />
             <text
               x={tx(minIdx)}
               y={ty(vMin) + 15}
               textAnchor="middle"
-              fill="#10b981"
+              fill="#35c47a"
               fontSize="8"
               fontWeight="600"
             >
@@ -171,15 +171,15 @@ export default function GraficoPreco({ precos }: Props) {
               cx={tx(maxIdx)}
               cy={ty(vMax)}
               r="5"
-              fill="#f87171"
-              stroke="#09090b"
+              fill="#b81828"
+              stroke="#0c0a08"
               strokeWidth="1.5"
             />
             <text
               x={tx(maxIdx)}
               y={ty(vMax) - 9}
               textAnchor="middle"
-              fill="#f87171"
+              fill="#b81828"
               fontSize="8"
               fontWeight="600"
             >
@@ -196,7 +196,7 @@ export default function GraficoPreco({ precos }: Props) {
               y1={PAD.top}
               x2={tx(hoveredIdx)}
               y2={H - PAD.bottom}
-              stroke="#f59e0b"
+              stroke="#d98f0e"
               strokeWidth="1"
               strokeDasharray="3,2"
               opacity="0.5"
@@ -205,8 +205,8 @@ export default function GraficoPreco({ precos }: Props) {
               cx={tx(hoveredIdx)}
               cy={ty(precos[hoveredIdx].valor)}
               r="4.5"
-              fill="#f59e0b"
-              stroke="#09090b"
+              fill="#d98f0e"
+              stroke="#0c0a08"
               strokeWidth="2"
             />
           </>
@@ -240,12 +240,12 @@ export default function GraficoPreco({ precos }: Props) {
       <div className="h-6 flex items-center justify-center gap-2 text-xs">
         {hovered ? (
           <>
-            <span className="text-amber-400 font-bold">{fmt(hovered.valor)}</span>
-            <span className="text-zinc-500">·</span>
-            <span className="text-zinc-400">{hovered.dataFull}</span>
+            <span className="text-gold font-bold tabular-nums">{fmt(hovered.valor)}</span>
+            <span className="text-dust">·</span>
+            <span className="text-parchment">{hovered.dataFull}</span>
           </>
         ) : (
-          <span className="text-zinc-700">Passe o mouse para ver o valor</span>
+          <span className="text-ash">Passe o mouse para ver o valor</span>
         )}
       </div>
     </div>

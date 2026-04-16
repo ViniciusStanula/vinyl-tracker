@@ -32,9 +32,9 @@ export default async function HomePage({
     precoMax: precoMaxStr,
   } = await searchParams;
 
-  const page        = Math.max(1, parseInt(pageStr ?? "1", 10));
-  const searchTerm  = q?.trim() ?? "";
-  const precoMax    = precoMaxStr ? Number(precoMaxStr) : null;
+  const page       = Math.max(1, parseInt(pageStr ?? "1", 10));
+  const searchTerm = q?.trim() ?? "";
+  const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
   const { items, total, totalPages } = await queryDiscos({
     searchTerm,
@@ -48,42 +48,51 @@ export default async function HomePage({
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-      {/* Hero */}
-      <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100">
-          Melhores ofertas em discos de vinil
+
+      {/* ── Hero ────────────────────────────────────────────────── */}
+      <header className="relative mb-8 overflow-hidden rounded-2xl bg-sleeve border border-groove px-6 py-7 vinyl-grooves">
+        <p className="text-gold text-[10px] font-bold tracking-[0.45em] uppercase mb-3 opacity-90">
+          Amazon Brasil · Atualizado 2× ao dia
+        </p>
+        <h1
+          className="text-3xl sm:text-4xl font-black text-cream leading-tight"
+          style={{ fontFamily: "var(--font-fraunces, serif)" }}
+        >
+          Melhores ofertas em
+          <br />
+          <span className="text-gold">discos de vinil</span>
         </h1>
-        <p className="mt-1 text-zinc-500 text-sm">
-          Os melhores descontos em discos de vinil da Amazon
+        <p className="mt-3 text-parchment text-sm max-w-md leading-relaxed">
+          Histórico de preços completo. Descubra o melhor momento para comprar.
         </p>
       </header>
 
-      {/* Sort bar */}
-      <div className="mb-4">
+      {/* ── Sort bar ────────────────────────────────────────────── */}
+      <div className="mb-5">
         <Suspense>
           <SortBar />
         </Suspense>
       </div>
 
-      {/* Result count + active artist badge */}
+      {/* ── Result count + active artist badge ──────────────────── */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <p className="text-zinc-500 text-sm">
+        <p className="text-dust text-sm">
           {total === 0
             ? "Nenhum disco encontrado"
             : `${total} ${total === 1 ? "disco encontrado" : "discos encontrados"}`}
           {searchTerm && (
-            <span className="text-zinc-400">
+            <span className="text-parchment">
               {" "}para{" "}
-              <span className="text-zinc-200">&ldquo;{q}&rdquo;</span>
+              <span className="text-cream">&ldquo;{q}&rdquo;</span>
             </span>
           )}
         </p>
         {artista && (
-          <span className="inline-flex items-center gap-1.5 bg-zinc-800 text-zinc-200 text-xs px-3 py-1 rounded-full">
+          <span className="inline-flex items-center gap-1.5 bg-groove border border-wax/60 text-parchment text-xs px-3 py-1 rounded-full">
             {artista}
             <Link
               href="/"
-              className="text-zinc-500 hover:text-zinc-200 transition-colors leading-none"
+              className="text-dust hover:text-cream transition-colors leading-none"
               aria-label="Remover filtro de artista"
             >
               ×
@@ -92,7 +101,7 @@ export default async function HomePage({
         )}
       </div>
 
-      {/* Grid + Pagination / Infinite scroll */}
+      {/* ── Grid + Pagination ───────────────────────────────────── */}
       {items.length > 0 ? (
         <InfiniteGrid
           initialItems={items}
@@ -102,17 +111,26 @@ export default async function HomePage({
           animationKey={`${sort}-${q ?? ""}-${artista ?? ""}-${currentPage}`}
         />
       ) : (
-        <div className="text-center py-24 text-zinc-600">
-          <p className="text-5xl mb-4">🎵</p>
-          <p className="text-zinc-400 text-lg font-medium mb-2">
+        <div className="text-center py-24 text-dust">
+          <div className="inline-block mb-5 opacity-40">
+            <svg viewBox="0 0 64 64" fill="none" className="w-16 h-16 mx-auto">
+              <circle cx="32" cy="32" r="30" fill="#d98f0e" opacity="0.3" />
+              <circle cx="32" cy="32" r="20" fill="#0c0a08" opacity="0.8" />
+              <circle cx="32" cy="32" r="5"  fill="#d98f0e" opacity="0.4" />
+              <circle cx="32" cy="32" r="2"  fill="#0c0a08" />
+            </svg>
+          </div>
+          <p className="text-parchment text-lg font-semibold mb-2"
+            style={{ fontFamily: "var(--font-fraunces, serif)" }}
+          >
             Nenhum disco encontrado
           </p>
-          <p className="text-zinc-600 text-sm mb-6">
+          <p className="text-dust text-sm mb-6">
             Tente ajustar os filtros ou buscar por outro artista.
           </p>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm px-5 py-2.5 rounded-full transition-colors"
+            className="inline-flex items-center gap-2 bg-gold hover:bg-goldlit text-record font-bold text-sm px-6 py-2.5 rounded-full transition-colors"
           >
             Ver todos os discos
           </Link>

@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Fraunces, DM_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
-const geist = Geist({
-  variable: "--font-geist-sans",
+/* Fraunces — optical-size variable serif; editorial, distinctive */
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
+  display: "swap",
+});
+
+/* DM Sans — clean, humanist sans-serif for body copy */
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -20,8 +29,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={geist.variable}>
-      <body className="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+    <html lang="pt-BR" className={`${fraunces.variable} ${dmSans.variable}`}>
+      <body className="min-h-screen bg-record text-cream antialiased">
         <Navbar />
         {children}
       </body>

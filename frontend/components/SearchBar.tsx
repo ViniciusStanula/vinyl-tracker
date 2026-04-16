@@ -11,18 +11,14 @@ export default function SearchBar() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function navigate(value: string) {
-    // Search always targets the home page — preserve sort/artista/precoMax params
-    // but drop page and always land on /, even when called from an internal page.
     const params = new URLSearchParams();
-    const sort = searchParams.get("sort");
+    const sort    = searchParams.get("sort");
     const artista = searchParams.get("artista");
     const precoMax = searchParams.get("precoMax");
-    if (sort) params.set("sort", sort);
-    if (artista) params.set("artista", artista);
+    if (sort)     params.set("sort", sort);
+    if (artista)  params.set("artista", artista);
     if (precoMax) params.set("precoMax", precoMax);
-    if (value) {
-      params.set("q", value);
-    }
+    if (value)    params.set("q", value);
     startTransition(() => {
       router.push(`/?${params.toString()}`);
     });
@@ -30,9 +26,7 @@ export default function SearchBar() {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      navigate(e.target.value.trim());
-    }, 300);
+    timerRef.current = setTimeout(() => navigate(e.target.value.trim()), 300);
   }
 
   function handleBuscar() {
@@ -49,41 +43,17 @@ export default function SearchBar() {
 
   return (
     <div className="relative flex w-full">
-      {/* Search icon / spinner */}
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+      {/* Icon / spinner */}
+      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
         {isPending ? (
-          <svg
-            className="w-4 h-4 text-amber-500 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
+          <svg className="w-4 h-4 text-gold animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path  className="opacity-75"  fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         ) : (
-          <svg
-            className="w-4 h-4 text-zinc-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-            />
+          <svg className="w-4 h-4 text-dust" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
           </svg>
         )}
       </div>
@@ -95,14 +65,14 @@ export default function SearchBar() {
         defaultValue={searchParams.get("q") ?? ""}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        className={`flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded-l-full pl-9 pr-4 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30 transition-all ${
+        className={`flex-1 min-w-0 bg-sleeve border border-groove rounded-l-full pl-10 pr-4 py-2 text-sm text-cream placeholder-dust focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all ${
           isPending ? "opacity-60" : ""
         }`}
       />
 
       <button
         onClick={handleBuscar}
-        className="shrink-0 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-sm px-4 rounded-r-full transition-colors cursor-pointer"
+        className="shrink-0 bg-gold hover:bg-goldlit text-record font-bold text-sm px-5 rounded-r-full transition-colors cursor-pointer"
         aria-label="Buscar"
       >
         Buscar
