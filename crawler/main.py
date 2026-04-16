@@ -61,14 +61,49 @@ BASE_URL = "https://www.amazon.com.br"
 
 # URLs de categorias de gênero — cada uma é paginada separadamente
 CATEGORY_URLS = [
+    # ── Blues (19416074011) ──────────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416074011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416074011%2Cn%3A19416096011&dc&rnid=19416074011",  # Blues Moderno
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416074011%2Cn%3A19416097011&dc&rnid=19416074011",  # Blues Regional
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416074011%2Cn%3A19416098011&dc&rnid=19416074011",  # Blues Tradicional
+    # ── Clássica (19416075011) ───────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416075011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416075011%2Cn%3A19416104011&dc&rnid=19416075011",  # Música de Câmara
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416075011%2Cn%3A19416105011&dc&rnid=19416075011",  # Ópera
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416075011%2Cn%3A19416106011&dc&rnid=19416075011",  # Orquestra, Concertos e Sinfonias
+    # ── Country (19416076011) ────────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416076011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416076011%2Cn%3A19416107011&dc&rnid=19416076011",  # Bluegrass
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416076011%2Cn%3A19416108011&dc&rnid=19416076011",  # Country Alternativo e Americano
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416076011%2Cn%3A19416109011&dc&rnid=19416076011",  # Country Clássico
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416076011%2Cn%3A19416110011&dc&rnid=19416076011",  # Country Contemporâneo
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416076011%2Cn%3A19416213011&dc&rnid=19416076011",  # Country Rock
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416076011%2Cn%3A19416113011&dc&rnid=19416076011",  # Western Swing
+    # ── Dance e Eletrônica (19416077011) ────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416077011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416077011%2Cn%3A19416114011&dc&rnid=19416077011",  # Ambiente
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416077011%2Cn%3A19416115011&dc&rnid=19416077011",  # Drum & Bass
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416077011%2Cn%3A19416117011&dc&rnid=19416077011",  # Eletrônica
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416077011%2Cn%3A19416118011&dc&rnid=19416077011",  # House
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416077011%2Cn%3A19416119011&dc&rnid=19416077011",  # Techno
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416077011%2Cn%3A19416121011&dc&rnid=19416077011",  # Trip Hop
+    # ── Diversos (19416078011) ───────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416078011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416078011%2Cn%3A19416125011&dc&rnid=19416078011",  # Karaokê
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416078011%2Cn%3A19416126011&dc&rnid=19416078011",  # Natal e Casamento
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416078011%2Cn%3A19416128011&dc&rnid=19416078011",  # Poesia, Recitação e Entrevistas
+    # ── Easy Listening (19416079011) ─────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416079011&dc&rnid=18726358011",
+    # ── Folk (19416080011) ───────────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416080011&dc&rnid=18726358011",
+    # ── Hard Rock e Metal (19416081011) ─────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011%2Cn%3A19416136011&dc&rnid=19416081011",  # Death Metal
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011%2Cn%3A19416137011&dc&rnid=19416081011",  # Hard Rock
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011%2Cn%3A19416138011&dc&rnid=19416081011",  # Heavy Metal
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011%2Cn%3A19416234011&dc&rnid=19416081011",  # Industrial
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011%2Cn%3A19416139011&dc&rnid=19416081011",  # Metal Alternativo
+    # ── Remaining top-level genres ───────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416082011&dc&rnid=18726358011",
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011&dc&rnid=18726358011",
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416085011&dc&rnid=18726358011",
