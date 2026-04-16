@@ -103,20 +103,85 @@ CATEGORY_URLS = [
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011%2Cn%3A19416138011&dc&rnid=19416081011",  # Heavy Metal
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011%2Cn%3A19416234011&dc&rnid=19416081011",  # Industrial
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416081011%2Cn%3A19416139011&dc&rnid=19416081011",  # Metal Alternativo
-    # ── Remaining top-level genres ───────────────────────────────────────────
+    # ── Indie e Alternativa (19416082011) ────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416082011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416082011%2Cn%3A19416146011&dc&rnid=19416082011",  # Gótica e Industrial
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416082011%2Cn%3A19416147011&dc&rnid=19416082011",  # Hardcore e Punk
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416082011%2Cn%3A19416148011&dc&rnid=19416082011",  # Indie e Lo-Fi
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416082011%2Cn%3A19416149011&dc&rnid=19416082011",  # New Wave e Pós-Punk
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416082011%2Cn%3A19416150011&dc&rnid=19416082011",  # Rock Alternativo
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416082011%2Cn%3A19416220011&dc&rnid=19416082011",  # Rock Britânico e Britpop
+    # ── Música Internacional (19416083011) ───────────────────────────────────
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416083011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416083011%2Cn%3A19416152011&dc&rnid=19416083011",  # Africana
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416083011%2Cn%3A19416155011&dc&rnid=19416083011",  # Europa
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416083011%2Cn%3A19416156011&dc&rnid=19416083011",  # Extremo Oriente e Ásia
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416083011%2Cn%3A19416158011&dc&rnid=19416083011",  # Latina
+    # ── Jazz (19416084011) ────────────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011%2Cn%3A19416161011&dc&rnid=19416084011",  # Acid Jazz
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011%2Cn%3A19416163011&dc&rnid=19416084011",  # Bebop
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011%2Cn%3A19416164011&dc&rnid=19416084011",  # Cool Jazz
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011%2Cn%3A19416242011&dc&rnid=19416084011",  # Jazz Latino
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011%2Cn%3A19416168011&dc&rnid=19416084011",  # Jazz e Ragtime Tradicionais
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011%2Cn%3A19416171011&dc&rnid=19416084011",  # Soul-Jazz e Boogaloo
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416084011%2Cn%3A19416172011&dc&rnid=19416084011",  # Swing Jazz
+    # ── Musicais e Cabaré (19416085011) ──────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416085011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416085011%2Cn%3A19416173011&dc&rnid=19416085011",  # Musicais
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416085011%2Cn%3A19416174011&dc&rnid=19416085011",  # Pop Vocal Tradicional
+    # ── Música Nacional (19532539011) ─────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19532539011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19532539011%2Cn%3A19532557011&dc&rnid=19532539011",  # Rock Nacional
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19532539011%2Cn%3A19416248011&dc&rnid=19532539011",  # Samba
+    # ── Música, Peças e Histórias Infantis (19416086011) ──────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416086011&dc&rnid=18726358011",
+    # ── New Age e Meditação (19416087011) ─────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416087011&dc&rnid=18726358011",
+    # ── Pop (19416088011) ─────────────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011%2Cn%3A19416180011&dc&rnid=19416088011",  # Cantores-Compositores
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011%2Cn%3A19416181011&dc&rnid=19416088011",  # Dança Pop
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011%2Cn%3A19416182011&dc&rnid=19416088011",  # Disco
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011%2Cn%3A19416185011&dc&rnid=19416088011",  # Pop Rock
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011%2Cn%3A19416174011&dc&rnid=19416088011",  # Pop Vocal Tradicional
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011%2Cn%3A19416195011&dc&rnid=19416088011",  # Rhythm e Blues Contemporâneo
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011%2Cn%3A19416187011&dc&rnid=19416088011",  # Soft Rock
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416088011%2Cn%3A19416188011&dc&rnid=19416088011",  # Synthpop
+    # ── R&B (19416089011) ─────────────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416089011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416089011%2Cn%3A19416190011&dc&rnid=19416089011",  # Funk Americano
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416089011%2Cn%3A19416195011&dc&rnid=19416089011",  # Rhythm e Blues Contemporâneo
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416089011%2Cn%3A19416197011&dc&rnid=19416089011",  # Soul
+    # ── Rap e Hip-Hop (19416090011) ───────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416090011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416090011%2Cn%3A19416198011&dc&rnid=19416090011",  # Baixo
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416090011%2Cn%3A19416201011&dc&rnid=19416090011",  # Gangsta e Hardcore
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416090011%2Cn%3A19416204011&dc&rnid=19416090011",  # Rap Experimental
+    # ── Reggae (19416091011) ──────────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416091011&dc&rnid=18726358011",
+    # ── Religião e Gospel (19416130011) ───────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416130011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416130011%2Cn%3A19416231011&dc&rnid=19416130011",  # Gospel
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416130011%2Cn%3A19416232011&dc&rnid=19416130011",  # Rock Cristão
+    # ── Rock (19416092011) ────────────────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011%2Cn%3A19416211011&dc&rnid=19416092011",  # Blues Rock
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011%2Cn%3A19416212011&dc&rnid=19416092011",  # Cantores-Compositores
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011%2Cn%3A19416213011&dc&rnid=19416092011",  # Country Rock
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011%2Cn%3A19416214011&dc&rnid=19416092011",  # Folk Rock
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011%2Cn%3A19416217011&dc&rnid=19416092011",  # Oldies e Retrô
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011%2Cn%3A19416218011&dc&rnid=19416092011",  # Progressivo
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011%2Cn%3A19416150011&dc&rnid=19416092011",  # Rock Alternativo
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011%2Cn%3A19416220011&dc&rnid=19416092011",  # Rock Britânico e Britpop
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416092011%2Cn%3A19416221011&dc&rnid=19416092011",  # Rock Clássico
+    # ── Trilhas Sonoras (19416093011) ─────────────────────────────────────────
     "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011&dc&rnid=18726358011",
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011%2Cn%3A19416173011&dc&rnid=19416093011",  # Musicais
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011%2Cn%3A19416223011&dc&rnid=19416093011",  # Originais de Filmes
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011%2Cn%3A19416225011&dc&rnid=19416093011",  # Trilhas Sonoras de Filme
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011%2Cn%3A19416226011&dc&rnid=19416093011",  # Trilhas Sonoras de Videogames
+    "https://www.amazon.com.br/s?bbn=19549018011&rh=n%3A7791937011%2Cn%3A19549018011%2Cn%3A19416093011%2Cn%3A19416224011&dc&rnid=19416093011",  # Trilhas Sonoras Para Televisão
 ]
 
 BROWSER_IDENTITIES = [
