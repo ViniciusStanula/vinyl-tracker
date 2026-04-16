@@ -176,17 +176,22 @@ export default async function ArtistaPage({
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-      <nav className="flex items-center gap-1.5 text-sm text-zinc-500 mb-6 flex-wrap">
-        <Link href="/" className="hover:text-zinc-300 transition-colors">
+      <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
+        <Link href="/" className="hover:text-cream transition-colors">
           Início
         </Link>
         <span>›</span>
-        <span className="text-zinc-400">{artista}</span>
+        <span className="text-parchment">{artista}</span>
       </nav>
 
       <header className="mb-6">
-        <h1 className="text-3xl font-bold text-zinc-100">{artista}</h1>
-        <p className="mt-1 text-zinc-500 text-sm">
+        <h1
+          className="text-3xl font-bold text-cream"
+          style={{ fontFamily: "var(--font-fraunces, serif)" }}
+        >
+          {artista}
+        </h1>
+        <p className="mt-1 text-dust text-sm">
           {sorted.length}{" "}
           {sorted.length === 1 ? "disco" : "discos"}
           {precoMax !== null && !isNaN(precoMax)
@@ -208,14 +213,21 @@ export default async function ArtistaPage({
           ))}
         </div>
       ) : (
-        <div className="text-center py-24 text-zinc-600">
-          <p className="text-5xl mb-4">🎵</p>
-          <p className="text-zinc-400 text-lg font-medium mb-2">
+        <div className="text-center py-24 text-dust">
+          <div className="inline-block mb-5 opacity-40">
+            <svg viewBox="0 0 64 64" fill="none" className="w-16 h-16 mx-auto">
+              <circle cx="32" cy="32" r="30" fill="#d98f0e" opacity="0.3" />
+              <circle cx="32" cy="32" r="20" fill="#0c0a08" opacity="0.8" />
+              <circle cx="32" cy="32" r="5"  fill="#d98f0e" opacity="0.4" />
+              <circle cx="32" cy="32" r="2"  fill="#0c0a08" />
+            </svg>
+          </div>
+          <p className="text-parchment text-lg font-semibold mb-2"
+            style={{ fontFamily: "var(--font-fraunces, serif)" }}
+          >
             Nenhum disco encontrado
           </p>
-          <p className="text-zinc-600 text-sm">
-            Tente ajustar os filtros.
-          </p>
+          <p className="text-dust text-sm">Tente ajustar os filtros.</p>
         </div>
       )}
 

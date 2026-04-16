@@ -48,11 +48,11 @@ export default function Pagination({
   const btnBase =
     "flex items-center justify-center text-sm rounded-lg transition-colors";
   const btnActive =
-    "bg-amber-500 text-zinc-950 font-semibold";
+    "bg-gold text-record font-semibold";
   const btnIdle =
-    "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100";
+    "bg-groove text-parchment hover:bg-wax hover:text-cream";
   const btnDisabled =
-    "bg-zinc-900 text-zinc-600 cursor-not-allowed select-none";
+    "bg-sleeve text-ash cursor-not-allowed select-none";
 
   return (
     <nav
@@ -78,7 +78,7 @@ export default function Pagination({
         p === "..." ? (
           <span
             key={`ellipsis-${i}`}
-            className="px-1.5 text-zinc-500 text-sm select-none"
+            className="px-1.5 text-dust text-sm select-none"
           >
             …
           </span>

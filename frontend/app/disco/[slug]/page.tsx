@@ -236,19 +236,19 @@ export default async function DiscoPage({
   return (
     <main className="max-w-3xl mx-auto px-4 py-8">
       {/* Breadcrumbs */}
-      <nav className="flex items-center gap-1.5 text-sm text-zinc-500 mb-6 flex-wrap">
-        <Link href="/" className="hover:text-zinc-300 transition-colors">
+      <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
+        <Link href="/" className="hover:text-cream transition-colors">
           Início
         </Link>
         <span>›</span>
         <Link
           href={`/artista/${slugifyArtist(disco.artista)}`}
-          className="hover:text-zinc-300 transition-colors"
+          className="hover:text-cream transition-colors"
         >
           {disco.artista}
         </Link>
         <span>›</span>
-        <span className="text-zinc-400 truncate max-w-[200px] sm:max-w-xs">
+        <span className="text-parchment truncate max-w-[200px] sm:max-w-xs">
           {disco.titulo}
         </span>
       </nav>
@@ -256,7 +256,7 @@ export default async function DiscoPage({
       {/* Hero — large album art on the left, price details on the right */}
       <div className="flex flex-col sm:flex-row gap-6 mb-8">
         {disco.imgUrl && (
-          <div className="relative w-full sm:w-72 sm:h-72 aspect-square sm:aspect-auto shrink-0 bg-zinc-800 rounded-2xl overflow-hidden">
+          <div className="relative w-full sm:w-72 sm:h-72 aspect-square sm:aspect-auto shrink-0 bg-label rounded-2xl overflow-hidden">
             <Image
               src={disco.imgUrl}
               alt={disco.titulo}
@@ -273,20 +273,23 @@ export default async function DiscoPage({
           <div>
             <Link
               href={`/artista/${slugifyArtist(disco.artista)}`}
-              className="text-zinc-500 hover:text-amber-400 text-sm transition-colors"
+              className="text-parchment hover:text-gold text-sm transition-colors font-medium"
             >
               {disco.artista}
             </Link>
-            <h1 className="text-2xl font-bold text-zinc-100 mt-1 leading-tight">
+            <h1
+              className="text-2xl font-bold text-cream mt-1 leading-tight"
+              style={{ fontFamily: "var(--font-fraunces, serif)" }}
+            >
               {disco.titulo}
             </h1>
             {rating && (
               <p className="text-sm mt-2 flex items-center gap-1">
-                <span className="text-amber-400">
+                <span className="text-gold">
                   {"★".repeat(stars)}
                   {"☆".repeat(5 - stars)}
                 </span>
-                <span className="text-zinc-400 ml-0.5">{rating.toFixed(1)}</span>
+                <span className="text-dust ml-0.5">{rating.toFixed(1)}</span>
               </p>
             )}
           </div>
@@ -294,43 +297,46 @@ export default async function DiscoPage({
           <div className="mt-5">
             {/* Price + badges row */}
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="text-4xl sm:text-5xl font-bold text-amber-400 leading-none">
+              <span
+                className="text-4xl sm:text-5xl font-black text-gold leading-none tabular-nums"
+                style={{ fontFamily: "var(--font-fraunces, serif)" }}
+              >
                 {fmt(precoAtual)}
               </span>
               {Math.abs(desconto) >= 1 && (
                 <span
                   className={`text-sm font-bold px-2.5 py-1 rounded-lg ${
                     desconto >= 10
-                      ? "bg-emerald-900 text-emerald-400"
+                      ? "bg-deal/20 text-deallit"
                       : desconto > 0
-                      ? "bg-zinc-800 text-zinc-400"
-                      : "bg-red-900/50 text-red-400"
+                      ? "bg-groove text-parchment"
+                      : "bg-cut/20 text-cut"
                   }`}
                 >
                   {desconto >= 0 ? "▼" : "▲"} {Math.abs(desconto).toFixed(1)}%
                 </span>
               )}
               {statusPreco === "menor" && (
-                <span className="text-xs bg-emerald-600 text-white font-bold px-3 py-1 rounded-full">
-                  🟢 Menor Preço Histórico
+                <span className="text-xs bg-deal text-cream font-bold px-3 py-1 rounded-full">
+                  ↓ Menor Preço Histórico
                 </span>
               )}
               {statusPreco === "aumento" && (
-                <span className="text-xs bg-red-900/70 text-red-400 font-bold px-3 py-1 rounded-full border border-red-800">
-                  🔴 Aumento de Preço
+                <span className="text-xs bg-cut/20 text-cut font-bold px-3 py-1 rounded-full border border-cut/40">
+                  ↑ Aumento de Preço
                 </span>
               )}
               {statusPreco === "estavel" && (
-                <span className="text-xs bg-blue-900/70 text-blue-400 font-bold px-3 py-1 rounded-full border border-blue-800">
-                  🔵 Preço Estável
+                <span className="text-xs bg-groove text-parchment font-semibold px-3 py-1 rounded-full border border-wax/50">
+                  → Preço Estável
                 </span>
               )}
             </div>
 
             {/* Historical average with strikethrough */}
-            <p className="text-zinc-500 text-sm">
+            <p className="text-dust text-sm">
               vs. média histórica{" "}
-              <span className="line-through text-zinc-600">{fmt(media)}</span>
+              <span className="line-through text-ash">{fmt(media)}</span>
             </p>
 
             {/* CTA buttons */}
@@ -340,30 +346,20 @@ export default async function DiscoPage({
                   href={disco.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm px-6 py-3 rounded-full transition-colors"
+                  className="inline-flex items-center gap-2 bg-gold hover:bg-goldlit text-record font-bold text-sm px-6 py-3 rounded-full transition-colors"
                 >
                   Ver na Amazon
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 8l4 4m0 0l-4 4m4-4H3"
-                    />
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
                 </a>
               ) : (
-                <span className="inline-flex items-center gap-2 bg-zinc-800 text-zinc-500 font-bold text-sm px-6 py-3 rounded-full cursor-not-allowed border border-zinc-700">
+                <span className="inline-flex items-center gap-2 bg-groove text-dust font-bold text-sm px-6 py-3 rounded-full cursor-not-allowed border border-wax/50">
                   Não disponível
                 </span>
               )}
             </div>
-            <p className="text-zinc-600 text-xs mt-2">
+            <p className="text-ash text-xs mt-2">
               Atualizado há {updateLabel} · Preços podem variar
             </p>
           </div>
@@ -371,65 +367,62 @@ export default async function DiscoPage({
       </div>
 
       {/* Price history */}
-      <section className="bg-zinc-900 rounded-xl border border-zinc-800 p-5 mb-6">
-        <h2 className="text-base font-semibold text-zinc-100 mb-4">
+      <section className="bg-sleeve rounded-xl border border-groove p-5 mb-6">
+        <h2
+          className="text-base font-semibold text-cream mb-4"
+          style={{ fontFamily: "var(--font-fraunces, serif)" }}
+        >
           Evolução do preço
-          <span className="text-zinc-500 text-sm font-normal ml-2">
+          <span className="text-dust text-sm font-normal ml-2">
             ({valores.length}{" "}
             {valores.length === 1 ? "registro" : "registros"})
           </span>
         </h2>
 
-        {/* Stat cards — visually distinct per type */}
+        {/* Stat cards */}
         <div className="grid grid-cols-3 gap-3 mb-5">
-          {/* Atual — neutral */}
-          <div className="bg-zinc-800 rounded-lg p-3 border-l-4 border-zinc-600">
-            <p className="text-xs text-zinc-500 mb-1">Atual</p>
-            <p className="font-bold text-zinc-100 text-sm">{fmt(precoAtual)}</p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">{dataAtualLabel}</p>
+          {/* Atual */}
+          <div className="bg-groove rounded-lg p-3 border-l-4 border-wax">
+            <p className="text-[11px] text-dust mb-1">Atual</p>
+            <p className="font-bold text-cream text-sm tabular-nums">{fmt(precoAtual)}</p>
+            <p className="text-[10px] text-dust mt-0.5">{dataAtualLabel}</p>
           </div>
 
-          {/* Mínimo — green accent */}
-          <div className="bg-zinc-800 rounded-lg p-3 border-l-4 border-emerald-600">
-            <p className="text-xs text-zinc-500 mb-1 flex items-center gap-1">
-              Mínimo
-              <span className="text-emerald-500 text-[10px] font-bold">↓</span>
+          {/* Mínimo */}
+          <div className="bg-groove rounded-lg p-3 border-l-4 border-deal">
+            <p className="text-[11px] text-dust mb-1 flex items-center gap-1">
+              Mínimo <span className="text-deallit text-[10px] font-bold">↓</span>
             </p>
-            <p className="font-bold text-emerald-400 text-sm">{fmt(precoMin)}</p>
+            <p className="font-bold text-deallit text-sm tabular-nums">{fmt(precoMin)}</p>
             {minRecord && (
-              <p className="text-[10px] text-zinc-500 mt-0.5">
-                {fmtDateTime(minRecord.capturadoEm)}
-              </p>
+              <p className="text-[10px] text-dust mt-0.5">{fmtDateTime(minRecord.capturadoEm)}</p>
             )}
           </div>
 
-          {/* Máximo — red accent */}
-          <div className="bg-zinc-800 rounded-lg p-3 border-l-4 border-red-800">
-            <p className="text-xs text-zinc-500 mb-1 flex items-center gap-1">
-              Máximo
-              <span className="text-red-500 text-[10px] font-bold">↑</span>
+          {/* Máximo */}
+          <div className="bg-groove rounded-lg p-3 border-l-4 border-cut">
+            <p className="text-[11px] text-dust mb-1 flex items-center gap-1">
+              Máximo <span className="text-cut text-[10px] font-bold">↑</span>
             </p>
-            <p className="font-bold text-red-400 text-sm">{fmt(precoMax)}</p>
+            <p className="font-bold text-cut text-sm tabular-nums">{fmt(precoMax)}</p>
             {maxRecord && (
-              <p className="text-[10px] text-zinc-500 mt-0.5">
-                {fmtDateTime(maxRecord.capturadoEm)}
-              </p>
+              <p className="text-[10px] text-dust mt-0.5">{fmtDateTime(maxRecord.capturadoEm)}</p>
             )}
           </div>
         </div>
 
         <GraficoPreco precos={chartPrecos} />
 
-        {/* Collapsible table with price delta column */}
+        {/* Collapsible price history table */}
         {valores.length > 1 && (
           <details className="mt-4">
-            <summary className="text-xs text-zinc-500 cursor-pointer hover:text-zinc-300 select-none transition-colors">
+            <summary className="text-xs text-dust cursor-pointer hover:text-cream select-none transition-colors">
               Ver todos os registros
             </summary>
             <div className="mt-3 max-h-52 overflow-y-auto">
               <table className="w-full text-xs text-left">
                 <thead>
-                  <tr className="text-zinc-600 border-b border-zinc-800">
+                  <tr className="text-ash border-b border-groove">
                     <th className="pb-2 font-medium">Data</th>
                     <th className="pb-2 font-medium text-right">Preço</th>
                     <th className="pb-2 font-medium text-right">Variação</th>
@@ -441,25 +434,20 @@ export default async function DiscoPage({
                     const curr = Number(p.precoBrl);
                     const delta = prev ? curr - Number(prev.precoBrl) : null;
                     return (
-                      <tr key={i} className="border-b border-zinc-800/50">
-                        <td className="py-1.5 text-zinc-500">
-                          {fmtDateTime(p.capturadoEm)}
-                        </td>
-                        <td className="py-1.5 text-right font-medium text-zinc-200">
-                          {curr.toLocaleString("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          })}
+                      <tr key={i} className="border-b border-groove/50">
+                        <td className="py-1.5 text-dust">{fmtDateTime(p.capturadoEm)}</td>
+                        <td className="py-1.5 text-right font-medium text-cream tabular-nums">
+                          {curr.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                         </td>
                         <td
-                          className={`py-1.5 text-right ${
+                          className={`py-1.5 text-right tabular-nums ${
                             delta === null
-                              ? "text-zinc-700"
+                              ? "text-ash"
                               : delta > 0
-                              ? "text-red-400"
+                              ? "text-cut"
                               : delta < 0
-                              ? "text-emerald-400"
-                              : "text-zinc-600"
+                              ? "text-deallit"
+                              : "text-dust"
                           }`}
                         >
                           {delta === null
@@ -478,15 +466,18 @@ export default async function DiscoPage({
         )}
       </section>
 
-      <p className="text-xs text-zinc-600 text-center">
+      <p className="text-xs text-ash text-center">
         Atualizado em {fmtDateTime(disco.updatedAt)} (horário de Brasília) · Dados
         via Amazon.com.br
       </p>
 
-      {/* Related deals — prevents the page from dead-ending */}
+      {/* Related deals */}
       {processedDeals.length > 0 && (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-zinc-100 mb-4">
+          <h2
+            className="text-lg font-semibold text-cream mb-4"
+            style={{ fontFamily: "var(--font-fraunces, serif)" }}
+          >
             Outros discos em oferta
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
