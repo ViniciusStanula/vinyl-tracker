@@ -32,6 +32,7 @@ export default function InfiniteGrid({
   const [nextPage, setNextPage] = useState(currentPage + 1);
   const [hasMore, setHasMore] = useState(currentPage < totalPages);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   const sentinelRef   = useRef<HTMLDivElement>(null);
   const gridRef       = useRef<HTMLDivElement>(null);
@@ -63,6 +64,7 @@ export default function InfiniteGrid({
   const fetchMore = useCallback(async () => {
     if (loading || !hasMore) return;
     setLoading(true);
+    setFetchError(false);
 
     const params = new URLSearchParams();
     if (searchParams.q) params.set("q", searchParams.q);
@@ -82,7 +84,7 @@ export default function InfiniteGrid({
       setNextPage((p) => p + 1);
       setHasMore(nextPage < data.totalPages);
     } catch {
-      // Silently ignore — user can scroll again to retry
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -113,14 +115,18 @@ export default function InfiniteGrid({
       <div className="flex justify-end mb-3">
         <button
           onClick={toggleMode}
-          className="text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-600 rounded-lg px-3 py-1.5 transition-colors"
+          className="text-xs text-dust hover:text-parchment border border-groove hover:border-wax rounded-lg px-3 py-1.5 transition-colors"
           aria-label={
             mode === "paginate"
               ? "Alternar para scroll infinito"
               : "Alternar para paginação"
           }
         >
-          {mode === "paginate" ? "Scroll infinito ↓" : "Paginação →"}
+          {mode === "paginate" ? (
+            <span>Paginação <span className="text-ash">· alternar para scroll ↓</span></span>
+          ) : (
+            <span>Scroll infinito <span className="text-ash">· alternar para paginação →</span></span>
+          )}
         </button>
       </div>
 
@@ -136,16 +142,25 @@ export default function InfiniteGrid({
 
       {/* Infinite scroll: sentinel + status */}
       {mode === "infinite" && (
-        <div ref={sentinelRef} className="mt-10 text-center min-h-[1px]">
+        <div ref={sentinelRef} className="mt-10 text-center h-px" aria-hidden="true">
           {loading && (
-            <p className="text-zinc-600 text-sm animate-pulse">
+            <p className="text-dust text-sm animate-pulse">
               Carregando mais discos…
             </p>
           )}
-          {!hasMore && !loading && items.length > 0 && (
-            <p className="text-zinc-700 text-xs">
-              Todos os discos foram carregados
-            </p>
+          {fetchError && !loading && (
+            <div className="flex items-center justify-center gap-3">
+              <p className="text-parchment/60 text-sm">Erro ao carregar</p>
+              <button
+                onClick={fetchMore}
+                className="text-xs text-gold hover:text-goldlit border border-groove hover:border-gold rounded-lg px-3 py-1 transition-colors"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          )}
+          {!hasMore && !loading && !fetchError && items.length > 0 && (
+            <p className="text-ash text-xs">Todos os discos foram carregados</p>
           )}
         </div>
       )}

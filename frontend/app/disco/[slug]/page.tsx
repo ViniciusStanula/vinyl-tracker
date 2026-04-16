@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
+import ShareButton from "@/components/ShareButton";
 import { slugifyArtist } from "@/lib/slugify";
 
 export const dynamic = "force-dynamic";
@@ -285,11 +286,11 @@ export default async function DiscoPage({
             </h1>
             {rating && (
               <p className="text-sm mt-2 flex items-center gap-1">
-                <span className="text-gold">
+                <span className="text-gold" aria-hidden="true">
                   {"★".repeat(stars)}
                   {"☆".repeat(5 - stars)}
                 </span>
-                <span className="text-dust ml-0.5">{rating.toFixed(1)}</span>
+                <span className="text-dust ml-0.5" aria-label={`Avaliação: ${rating.toFixed(1)} de 5`}>{rating.toFixed(1)}</span>
               </p>
             )}
           </div>
@@ -360,6 +361,7 @@ export default async function DiscoPage({
                   Não disponível
                 </span>
               )}
+              <ShareButton titulo={disco.titulo} artista={disco.artista} />
             </div>
             <p className="text-ash text-xs mt-2">
               Atualizado há {updateLabel} · Preços podem variar
