@@ -410,6 +410,27 @@ def mark_stale_price(
     conn.commit()
 
 
+def clear_deal_score(conn, disco_id: str) -> None:
+    """
+    Clears deal_score so the product stops appearing as a deal, without
+    marking it unavailable. Used when the scraper cannot confirm the vinyl
+    price (e.g. multi-format page served with a non-vinyl format selected)
+    but the product is still listed as in-stock.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            UPDATE "Disco"
+            SET deal_score      = NULL,
+                "updatedAt"     = NOW(),
+                last_crawled_at = NOW()
+            WHERE id = %s
+            """,
+            (disco_id,),
+        )
+    conn.commit()
+
+
 def mark_unavailable(conn, disco_id: str) -> None:
     """
     Marks a Disco record as unavailable (product page 404 or out-of-stock).

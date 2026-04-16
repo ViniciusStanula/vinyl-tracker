@@ -33,6 +33,7 @@ from database import (
     fetch_stale_records,
     mark_stale_price,
     mark_unavailable,
+    clear_deal_score,
 )
 from deal_scorer import score_deals
 from utils import gerar_slug
@@ -1179,12 +1180,16 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
         if not in_stock:
             result["outcome"] = "unavailable"
         elif price is None:
+            # In-stock but vinyl price unconfirmable (e.g. multi-format page
+            # served with a non-vinyl format selected).  Clear deal_score so
+            # this product stops appearing as a deal — we cannot vouch for
+            # the price — but leave disponivel=TRUE since the product exists.
             log.info(
-                "Stale check: ASIN %s is in-stock but price could not be parsed"
-                " — skipping DB update this run",
+                "Stale check: ASIN %s is in-stock but vinyl price could not be"
+                " confirmed — clearing deal score",
                 record["asin"],
             )
-            result["outcome"] = "error"
+            result["outcome"] = "deal_cleared"
         else:
             result["outcome"] = "updated"
             result["price"] = price
@@ -1212,15 +1217,15 @@ def crawl_stale_records(
 
     For each stale record:
       - HTTP 404            → mark_unavailable()
-      - Out-of-stock page   → mark_unavailable()
-      - In-stock + price    → mark_stale_price()
-      - In-stock, no price  → warning; DB not touched this run
-      - Transient error     → warning; DB not touched (will retry next run)
+      - Out-of-stock page         → mark_unavailable()
+      - In-stock + price          → mark_stale_price()
+      - In-stock, no vinyl price  → clear_deal_score()
+      - Transient error           → warning; DB not touched (will retry next run)
 
     Returns (updated, unavailable, errors).
     """
     now = datetime.now(timezone.utc)
-    updated = unavailable = errors = 0
+    updated = unavailable = deals_cleared = errors = 0
     total = len(stale)
 
     log.info("Stale-records: %d records, %d parallel workers", total, max_workers)
@@ -1261,12 +1266,16 @@ def crawl_stale_records(
                 if not dry_run:
                     mark_stale_price(conn, disco_id, res["price"], now, res["review_count"])
                 updated += 1
+            elif outcome == "deal_cleared":
+                if not dry_run:
+                    clear_deal_score(conn, disco_id)
+                deals_cleared += 1
             else:
                 errors += 1
 
     log.info(
-        "Stale-records check done — %d updated | %d unavailable | %d skipped",
-        updated, unavailable, errors,
+        "Stale-records check done — %d updated | %d unavailable | %d deals_cleared | %d skipped",
+        updated, unavailable, deals_cleared, errors,
     )
     return updated, unavailable, errors
 
