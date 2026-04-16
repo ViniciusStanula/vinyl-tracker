@@ -97,17 +97,21 @@ export default async function ArtistaPage({
     deal_score: number | null;
     confidence_level: string | null;
     last_crawled_at: Date | null;
+    disponivel: boolean;
   };
   const dealMetaRows = await prisma.$queryRaw<DealMeta[]>`
-    SELECT id::text, deal_score, confidence_level, last_crawled_at
+    SELECT id::text, deal_score, confidence_level, last_crawled_at, disponivel
     FROM "Disco"
     WHERE id::text = ANY(${discoIds})
   `;
   const dealMeta = Object.fromEntries(dealMetaRows.map((r) => [r.id, r]));
 
+  // Filter out unavailable products from the artist page listing
+  const discosDisponiveis = discos.filter((d) => dealMeta[d.id]?.disponivel !== false);
+
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const discosProcessados = discos.map((disco) => {
+  const discosProcessados = discosDisponiveis.map((disco) => {
     const precos = disco.precos.map((p) => Number(p.precoBrl));
     const precoAtual = precos[0] ?? 0;
     const media =

@@ -60,6 +60,12 @@ export default async function DiscoPage({
 
   if (!disco) notFound();
 
+  // disponivel lives outside the Prisma schema (managed by the crawler via raw DDL)
+  const dispRow = await prisma.$queryRaw<[{ disponivel: boolean }]>`
+    SELECT disponivel FROM "Disco" WHERE slug = ${slug}
+  `;
+  const disponivel = dispRow[0]?.disponivel ?? true;
+
   const valores = disco.precos.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;
   const precoMin = valores.length ? Math.min(...valores) : precoAtual;
@@ -200,6 +206,7 @@ export default async function DiscoPage({
     LEFT  JOIN avgd   a ON a."discoId" = d.id
     WHERE d.id != ${disco.id}
       AND d.deal_score IS NOT NULL
+      AND d.disponivel = TRUE
     ORDER BY d.deal_score DESC, RANDOM()
     LIMIT 4
   `;
@@ -328,27 +335,33 @@ export default async function DiscoPage({
 
             {/* CTA buttons */}
             <div className="flex flex-wrap items-center gap-3 mt-5">
-              <a
-                href={disco.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm px-6 py-3 rounded-full transition-colors"
-              >
-                Ver na Amazon
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              {disponivel ? (
+                <a
+                  href={disco.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm px-6 py-3 rounded-full transition-colors"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 8l4 4m0 0l-4 4m4-4H3"
-                  />
-                </svg>
-              </a>
+                  Ver na Amazon
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 8l4 4m0 0l-4 4m4-4H3"
+                    />
+                  </svg>
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-2 bg-zinc-800 text-zinc-500 font-bold text-sm px-6 py-3 rounded-full cursor-not-allowed border border-zinc-700">
+                  Não disponível
+                </span>
+              )}
             </div>
             <p className="text-zinc-600 text-xs mt-2">
               Atualizado há {updateLabel} · Preços podem variar
