@@ -51,9 +51,6 @@ export default async function HomePage({
 
       {/* ── Hero ────────────────────────────────────────────────── */}
       <header className="relative mb-8 overflow-hidden rounded-2xl bg-sleeve border border-groove px-6 py-7 vinyl-grooves">
-        <p className="text-gold text-[10px] font-bold tracking-[0.45em] uppercase mb-3 opacity-90">
-          Amazon Brasil · Atualizado 2× ao dia
-        </p>
         <h1
           className="text-3xl sm:text-4xl font-black text-cream leading-tight"
           style={{ fontFamily: "var(--font-fraunces, serif)" }}
