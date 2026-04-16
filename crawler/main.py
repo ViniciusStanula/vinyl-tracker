@@ -498,9 +498,9 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
     if soup.select_one("#unqualifiedBuyBox") and not soup.select_one("#qualifiedBuybox"):
         log.debug(
             "parse_product_page: unqualified buy box detected "
-            "(third-party sellers only) — marking unavailable"
+            "(third-party sellers only) — clearing deal, preserving availability"
         )
-        return None, False, None
+        return None, in_stock, None
 
     # ── Review count ──────────────────────────────────────────────────────
     # Extracted before price so it's available in early OOS returns below.
