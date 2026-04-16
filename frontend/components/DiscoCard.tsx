@@ -79,7 +79,6 @@ export default function DiscoCard({
 
   // Score-3 gets a subtle gold ring
   const cardRing = dealScore === 3 ? " ring-1 ring-gold/40" : "";
-  const dealBadgeTop = descontoPercent > 0 ? "top-[3.25rem]" : "top-2";
 
   return (
     <div className={`relative group bg-sleeve rounded-xl overflow-hidden flex flex-col border border-groove hover:border-wax transition-colors duration-200${cardRing}`}>
@@ -112,27 +111,26 @@ export default function DiscoCard({
         {/* Subtle gradient overlay — bottom fade for legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-record/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-        {/* Discount badge — circular sticker */}
+        {/* Discount badge — pill, top-left */}
         {descontoPercent > 0 && (
-          <div className="absolute top-2 left-2 z-20 w-[2.6rem] h-[2.6rem] rounded-full bg-cut text-cream flex flex-col items-center justify-center shadow-lg shadow-cut/30">
-            <span className="text-[8px] font-bold leading-none tracking-wide">-</span>
-            <span className="text-[14px] font-black leading-none">{descontoPercent}%</span>
+          <div className="absolute top-2 left-2 z-20 bg-cut text-cream text-xs font-black px-2.5 py-1 rounded-md shadow-lg shadow-cut/30 tabular-nums">
+            -{descontoPercent}%
           </div>
         )}
 
-        {/* Deal tier badges */}
+        {/* Deal tier badges — bottom-left, clear of the discount badge */}
         {dealScore === 3 && (
-          <div className={`absolute ${dealBadgeTop} left-2 z-20 bg-gold text-record text-[10px] font-black px-2 py-0.5 rounded shadow-md flex items-center gap-1`}>
+          <div className="absolute bottom-2 left-2 z-20 bg-gold text-record text-[10px] font-black px-2 py-0.5 rounded-md shadow-md flex items-center gap-1">
             ✦ Melhor Preço
           </div>
         )}
         {dealScore === 2 && (
-          <div className={`absolute ${dealBadgeTop} left-2 z-20 bg-deal text-cream text-[10px] font-bold px-2 py-0.5 rounded shadow-md`}>
+          <div className="absolute bottom-2 left-2 z-20 bg-deal text-cream text-[10px] font-bold px-2 py-0.5 rounded-md shadow-md">
             ✓ Ótima Oferta
           </div>
         )}
         {dealScore === 1 && (
-          <div className={`absolute ${dealBadgeTop} left-2 z-20 bg-groove text-parchment text-[10px] font-medium px-2 py-0.5 rounded border border-wax/50`}>
+          <div className="absolute bottom-2 left-2 z-20 bg-record/70 text-parchment text-[10px] font-medium px-2 py-0.5 rounded-md border border-wax/60 backdrop-blur-sm">
             Boa Oferta
           </div>
         )}

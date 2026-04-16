@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
-import ShareButton from "@/components/ShareButton";
 import { slugifyArtist } from "@/lib/slugify";
 
 export const dynamic = "force-dynamic";
@@ -361,7 +360,6 @@ export default async function DiscoPage({
                   Não disponível
                 </span>
               )}
-              <ShareButton titulo={disco.titulo} artista={disco.artista} />
             </div>
             <p className="text-ash text-xs mt-2">
               Atualizado há {updateLabel} · Preços podem variar
