@@ -528,10 +528,10 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
 
     # Step 3 & 4: OOS / wrong format guard.
     if has_format_switcher and tmm_vinyl_price is None:
-        vinyl_oos = bool(soup.select_one("#outOfStockBuyBox_feature_div"))
+        vinyl_oos = bool(soup.select_one("#outOfStockBuyBox"))
         if vinyl_oos:
             log.debug(
-                "parse_product_page: vinyl OOS (#outOfStockBuyBox_feature_div) "
+                "parse_product_page: vinyl OOS (#outOfStockBuyBox inner widget) "
                 "— returning null price"
             )
             return None, False, review_count
