@@ -25,8 +25,14 @@ export interface DiscoCardProps {
 /** 40×16 px SVG sparkline showing the 30-day price trend. */
 function Sparkline({ values }: { values: number[] }) {
   if (values.length < 2) return null;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const dataMin = Math.min(...values);
+  const dataMax = Math.max(...values);
+  const mid = (dataMin + dataMax) / 2;
+  // Enforce a minimum visual range of 10% of the midpoint price so that
+  // tiny fluctuations (e.g. R$0.17 on a R$250 item) don't look like huge swings.
+  const minRange = mid * 0.10;
+  const min = Math.min(dataMin, mid - minRange / 2);
+  const max = Math.max(dataMax, mid + minRange / 2);
   const range = max - min || 1;
   const W = 40, H = 16, PAD = 1;
   const pts = values
