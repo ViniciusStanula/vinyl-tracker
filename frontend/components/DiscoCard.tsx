@@ -90,8 +90,15 @@ export default function DiscoCard({
         : "estavel"
       : null;
 
+  // Score-3 cards get a subtle amber ring so they stand out in the grid
+  const cardRing = dealScore === 3 ? " ring-2 ring-amber-500/50" : "";
+
+  // Deal badge sits below the discount badge when both are present; otherwise
+  // it floats to the top-left so it isn't orphaned mid-image.
+  const dealBadgeTop = descontoPercent > 0 ? "top-10" : "top-2";
+
   return (
-    <div className="relative group bg-zinc-900 rounded-xl overflow-hidden flex flex-col">
+    <div className={`relative group bg-zinc-900 rounded-xl overflow-hidden flex flex-col${cardRing}`}>
       {/* Full-card link — covers the entire card */}
       <Link
         href={`/disco/${disco.slug}`}
@@ -127,17 +134,17 @@ export default function DiscoCard({
 
         {/* Deal tier badge — shown when the scorer has assigned a tier */}
         {dealScore === 3 && (
-          <div className="absolute top-10 left-2 z-20 bg-amber-500 text-zinc-950 text-[10px] font-bold px-1.5 py-0.5 rounded">
+          <div className={`absolute ${dealBadgeTop} left-2 z-20 bg-amber-500 text-zinc-950 text-xs font-bold px-2 py-1 rounded shadow-sm`}>
             🥇 Melhor Preço
           </div>
         )}
         {dealScore === 2 && (
-          <div className="absolute top-10 left-2 z-20 bg-zinc-300 text-zinc-950 text-[10px] font-bold px-1.5 py-0.5 rounded">
+          <div className={`absolute ${dealBadgeTop} left-2 z-20 bg-emerald-500 text-zinc-950 text-[11px] font-bold px-1.5 py-0.5 rounded shadow-sm`}>
             🥈 Ótima Oferta
           </div>
         )}
         {dealScore === 1 && (
-          <div className="absolute top-10 left-2 z-20 bg-amber-800/80 text-amber-100 text-[10px] font-bold px-1.5 py-0.5 rounded">
+          <div className={`absolute ${dealBadgeTop} left-2 z-20 bg-zinc-700 text-zinc-300 text-[10px] font-medium px-1.5 py-0.5 rounded`}>
             🥉 Boa Oferta
           </div>
         )}

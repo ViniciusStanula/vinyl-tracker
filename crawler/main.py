@@ -44,7 +44,7 @@ ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
 MAX_PAGES_DEFAULT    = 100     # main popularity URL — generous ceiling, early-exit handles the rest
 MAX_PAGES_CATEGORY   = 20      # per genre URL — Amazon rarely exceeds 15 pages
 DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi browser impersonation
-MAX_CATEGORY_WORKERS = 3       # parallel threads for genre category crawling
+MAX_CATEGORY_WORKERS = 5       # parallel threads for genre category crawling
 MIN_PRICE_BRL      = 10.0
 
 # URL principal — todos os vinis ordenados por popularidade

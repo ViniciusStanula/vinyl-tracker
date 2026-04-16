@@ -39,6 +39,7 @@ type DiscoRow = {
   dealScore: string | null;        // SMALLINT from Disco.deal_score
   confidenceLevel: string | null;  // VARCHAR from Disco.confidence_level
   historyDays: string | null;      // INTEGER from Disco.history_days
+  lastCrawledAt: Date | null;      // TIMESTAMPTZ from Disco.last_crawled_at
 };
 
 export type ProcessedDisco = {
@@ -114,6 +115,7 @@ export async function queryDiscos(params: {
           d.deal_score        AS "dealScore",
           d.confidence_level  AS "confidenceLevel",
           d.history_days      AS "historyDays",
+          d.last_crawled_at   AS "lastCrawledAt",
           hp_latest."precoBrl"                              AS "precoAtual",
           COALESCE(hp_avg.media, hp_latest."precoBrl")      AS "mediaPreco",
           COALESCE(hp_avg.cnt, 0)::INTEGER                  AS "totalPrecos",
@@ -182,10 +184,18 @@ export async function queryDiscos(params: {
       }
     }
 
-    const dealScore =
+    const rawDealScore =
       row.dealScore !== null && row.dealScore !== undefined
         ? Number(row.dealScore)
         : null;
+
+    // Suppress deal badge if the crawler hasn't confirmed this product in the
+    // last 4 hours. Protects against stale data when the crawler hasn't run or
+    // failed to re-validate an active deal in Phase 0.
+    const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
+    const crawledAt = row.lastCrawledAt ? new Date(row.lastCrawledAt).getTime() : null;
+    const dealIsStale = crawledAt === null || Date.now() - crawledAt > DEAL_STALE_MS;
+    const dealScore = rawDealScore !== null && !dealIsStale ? rawDealScore : null;
 
     return {
       id:             row.id,

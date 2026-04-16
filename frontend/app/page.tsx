@@ -5,7 +5,7 @@ import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import { Suspense } from "react";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export const metadata = {
   title: "Garimpa Vinil — Melhores ofertas em discos de vinil",

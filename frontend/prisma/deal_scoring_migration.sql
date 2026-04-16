@@ -47,6 +47,11 @@ ALTER TABLE "Disco"
 ALTER TABLE "Disco"
     ADD COLUMN IF NOT EXISTS history_days INTEGER;
 
+-- last_crawled_at — UTC timestamp of the most recent crawler visit (upsert or stale-check).
+-- Set on every write. Used by the frontend to suppress stale deal badges (> 4 hours old).
+ALTER TABLE "Disco"
+    ADD COLUMN IF NOT EXISTS last_crawled_at TIMESTAMPTZ;
+
 -- Index on deal_score for fast active-deal queries (Phase 0 re-validation)
 CREATE INDEX IF NOT EXISTS "Disco_deal_score_idx"
     ON "Disco" (deal_score)

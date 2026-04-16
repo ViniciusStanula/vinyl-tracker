@@ -92,9 +92,14 @@ export default async function ArtistaPage({
   // These columns live outside the Prisma schema (managed by the crawler),
   // so a targeted raw query is the lightest way to pull them in.
   const discoIds = discos.map((d) => d.id);
-  type DealMeta = { id: string; deal_score: number | null; confidence_level: string | null };
+  type DealMeta = {
+    id: string;
+    deal_score: number | null;
+    confidence_level: string | null;
+    last_crawled_at: Date | null;
+  };
   const dealMetaRows = await prisma.$queryRaw<DealMeta[]>`
-    SELECT id::text, deal_score, confidence_level
+    SELECT id::text, deal_score, confidence_level, last_crawled_at
     FROM "Disco"
     WHERE id::text = ANY(${discoIds})
   `;
@@ -119,9 +124,14 @@ export default async function ArtistaPage({
       .map((p) => Number(p.precoBrl));
 
     const meta = dealMeta[disco.id];
-    const dealScore = meta?.deal_score !== null && meta?.deal_score !== undefined
+    const rawDealScore = meta?.deal_score !== null && meta?.deal_score !== undefined
       ? Number(meta.deal_score)
       : null;
+
+    const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
+    const crawledAt = meta?.last_crawled_at ? new Date(meta.last_crawled_at).getTime() : null;
+    const dealIsStale = crawledAt === null || Date.now() - crawledAt > DEAL_STALE_MS;
+    const dealScore = rawDealScore !== null && !dealIsStale ? rawDealScore : null;
 
     return {
       ...disco,

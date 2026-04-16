@@ -122,21 +122,22 @@ def upsert_batch(conn, items: list[dict]) -> int:
             """
             INSERT INTO "Disco" (
                 id, asin, titulo, artista, slug, estilo, "imgUrl", url, rating,
-                "reviewCount", "createdAt", "updatedAt"
+                "reviewCount", "createdAt", "updatedAt", last_crawled_at
             )
             VALUES (
                 gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                NOW(), NOW()
+                NOW(), NOW(), NOW()
             )
             ON CONFLICT (asin) DO UPDATE SET
-                titulo        = EXCLUDED.titulo,
-                artista       = EXCLUDED.artista,
-                estilo        = COALESCE(EXCLUDED.estilo, "Disco".estilo),
-                "imgUrl"      = EXCLUDED."imgUrl",
-                url           = EXCLUDED.url,
-                rating        = EXCLUDED.rating,
-                "reviewCount" = COALESCE(EXCLUDED."reviewCount", "Disco"."reviewCount"),
-                "updatedAt"   = NOW()
+                titulo          = EXCLUDED.titulo,
+                artista         = EXCLUDED.artista,
+                estilo          = COALESCE(EXCLUDED.estilo, "Disco".estilo),
+                "imgUrl"        = EXCLUDED."imgUrl",
+                url             = EXCLUDED.url,
+                rating          = EXCLUDED.rating,
+                "reviewCount"   = COALESCE(EXCLUDED."reviewCount", "Disco"."reviewCount"),
+                "updatedAt"     = NOW(),
+                last_crawled_at = NOW()
             """,
             disco_rows,
             page_size=500,
@@ -234,6 +235,11 @@ def ensure_schema_extras(conn) -> None:
 
       Disco.history_days INTEGER
         — Number of days spanned by the product's price history.
+
+      Disco.last_crawled_at TIMESTAMPTZ
+        — UTC timestamp of the most recent crawler visit (upsert or stale-check).
+          Set on every write, including price-unchanged upserts. Used by the
+          frontend to suppress deal badges older than 4 hours.
     """
     with _cursor(conn) as cur:
         # Fast path: check the catalog first. After the first successful run
@@ -244,12 +250,13 @@ def ensure_schema_extras(conn) -> None:
             WHERE table_name = 'Disco'
               AND column_name IN (
                 'disponivel','deal_score','last_flagged_at','last_flagged_price',
-                'avg_30d','avg_90d','low_30d','low_all_time','confidence_level','history_days'
+                'avg_30d','avg_90d','low_30d','low_all_time','confidence_level',
+                'history_days','last_crawled_at'
               )
             """
         )
         existing = cur.fetchone()[0]
-        if existing == 10:
+        if existing == 11:
             log.debug("ensure_schema_extras: schema already complete, skipping DDL.")
             return
 
@@ -269,7 +276,8 @@ def ensure_schema_extras(conn) -> None:
                 ADD COLUMN IF NOT EXISTS low_30d          DECIMAL(10, 2),
                 ADD COLUMN IF NOT EXISTS low_all_time     DECIMAL(10, 2),
                 ADD COLUMN IF NOT EXISTS confidence_level VARCHAR(30),
-                ADD COLUMN IF NOT EXISTS history_days     INTEGER
+                ADD COLUMN IF NOT EXISTS history_days     INTEGER,
+                ADD COLUMN IF NOT EXISTS last_crawled_at  TIMESTAMPTZ
             """
         )
         # Partial index for fast active-deal lookups (Phase 0 re-validation)
@@ -378,9 +386,10 @@ def mark_stale_price(
         cur.execute(
             """
             UPDATE "Disco"
-            SET disponivel    = TRUE,
-                "reviewCount" = COALESCE(%s, "reviewCount"),
-                "updatedAt"   = NOW()
+            SET disponivel      = TRUE,
+                "reviewCount"   = COALESCE(%s, "reviewCount"),
+                "updatedAt"     = NOW(),
+                last_crawled_at = NOW()
             WHERE id = %s
             """,
             (review_count, disco_id),
@@ -399,9 +408,10 @@ def mark_unavailable(conn, disco_id: str) -> None:
         cur.execute(
             """
             UPDATE "Disco"
-            SET disponivel  = FALSE,
-                deal_score  = NULL,
-                "updatedAt" = NOW()
+            SET disponivel      = FALSE,
+                deal_score      = NULL,
+                "updatedAt"     = NOW(),
+                last_crawled_at = NOW()
             WHERE id = %s
             """,
             (disco_id,),
