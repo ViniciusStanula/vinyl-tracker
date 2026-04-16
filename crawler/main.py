@@ -443,7 +443,12 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
     # sellers — no price is rendered in the page HTML (only a "Ver todas as
     # opções de compra" button).  Treat as unavailable so the record is marked
     # accordingly and removed from the deals page.
-    if soup.select_one("#unqualifiedBuyBox_feature_div"):
+    #
+    # NOTE: check #unqualifiedBuyBox (inner widget), NOT #unqualifiedBuyBox_feature_div
+    # (outer wrapper). Amazon renders the _feature_div shell on every page even when
+    # empty; the inner #unqualifiedBuyBox div only appears when the page genuinely
+    # has no qualified seller.
+    if soup.select_one("#unqualifiedBuyBox"):
         log.debug(
             "parse_product_page: unqualified buy box detected "
             "(third-party sellers only) — marking unavailable"
