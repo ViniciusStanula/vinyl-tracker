@@ -532,9 +532,13 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
         if vinyl_oos:
             log.debug(
                 "parse_product_page: vinyl OOS (#outOfStockBuyBox inner widget) "
-                "— returning null price"
+                "— clearing deal but preserving availability status"
             )
-            return None, False, review_count
+            # Return in_stock as-is (not hardcoded False): if vinyl is OOS but another
+            # format is in stock, the product still exists. Returning in_stock=True here
+            # causes _fetch_one_stale to call clear_deal_score() instead of
+            # mark_unavailable(), so the record stays disponivel=TRUE.
+            return None, in_stock, review_count
         if not selected_is_vinyl:
             log.debug(
                 "parse_product_page: multi-format page, selected swatch is not "
