@@ -206,7 +206,7 @@ export async function queryDiscos(params: {
     const dealIsStale = crawledAt === null || Date.now() - crawledAt > DEAL_STALE_MS;
     const dealScore = rawDealScore !== null && !dealIsStale ? rawDealScore : null;
 
-    return {
+    return [{
       id:             row.id,
       slug:           row.slug,
       titulo:         row.titulo,
