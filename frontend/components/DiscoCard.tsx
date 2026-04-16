@@ -74,24 +74,8 @@ export default function DiscoCard({
   const showOriginalPrice = descontoPercent > 0;
   const dealScore         = disco.dealScore ?? null;
   const confidenceLevel   = disco.confidenceLevel ?? null;
-  const rating            = disco.rating;
-  const stars             = rating ? Math.round(rating) : 0;
   const artistaSlug       = slugifyArtist(disco.artista);
   const sparkline         = disco.sparkline ?? [];
-
-  const sparklineMin = sparkline.length >= 2 ? Math.min(...sparkline) : null;
-  const sparklineAvg =
-    sparkline.length >= 2
-      ? sparkline.reduce((a, b) => a + b, 0) / sparkline.length
-      : null;
-  const statusPreco: "menor" | "aumento" | "estavel" | null =
-    sparklineMin !== null && sparklineAvg !== null
-      ? disco.precoAtual <= sparklineMin
-        ? "menor"
-        : disco.precoAtual > sparklineAvg * 1.03
-        ? "aumento"
-        : "estavel"
-      : null;
 
   // Score-3 gets a subtle gold ring
   const cardRing = dealScore === 3 ? " ring-1 ring-gold/40" : "";
@@ -184,23 +168,6 @@ export default function DiscoCard({
           {disco.titulo}
         </h2>
 
-        {/* Star rating */}
-        {rating !== null && (
-          <div className="flex items-center gap-1 mt-1">
-            <span className="text-gold text-xs" aria-hidden="true">
-              {"★".repeat(stars)}{"☆".repeat(5 - stars)}
-            </span>
-            <span className="text-dust text-xs">{rating.toFixed(1)}</span>
-          </div>
-        )}
-
-        {/* Genre tag */}
-        {disco.estilo && (
-          <span className="inline-block mt-1 text-[10px] text-parchment bg-groove/50 border border-wax/40 px-2 py-0.5 rounded-full self-start">
-            {disco.estilo}
-          </span>
-        )}
-
         {/* ── Price section ──────────────────────────────────────── */}
         <div className="mt-auto pt-2">
           {(sparkline.length >= 2 || showOriginalPrice) && (
@@ -222,37 +189,12 @@ export default function DiscoCard({
             {fmt(disco.precoAtual)}
           </p>
 
-          {/* Price status */}
-          {statusPreco === "menor" && (
-            <p className="text-[11px] mt-0.5 font-semibold text-deallit">
-              ↓ Menor preço histórico
-            </p>
-          )}
-          {statusPreco === "aumento" && (
-            <p className="text-[11px] mt-0.5 font-semibold text-cut">
-              ↑ Aumento de preço
-            </p>
-          )}
-          {statusPreco === "estavel" && (
-            <p className="text-[11px] mt-0.5 text-parchment/60">
-              → Preço estável
-            </p>
-          )}
-
           {/* Low-confidence warning */}
           {confidenceLevel === "low_confidence" && dealScore !== null && (
             <p className="text-[10px] mt-0.5 text-goldmute">
               ⚠ Poucos dados disponíveis
             </p>
           )}
-
-          {/* CTA */}
-          <Link
-            href={`/disco/${disco.slug}`}
-            className="relative z-20 mt-2.5 w-full text-center text-xs font-semibold text-parchment border border-groove hover:border-gold hover:text-gold rounded-lg py-1.5 transition-all block"
-          >
-            Ver Histórico de Preços
-          </Link>
         </div>
       </div>
     </div>
