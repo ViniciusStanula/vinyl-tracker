@@ -1433,8 +1433,10 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
     Returns a result dict with keys: record, outcome, price, review_count.
     outcome is one of: "updated", "unavailable", "error".
     """
-    # Stagger worker starts so they don't fire simultaneously.
-    time.sleep(worker_idx * random.uniform(1.0, 2.0))
+    # Stagger worker starts so they don't all fire simultaneously.
+    # Cap at 5 slots so startup overhead stays under ~10s even with many workers.
+    stagger_slot = worker_idx % 5
+    time.sleep(stagger_slot * random.uniform(1.0, 2.0))
 
     url = affiliate_link(record["asin"])
     session, _ = make_session()

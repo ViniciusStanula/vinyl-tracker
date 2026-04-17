@@ -14,7 +14,7 @@ concurrency:
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 120   # expanded from 60 — category crawl now covers 69 URLs
+    timeout-minutes: 55    # hard ceiling just under 1 hour so stale phase never overruns
     permissions:
       issues: write        # needed for the "open issue on failure" step
 
@@ -31,7 +31,7 @@ jobs:
         run: pip install -r crawler/requirements.txt
 
       - name: Run crawler
-        run: python crawler/main.py --max-pages 300 --stale-max 300 --stale-workers 6
+        run: python crawler/main.py --max-pages 300 --stale-max 0 --stale-workers 12
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
