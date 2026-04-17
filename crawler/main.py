@@ -47,9 +47,9 @@ from utils import gerar_slug
 # ─────────────────────────────────────────────────────────────
 ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
 MAX_PAGES_DEFAULT    = 100     # main popularity URL — generous ceiling, early-exit handles the rest
-MAX_PAGES_CATEGORY   = 20      # per genre URL — Amazon rarely exceeds 15 pages
+MAX_PAGES_CATEGORY   = 10      # per genre URL — capped at 10; Amazon rarely yields useful results beyond that
 DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi browser impersonation
-MAX_CATEGORY_WORKERS = int(os.environ.get("CATEGORY_WORKERS", "2"))  # parallel threads for genre category crawling
+MAX_CATEGORY_WORKERS = int(os.environ.get("CATEGORY_WORKERS", "4"))  # parallel threads for genre category crawling
 MIN_PRICE_BRL      = 10.0
 
 # Stale-records session hygiene: rotate after a random number of product-page
@@ -1600,7 +1600,7 @@ def _crawl_one_category(cat_url: str, label: str, delay: float) -> list[dict]:
     return items
 
 
-def crawl(max_pages: int, delay: float) -> list[dict]:
+def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[dict]:
     """
     Orchestrates the full crawl:
       1. Main popularity-ranked URL (up to max_pages pages), sequential.
@@ -1649,6 +1649,17 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
         }
         for future in as_completed(futures):
             cat_idx = futures[future]
+
+            if deadline is not None and time.monotonic() >= deadline:
+                pending = sum(1 for f in futures if not f.done())
+                log.warning(
+                    "Time limit reached during category crawl — cancelling %d pending futures.",
+                    pending,
+                )
+                for f in futures:
+                    f.cancel()
+                break
+
             try:
                 cat_items = future.result()
                 log.info("Category %d complete — %d products.", cat_idx, len(cat_items))
@@ -1982,7 +1993,7 @@ def main():
         # ── Phase 1: Regular crawl ─────────────────────────────────────────
         log.info("═" * 60)
         t0 = time.monotonic()
-        all_items, asin_categories = crawl(args.max_pages, args.delay)
+        all_items, asin_categories = crawl(args.max_pages, args.delay, deadline=deadline)
         log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
 
         if not all_items:
