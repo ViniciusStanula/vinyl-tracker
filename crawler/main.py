@@ -1686,7 +1686,8 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
 # ─────────────────────────────────────────────────────────────
 #  Stale-records check
 # ─────────────────────────────────────────────────────────────
-def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
+def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
+                     deadline: float | None = None) -> dict:
     """
     Worker function: fetches a single product page using a persistent per-thread
     session. Reusing the session across tasks lets cookies accumulate so requests
@@ -1696,8 +1697,14 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
     connection (all DB writes happen back on the main thread).
 
     Returns a result dict with keys: record, outcome, price, review_count.
-    outcome is one of: "updated", "unavailable", "error".
+    outcome is one of: "updated", "unavailable", "deal_cleared", "error", "skipped".
     """
+    # Bail immediately if the wall-clock budget has already been exhausted.
+    # Tasks submitted before the deadline but not yet started will self-cancel
+    # here rather than running a full network round-trip past the time limit.
+    if deadline is not None and time.monotonic() >= deadline:
+        return {"record": record, "outcome": "skipped", "price": None, "review_count": None}
+
     # Stagger worker starts so they don't all fire simultaneously.
     time.sleep(worker_idx * random.uniform(1.0, 2.0))
 
@@ -1803,11 +1810,27 @@ def crawl_stale_records(
                     idx, total,
                 )
                 break
-            futures[pool.submit(_fetch_one_stale, record, delay, idx % max_workers)] = record
+            futures[pool.submit(_fetch_one_stale, record, delay, idx % max_workers, deadline)] = record
 
         completed = 0
+        skipped = 0
         for future in as_completed(futures):
             completed += 1
+
+            # Hard deadline: cancel every future that hasn't started yet and stop
+            # harvesting results.  pool.submit() is non-blocking, so all tasks are
+            # queued instantly — without this check the pool works through all of
+            # them even after the wall-clock budget is exhausted.
+            if deadline is not None and time.monotonic() >= deadline:
+                pending = sum(1 for f in futures if not f.done())
+                log.warning(
+                    "Time limit reached during stale harvest — cancelling %d pending futures.",
+                    pending,
+                )
+                for f in futures:
+                    f.cancel()
+                break
+
             try:
                 res = future.result()
             except Exception as exc:
@@ -1839,12 +1862,15 @@ def crawl_stale_records(
                 if not dry_run:
                     clear_deal_score(conn, disco_id)
                 deals_cleared += 1
+            elif outcome == "skipped":
+                skipped += 1
             else:
                 errors += 1
 
     log.info(
-        "Stale-records check done — %d updated | %d unavailable | %d deals_cleared | %d skipped",
-        updated, unavailable, deals_cleared, errors,
+        "Stale-records check done — %d updated | %d unavailable | %d deals_cleared"
+        " | %d skipped | %d errors",
+        updated, unavailable, deals_cleared, skipped, errors,
     )
     return updated, unavailable, errors
 
