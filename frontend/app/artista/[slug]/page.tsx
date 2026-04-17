@@ -22,12 +22,25 @@ type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
 const resolveArtista = cache(async function resolveArtista(
   slug: string
 ): Promise<{ canonical: string; variants: string[] } | null> {
-  const todos = await prisma.disco.findMany({
-    select: { artista: true },
-    distinct: ["artista"],
-  });
-  const variants = todos
-    .map((a) => a.artista)
+  // Pre-filter at the DB level using a SQL slug approximation so we transfer
+  // only candidates instead of the full artist table. Two expressions cover:
+  //   1. Regular names: lower(regexp_replace(artista, '[^a-z0-9]+', '-', 'g'))
+  //   2. Inverted "LAST,FIRST" names: swap parts before slugifying
+  // The JS slugifyArtist() filter below is the exact match safety-net for
+  // edge cases (accent stripping via NFD that SQL doesn't reproduce exactly).
+  const candidates = await prisma.$queryRaw<{ artista: string }[]>`
+    SELECT DISTINCT artista FROM "Disco"
+    WHERE lower(regexp_replace(artista, '[^a-z0-9]+', '-', 'g'))
+            LIKE ${slug.substring(0, 60)}
+       OR  lower(regexp_replace(artista, '[^a-z0-9]+', '-', 'g'))
+            LIKE ${'%' + slug.substring(0, 30) + '%'}
+       OR  lower(regexp_replace(
+             trim(split_part(artista, ',', 2)) || ' ' || trim(split_part(artista, ',', 1)),
+             '[^a-z0-9]+', '-', 'g'
+           )) LIKE ${slug.substring(0, 60)}
+  `;
+  const variants = candidates
+    .map((r) => r.artista)
     .filter((a) => slugifyArtist(a) === slug);
 
   if (variants.length === 0) return null;

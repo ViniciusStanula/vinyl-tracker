@@ -437,7 +437,7 @@ def is_vinyl(title: str, card=None) -> bool:
         for sig in vinyl_card_signals:
             if re.search(sig, card_text):
                 if re.search(r"\bcd\b", card_text) and not re.search(r"vinil|vinyl|\blp\b", title_lower):
-                    pass
+                    continue
                 return True
 
     return True
