@@ -605,10 +605,18 @@ def fetch_product_page(session, url: str, retries: int = 3):
                 continue
             return None, None, session
 
-        if any(s in resp.text for s in [
-            "Robot Check", "Verificação de robô", "Digite os caracteres",
-        ]):
-            log.warning("CAPTCHA detected on product page, skipping.")
+        if any(s in resp.text for s in (
+            "Robot Check",
+            "Verificação de robô",
+            "Digite os caracteres",
+            "Sorry, we just need to make sure you're not a robot",
+            "To discuss automated access to Amazon data please contact",
+            "Access Denied",
+            "Enter the characters you see below",
+            "amazon.com.br/errors/validateCaptcha",
+            "Prove you're not a robot",
+        )):
+            log.warning("CAPTCHA/bot-detection page on product page, skipping.")
             return None, None, session
 
         return BeautifulSoup(resp.text, "lxml"), resp.status_code, session
@@ -633,12 +641,14 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
 
     price_brl is None when the price widget is absent (e.g. "sold by third
     party only" pages where the add-to-cart block isn't rendered).
-    in_stock reflects the #availability / span.a-color-success text;
-    defaults to False when no availability signal is found.
+    in_stock defaults to True (conservative) and is only set to False when
+    explicit out-of-stock signals are found. Pages with no availability
+    signal (e.g. bot-detection pages that slipped the CAPTCHA guard) are
+    treated as available rather than incorrectly marked unavailable.
     review_count is None when the review widget is absent.
     """
     # ── Availability ──────────────────────────────────────────────────────
-    in_stock = False
+    in_stock = True  # conservative default — only override on explicit OOS signals
 
     avail_el = soup.select_one("#availability")
     if avail_el:
