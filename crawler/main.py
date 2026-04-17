@@ -1477,6 +1477,7 @@ def crawl_stale_records(
     conn,
     dry_run: bool,
     max_workers: int = 2,
+    deadline: float | None = None,
 ) -> tuple[int, int, int]:
     """
     Fetches individual product pages for records absent from the category crawl
@@ -1502,10 +1503,15 @@ def crawl_stale_records(
     log.info("Stale-records: %d records, %d parallel workers", total, max_workers)
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = {
-            pool.submit(_fetch_one_stale, record, delay, idx % max_workers): record
-            for idx, record in enumerate(stale)
-        }
+        futures = {}
+        for idx, record in enumerate(stale):
+            if deadline is not None and time.monotonic() >= deadline:
+                log.warning(
+                    "Time limit reached — stopping stale submission after %d/%d records.",
+                    idx, total,
+                )
+                break
+            futures[pool.submit(_fetch_one_stale, record, delay, idx % max_workers)] = record
 
         completed = 0
         for future in as_completed(futures):
@@ -1576,6 +1582,10 @@ def parse_args():
         "--skip-deal-revalidation", action="store_true",
         help="Skip the pre-crawl deal re-validation phase",
     )
+    parser.add_argument(
+        "--time-limit", type=int, default=50, metavar="MIN",
+        help="Wall-clock budget in minutes; stale submission stops when exceeded (default: 50)",
+    )
     return parser.parse_args()
 
 
@@ -1592,6 +1602,7 @@ def main():
     log.info("═" * 60)
 
     t_start = time.monotonic()
+    deadline = t_start + args.time_limit * 60
 
     if args.dry_run:
         log.info("DRY RUN — skipping DB phases; running crawl only.")
@@ -1638,6 +1649,7 @@ def main():
                 crawl_stale_records(
                     active_deals, args.delay, conn,
                     dry_run=False, max_workers=args.stale_workers,
+                    deadline=deadline,
                 )
                 # Re-score immediately after re-validation so that deals whose
                 # prices just went up (or products that became unavailable) are
@@ -1720,6 +1732,7 @@ def main():
                     crawl_stale_records(
                         stale, args.delay, conn,
                         dry_run=False, max_workers=args.stale_workers,
+                        deadline=deadline,
                     )
                     log.info("Phase 3 stale: %.0fs", time.monotonic() - t0)
 
