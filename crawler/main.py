@@ -50,6 +50,11 @@ DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi b
 MAX_CATEGORY_WORKERS = 5       # parallel threads for genre category crawling
 MIN_PRICE_BRL      = 10.0
 
+# Stale-records session hygiene: rotate the curl_cffi session after this many
+# product-page hits.  Amazon silently degrades sessions to skeleton pages after
+# ~1-2 product hits per session; rotating proactively keeps requests fresh.
+_STALE_SESSION_MAX_HITS = 2
+
 # URL principal — todos os vinis ordenados por popularidade
 VINYL_URL_PATH = (
     "/s?i=popular&srs=19549018011"
@@ -344,12 +349,14 @@ def _get_worker_session():
         session, _ = make_session()
         warm_up(session)
         _tl.session = session
+        _tl.hit_count = 0
     return _tl.session
 
 
 def _invalidate_worker_session():
     """Discard the current thread's session so the next call rebuilds it."""
     _tl.session = None
+    _tl.hit_count = 0
 
 # ─────────────────────────────────────────────────────────────
 #  Compiled regexes
@@ -539,19 +546,26 @@ def make_session():
 
 
 def warm_up(session) -> None:
+    # Three-step warm-up: homepage → vinyl category → vinyl search results.
+    # Visiting search results sets the same cookies the main crawl accumulates
+    # so subsequent product-page requests look like organic search-then-click.
     try:
         session.get("https://www.amazon.com.br/", timeout=15)
-        time.sleep(random.uniform(0.5, 1.5))
+        time.sleep(random.uniform(0.8, 1.8))
         session.get("https://www.amazon.com.br/CD-e-Vinil/b/?node=7791937011", timeout=15)
-        time.sleep(random.uniform(0.3, 0.8))
+        time.sleep(random.uniform(0.5, 1.2))
+        session.get(BASE_URL + VINYL_URL_PATH, timeout=15)
+        time.sleep(random.uniform(0.5, 1.0))
     except Exception:
         pass
 
 
 def _quick_warmup(session) -> None:
-    """Lightweight session init for parallel workers — just fetches the homepage."""
+    """Mid-run re-warm after session rotation: homepage only, keeps overhead low."""
     try:
         session.get("https://www.amazon.com.br/", timeout=12)
+        time.sleep(random.uniform(0.5, 1.2))
+        session.get("https://www.amazon.com.br/CD-e-Vinil/b/?node=7791937011", timeout=12)
         time.sleep(random.uniform(0.3, 0.8))
     except Exception:
         pass
@@ -586,7 +600,10 @@ def safe_get(session, url: str, retries: int = 3):
 # ─────────────────────────────────────────────────────────────
 #  Product-page fetch + parse (stale-records check)
 # ─────────────────────────────────────────────────────────────
-def fetch_product_page(session, url: str, retries: int = 3):
+_VINYL_SEARCH_REFERER = BASE_URL + VINYL_URL_PATH
+
+
+def fetch_product_page(session, url: str, retries: int = 3, referer: str | None = None):
     """
     Fetches a single Amazon product detail page.
 
@@ -599,9 +616,11 @@ def fetch_product_page(session, url: str, retries: int = 3):
     """
     from bs4 import BeautifulSoup
 
+    req_headers = {"Referer": referer or _VINYL_SEARCH_REFERER}
+
     for attempt in range(1, retries + 1):
         try:
-            resp = session.get(url, timeout=25)
+            resp = session.get(url, timeout=25, headers=req_headers)
             if resp.status_code == 404:
                 return None, 404, session
             if resp.status_code in (503, 429):
@@ -636,10 +655,25 @@ def fetch_product_page(session, url: str, retries: int = 3):
             "amazon.com.br/errors/validateCaptcha",
             "Prove you're not a robot",
         )):
-            log.warning("CAPTCHA/bot-detection page on product page, skipping.")
+            log.warning("[BOT-DETECTED] CAPTCHA challenge page — %s (attempt %d)", url, attempt)
             return None, None, session
 
-        return BeautifulSoup(resp.text, "lxml"), resp.status_code, session
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        # Amazon silently serves ~290 KB skeleton pages to suspected bots: correct
+        # title + nav chrome, but #dp-container is empty — no #ppd, no buy-box, no
+        # price.  These pass every CAPTCHA string check above.  Without this guard
+        # parse_product_page() returns (None, True, None) → deal_cleared, wiping the
+        # deal score even though the product is live and correctly priced.
+        if not soup.select_one("#ppd"):
+            log.warning(
+                "[BOT-DETECTED] Skeleton page for %s — no #ppd, %d bytes. "
+                "Session will be rotated; deal score preserved.",
+                url, len(resp.text),
+            )
+            return None, None, session
+
+        return soup, resp.status_code, session
 
     return None, None, session
 
@@ -1470,13 +1504,33 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
     time.sleep(worker_idx * random.uniform(1.0, 2.0))
 
     url = affiliate_link(record["asin"])
+
+    # Proactively rotate session before Amazon's silent bot-detection triggers.
+    # Sessions serve real pages for the first ~2 product-page hits, then silently
+    # degrade to ~290 KB skeleton pages that contain no buy-box content.
+    # Rotating here (using _quick_warmup for speed) resets that counter.
+    hit_count = getattr(_tl, "hit_count", 0)
+    if hit_count >= _STALE_SESSION_MAX_HITS:
+        log.debug(
+            "[session] Worker %d: proactive rotation after %d hits — rebuilding session",
+            worker_idx, hit_count,
+        )
+        _invalidate_worker_session()
+        session, _ = make_session()
+        _quick_warmup(session)
+        _tl.session = session
+
     session = _get_worker_session()
     soup, status, session = fetch_product_page(session, url)
     # Propagate any session the retry logic created back into thread-local storage.
     _tl.session = session
 
-    # Bot-detection: discard the session so the next task gets a fresh warmed one.
-    if soup is None and status is None:
+    if soup is not None:
+        # Successful fetch — increment hit counter.
+        _tl.hit_count = getattr(_tl, "hit_count", 0) + 1
+    elif status is None:
+        # Bot-detection (CAPTCHA or skeleton page): discard session so the next
+        # task gets a fresh warmed one.
         _invalidate_worker_session()
 
     result = {"record": record, "outcome": "error", "price": None, "review_count": None}
@@ -1490,13 +1544,14 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
         if not in_stock:
             result["outcome"] = "unavailable"
         elif price is None:
-            # In-stock but vinyl price unconfirmable (e.g. multi-format page
-            # served with a non-vinyl format selected).  Clear deal_score so
-            # this product stops appearing as a deal — we cannot vouch for
-            # the price — but leave disponivel=TRUE since the product exists.
-            log.info(
-                "Stale check: ASIN %s is in-stock but vinyl price could not be"
-                " confirmed — clearing deal score",
+            # Full page received (passed #ppd check) but price extraction still
+            # returned None — genuine parse failure: unqualified buy-box, vinyl OOS
+            # on a multi-format page, or wrong swatch selected with no TMM price.
+            # Clear deal_score so this product stops appearing as a deal.
+            log.warning(
+                "[DEAL-CLEARED] ASIN %s — full page received but vinyl price "
+                "could not be confirmed (unqualified buy-box / vinyl OOS / "
+                "wrong swatch). Clearing deal score.",
                 record["asin"],
             )
             result["outcome"] = "deal_cleared"
