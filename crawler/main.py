@@ -332,6 +332,26 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────
+#  Thread-local session pool (stale-records workers)
+# ─────────────────────────────────────────────────────────────
+import threading as _threading
+_tl = _threading.local()
+
+
+def _get_worker_session():
+    """Return this thread's persistent session, creating and warming it if needed."""
+    if not getattr(_tl, "session", None):
+        session, _ = make_session()
+        warm_up(session)
+        _tl.session = session
+    return _tl.session
+
+
+def _invalidate_worker_session():
+    """Discard the current thread's session so the next call rebuilds it."""
+    _tl.session = None
+
+# ─────────────────────────────────────────────────────────────
 #  Compiled regexes
 # ─────────────────────────────────────────────────────────────
 _RATING_TEXT_RE = re.compile(
@@ -1436,19 +1456,28 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
 # ─────────────────────────────────────────────────────────────
 def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
     """
-    Worker function: fetches a single product page in its own session.
+    Worker function: fetches a single product page using a persistent per-thread
+    session. Reusing the session across tasks lets cookies accumulate so requests
+    look like organic browsing rather than isolated bot hits.
+
     Called from a ThreadPoolExecutor — must be stateless w.r.t. the DB
     connection (all DB writes happen back on the main thread).
 
     Returns a result dict with keys: record, outcome, price, review_count.
     outcome is one of: "updated", "unavailable", "error".
     """
-    # Stagger worker starts so they don't fire simultaneously.
+    # Stagger worker starts so they don't all fire simultaneously.
     time.sleep(worker_idx * random.uniform(1.0, 2.0))
 
     url = affiliate_link(record["asin"])
-    session, _ = make_session()
-    soup, status, _ = fetch_product_page(session, url)
+    session = _get_worker_session()
+    soup, status, session = fetch_product_page(session, url)
+    # Propagate any session the retry logic created back into thread-local storage.
+    _tl.session = session
+
+    # Bot-detection: discard the session so the next task gets a fresh warmed one.
+    if soup is None and status is None:
+        _invalidate_worker_session()
 
     result = {"record": record, "outcome": "error", "price": None, "review_count": None}
 
