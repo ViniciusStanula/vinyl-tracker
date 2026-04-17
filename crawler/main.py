@@ -21,6 +21,8 @@ import time
 import random
 import logging
 import argparse
+import threading as _threading
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
@@ -47,13 +49,24 @@ ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
 MAX_PAGES_DEFAULT    = 100     # main popularity URL — generous ceiling, early-exit handles the rest
 MAX_PAGES_CATEGORY   = 20      # per genre URL — Amazon rarely exceeds 15 pages
 DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi browser impersonation
-MAX_CATEGORY_WORKERS = 5       # parallel threads for genre category crawling
+MAX_CATEGORY_WORKERS = int(os.environ.get("CATEGORY_WORKERS", "2"))  # parallel threads for genre category crawling
 MIN_PRICE_BRL      = 10.0
 
-# Stale-records session hygiene: rotate the curl_cffi session after this many
-# product-page hits.  Amazon silently degrades sessions to skeleton pages after
-# ~1-2 product hits per session; rotating proactively keeps requests fresh.
-_STALE_SESSION_MAX_HITS = 2
+# Stale-records session hygiene: rotate after a random number of product-page
+# hits in this range.  Amazon degrades sessions to skeleton pages after ~1-2
+# hits; jittering the rotation count removes the mechanical every-N pattern.
+_STALE_MAX_HITS_RANGE = (1, 4)
+
+# ─────────────────────────────────────────────────────────────
+#  Proxy configuration
+# ─────────────────────────────────────────────────────────────
+# Set PROXY_LIST (comma-separated proxy URLs) or PROXY_FILE (one URL per line).
+# Proxy URL format: http://user:pass@host:port
+# Leave both empty to crawl without proxies (uses the runner's IP directly).
+PROXY_LIST_ENV   = os.environ.get("PROXY_LIST", "")
+PROXY_FILE_ENV   = os.environ.get("PROXY_FILE", "")
+PROXY_COOLDOWN_S = int(os.environ.get("PROXY_COOLDOWN", "300"))  # seconds before retired proxy re-enters pool
+PROXY_MAX_BLOCKS = int(os.environ.get("PROXY_MAX_BLOCKS", "3"))  # consecutive blocks before retiring a proxy
 
 # URL principal — todos os vinis ordenados por popularidade
 VINYL_URL_PATH = (
@@ -339,23 +352,26 @@ log = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────
 #  Thread-local session pool (stale-records workers)
 # ─────────────────────────────────────────────────────────────
-import threading as _threading
 _tl = _threading.local()
 
 
-def _get_worker_session():
-    """Return this thread's persistent session, creating and warming it if needed."""
+def _get_worker_session() -> tuple:
+    """Return (session, proxy) for this thread, creating and warming them if needed."""
     if not getattr(_tl, "session", None):
-        session, _ = make_session()
+        proxy = get_proxy_pool().acquire()
+        session, _ = make_session(proxy=proxy)
         warm_up(session)
-        _tl.session = session
+        _tl.session  = session
+        _tl.proxy    = proxy
         _tl.hit_count = 0
-    return _tl.session
+        _tl.max_hits  = random.randint(*_STALE_MAX_HITS_RANGE)
+    return _tl.session, getattr(_tl, "proxy", None)
 
 
-def _invalidate_worker_session():
+def _invalidate_worker_session() -> None:
     """Discard the current thread's session so the next call rebuilds it."""
-    _tl.session = None
+    _tl.session  = None
+    _tl.proxy    = None
     _tl.hit_count = 0
 
 # ─────────────────────────────────────────────────────────────
@@ -520,19 +536,135 @@ def build_category_page_url(base_url: str, page: int) -> str:
     return url + f"&qid={qid}&page={page}"
 
 
-def make_session():
+# ─────────────────────────────────────────────────────────────
+#  Proxy pool
+# ─────────────────────────────────────────────────────────────
+def _mask_proxy(proxy: str) -> str:
+    return re.sub(r"(https?://)[^:]+:[^@]+@", r"\1***:***@", proxy)
+
+
+def _load_proxy_list() -> list[str]:
+    proxies: list[str] = []
+    for raw in re.split(r"[,\n]", PROXY_LIST_ENV):
+        p = raw.strip()
+        if p:
+            proxies.append(p)
+    if PROXY_FILE_ENV:
+        try:
+            with open(PROXY_FILE_ENV, encoding="utf-8") as fh:
+                for line in fh:
+                    p = line.strip()
+                    if p and not p.startswith("#"):
+                        proxies.append(p)
+        except OSError as exc:
+            log.warning("[proxy] Cannot read PROXY_FILE %s: %s", PROXY_FILE_ENV, exc)
+    return proxies
+
+
+class ProxyPool:
+    """Thread-safe residential proxy pool with per-proxy block tracking."""
+
+    def __init__(self, proxies: list[str]) -> None:
+        self._lock    = _threading.Lock()
+        self._active  = list(proxies)
+        self._retired: dict[str, float] = {}
+        self._blocks:  dict[str, int]   = defaultdict(int)
+        self._reqs:    dict[str, int]   = defaultdict(int)
+
+    # ── Public API ─────────────────────────────────────────────────────────
+
+    def acquire(self) -> str | None:
+        with self._lock:
+            self._reactivate()
+            return random.choice(self._active) if self._active else None
+
+    def report_ok(self, proxy: str | None) -> None:
+        if not proxy:
+            return
+        with self._lock:
+            self._reqs[proxy] += 1
+
+    def report_block(self, proxy: str | None) -> None:
+        if not proxy:
+            return
+        with self._lock:
+            self._blocks[proxy] += 1
+            self._reqs[proxy]   += 1
+            if self._blocks[proxy] >= PROXY_MAX_BLOCKS:
+                self._retire(proxy)
+
+    def log_stats(self) -> None:
+        with self._lock:
+            block_summary = {
+                _mask_proxy(p): c
+                for p, c in self._blocks.items() if c
+            }
+            log.info(
+                "[proxy] Pool: %d active, %d retired | blocks: %s",
+                len(self._active), len(self._retired), block_summary,
+            )
+
+    @property
+    def has_proxies(self) -> bool:
+        with self._lock:
+            self._reactivate()
+            return bool(self._active)
+
+    # ── Internal ────────────────────────────────────────────────────────────
+
+    def _retire(self, proxy: str) -> None:
+        if proxy in self._active:
+            self._active.remove(proxy)
+        self._retired[proxy] = time.monotonic()
+        log.warning(
+            "[proxy] Retired %s — %d blocks / %d requests",
+            _mask_proxy(proxy), self._blocks[proxy], self._reqs[proxy],
+        )
+
+    def _reactivate(self) -> None:
+        now = time.monotonic()
+        for proxy in [p for p, t in self._retired.items() if now - t >= PROXY_COOLDOWN_S]:
+            del self._retired[proxy]
+            self._blocks[proxy] = 0
+            self._active.append(proxy)
+            log.info("[proxy] Reactivated %s after cooldown.", _mask_proxy(proxy))
+
+
+_proxy_pool: ProxyPool | None = None
+
+
+def get_proxy_pool() -> ProxyPool:
+    global _proxy_pool
+    if _proxy_pool is None:
+        proxies = _load_proxy_list()
+        _proxy_pool = ProxyPool(proxies)
+        if proxies:
+            log.info("[proxy] Pool initialised with %d proxies.", len(proxies))
+        else:
+            log.info("[proxy] No proxies configured — using runner IP directly.")
+    return _proxy_pool
+
+
+# ─────────────────────────────────────────────────────────────
+#  Session factory
+# ─────────────────────────────────────────────────────────────
+def make_session(proxy: str | None = None):
     try:
         from curl_cffi import requests as cffi_requests
-        s = cffi_requests.Session(impersonate=random.choice(BROWSER_IDENTITIES))
+        kwargs: dict = {"impersonate": random.choice(BROWSER_IDENTITIES)}
+        if proxy:
+            kwargs["proxies"] = {"http": proxy, "https": proxy}
+        s = cffi_requests.Session(**kwargs)
         s.headers.update({
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8",
             "Referer": "https://www.amazon.com.br/",
-            "DNT": "1",
         })
         return s, "curl_cffi"
     except ImportError:
         import requests as req_lib
         s = req_lib.Session()
+        if proxy:
+            s.proxies = {"http": proxy, "https": proxy}
         s.headers.update({
             "User-Agent": random.choice([
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
@@ -540,7 +672,6 @@ def make_session():
             ]),
             "Accept-Language": "pt-BR,pt;q=0.9",
             "Referer": "https://www.amazon.com.br/",
-            "DNT": "1",
         })
         return s, "requests"
 
@@ -571,30 +702,68 @@ def _quick_warmup(session) -> None:
         pass
 
 
-def safe_get(session, url: str, retries: int = 3):
+def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
+             referer: str | None = None):
+    """
+    Fetch a search-results page. Returns (soup_or_none, session, proxy).
+
+    On CAPTCHA/rate-limit the session and proxy are rotated so the caller
+    always gets the current live session back regardless of what happened
+    during retries.
+    """
     from bs4 import BeautifulSoup
+    pool = get_proxy_pool()
+    req_headers = {}
+    if referer:
+        req_headers["Referer"] = referer
+
     for attempt in range(1, retries + 1):
         try:
-            resp = session.get(url, timeout=25)
+            resp = session.get(url, timeout=25, headers=req_headers or None)
+            size = len(resp.content)
             if resp.status_code in (503, 429):
-                log.warning("Rate-limited (%s), backing off...", resp.status_code)
+                log.warning(
+                    "[safe_get] Rate-limited %s proxy=%s size=%d — backing off",
+                    resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
+                )
+                pool.report_block(proxy)
                 time.sleep(random.uniform(6, 12))
-                session, _ = make_session()
+                proxy = pool.acquire()
+                session, _ = make_session(proxy=proxy)
                 warm_up(session)
                 continue
             resp.raise_for_status()
         except Exception as exc:
-            log.warning("Request error (attempt %d/%d): %s", attempt, retries, exc)
+            log.warning("[safe_get] Request error (attempt %d/%d): %s", attempt, retries, exc)
             if attempt < retries:
                 time.sleep(random.uniform(4, 8))
-                session, _ = make_session()
+                proxy = pool.acquire()
+                session, _ = make_session(proxy=proxy)
                 continue
-            return None, session
+            return None, session, proxy
+
+        verdict = "ok"
         if any(s in resp.text for s in ["Robot Check", "Verificação de robô", "Digite os caracteres"]):
-            log.warning("CAPTCHA detected, skipping page.")
-            return None, session
-        return BeautifulSoup(resp.text, "lxml"), session
-    return None, session
+            verdict = "captcha"
+            log.warning(
+                "[safe_get] CAPTCHA detected proxy=%s size=%d — rotating session",
+                _mask_proxy(proxy) if proxy else "none", size,
+            )
+            pool.report_block(proxy)
+            proxy = pool.acquire()
+            session, _ = make_session(proxy=proxy)
+            warm_up(session)
+            return None, session, proxy
+
+        log.debug(
+            "[safe_get] %s status=%d size=%d proxy=%s verdict=%s",
+            url[:80], resp.status_code, size,
+            _mask_proxy(proxy) if proxy else "none", verdict,
+        )
+        pool.report_ok(proxy)
+        return BeautifulSoup(resp.text, "lxml"), session, proxy
+
+    return None, session, proxy
 
 
 # ─────────────────────────────────────────────────────────────
@@ -603,11 +772,12 @@ def safe_get(session, url: str, retries: int = 3):
 _VINYL_SEARCH_REFERER = BASE_URL + VINYL_URL_PATH
 
 
-def fetch_product_page(session, url: str, retries: int = 3, referer: str | None = None):
+def fetch_product_page(session, url: str, retries: int = 3, referer: str | None = None,
+                       proxy: str | None = None):
     """
     Fetches a single Amazon product detail page.
 
-    Returns (soup_or_none, http_status_or_none, session).
+    Returns (soup_or_none, http_status_or_none, session, proxy).
 
     Callers must inspect http_status:
       404          → product definitively gone; mark unavailable
@@ -615,34 +785,43 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
       2xx / other  → soup is populated; parse normally
     """
     from bs4 import BeautifulSoup
-
+    pool = get_proxy_pool()
     req_headers = {"Referer": referer or _VINYL_SEARCH_REFERER}
 
     for attempt in range(1, retries + 1):
         try:
             resp = session.get(url, timeout=25, headers=req_headers)
+            size = len(resp.content)
             if resp.status_code == 404:
-                return None, 404, session
+                log.debug(
+                    "[fetch_product] 404 %s proxy=%s",
+                    url[:80], _mask_proxy(proxy) if proxy else "none",
+                )
+                pool.report_ok(proxy)
+                return None, 404, session, proxy
             if resp.status_code in (503, 429):
                 log.warning(
-                    "Rate-limited (%s) on product page, backing off...",
-                    resp.status_code,
+                    "[fetch_product] Rate-limited %s proxy=%s size=%d — backing off",
+                    resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
                 )
+                pool.report_block(proxy)
                 time.sleep(random.uniform(6, 12))
-                session, _ = make_session()
+                proxy = pool.acquire()
+                session, _ = make_session(proxy=proxy)
                 warm_up(session)
                 continue
             resp.raise_for_status()
         except Exception as exc:
             log.warning(
-                "Request error fetching product page (attempt %d/%d): %s",
+                "[fetch_product] Request error (attempt %d/%d): %s",
                 attempt, retries, exc,
             )
             if attempt < retries:
                 time.sleep(random.uniform(4, 8))
-                session, _ = make_session()
+                proxy = pool.acquire()
+                session, _ = make_session(proxy=proxy)
                 continue
-            return None, None, session
+            return None, None, session, proxy
 
         if any(s in resp.text for s in (
             "Robot Check",
@@ -655,8 +834,12 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
             "amazon.com.br/errors/validateCaptcha",
             "Prove you're not a robot",
         )):
-            log.warning("[BOT-DETECTED] CAPTCHA challenge page — %s (attempt %d)", url, attempt)
-            return None, None, session
+            log.warning(
+                "[BOT-DETECTED] CAPTCHA proxy=%s size=%d — %s (attempt %d)",
+                _mask_proxy(proxy) if proxy else "none", size, url[:80], attempt,
+            )
+            pool.report_block(proxy)
+            return None, None, session, proxy
 
         soup = BeautifulSoup(resp.text, "lxml")
 
@@ -667,15 +850,22 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
         # deal score even though the product is live and correctly priced.
         if not soup.select_one("#ppd"):
             log.warning(
-                "[BOT-DETECTED] Skeleton page for %s — no #ppd, %d bytes. "
+                "[BOT-DETECTED] Skeleton page proxy=%s size=%d — %s. "
                 "Session will be rotated; deal score preserved.",
-                url, len(resp.text),
+                _mask_proxy(proxy) if proxy else "none", size, url[:80],
             )
-            return None, None, session
+            pool.report_block(proxy)
+            return None, None, session, proxy
 
-        return soup, resp.status_code, session
+        log.debug(
+            "[fetch_product] ok status=%d size=%d proxy=%s %s",
+            resp.status_code, size,
+            _mask_proxy(proxy) if proxy else "none", url[:80],
+        )
+        pool.report_ok(proxy)
+        return soup, resp.status_code, session, proxy
 
-    return None, None, session
+    return None, None, session, proxy
 
 
 # In-stock keywords for Amazon Brazil product pages (span.a-color-success / #availability)
@@ -1324,6 +1514,7 @@ def crawl_single_url(
     delay: float,
     seen_asins: set,
     max_consecutive_empty: int = 5,
+    proxy: str | None = None,
 ):
     """
     Crawls a single paginated URL until exhausted or max_pages reached.
@@ -1333,15 +1524,17 @@ def crawl_single_url(
     caller can share it across multiple crawl_single_url calls to deduplicate
     across sources within the same run.
 
-    Returns (new_items, session).
+    Returns (new_items, session, proxy).
     """
     items: list[dict] = []
     consecutive_empty = 0
+    prev_url: str | None = None
 
     for page in range(1, max_pages + 1):
         url = url_builder(page)
         log.info("[%s] Page %d", label, page)
-        soup, session = safe_get(session, url)
+        soup, session, proxy = safe_get(session, url, proxy=proxy, referer=prev_url)
+        prev_url = url
 
         if soup is None:
             log.warning("[%s] Page %d failed, skipping.", label, page)
@@ -1375,7 +1568,7 @@ def crawl_single_url(
             log.info("[%s] Waiting %.1fs...", label, sleep_time)
             time.sleep(sleep_time)
 
-    return items, session
+    return items, session, proxy
 
 
 def _crawl_one_category(cat_url: str, label: str, delay: float) -> list[dict]:
@@ -1386,12 +1579,13 @@ def _crawl_one_category(cat_url: str, label: str, delay: float) -> list[dict]:
     local seen-ASINs set.  Global deduplication against the main URL results
     happens on the calling thread after all futures complete.
     """
-    session, _ = make_session()
-    # Stagger worker starts so all 3 don't hit Amazon simultaneously.
+    proxy = get_proxy_pool().acquire()
+    session, _ = make_session(proxy=proxy)
+    # Stagger worker starts so they don't all hit Amazon simultaneously.
     time.sleep(random.uniform(0.5, 3.0))
     _quick_warmup(session)
     local_seen: set[str] = set()
-    items, _ = crawl_single_url(
+    items, _, _ = crawl_single_url(
         session,
         lambda page, base=cat_url: build_category_page_url(base, page),
         label,
@@ -1399,6 +1593,7 @@ def _crawl_one_category(cat_url: str, label: str, delay: float) -> list[dict]:
         delay,
         local_seen,
         max_consecutive_empty=3,
+        proxy=proxy,
     )
     for item in items:
         item["source_category_url"] = cat_url
@@ -1416,7 +1611,8 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
     already seen in the main crawl are skipped from category results,
     preventing duplicate HistoricoPreco rows within the same run.
     """
-    session, backend = make_session()
+    proxy = get_proxy_pool().acquire()
+    session, backend = make_session(proxy=proxy)
     log.info("Starting — backend: %s | max_pages (main): %d", backend, max_pages)
     warm_up(session)
 
@@ -1426,7 +1622,7 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
     # ── 1. Main popularity URL ─────────────────────────────────────────────
     log.info("═" * 50)
     log.info("Crawling main popularity URL...")
-    items, session = crawl_single_url(
+    items, session, proxy = crawl_single_url(
         session,
         build_page_url,
         "main",
@@ -1434,6 +1630,7 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
         delay,
         seen_asins,
         max_consecutive_empty=5,
+        proxy=proxy,
     )
     all_items.extend(items)
     log.info("Main URL complete — %d products.", len(items))
@@ -1482,6 +1679,7 @@ def crawl(max_pages: int, delay: float) -> list[dict]:
 
     log.info("═" * 50)
     log.info("Full crawl done — %d unique products total.", len(all_items))
+    get_proxy_pool().log_stats()
     return all_items, asin_categories
 
 
@@ -1506,24 +1704,24 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int) -> dict:
     url = affiliate_link(record["asin"])
 
     # Proactively rotate session before Amazon's silent bot-detection triggers.
-    # Sessions serve real pages for the first ~2 product-page hits, then silently
+    # Sessions serve real pages for the first N product-page hits, then silently
     # degrade to ~290 KB skeleton pages that contain no buy-box content.
-    # Rotating here (using _quick_warmup for speed) resets that counter.
+    # Rotating proactively (with jitter) resets that counter and removes the
+    # mechanical every-N pattern from the request stream.
     hit_count = getattr(_tl, "hit_count", 0)
-    if hit_count >= _STALE_SESSION_MAX_HITS:
+    max_hits  = getattr(_tl, "max_hits", random.randint(*_STALE_MAX_HITS_RANGE))
+    if hit_count >= max_hits:
         log.debug(
             "[session] Worker %d: proactive rotation after %d hits — rebuilding session",
             worker_idx, hit_count,
         )
         _invalidate_worker_session()
-        session, _ = make_session()
-        _quick_warmup(session)
-        _tl.session = session
 
-    session = _get_worker_session()
-    soup, status, session = fetch_product_page(session, url)
-    # Propagate any session the retry logic created back into thread-local storage.
+    session, proxy = _get_worker_session()
+    soup, status, session, proxy = fetch_product_page(session, url, proxy=proxy)
+    # Propagate any session/proxy the retry logic created back into thread-local storage.
     _tl.session = session
+    _tl.proxy   = proxy
 
     if soup is not None:
         # Successful fetch — increment hit counter.
