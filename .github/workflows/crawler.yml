@@ -2,7 +2,7 @@ name: Vinyl Crawler
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # every 2 hours — expanded category list needs more runtime
+    - cron: '0 * * * *'  # every hour
   workflow_dispatch:        # manual trigger from the GitHub Actions UI
 
 # Prevent concurrent runs: if a previous crawl is still going when the next
