@@ -100,10 +100,10 @@ export default async function DiscoPage({
         : "estavel"
       : null;
 
-  // Hours since last update
-  const horasUpdate = Math.floor(
-    (Date.now() - disco.updatedAt.getTime()) / (1000 * 60 * 60)
-  );
+  // Hours since last price capture — same source as the chart's newest point
+  const horasUpdate = dataAtual
+    ? Math.floor((Date.now() - dataAtual.getTime()) / (1000 * 60 * 60))
+    : Math.floor((Date.now() - disco.updatedAt.getTime()) / (1000 * 60 * 60));
   const updateLabel =
     horasUpdate === 0
       ? "menos de 1 hora"
