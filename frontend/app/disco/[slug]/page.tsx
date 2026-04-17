@@ -100,17 +100,6 @@ export default async function DiscoPage({
         : "estavel"
       : null;
 
-  // Hours since last price capture — same source as the chart's newest point
-  const horasUpdate = dataAtual
-    ? Math.floor((Date.now() - dataAtual.getTime()) / (1000 * 60 * 60))
-    : Math.floor((Date.now() - disco.updatedAt.getTime()) / (1000 * 60 * 60));
-  const updateLabel =
-    horasUpdate === 0
-      ? "menos de 1 hora"
-      : horasUpdate === 1
-      ? "1 hora"
-      : `${horasUpdate} horas`;
-
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -126,6 +115,17 @@ export default async function DiscoPage({
 
   // Label for the "Atual" stat card — compare dates in BRT
   const dataAtual = disco.precos.at(-1)?.capturadoEm;
+
+  // Hours since last price capture — same source as the chart's newest point
+  const horasUpdate = dataAtual
+    ? Math.floor((Date.now() - dataAtual.getTime()) / (1000 * 60 * 60))
+    : Math.floor((Date.now() - disco.updatedAt.getTime()) / (1000 * 60 * 60));
+  const updateLabel =
+    horasUpdate === 0
+      ? "menos de 1 hora"
+      : horasUpdate === 1
+      ? "1 hora"
+      : `${horasUpdate} horas`;
   const isHoje =
     dataAtual
       ? dataAtual.toLocaleDateString("pt-BR", { timeZone: BRT }) ===
