@@ -30,14 +30,12 @@ const resolveArtista = cache(async function resolveArtista(
   // edge cases (accent stripping via NFD that SQL doesn't reproduce exactly).
   const candidates = await prisma.$queryRaw<{ artista: string }[]>`
     SELECT DISTINCT artista FROM "Disco"
-    WHERE lower(regexp_replace(artista, '[^a-z0-9]+', '-', 'g'))
-            LIKE ${slug.substring(0, 60)}
-       OR  lower(regexp_replace(artista, '[^a-z0-9]+', '-', 'g'))
-            LIKE ${'%' + slug.substring(0, 30) + '%'}
-       OR  lower(regexp_replace(
-             trim(split_part(artista, ',', 2)) || ' ' || trim(split_part(artista, ',', 1)),
-             '[^a-z0-9]+', '-', 'g'
-           )) LIKE ${slug.substring(0, 60)}
+    WHERE left(lower(regexp_replace(unaccent(artista), '[^a-z0-9]+', '-', 'g')), 60)
+            = ${slug}
+       OR left(lower(regexp_replace(
+            unaccent(trim(split_part(artista, ',', 2)) || ' ' || trim(split_part(artista, ',', 1))),
+            '[^a-z0-9]+', '-', 'g'
+          )), 60) = ${slug}
   `;
   const variants = candidates
     .map((r) => r.artista)
