@@ -342,8 +342,9 @@ def fetch_stale_records(
     """
     Returns Disco rows whose ASINs were NOT encountered during this crawl run.
 
-    Rows are ordered oldest-updated first so that over successive runs every
-    record gets cycled through even when limit < total stale count.
+    Ordered by last_crawled_at ASC NULLS FIRST so the most neglected records
+    are checked first. If the deadline hits mid-phase, recently-visited records
+    are the ones skipped — the right trade-off.
 
     Each returned dict has: asin, id, titulo.
     """
@@ -353,7 +354,7 @@ def fetch_stale_records(
             SELECT asin, id, COALESCE(titulo, '') AS titulo
             FROM "Disco"
             WHERE asin != ALL(%s)
-            ORDER BY "updatedAt" ASC
+            ORDER BY last_crawled_at ASC NULLS FIRST
             LIMIT %s
             """,
             (list(seen_asins) if seen_asins else ["__none__"], limit),
