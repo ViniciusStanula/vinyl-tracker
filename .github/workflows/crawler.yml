@@ -2,7 +2,7 @@ name: Vinyl Crawler
 
 on:
   schedule:
-    - cron: '0 * * * *'  # every hour
+    - cron: '0 */2 * * *'  # every 2 hours
   workflow_dispatch:        # manual trigger from the GitHub Actions UI
 
 # Prevent concurrent runs: if a previous crawl is still going when the next
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 55    # hard ceiling just under 1 hour so stale phase never overruns
+    timeout-minutes: 90    # hard ceiling; crawler --time-limit 75 stops 15 min before
     permissions:
       issues: write        # needed for the "open issue on failure" step
     env:
@@ -34,14 +34,11 @@ jobs:
         run: pip install -r crawler/requirements.txt
 
       - name: Run crawler
-        # --stale-max 600  cap stale re-fetches so in-flight tasks always finish before
-        #                  the 55-min hard limit (0 = unlimited, which caused the timeout).
-        #                  Budget math: ~10 min for crawl phases leaves ~35 min for stale,
-        #                  which fits ~1,050 records; 600 gives a comfortable safety margin.
-        # --stale-workers 2  matches the new CATEGORY_WORKERS=2 default; 3 workers
-        #                    hit Amazon harder and the extra throughput wasn't worth it.
-        # --time-limit 45  leaves a 10-min buffer before the GHA 55-min ceiling.
-        run: python crawler/main.py --max-pages 300 --stale-max 300 --stale-workers 2 --time-limit 45
+        # --stale-max 300  caps stale re-fetches so in-flight tasks finish before the deadline.
+        # --stale-workers 2  avoids hitting Amazon too hard.
+        # --time-limit 75  stops the crawler 15 min before the 90-min GHA ceiling,
+        #                  leaving time for tag enrichment flush and Phase 4 cleanup.
+        run: python crawler/main.py --max-pages 300 --stale-max 300 --stale-workers 2 --time-limit 75
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}

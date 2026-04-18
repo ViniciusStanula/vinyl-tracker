@@ -2033,7 +2033,9 @@ def main():
             if LASTFM_API_KEY:
                 t0 = time.monotonic()
                 crawled_artistas = {item["artista"] for item in all_items}
-                tagged = enrich_new_artists(conn, crawled_artistas, LASTFM_API_KEY)
+                # Reserve 5 min before the hard deadline for Phase 3 + cleanup.
+                tag_deadline = deadline - 300 if deadline is not None else None
+                tagged = enrich_new_artists(conn, crawled_artistas, LASTFM_API_KEY, deadline=tag_deadline)
                 log.info("Phase 2.3 tags: %.0fs — %d artists tagged.", time.monotonic() - t0, tagged)
             else:
                 log.debug("Phase 2.3 tags: LASTFM_API_KEY not set — skipped.")

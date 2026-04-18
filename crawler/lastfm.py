@@ -102,6 +102,7 @@ def enrich_new_artists(
     artistas: set[str],
     api_key: str | None,
     delay: float = 0.21,
+    deadline: float | None = None,
 ) -> int:
     """
     Fetches Last.fm tags for artists in `artistas` that have lastfm_tags IS NULL.
@@ -109,6 +110,9 @@ def enrich_new_artists(
     Returns the number of artists updated.
 
     `delay` controls the inter-request pause (≥0.2 s keeps us under 5 req/s).
+    `deadline` is a monotonic timestamp; the loop stops early when reached so
+    the caller's hard time limit is respected. Unprocessed artists remain NULL
+    and will be picked up on the next run.
     """
     if not api_key:
         log.debug("LASTFM_API_KEY not set — skipping tag enrichment.")
@@ -124,6 +128,9 @@ def enrich_new_artists(
     updates: dict[str, str] = {}
 
     for i, artista in enumerate(needs_tags, 1):
+        if deadline is not None and time.monotonic() >= deadline:
+            log.info("Tag enrichment: deadline reached — saved %d/%d, remaining picked up next run.", i - 1, len(needs_tags))
+            break
         tags = fetch_artist_tags(artista, api_key)
         updates[artista] = ", ".join(tags)   # "" if no tags — marks as fetched
         log.debug("[%d/%d] %r → %r", i, len(needs_tags), artista, updates[artista])
