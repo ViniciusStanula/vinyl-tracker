@@ -2,7 +2,7 @@ name: Vinyl Crawler
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # every 2 hours
+    - cron: '0 * * * *'  # every hour
   workflow_dispatch:        # manual trigger from the GitHub Actions UI
 
 # Prevent concurrent runs: if a previous crawl is still going when the next
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 90    # hard ceiling; crawler --time-limit 75 stops 15 min before
+    timeout-minutes: 55    # hard ceiling just under 1 hour so stale phase never overruns
     permissions:
       issues: write        # needed for the "open issue on failure" step
     env:
@@ -36,9 +36,8 @@ jobs:
       - name: Run crawler
         # --stale-max 300  caps stale re-fetches so in-flight tasks finish before the deadline.
         # --stale-workers 2  avoids hitting Amazon too hard.
-        # --time-limit 75  stops the crawler 15 min before the 90-min GHA ceiling,
-        #                  leaving time for tag enrichment flush and Phase 4 cleanup.
-        run: python crawler/main.py --max-pages 300 --stale-max 300 --stale-workers 2 --time-limit 75
+        # --time-limit 45  leaves a 10-min buffer before the GHA 55-min ceiling.
+        run: python crawler/main.py --max-pages 300 --stale-max 300 --stale-workers 2 --time-limit 45
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
