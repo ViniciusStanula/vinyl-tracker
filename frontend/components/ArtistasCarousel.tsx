@@ -36,17 +36,14 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between mb-3">
-        <h2
-          className="text-xl font-bold text-cream"
-          style={{ fontFamily: "var(--font-fraunces, serif)" }}
-        >
+        <h2 className="font-display text-xl font-bold text-cream">
           Artistas mais Ouvidos
         </h2>
         <div className="flex gap-1.5">
           <button
             onClick={() => ref.current?.scrollBy({ left: -SCROLL_AMOUNT, behavior: "smooth" })}
             disabled={!canLeft}
-            className="w-8 h-8 flex items-center justify-center rounded-full border border-groove hover:border-wax text-cream text-lg disabled:opacity-20 disabled:cursor-default transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full border border-groove hover:border-wax text-cream text-lg disabled:opacity-20 disabled:cursor-default transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
             aria-label="Rolar para esquerda"
           >
             ‹
@@ -54,7 +51,7 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
           <button
             onClick={() => ref.current?.scrollBy({ left: SCROLL_AMOUNT, behavior: "smooth" })}
             disabled={!canRight}
-            className="w-8 h-8 flex items-center justify-center rounded-full border border-groove hover:border-wax text-cream text-lg disabled:opacity-20 disabled:cursor-default transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full border border-groove hover:border-wax text-cream text-lg disabled:opacity-20 disabled:cursor-default transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
             aria-label="Rolar para direita"
           >
             ›

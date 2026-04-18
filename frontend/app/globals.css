@@ -26,8 +26,8 @@
   --color-ash:       #3d2a20;   /* very muted */
 
   /* ── Typography ──────────────────────────────────────────────── */
-  --font-display: var(--font-fraunces);
-  --font-sans:    var(--font-dm-sans);
+  --font-display: var(--font-fraunces, serif);
+  --font-sans:    var(--font-dm-sans, system-ui, sans-serif);
 }
 
 :root {
@@ -43,9 +43,9 @@ body {
 
 /* ── Warm custom scrollbar ────────────────────────────────────────── */
 ::-webkit-scrollbar          { width: 5px; height: 5px; }
-::-webkit-scrollbar-track    { background: #0c0a08; }
-::-webkit-scrollbar-thumb    { background: #3d2c21; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #5a4232; }
+::-webkit-scrollbar-track    { background: var(--color-record); }
+::-webkit-scrollbar-thumb    { background: var(--color-wax); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-patina); }
 
 /* ── Vinyl groove background decoration ──────────────────────────── */
 .vinyl-grooves {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
+import ShareButton from "@/components/ShareButton";
 import BackToTop from "@/components/BackToTop";
 import { slugifyArtist } from "@/lib/slugify";
 
@@ -277,10 +278,7 @@ export default async function DiscoPage({
             >
               {disco.artista}
             </Link>
-            <h1
-              className="text-2xl font-bold text-cream mt-1 leading-tight"
-              style={{ fontFamily: "var(--font-fraunces, serif)" }}
-            >
+            <h1 className="font-display text-2xl font-bold text-cream mt-1 leading-tight">
               {disco.titulo}
             </h1>
             {rating && (
@@ -297,10 +295,7 @@ export default async function DiscoPage({
           <div className="mt-5">
             {/* Price + discount badge */}
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span
-                className="text-4xl sm:text-5xl font-black text-gold leading-none tabular-nums"
-                style={{ fontFamily: "var(--font-fraunces, serif)" }}
-              >
+              <span className="font-display text-4xl sm:text-5xl font-black text-gold leading-none tabular-nums">
                 {fmt(precoAtual)}
               </span>
               {Math.abs(desconto) >= 1 && (
@@ -348,7 +343,7 @@ export default async function DiscoPage({
                   href={disco.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-gold hover:bg-goldlit text-record font-bold text-sm px-6 py-3 rounded-full transition-colors"
+                  className="inline-flex items-center gap-2 bg-gold hover:bg-goldlit text-record font-bold text-sm px-6 py-3 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-record"
                 >
                   Ver na Amazon
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,6 +355,7 @@ export default async function DiscoPage({
                   Não disponível
                 </span>
               )}
+              <ShareButton titulo={disco.titulo} artista={disco.artista} />
             </div>
             <p className="text-ash text-xs mt-2">
               Atualizado há {updateLabel} · Preços podem variar
@@ -370,10 +366,7 @@ export default async function DiscoPage({
 
       {/* Price history */}
       <section className="bg-sleeve rounded-xl border border-groove p-5 mb-6">
-        <h2
-          className="text-base font-semibold text-cream mb-4"
-          style={{ fontFamily: "var(--font-fraunces, serif)" }}
-        >
+        <h2 className="font-display text-base font-semibold text-cream mb-4">
           Evolução do preço
           <span className="text-dust text-sm font-normal ml-2">· {dataAtualLabel}</span>
         </h2>
@@ -461,10 +454,7 @@ export default async function DiscoPage({
       {/* Related deals */}
       {processedDeals.length > 0 && (
         <section className="mt-10">
-          <h2
-            className="text-lg font-semibold text-cream mb-4"
-            style={{ fontFamily: "var(--font-fraunces, serif)" }}
-          >
+          <h2 className="font-display text-lg font-semibold text-cream mb-4">
             Outros discos em oferta
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

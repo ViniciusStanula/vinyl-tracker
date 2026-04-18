@@ -48,7 +48,7 @@ export default function Pagination({
   const pages = pageRange(currentPage, totalPages);
 
   const btnBase =
-    "flex items-center justify-center text-sm rounded-lg transition-colors";
+    "flex items-center justify-center text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/30";
   const btnActive =
     "bg-gold text-record font-semibold";
   const btnIdle =

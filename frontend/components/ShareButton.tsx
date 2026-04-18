@@ -18,7 +18,7 @@ export default function ShareButton({ titulo, artista }: Props) {
   return (
     <button
       onClick={handleShare}
-      className="inline-flex items-center gap-2 px-5 py-3 rounded-full border border-groove hover:border-gold hover:text-gold text-dust font-semibold text-sm transition-colors"
+      className="inline-flex items-center gap-2 px-5 py-3 rounded-full border border-groove hover:border-gold hover:text-gold text-dust font-semibold text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20"
     >
       <svg
         className="w-4 h-4"

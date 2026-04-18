@@ -43,13 +43,12 @@ function Sparkline({ values }: { values: number[] }) {
     })
     .join(" ");
   const trending = values[values.length - 1] <= values[0];
-  const color = trending ? "#35c47a" : "#b81828";
   return (
     <svg width={W} height={H} aria-hidden="true" className="shrink-0 opacity-80">
       <polyline
         points={pts}
         fill="none"
-        stroke={color}
+        className={trending ? "stroke-deallit" : "stroke-cut"}
         strokeWidth="1.5"
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -161,8 +160,7 @@ export default function DiscoCard({
 
         {/* Title — Fraunces for editorial character */}
         <h2
-          className="text-cream text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] mt-0.5"
-          style={{ fontFamily: "var(--font-fraunces, serif)" }}
+          className="font-display text-cream text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] mt-0.5"
           title={disco.titulo}
         >
           {disco.titulo}
@@ -182,10 +180,7 @@ export default function DiscoCard({
           )}
 
           {/* Current price — bold, gold, large */}
-          <p
-            className="text-gold font-black text-xl leading-tight tabular-nums"
-            style={{ fontFamily: "var(--font-fraunces, serif)" }}
-          >
+          <p className="font-display text-gold font-black text-xl leading-tight tabular-nums">
             {fmt(disco.precoAtual)}
           </p>
 

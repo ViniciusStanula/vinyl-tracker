@@ -84,8 +84,8 @@ export default function GraficoPreco({ precos }: Props) {
       >
         <defs>
           <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#d98f0e" stopOpacity="0.30" />
-            <stop offset="100%" stopColor="#d98f0e" stopOpacity="0.02" />
+            <stop offset="0%" style={{ stopColor: "var(--color-gold)", stopOpacity: 0.30 }} />
+            <stop offset="100%" style={{ stopColor: "var(--color-gold)", stopOpacity: 0.02 }} />
           </linearGradient>
         </defs>
 
@@ -97,7 +97,7 @@ export default function GraficoPreco({ precos }: Props) {
               y1={tick.y}
               x2={W - PAD.right}
               y2={tick.y}
-              stroke="#2b1e17"
+              className="stroke-groove"
               strokeWidth="0.5"
               strokeDasharray="3,3"
             />
@@ -105,7 +105,7 @@ export default function GraficoPreco({ precos }: Props) {
               x={PAD.left - 6}
               y={tick.y + 3.5}
               textAnchor="end"
-              fill="#6e4e38"
+              className="fill-dust"
               fontSize="8.5"
             >
               {tick.label}
@@ -120,7 +120,7 @@ export default function GraficoPreco({ precos }: Props) {
             x={tick.x}
             y={H - PAD.bottom + 14}
             textAnchor="middle"
-            fill="#5a4232"
+            className="fill-patina"
             fontSize="8"
           >
             {tick.label}
@@ -134,7 +134,7 @@ export default function GraficoPreco({ precos }: Props) {
         <path
           d={linePath}
           fill="none"
-          stroke="#d98f0e"
+          className="stroke-gold"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -147,15 +147,14 @@ export default function GraficoPreco({ precos }: Props) {
               cx={tx(minIdx)}
               cy={ty(vMin)}
               r="5"
-              fill="#35c47a"
-              stroke="#0c0a08"
+              className="fill-deallit stroke-record"
               strokeWidth="1.5"
             />
             <text
               x={tx(minIdx)}
               y={ty(vMin) + 15}
               textAnchor="middle"
-              fill="#35c47a"
+              className="fill-deallit"
               fontSize="8"
               fontWeight="600"
             >
@@ -171,15 +170,14 @@ export default function GraficoPreco({ precos }: Props) {
               cx={tx(maxIdx)}
               cy={ty(vMax)}
               r="5"
-              fill="#b81828"
-              stroke="#0c0a08"
+              className="fill-cut stroke-record"
               strokeWidth="1.5"
             />
             <text
               x={tx(maxIdx)}
               y={ty(vMax) - 9}
               textAnchor="middle"
-              fill="#b81828"
+              className="fill-cut"
               fontSize="8"
               fontWeight="600"
             >
@@ -196,7 +194,7 @@ export default function GraficoPreco({ precos }: Props) {
               y1={PAD.top}
               x2={tx(hoveredIdx)}
               y2={H - PAD.bottom}
-              stroke="#d98f0e"
+              className="stroke-gold"
               strokeWidth="1"
               strokeDasharray="3,2"
               opacity="0.5"
@@ -205,8 +203,7 @@ export default function GraficoPreco({ precos }: Props) {
               cx={tx(hoveredIdx)}
               cy={ty(precos[hoveredIdx].valor)}
               r="4.5"
-              fill="#d98f0e"
-              stroke="#0c0a08"
+              className="fill-gold stroke-record"
               strokeWidth="2"
             />
           </>

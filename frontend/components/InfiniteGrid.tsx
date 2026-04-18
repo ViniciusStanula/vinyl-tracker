@@ -117,7 +117,7 @@ export default function InfiniteGrid({
       <div className="flex justify-end mb-3">
         <button
           onClick={toggleMode}
-          className="text-xs text-dust hover:text-parchment border border-groove hover:border-wax rounded-lg px-3 py-1.5 transition-colors"
+          className="text-xs text-dust hover:text-parchment border border-groove hover:border-wax rounded-lg px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20"
           aria-label={
             mode === "paginate"
               ? "Alternar para scroll infinito"
@@ -155,7 +155,7 @@ export default function InfiniteGrid({
               <p className="text-parchment/60 text-sm">Erro ao carregar</p>
               <button
                 onClick={fetchMore}
-                className="text-xs text-gold hover:text-goldlit border border-groove hover:border-gold rounded-lg px-3 py-1 transition-colors"
+                className="text-xs text-gold hover:text-goldlit border border-groove hover:border-gold rounded-lg px-3 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20"
               >
                 Tentar novamente
               </button>

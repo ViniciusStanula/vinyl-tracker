@@ -92,7 +92,7 @@ export default function SortBar() {
           <select
             value={current}
             onChange={(e) => handleSort(e.target.value)}
-            className="bg-groove text-cream text-sm border border-wax/60 rounded-lg px-3 py-1.5 focus:outline-none focus:border-gold cursor-pointer transition-colors"
+            className="bg-groove text-cream text-sm border border-wax/60 rounded-lg px-3 py-1.5 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 cursor-pointer transition-colors"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>

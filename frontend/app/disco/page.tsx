@@ -96,16 +96,13 @@ export default async function DiscosPage({
         <div className="text-center py-24 text-dust">
           <div className="inline-block mb-5 opacity-40">
             <svg viewBox="0 0 64 64" fill="none" className="w-16 h-16 mx-auto">
-              <circle cx="32" cy="32" r="30" fill="#d98f0e" opacity="0.3" />
-              <circle cx="32" cy="32" r="20" fill="#0c0a08" opacity="0.8" />
-              <circle cx="32" cy="32" r="5"  fill="#d98f0e" opacity="0.4" />
-              <circle cx="32" cy="32" r="2"  fill="#0c0a08" />
+              <circle cx="32" cy="32" r="30" className="fill-gold" opacity="0.3" />
+              <circle cx="32" cy="32" r="20" className="fill-record" opacity="0.8" />
+              <circle cx="32" cy="32" r="5"  className="fill-gold" opacity="0.4" />
+              <circle cx="32" cy="32" r="2"  className="fill-record" />
             </svg>
           </div>
-          <p
-            className="text-parchment text-lg font-semibold mb-2"
-            style={{ fontFamily: "var(--font-fraunces, serif)" }}
-          >
+          <p className="font-display text-parchment text-lg font-semibold mb-2">
             Nenhum disco encontrado
           </p>
           <p className="text-dust text-sm mb-6">
