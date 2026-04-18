@@ -50,6 +50,7 @@ LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
 MAX_PAGES_DEFAULT    = 100     # main popularity URL — generous ceiling, early-exit handles the rest
 MAX_PAGES_CATEGORY   = 10      # per genre URL — capped at 10; Amazon rarely yields useful results beyond that
+MAX_PAGES_EXTRA      = 5       # per extra sort URL — first 5 pages captures most new/distinct products
 DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi browser impersonation
 MAX_CATEGORY_WORKERS = int(os.environ.get("CATEGORY_WORKERS", "4"))  # parallel threads for genre category crawling
 MIN_PRICE_BRL      = 10.0
@@ -80,6 +81,18 @@ VINYL_URL_PATH = (
 )
 
 BASE_URL = "https://www.amazon.com.br"
+
+# Browse node landing page — editorial carousels (Best Sellers, New Releases, etc.)
+# Scraped for embedded ASINs; products not yet in the DB get individual product-page fetches.
+BROWSE_NODE_URL = BASE_URL + "/b?node=19549018011"
+
+# Additional search sort URLs — each crawled for MAX_PAGES_EXTRA pages to surface
+# records that rank poorly by popularity but appear in other sort orders.
+EXTRA_SORT_URLS = [
+    BASE_URL + "/s?i=popular&srs=19549018011&rh=n%3A19549018011&s=date-desc-rank&fs=true",   # New releases
+    BASE_URL + "/s?i=popular&srs=19549018011&rh=n%3A19549018011&s=review-rank&fs=true",       # Most reviewed
+    BASE_URL + "/s?i=popular&srs=19549018011&rh=n%3A19549018011&s=featured-rank&fs=true",     # Featured / editorial
+]
 
 # URLs de categorias de gênero — cada uma é paginada separadamente
 CATEGORY_URLS = [
@@ -768,6 +781,44 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
     return None, session, proxy
 
 
+def mine_browse_node(session, proxy: str | None = None) -> set[str]:
+    """
+    Fetches the Amazon Brazil vinyl browse node page and extracts ASINs from:
+      1. data-asin attributes on any HTML element (initial carousel state)
+      2. JSON blobs embedded in <script> tags (encoded product data)
+
+    Returns a deduplicated set of valid 10-char ASINs.  Failures are logged
+    and return an empty set so the calling crawl is not disrupted.
+    """
+    log.info("[browse-node] Mining %s", BROWSE_NODE_URL)
+    soup, session, proxy = safe_get(
+        session, BROWSE_NODE_URL, proxy=proxy,
+        referer=BASE_URL + "/CD-e-Vinil/b/?node=7791937011",
+    )
+    if soup is None:
+        log.warning("[browse-node] Failed to fetch browse node page — skipping.")
+        return set()
+
+    asins: set[str] = set()
+    _ASIN_JSON_RE = re.compile(r'"[Aa][Ss][Ii][Nn]"\s*:\s*"([A-Za-z0-9]{10})"')
+
+    for el in soup.find_all(attrs={"data-asin": True}):
+        val = el.get("data-asin", "").strip()
+        if len(val) == 10 and val.isalnum():
+            asins.add(val.upper())
+
+    for script in soup.find_all("script"):
+        text = script.string or ""
+        if not text or ('"asin"' not in text and '"ASIN"' not in text):
+            continue
+        for m in _ASIN_JSON_RE.finditer(text):
+            asins.add(m.group(1).upper())
+
+    asins.discard("")
+    log.info("[browse-node] Extracted %d ASINs.", len(asins))
+    return asins
+
+
 # ─────────────────────────────────────────────────────────────
 #  Product-page fetch + parse (stale-records check)
 # ─────────────────────────────────────────────────────────────
@@ -1090,6 +1141,105 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
                     break
 
     return price, in_stock, review_count
+
+
+def parse_product_page_discovery(soup, asin: str) -> dict | None:
+    """
+    Extracts a full record from a product detail page for ASINs newly discovered
+    via the browse node that are not yet in the database.
+
+    Returns a record dict compatible with upsert_batch, or None when:
+    - No title found (not a product page / bot detection)
+    - Product is out of stock or has no vinyl price
+    - Product is not vinyl
+    """
+    title_el = soup.select_one("#productTitle")
+    if not title_el:
+        return None
+    title = title_el.get_text(strip=True)
+    if not title or len(title) < 3:
+        return None
+
+    if not is_vinyl(title, soup):
+        log.debug("[discovery] ASIN %s: non-vinyl — skipping.", asin)
+        return None
+
+    price, in_stock, review_count = parse_product_page(soup)
+    if not in_stock or price is None:
+        return None
+
+    artist = _UNKNOWN_ARTIST
+    for sel in (
+        "#bylineInfo .author a.a-link-normal",
+        "#bylineInfo a.a-link-normal",
+        ".author.notFaded a",
+    ):
+        el = soup.select_one(sel)
+        if el:
+            text = re.sub(r"^(por|by|de)\s+", "", el.get_text(strip=True), flags=re.IGNORECASE).strip()
+            if _is_plausible_artist(text):
+                artist = normalize_artist(text)
+                break
+
+    img_url = ""
+    for sel in ("#landingImage", "#imgBlkFront", "#main-image"):
+        img_el = soup.select_one(sel)
+        if img_el:
+            src = img_el.get("src", "").strip() or img_el.get("data-old-hires", "").strip()
+            if src and not src.startswith("data:"):
+                img_url = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", src)
+                break
+
+    rating = None
+    for sel in ('[aria-label*="de 5 estrelas"]', '[aria-label*="out of 5 stars"]'):
+        el = soup.select_one(sel)
+        if el:
+            m = re.search(
+                r"([\d,]+)\s*de\s*5|([\d.]+)\s*out\s*of\s*5",
+                el.get("aria-label", ""), re.IGNORECASE,
+            )
+            if m:
+                raw = (m.group(1) or m.group(2) or "").replace(",", ".")
+                try:
+                    rating = round(float(raw), 1)
+                except ValueError:
+                    pass
+            break
+
+    return {
+        "asin":        asin,
+        "titulo":      title,
+        "artista":     artist,
+        "slug":        gerar_slug(title, asin),
+        "imgUrl":      img_url,
+        "url":         affiliate_link(asin),
+        "rating":      rating,
+        "reviewCount": review_count,
+        "precoBrl":    price,
+        "capturadoEm": datetime.now(timezone.utc),
+    }
+
+
+def fetch_catalog_discovery(
+    session,
+    asin: str,
+    proxy: str | None = None,
+) -> tuple:
+    """
+    Fetches a product detail page for a brand-new ASIN (not yet in the DB)
+    discovered via the browse node and builds a full upsert_batch-compatible record.
+
+    Returns (record_or_none, session, proxy).
+    """
+    url = affiliate_link(asin)
+    soup, status, session, proxy = fetch_product_page(session, url, proxy=proxy)
+    if status == 404:
+        log.debug("[catalog-discovery] ASIN %s: 404 — skipping.", asin)
+        return None, session, proxy
+    if soup is None:
+        return None, session, proxy
+    record = parse_product_page_discovery(soup, asin)
+    return record, session, proxy
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1690,10 +1840,43 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
         new_from_categories, len(asin_categories),
     )
 
+    # ── 3. Extra sort URLs (sequential) ───────────────────────────────────
+    log.info("═" * 50)
+    log.info(
+        "Crawling %d extra sort URLs (%d pages each)...",
+        len(EXTRA_SORT_URLS), MAX_PAGES_EXTRA,
+    )
+    for i, extra_url in enumerate(EXTRA_SORT_URLS, 1):
+        if deadline is not None and time.monotonic() >= deadline:
+            log.warning("Time limit reached — skipping remaining extra sort URLs.")
+            break
+        extra_items, session, proxy = crawl_single_url(
+            session,
+            lambda page, base=extra_url: build_category_page_url(base, page),
+            f"extra-{i}",
+            MAX_PAGES_EXTRA,
+            delay,
+            seen_asins,
+            max_consecutive_empty=3,
+            proxy=proxy,
+        )
+        all_items.extend(extra_items)
+        log.info("Extra sort %d done — %d new products.", i, len(extra_items))
+        if i < len(EXTRA_SORT_URLS) and (deadline is None or time.monotonic() < deadline):
+            time.sleep(random.uniform(2.0, 4.0))
+
+    # ── 4. Browse node ASIN mining ─────────────────────────────────────────
+    log.info("═" * 50)
+    browse_asins: set[str] = set()
+    if deadline is None or time.monotonic() < deadline:
+        browse_asins = mine_browse_node(session, proxy=proxy)
+    else:
+        log.warning("Time limit reached — skipping browse node mining.")
+
     log.info("═" * 50)
     log.info("Full crawl done — %d unique products total.", len(all_items))
     get_proxy_pool().log_stats()
-    return all_items, asin_categories
+    return all_items, asin_categories, browse_asins
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1938,7 +2121,7 @@ def main():
     if args.dry_run:
         log.info("DRY RUN — skipping DB phases; running crawl only.")
         t0 = time.monotonic()
-        all_items, _ = crawl(args.max_pages, args.delay)
+        all_items, *_ = crawl(args.max_pages, args.delay)
         log.info("Phase crawl: %.0fs", time.monotonic() - t0)
         log.info("DRY RUN — Sample of first 3 items:")
         for item in all_items[:3]:
@@ -1995,7 +2178,7 @@ def main():
         # ── Phase 1: Regular crawl ─────────────────────────────────────────
         log.info("═" * 60)
         t0 = time.monotonic()
-        all_items, asin_categories = crawl(args.max_pages, args.delay, deadline=deadline)
+        all_items, asin_categories, browse_asins = crawl(args.max_pages, args.delay, deadline=deadline)
         log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
 
         if not all_items:
@@ -2045,6 +2228,61 @@ def main():
                 scoring_summary["cleared"],
                 scoring_summary["skipped"],
             )
+
+            # ── Phase 2.7: Browse node catalog discovery ────────────────
+            # Process ASINs found on the browse node page that weren't seen
+            # in the Phase 1 search crawl. Records already in the DB but not
+            # seen this run will be caught by Phase 3; truly new ASINs get
+            # individual product-page fetches so they enter the catalog now.
+            if browse_asins and not (deadline is not None and time.monotonic() >= deadline):
+                log.info("═" * 60)
+                t0 = time.monotonic()
+                phase1_asins = {item["asin"] for item in all_items}
+                new_browse = browse_asins - phase1_asins
+                log.info(
+                    "Phase 2.7 browse discovery — %d browse ASINs, %d not in Phase 1.",
+                    len(browse_asins), len(new_browse),
+                )
+                if new_browse:
+                    with conn.cursor() as _cur:
+                        _cur.execute(
+                            'SELECT asin FROM "Disco" WHERE asin = ANY(%s)',
+                            (list(new_browse),),
+                        )
+                        already_in_db = {row[0] for row in _cur.fetchall()}
+                    truly_new = new_browse - already_in_db
+                    log.info(
+                        "  %d already in DB (Phase 3 will cover them), %d brand new.",
+                        len(already_in_db), len(truly_new),
+                    )
+                    if truly_new and not (deadline is not None and time.monotonic() >= deadline):
+                        disc_proxy = get_proxy_pool().acquire()
+                        disc_session, _ = make_session(proxy=disc_proxy)
+                        _quick_warmup(disc_session)
+                        browse_records: list[dict] = []
+                        cap = list(truly_new)[:50]
+                        for idx, asin in enumerate(cap):
+                            if deadline is not None and time.monotonic() >= deadline:
+                                log.warning(
+                                    "Phase 2.7: time limit at %d/%d new ASINs.", idx, len(cap)
+                                )
+                                break
+                            record, disc_session, disc_proxy = fetch_catalog_discovery(
+                                disc_session, asin, proxy=disc_proxy,
+                            )
+                            if record:
+                                browse_records.append(record)
+                                log.debug("  [new] %s — %s", asin, record["titulo"][:50])
+                            time.sleep(DELAY_SECONDS + random.uniform(0.5, 1.5))
+                        if browse_records:
+                            upsert_batch(conn, browse_records)
+                            log.info(
+                                "Phase 2.7: upserted %d newly discovered records. (%.0fs)",
+                                len(browse_records), time.monotonic() - t0,
+                            )
+                        else:
+                            log.info("Phase 2.7: no new records built from %d new ASINs.", len(truly_new))
+                log.info("Phase 2.7 done: %.0fs", time.monotonic() - t0)
 
             # ── Phase 3: Stale-records check ───────────────────────────────
             if args.skip_stale:

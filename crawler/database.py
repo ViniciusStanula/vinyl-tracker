@@ -342,9 +342,12 @@ def fetch_stale_records(
     """
     Returns Disco rows whose ASINs were NOT encountered during this crawl run.
 
-    Ordered by last_crawled_at ASC NULLS FIRST so the most neglected records
-    are checked first. If the deadline hits mid-phase, recently-visited records
-    are the ones skipped — the right trade-off.
+    Priority order within the limit:
+      1. Records with an active deal score — may have drifted off search results
+         while still carrying a deal badge.
+      2. Records flagged as a deal in the past 14 days — ensures recently-promoted
+         records are re-checked even after dropping from search results.
+      3. All others by last_crawled_at ASC NULLS FIRST — most neglected first.
 
     Each returned dict has: asin, id, titulo.
     """
@@ -354,7 +357,13 @@ def fetch_stale_records(
             SELECT asin, id, COALESCE(titulo, '') AS titulo
             FROM "Disco"
             WHERE asin != ALL(%s)
-            ORDER BY last_crawled_at ASC NULLS FIRST
+            ORDER BY
+                CASE
+                    WHEN deal_score IS NOT NULL                        THEN 0
+                    WHEN last_flagged_at > NOW() - INTERVAL '14 days' THEN 1
+                    ELSE                                                    2
+                END,
+                last_crawled_at ASC NULLS FIRST
             LIMIT %s
             """,
             (list(seen_asins) if seen_asins else ["__none__"], limit),
