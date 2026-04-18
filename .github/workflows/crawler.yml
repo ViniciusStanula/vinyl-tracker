@@ -38,7 +38,7 @@ jobs:
         # --stale-workers 4  runs Phase 0 (deal re-validation) and Phase 3 in parallel;
         #                    cuts Phase 0 time from ~27 min to ~14 min, freeing budget for Phase 3.
         # --time-limit 50  leaves a 10-min buffer before the GHA 60-min ceiling.
-        run: python crawler/main.py --max-pages 300 --stale-max 300 --stale-workers 4 --time-limit 50
+        run: python crawler/main.py --max-pages 300 --stale-max 1500 --stale-workers 4 --time-limit 50
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
