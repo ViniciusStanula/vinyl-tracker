@@ -20,6 +20,8 @@ export interface DiscoCardProps {
   dealScore?: number | null;
   /** Backend confidence tier; "low_confidence" triggers a data-warning indicator */
   confidenceLevel?: string | null;
+  /** Comma-separated Last.fm genre tags, e.g. "rock, classic rock" */
+  lastfmTags?: string | null;
 }
 
 /** 44×18 px SVG sparkline showing the 30-day price trend. */
@@ -76,6 +78,7 @@ export default function DiscoCard({
   const confidenceLevel   = disco.confidenceLevel ?? null;
   const artistaSlug       = slugifyArtist(disco.artista);
   const sparkline         = disco.sparkline ?? [];
+  const firstTag          = disco.lastfmTags?.split(",")[0]?.trim() || null;
 
   // Score-3 gets a subtle gold ring
   const cardRing = dealScore === 3 ? " ring-1 ring-gold/40" : "";
@@ -156,6 +159,13 @@ export default function DiscoCard({
         >
           {disco.artista}
         </Link>
+
+        {/* Genre tag pill */}
+        {firstTag && (
+          <span className="inline-block mt-0.5 mb-0.5 text-[10px] text-patina border border-groove rounded px-1.5 py-px leading-tight truncate max-w-full">
+            {firstTag}
+          </span>
+        )}
 
         {/* Title — Fraunces for editorial character */}
         <h2

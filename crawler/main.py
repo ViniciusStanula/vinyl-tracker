@@ -40,7 +40,10 @@ from database import (
     clear_deal_score,
 )
 from deal_scorer import score_deals
+from lastfm import enrich_new_artists
 from utils import gerar_slug
+
+LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 
 # ─────────────────────────────────────────────────────────────
 #  Configuration
@@ -2023,6 +2026,17 @@ def main():
                 log.info("Phase 2 categories: %.0fs — %d associations written.", time.monotonic() - t0, assoc_written)
             else:
                 log.warning("Skipping category associations — schema setup failed at startup.")
+
+            # ── Phase 2.3: Last.fm tag enrichment ──────────────────────────
+            # Runs only for artists seen in this crawl that have no tags yet.
+            # One API call per new artist; already-tagged artists are skipped.
+            if LASTFM_API_KEY:
+                t0 = time.monotonic()
+                crawled_artistas = {item["artista"] for item in all_items}
+                tagged = enrich_new_artists(conn, crawled_artistas, LASTFM_API_KEY)
+                log.info("Phase 2.3 tags: %.0fs — %d artists tagged.", time.monotonic() - t0, tagged)
+            else:
+                log.debug("Phase 2.3 tags: LASTFM_API_KEY not set — skipped.")
 
             # ── Phase 2.5: Deal scoring ─────────────────────────────────────
             # Runs after every upsert so deal_score reflects the freshest prices.

@@ -18,6 +18,7 @@ interface InfiniteGridProps {
   totalPages: number;
   searchParams: SearchParams;
   animationKey: string;
+  basePath?: string;
 }
 
 export default function InfiniteGrid({
@@ -26,6 +27,7 @@ export default function InfiniteGrid({
   totalPages,
   searchParams,
   animationKey,
+  basePath = "/disco",
 }: InfiniteGridProps) {
   const [mode, setMode] = useState<"paginate" | "infinite">("paginate");
   const [items, setItems] = useState<ProcessedDisco[]>(initialItems);
@@ -171,6 +173,7 @@ export default function InfiniteGrid({
           currentPage={currentPage}
           totalPages={totalPages}
           searchParams={searchParams}
+          basePath={basePath}
         />
       )}
     </div>

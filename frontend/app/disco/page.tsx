@@ -1,8 +1,6 @@
 import { queryDiscos } from "@/lib/queryDiscos";
-import { queryCarouselDiscos } from "@/lib/carousel";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
-import ArtistasCarousel from "@/components/ArtistasCarousel";
 import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -10,12 +8,12 @@ import { Suspense } from "react";
 export const revalidate = 300;
 
 export const metadata = {
-  title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+  title: "Todos os Discos — Garimpa Vinil",
   description:
-    "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços atualizado 2× ao dia.",
+    "Todos os discos de vinil em promoção na Amazon Brasil. Filtre por preço, artista e ordenação.",
 };
 
-export default async function HomePage({
+export default async function DiscosPage({
   searchParams,
 }: {
   searchParams: Promise<{
@@ -38,36 +36,18 @@ export default async function HomePage({
   const searchTerm = q?.trim() ?? "";
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
-  // Fetch main grid and carousel in parallel
-  const [{ items, total, totalPages }, carouselItems] = await Promise.all([
-    queryDiscos({ searchTerm, sort, artista, precoMax, page }),
-    // Only load the carousel on the unfiltered first page — when the user is
-    // searching or filtering, the carousel would distract from their intent.
-    searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscos(),
-  ]);
+  const { items, total, totalPages } = await queryDiscos({
+    searchTerm,
+    sort,
+    artista,
+    precoMax,
+    page,
+  });
 
   const currentPage = Math.min(page, totalPages);
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-
-      {/* ── Hero ────────────────────────────────────────────────── */}
-      <header className="relative mb-8 overflow-hidden rounded-2xl bg-sleeve border border-groove px-6 py-7 vinyl-grooves">
-        <h1
-          className="text-3xl sm:text-4xl font-black text-cream leading-tight"
-          style={{ fontFamily: "var(--font-fraunces, serif)" }}
-        >
-          Melhores ofertas em
-          <br />
-          <span className="text-gold">discos de vinil</span>
-        </h1>
-        <p className="mt-3 text-parchment text-sm max-w-md leading-relaxed">
-          Histórico de preços completo. Descubra o melhor momento para comprar.
-        </p>
-      </header>
-
-      {/* ── Artistas mais Ouvidos carousel ──────────────────────── */}
-      <ArtistasCarousel items={carouselItems} />
 
       {/* ── Sort bar ────────────────────────────────────────────── */}
       <div className="mb-5">
@@ -76,7 +56,7 @@ export default async function HomePage({
         </Suspense>
       </div>
 
-      {/* ── Result count + active artist badge ──────────────────── */}
+      {/* ── Result count + active filters ───────────────────────── */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <p className="text-dust text-sm">
           {total === 0
@@ -93,7 +73,7 @@ export default async function HomePage({
           <span className="inline-flex items-center gap-1.5 bg-groove border border-wax/60 text-parchment text-xs px-3 py-1 rounded-full">
             {artista}
             <Link
-              href="/"
+              href="/disco"
               className="text-dust hover:text-cream transition-colors leading-none"
               aria-label="Remover filtro de artista"
             >
@@ -111,7 +91,6 @@ export default async function HomePage({
           totalPages={totalPages}
           searchParams={{ q, sort, artista, precoMax: precoMaxStr }}
           animationKey={`${sort}-${q ?? ""}-${artista ?? ""}-${currentPage}`}
-          basePath="/disco"
         />
       ) : (
         <div className="text-center py-24 text-dust">
@@ -123,7 +102,8 @@ export default async function HomePage({
               <circle cx="32" cy="32" r="2"  fill="#0c0a08" />
             </svg>
           </div>
-          <p className="text-parchment text-lg font-semibold mb-2"
+          <p
+            className="text-parchment text-lg font-semibold mb-2"
             style={{ fontFamily: "var(--font-fraunces, serif)" }}
           >
             Nenhum disco encontrado
@@ -132,7 +112,7 @@ export default async function HomePage({
             Tente ajustar os filtros ou buscar por outro artista.
           </p>
           <Link
-            href="/"
+            href="/disco"
             className="inline-flex items-center gap-2 bg-gold hover:bg-goldlit text-record font-bold text-sm px-6 py-2.5 rounded-full transition-colors"
           >
             Ver todos os discos

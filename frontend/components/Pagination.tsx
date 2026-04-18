@@ -7,7 +7,7 @@ type SearchParams = {
   precoMax?: string;
 };
 
-function buildUrl(page: number, sp: SearchParams): string {
+function buildUrl(page: number, sp: SearchParams, basePath: string): string {
   const params = new URLSearchParams();
   if (sp.q) params.set("q", sp.q);
   // Only include sort when it's not the default so URLs stay clean
@@ -16,7 +16,7 @@ function buildUrl(page: number, sp: SearchParams): string {
   if (sp.precoMax) params.set("precoMax", sp.precoMax);
   if (page > 1) params.set("page", String(page));
   const qs = params.toString();
-  return qs ? `/?${qs}` : "/";
+  return qs ? `${basePath}?${qs}` : basePath;
 }
 
 /** Returns a mixed array of page numbers and ellipsis markers. */
@@ -38,10 +38,12 @@ export default function Pagination({
   currentPage,
   totalPages,
   searchParams,
+  basePath = "/disco",
 }: {
   currentPage: number;
   totalPages: number;
   searchParams: SearchParams;
+  basePath?: string;
 }) {
   const pages = pageRange(currentPage, totalPages);
 
@@ -62,7 +64,7 @@ export default function Pagination({
       {/* Previous */}
       {currentPage > 1 ? (
         <Link
-          href={buildUrl(currentPage - 1, searchParams)}
+          href={buildUrl(currentPage - 1, searchParams, basePath)}
           className={`${btnBase} ${btnIdle} px-3 py-1.5`}
         >
           ← Anterior
@@ -85,7 +87,7 @@ export default function Pagination({
         ) : (
           <Link
             key={p}
-            href={buildUrl(p, searchParams)}
+            href={buildUrl(p, searchParams, basePath)}
             aria-current={p === currentPage ? "page" : undefined}
             className={`${btnBase} ${p === currentPage ? btnActive : btnIdle} w-9 h-9`}
           >
@@ -97,7 +99,7 @@ export default function Pagination({
       {/* Next */}
       {currentPage < totalPages ? (
         <Link
-          href={buildUrl(currentPage + 1, searchParams)}
+          href={buildUrl(currentPage + 1, searchParams, basePath)}
           className={`${btnBase} ${btnIdle} px-3 py-1.5`}
         >
           Próxima →

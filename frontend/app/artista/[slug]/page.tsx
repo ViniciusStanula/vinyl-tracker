@@ -7,6 +7,13 @@ import { notFound } from "next/navigation";
 import { slugifyArtist } from "@/lib/slugify";
 import { Suspense, cache } from "react";
 
+// Covers the full set of accented characters produced by slugifyArtist()'s
+// NFD normalization for Portuguese, Spanish, French, German, and other common
+// artist name origins. translate() is a built-in PostgreSQL function that
+// requires no extension, unlike unaccent().
+const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
+const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";
+
 export const dynamic = "force-dynamic";
 
 type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
@@ -28,14 +35,28 @@ const resolveArtista = cache(async function resolveArtista(
   //   2. Inverted "LAST,FIRST" names: swap parts before slugifying
   // The JS slugifyArtist() filter below is the exact match safety-net for
   // edge cases (accent stripping via NFD that SQL doesn't reproduce exactly).
+  // Mirror slugifyArtist() in SQL: unaccent → lowercase → strip non-alphanumeric
+  // → strip leading/trailing hyphens → truncate to 60 chars.
+  // lowercase must come BEFORE the regex so uppercase letters aren't stripped
+  // (PostgreSQL [^a-z0-9] treats uppercase as non-alphanumeric).
   const candidates = await prisma.$queryRaw<{ artista: string }[]>`
     SELECT DISTINCT artista FROM "Disco"
-    WHERE left(lower(regexp_replace(unaccent(artista), '[^a-z0-9]+', '-', 'g')), 60)
-            = ${slug}
-       OR left(lower(regexp_replace(
-            unaccent(trim(split_part(artista, ',', 2)) || ' ' || trim(split_part(artista, ',', 1))),
-            '[^a-z0-9]+', '-', 'g'
-          )), 60) = ${slug}
+    WHERE left(
+            regexp_replace(
+              regexp_replace(translate(lower(artista), ${ACCENT_FROM}, ${ACCENT_TO}), '[^a-z0-9]+', '-', 'g'),
+              '^-+|-+$', '', 'g'
+            ), 60) = ${slug}
+       OR left(
+            regexp_replace(
+              regexp_replace(
+                translate(
+                  lower(trim(split_part(artista, ',', 2)) || ' ' || trim(split_part(artista, ',', 1))),
+                  ${ACCENT_FROM}, ${ACCENT_TO}
+                ),
+                '[^a-z0-9]+', '-', 'g'
+              ),
+              '^-+|-+$', '', 'g'
+            ), 60) = ${slug}
   `;
   const variants = candidates
     .map((r) => r.artista)
@@ -80,7 +101,21 @@ export default async function ArtistaPage({
   const precoMax =
     precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
 
-  const resolved = await resolveArtista(slug);
+  let resolved;
+  try {
+    resolved = await resolveArtista(slug);
+  } catch (err) {
+    console.error("[ArtistaPage] resolveArtista failed for slug=%s:", slug, err);
+    return (
+      <main className="max-w-7xl mx-auto px-4 py-24 text-center">
+        <p className="text-parchment text-lg font-semibold mb-2"
+          style={{ fontFamily: "var(--font-fraunces, serif)" }}>
+          Erro ao carregar página do artista
+        </p>
+        <p className="text-dust text-sm">Tente novamente em alguns instantes.</p>
+      </main>
+    );
+  }
   if (!resolved) notFound();
   const { canonical: artista, variants: artistaVariants } = resolved;
 

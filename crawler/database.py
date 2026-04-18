@@ -263,12 +263,12 @@ def ensure_schema_extras(conn) -> None:
               AND column_name IN (
                 'disponivel','deal_score','last_flagged_at','last_flagged_price',
                 'avg_30d','avg_90d','low_30d','low_all_time','confidence_level',
-                'history_days','last_crawled_at'
+                'history_days','last_crawled_at','lastfm_tags'
               )
             """
         )
         existing = cur.fetchone()[0]
-        if existing == 11:
+        if existing == 12:
             log.debug("ensure_schema_extras: schema already complete, skipping DDL.")
             return
 
@@ -289,7 +289,8 @@ def ensure_schema_extras(conn) -> None:
                 ADD COLUMN IF NOT EXISTS low_all_time     DECIMAL(10, 2),
                 ADD COLUMN IF NOT EXISTS confidence_level VARCHAR(30),
                 ADD COLUMN IF NOT EXISTS history_days     INTEGER,
-                ADD COLUMN IF NOT EXISTS last_crawled_at  TIMESTAMPTZ
+                ADD COLUMN IF NOT EXISTS last_crawled_at  TIMESTAMPTZ,
+                ADD COLUMN IF NOT EXISTS lastfm_tags      TEXT
             """
         )
         # Partial index for fast active-deal lookups (Phase 0 re-validation)
@@ -560,6 +561,58 @@ def upsert_category_associations(
 
     conn.commit()
     return len(rows)
+
+
+def fetch_untagged_artists(conn, artistas: list[str] | None = None) -> list[str]:
+    """
+    Returns distinct artista values whose lastfm_tags column is NULL.
+
+    If `artistas` is provided, only those names are checked (incremental mode).
+    If None, returns all untagged artists in the table (backfill mode).
+    """
+    with _cursor(conn) as cur:
+        if artistas:
+            cur.execute(
+                """
+                SELECT DISTINCT artista FROM "Disco"
+                WHERE lastfm_tags IS NULL
+                  AND artista = ANY(%s)
+                """,
+                (artistas,),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT DISTINCT artista FROM "Disco"
+                WHERE lastfm_tags IS NULL
+                ORDER BY artista
+                """
+            )
+        return [row[0] for row in cur.fetchall()]
+
+
+def bulk_update_tags(conn, artista_to_tags: dict[str, str]) -> int:
+    """
+    Sets lastfm_tags for every artista key in artista_to_tags.
+    An empty-string value marks the artist as "fetched but no genre tags found"
+    so it is not re-fetched on future runs.
+    Returns the number of rows updated.
+    """
+    if not artista_to_tags:
+        return 0
+
+    rows = [(tags, artista) for artista, tags in artista_to_tags.items()]
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            'UPDATE "Disco" SET lastfm_tags = %s WHERE artista = %s',
+            rows,
+            page_size=500,
+        )
+        updated = cur.rowcount
+    conn.commit()
+    log.debug("bulk_update_tags: updated tags for %d artista values.", len(rows))
+    return updated
 
 
 def limpar_historico_antigo(conn, days: int = 365) -> int:

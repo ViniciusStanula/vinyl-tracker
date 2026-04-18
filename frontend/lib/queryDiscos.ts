@@ -41,6 +41,7 @@ type DiscoRow = {
   confidenceLevel: string | null;  // VARCHAR from Disco.confidence_level
   historyDays: string | null;      // INTEGER from Disco.history_days
   lastCrawledAt: Date | null;      // TIMESTAMPTZ from Disco.last_crawled_at
+  lastfmTags: string | null;       // TEXT from Disco.lastfm_tags
 };
 
 export type ProcessedDisco = {
@@ -64,6 +65,8 @@ export type ProcessedDisco = {
   confidenceLevel: string | null;
   /** Days of price history available (used to render trust indicators) */
   historyDays: number | null;
+  /** Comma-separated Last.fm genre tags, e.g. "rock, classic rock, hard rock" */
+  lastfmTags: string | null;
 };
 
 export async function queryDiscos(params: {
@@ -117,6 +120,7 @@ export async function queryDiscos(params: {
           d.confidence_level  AS "confidenceLevel",
           d.history_days      AS "historyDays",
           d.last_crawled_at   AS "lastCrawledAt",
+          d.lastfm_tags       AS "lastfmTags",
           hp_latest."precoBrl"                              AS "precoAtual",
           COALESCE(hp_avg.media, hp_latest."precoBrl")      AS "mediaPreco",
           COALESCE(hp_avg.cnt, 0)::INTEGER                  AS "totalPrecos",
@@ -226,6 +230,7 @@ export async function queryDiscos(params: {
       dealScore,
       confidenceLevel: row.confidenceLevel ?? null,
       historyDays:    row.historyDays !== null && row.historyDays !== undefined ? Number(row.historyDays) : null,
+      lastfmTags:     row.lastfmTags ?? null,
     }];
   });
 

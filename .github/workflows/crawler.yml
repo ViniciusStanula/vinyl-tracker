@@ -45,6 +45,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
 
       - name: Open issue on failure
         if: failure()
