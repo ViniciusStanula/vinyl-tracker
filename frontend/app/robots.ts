@@ -8,6 +8,10 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: `${base}/sitemap.xml`,
+    sitemap: [
+      `${base}/sitemap/static.xml`,
+      `${base}/sitemap/artists.xml`,
+      `${base}/sitemap/discos.xml`,
+    ],
   };
 }
