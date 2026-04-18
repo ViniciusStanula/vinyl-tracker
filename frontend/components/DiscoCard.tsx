@@ -78,7 +78,6 @@ export default function DiscoCard({
   const confidenceLevel   = disco.confidenceLevel ?? null;
   const artistaSlug       = slugifyArtist(disco.artista);
   const sparkline         = disco.sparkline ?? [];
-  const firstTag          = disco.lastfmTags?.split(",")[0]?.trim() || null;
 
   // Score-3 gets a subtle gold ring
   const cardRing = dealScore === 3 ? " ring-1 ring-gold/40" : "";
@@ -159,13 +158,6 @@ export default function DiscoCard({
         >
           {disco.artista}
         </Link>
-
-        {/* Genre tag pill */}
-        {firstTag && (
-          <span className="inline-block mt-0.5 mb-0.5 text-[10px] text-patina border border-groove rounded px-1.5 py-px leading-tight truncate max-w-full">
-            {firstTag}
-          </span>
-        )}
 
         {/* Title — Fraunces for editorial character */}
         <h2
