@@ -12,6 +12,7 @@ export default function robots(): MetadataRoute.Robots {
       `${base}/sitemap/static.xml`,
       `${base}/sitemap/artists.xml`,
       `${base}/sitemap/discos.xml`,
+      `${base}/sitemap/styles.xml`,
     ],
   };
 }

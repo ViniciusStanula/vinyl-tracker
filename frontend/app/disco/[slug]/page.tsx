@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
+import StyleTags from "@/components/StyleTags";
 import { slugifyArtist } from "@/lib/slugify";
+import { parseStyleTags } from "@/lib/styleUtils";
 
 export const revalidate = 7200;
 
@@ -60,11 +62,15 @@ export default async function DiscoPage({
 
   if (!disco) notFound();
 
-  // disponivel lives outside the Prisma schema (managed by the crawler via raw DDL)
-  const dispRow = await prisma.$queryRaw<[{ disponivel: boolean }]>`
-    SELECT disponivel FROM "Disco" WHERE slug = ${slug}
+  // disponivel and lastfm_tags live outside the Prisma schema (managed by the crawler)
+  const metaRow = await prisma.$queryRaw<[{ disponivel: boolean; lastfmTags: string | null }]>`
+    SELECT disponivel, lastfm_tags AS "lastfmTags" FROM "Disco" WHERE slug = ${slug}
   `;
-  const disponivel = dispRow[0]?.disponivel ?? true;
+  const disponivel = metaRow[0]?.disponivel ?? true;
+  const artistLower = disco.artista.toLowerCase();
+  const styleTags = parseStyleTags(metaRow[0]?.lastfmTags ?? null)
+    .filter((t) => t.toLowerCase() !== artistLower)
+    .slice(0, 5);
 
   const valores = disco.precos.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;
@@ -289,6 +295,7 @@ export default async function DiscoPage({
                 <span className="text-dust ml-0.5" aria-label={`Avaliação: ${rating.toFixed(1)} de 5`}>{rating.toFixed(1)}</span>
               </p>
             )}
+            <StyleTags tags={styleTags} />
           </div>
 
           <div className="mt-5">

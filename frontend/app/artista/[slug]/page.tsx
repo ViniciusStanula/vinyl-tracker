@@ -2,9 +2,11 @@ import { prisma } from "@/lib/prisma";
 import DiscoCard from "@/components/DiscoCard";
 import SortBar from "@/components/SortBar";
 import BackToTop from "@/components/BackToTop";
+import StyleTags from "@/components/StyleTags";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { slugifyArtist } from "@/lib/slugify";
+import { getTopStyles } from "@/lib/styleUtils";
 import { Suspense, cache } from "react";
 import { unstable_cache } from "next/cache";
 
@@ -26,6 +28,7 @@ type SerializedPageData = {
     artista: string;
     slug: string;
     estilo: string | null;
+    lastfmTags: string | null;
     imgUrl: string | null;
     url: string;
     rating: string | null;
@@ -105,17 +108,27 @@ const _getArtistaPageData = unstable_cache(
 
     const discoIds = discos.map((d) => d.id);
 
-    const dealMetaRows = await prisma.$queryRaw<{
-      id: string;
-      deal_score: number | null;
-      confidence_level: string | null;
-      last_crawled_at: Date | null;
-      disponivel: boolean;
-    }[]>`
-      SELECT id::text, deal_score, confidence_level, last_crawled_at, disponivel
-      FROM "Disco"
-      WHERE id::text = ANY(${discoIds})
-    `;
+    const [dealMetaRows, lastfmTagsRows] = await Promise.all([
+      prisma.$queryRaw<{
+        id: string;
+        deal_score: number | null;
+        confidence_level: string | null;
+        last_crawled_at: Date | null;
+        disponivel: boolean;
+      }[]>`
+        SELECT id::text, deal_score, confidence_level, last_crawled_at, disponivel
+        FROM "Disco"
+        WHERE id::text = ANY(${discoIds})
+      `,
+      prisma.$queryRaw<{ id: string; lastfmTags: string | null }[]>`
+        SELECT id::text, lastfm_tags AS "lastfmTags"
+        FROM "Disco"
+        WHERE id::text = ANY(${discoIds})
+      `,
+    ]);
+    const lastfmTagsById = Object.fromEntries(
+      lastfmTagsRows.map((r) => [r.id, r.lastfmTags])
+    );
 
     return {
       canonical,
@@ -126,6 +139,7 @@ const _getArtistaPageData = unstable_cache(
         artista: d.artista,
         slug: d.slug,
         estilo: d.estilo,
+        lastfmTags: lastfmTagsById[d.id] ?? null,
         imgUrl: d.imgUrl,
         url: d.url,
         rating: d.rating ? String(d.rating) : null,
@@ -196,6 +210,7 @@ export default async function ArtistaPage({
   if (!data) notFound();
 
   const { canonical: artista, discos, dealMeta } = data;
+  const topStyles = getTopStyles(discos.map((d) => d.lastfmTags), 5, artista);
 
   // Filter out unavailable products from the artist page listing
   const discosDisponiveis = discos.filter((d) => dealMeta[d.id]?.disponivel !== false);
@@ -287,6 +302,7 @@ export default async function ArtistaPage({
             ? ` até R$ ${precoMax.toLocaleString("pt-BR")}`
             : " rastreados"}
         </p>
+        <StyleTags tags={topStyles} />
       </header>
 
       <div className="mb-4">
