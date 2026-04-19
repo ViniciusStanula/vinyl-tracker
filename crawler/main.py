@@ -350,6 +350,17 @@ BROWSER_IDENTITIES = [
     "edge101", "firefox144", "firefox135", "firefox133",
 ]
 
+# Rotate Accept-Language per session so every session doesn't share an identical
+# header fingerprint. All strings reflect realistic Brazilian-user browser configs.
+_ACCEPT_LANGUAGES = [
+    "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+    "pt-BR,pt;q=0.9,en;q=0.8",
+    "pt-BR,pt;q=0.8,en-US;q=0.7,en;q=0.6",
+    "pt;q=0.9,pt-BR;q=0.8,en-US;q=0.7",
+    "pt-BR,pt;q=0.95,en-US;q=0.9,en;q=0.85",
+    "pt-BR,pt;q=1.0,en-US;q=0.5",
+]
+
 # ─────────────────────────────────────────────────────────────
 #  Logging
 # ─────────────────────────────────────────────────────────────
@@ -404,6 +415,24 @@ _VINYL_LABEL_RE = re.compile(r"vinil|vinyl", re.IGNORECASE)
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
+def _human_delay(base: float) -> float:
+    """
+    Returns a delay that mimics human reading-time variance.
+
+    80% of requests get the standard 0.5–1.5 s jitter on top of base.
+    5% get a medium pause (2–4 s extra) — like mousing over a product.
+    15% get a long pause (4–9 s extra) — like actually reading a listing.
+    A pure uniform(0.5, 1.5) range is easy to fingerprint; adding the long
+    tail removes the hard upper bound that automated tools exhibit.
+    """
+    r = random.random()
+    if r < 0.80:
+        return base + random.uniform(0.5, 1.5)
+    if r < 0.85:
+        return base + random.uniform(2.0, 4.0)
+    return base + random.uniform(4.0, 9.0)
+
+
 def affiliate_link(asin: str) -> str:
     return f"https://www.amazon.com.br/dp/{asin}?tag={ASSOCIATE_TAG}"
 
@@ -540,14 +569,22 @@ def build_page_url(page: int) -> str:
     url = BASE_URL + VINYL_URL_PATH
     url = re.sub(r"[&?]page=\d+", "", url)
     url = re.sub(r"[&?]qid=\d+", "", url)
-    qid = int(time.time())
+    # Small jitter so qid is not an exact wall-clock second on every call —
+    # exact-integer qids are a bot pattern that real browsers don't produce.
+    qid = int(time.time()) + random.randint(-3, 3)
+    if page == 1:
+        # Real Amazon page-1 URLs don't include &page=1; omitting it matches
+        # the URL a browser produces when landing on the first results page.
+        return url + f"&qid={qid}&ref=sr_pg_1"
     return url + f"&qid={qid}&page={page}&ref=sr_pg_{page}"
 
 
 def build_category_page_url(base_url: str, page: int) -> str:
     url = re.sub(r"[&?]page=\d+", "", base_url)
     url = re.sub(r"[&?]qid=\d+", "", url)
-    qid = int(time.time())
+    qid = int(time.time()) + random.randint(-3, 3)
+    if page == 1:
+        return url + f"&qid={qid}"
     return url + f"&qid={qid}&page={page}"
 
 
@@ -671,7 +708,8 @@ def make_session(proxy: str | None = None):
             kwargs["proxies"] = {"http": proxy, "https": proxy}
         s = cffi_requests.Session(**kwargs)
         s.headers.update({
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8",
+            # Rotate Accept-Language so sessions don't share a single fixed string.
+            "Accept-Language": random.choice(_ACCEPT_LANGUAGES),
             "Referer": "https://www.amazon.com.br/",
         })
         return s, "curl_cffi"
@@ -684,8 +722,14 @@ def make_session(proxy: str | None = None):
             "User-Agent": random.choice([
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136.0.0.0 Safari/537.36",
             ]),
-            "Accept-Language": "pt-BR,pt;q=0.9",
+            # Accept header is mandatory — its absence is a clear non-browser signal.
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": random.choice(_ACCEPT_LANGUAGES),
+            "DNT": "1",
+            "Connection": "keep-alive",
             "Referer": "https://www.amazon.com.br/",
         })
         return s, "requests"
@@ -736,7 +780,8 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
         try:
             resp = session.get(url, timeout=25, headers=req_headers or None)
             size = len(resp.content)
-            if resp.status_code in (503, 429):
+            # 403 is Amazon's soft-block alongside 429/503 — treat identically.
+            if resp.status_code in (403, 503, 429):
                 log.warning(
                     "[safe_get] Rate-limited %s proxy=%s size=%d — backing off",
                     resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
@@ -758,7 +803,19 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
             return None, session, proxy
 
         verdict = "ok"
-        if any(s in resp.text for s in ["Robot Check", "Verificação de robô", "Digite os caracteres"]):
+        # Keep CAPTCHA signals in sync with fetch_product_page — both functions
+        # must detect the same bot-challenge pages.
+        if any(s in resp.text for s in (
+            "Robot Check",
+            "Verificação de robô",
+            "Digite os caracteres",
+            "Sorry, we just need to make sure you're not a robot",
+            "To discuss automated access to Amazon data please contact",
+            "Access Denied",
+            "Enter the characters you see below",
+            "amazon.com.br/errors/validateCaptcha",
+            "Prove you're not a robot",
+        )):
             verdict = "captcha"
             log.warning(
                 "[safe_get] CAPTCHA detected proxy=%s size=%d — rotating session",
@@ -852,7 +909,8 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 )
                 pool.report_ok(proxy)
                 return None, 404, session, proxy
-            if resp.status_code in (503, 429):
+            # 403 is Amazon's soft-block signal — treat as rate-limit alongside 429/503.
+            if resp.status_code in (403, 503, 429):
                 log.warning(
                     "[fetch_product] Rate-limited %s proxy=%s size=%d — backing off",
                     resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
@@ -1716,7 +1774,7 @@ def crawl_single_url(
             break
 
         if page < max_pages:
-            sleep_time = delay + random.uniform(0.5, 1.5)
+            sleep_time = _human_delay(delay)
             log.info("[%s] Waiting %.1fs...", label, sleep_time)
             time.sleep(sleep_time)
 
@@ -1752,16 +1810,45 @@ def _crawl_one_category(cat_url: str, label: str, delay: float) -> list[dict]:
     return items
 
 
+def _crawl_one_extra(extra_url: str, label: str, delay: float) -> list[dict]:
+    """
+    Thread worker: crawl a single extra sort URL end-to-end.
+
+    Runs inside the same ThreadPoolExecutor as category workers so extra sorts
+    overlap with the category crawl instead of running sequentially after it.
+    Each worker gets its own session (different browser identity).
+    """
+    proxy = get_proxy_pool().acquire()
+    session, _ = make_session(proxy=proxy)
+    # Stagger slightly more than category workers since these share the pool.
+    time.sleep(random.uniform(1.5, 5.0))
+    _quick_warmup(session)
+    local_seen: set[str] = set()
+    items, _, _ = crawl_single_url(
+        session,
+        lambda page, base=extra_url: build_category_page_url(base, page),
+        label,
+        MAX_PAGES_EXTRA,
+        delay,
+        local_seen,
+        max_consecutive_empty=3,
+        proxy=proxy,
+    )
+    return items
+
+
 def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[dict]:
     """
     Orchestrates the full crawl:
       1. Main popularity-ranked URL (up to max_pages pages), sequential.
-      2. All genre category URLs crawled in parallel (MAX_CATEGORY_WORKERS
-         concurrent threads), each with its own session.
+      2. All genre category URLs + extra sort URLs in the same
+         ThreadPoolExecutor (MAX_CATEGORY_WORKERS concurrent threads),
+         each worker with its own session.
+      3. Browse node ASIN mining (sequential, after the pool closes).
 
     Final deduplication is done in-memory after merging results: ASINs
-    already seen in the main crawl are skipped from category results,
-    preventing duplicate HistoricoPreco rows within the same run.
+    already seen in earlier steps are skipped to prevent duplicate
+    HistoricoPreco rows within the same run.
     """
     proxy = get_proxy_pool().acquire()
     session, backend = make_session(proxy=proxy)
@@ -1787,25 +1874,33 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
     all_items.extend(items)
     log.info("Main URL complete — %d products.", len(items))
 
-    # ── 2. Genre category URLs (parallel) ─────────────────────────────────
+    # ── 2. Genre category URLs + extra sort URLs (parallel) ───────────────
+    # Extra sort URLs run in the same executor as categories so they overlap
+    # with the category crawl rather than running sequentially after it.
     log.info("═" * 50)
     log.info(
-        "Crawling %d category URLs with %d parallel workers...",
-        len(CATEGORY_URLS), MAX_CATEGORY_WORKERS,
+        "Crawling %d category URLs + %d extra sort URLs with %d parallel workers...",
+        len(CATEGORY_URLS), len(EXTRA_SORT_URLS), MAX_CATEGORY_WORKERS,
     )
     cat_items_all: list[dict] = []
+    extra_items_all: list[dict] = []
+    # futures value: ("cat", index) or ("extra", index) to tell results apart.
     with ThreadPoolExecutor(max_workers=MAX_CATEGORY_WORKERS) as pool:
-        futures = {
-            pool.submit(_crawl_one_category, cat_url, f"cat-{i}", delay): i
+        futures: dict = {
+            pool.submit(_crawl_one_category, cat_url, f"cat-{i}", delay): ("cat", i)
             for i, cat_url in enumerate(CATEGORY_URLS, 1)
         }
+        for i, extra_url in enumerate(EXTRA_SORT_URLS, 1):
+            fut = pool.submit(_crawl_one_extra, extra_url, f"extra-{i}", delay)
+            futures[fut] = ("extra", i)
+
         for future in as_completed(futures):
-            cat_idx = futures[future]
+            kind, idx = futures[future]
 
             if deadline is not None and time.monotonic() >= deadline:
                 pending = sum(1 for f in futures if not f.done())
                 log.warning(
-                    "Time limit reached during category crawl — cancelling %d pending futures.",
+                    "Time limit reached during category/extra crawl — cancelling %d pending futures.",
                     pending,
                 )
                 for f in futures:
@@ -1813,11 +1908,15 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
                 break
 
             try:
-                cat_items = future.result()
-                log.info("Category %d complete — %d products.", cat_idx, len(cat_items))
-                cat_items_all.extend(cat_items)
+                result_items = future.result()
+                if kind == "cat":
+                    log.info("Category %d complete — %d products.", idx, len(result_items))
+                    cat_items_all.extend(result_items)
+                else:
+                    log.info("Extra sort %d complete — %d products.", idx, len(result_items))
+                    extra_items_all.extend(result_items)
             except Exception as exc:
-                log.warning("Category %d worker raised: %s", cat_idx, exc)
+                log.warning("%s %d worker raised: %s", kind, idx, exc)
 
     # Build category associations before dedup — an ASIN seen in the main URL
     # crawl can still appear in a category and should have that association recorded.
@@ -1840,30 +1939,16 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
         new_from_categories, len(asin_categories),
     )
 
-    # ── 3. Extra sort URLs (sequential) ───────────────────────────────────
-    log.info("═" * 50)
+    # Merge extra sort results, deduplicating against all seen ASINs so far.
+    new_from_extras = 0
+    for item in extra_items_all:
+        if item["asin"] not in seen_asins:
+            seen_asins.add(item["asin"])
+            all_items.append(item)
+            new_from_extras += 1
     log.info(
-        "Crawling %d extra sort URLs (%d pages each)...",
-        len(EXTRA_SORT_URLS), MAX_PAGES_EXTRA,
+        "Extra sorts done — %d new products (after dedup).", new_from_extras,
     )
-    for i, extra_url in enumerate(EXTRA_SORT_URLS, 1):
-        if deadline is not None and time.monotonic() >= deadline:
-            log.warning("Time limit reached — skipping remaining extra sort URLs.")
-            break
-        extra_items, session, proxy = crawl_single_url(
-            session,
-            lambda page, base=extra_url: build_category_page_url(base, page),
-            f"extra-{i}",
-            MAX_PAGES_EXTRA,
-            delay,
-            seen_asins,
-            max_consecutive_empty=3,
-            proxy=proxy,
-        )
-        all_items.extend(extra_items)
-        log.info("Extra sort %d done — %d new products.", i, len(extra_items))
-        if i < len(EXTRA_SORT_URLS) and (deadline is None or time.monotonic() < deadline):
-            time.sleep(random.uniform(2.0, 4.0))
 
     # ── 4. Browse node ASIN mining ─────────────────────────────────────────
     log.info("═" * 50)
@@ -1962,7 +2047,7 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
             result["review_count"] = review_count
 
     # Per-worker delay so the combined request rate stays at ≤ max_workers/delay req/s.
-    time.sleep(delay + random.uniform(0.5, 1.5))
+    time.sleep(_human_delay(delay))
     return result
 
 
@@ -2164,6 +2249,7 @@ def main():
         # Query for records currently flagged as deals and re-crawl them
         # immediately so that the DB reflects the freshest prices before we
         # spend time discovering new ones.
+        phase0_asins: set[str] = set()  # tracked so Phase 3 doesn't re-fetch them
         if args.skip_deal_revalidation:
             log.info("Deal re-validation skipped (--skip-deal-revalidation).")
         else:
@@ -2175,6 +2261,7 @@ def main():
                 len(active_deals),
             )
             if active_deals:
+                phase0_asins = {d["asin"] for d in active_deals}
                 crawl_stale_records(
                     active_deals, args.delay, conn,
                     dry_run=False, max_workers=args.stale_workers,
@@ -2303,7 +2390,9 @@ def main():
             if args.skip_stale:
                 log.info("Stale-records check skipped (--skip-stale).")
             else:
-                seen_asins = {item["asin"] for item in all_items}
+                # Exclude both Phase 1 discoveries and Phase 0 deal re-checks so
+                # we don't fetch the same product pages a second time this run.
+                seen_asins = {item["asin"] for item in all_items} | phase0_asins
                 stale_limit = args.stale_max if args.stale_max > 0 else 10_000
                 stale = fetch_stale_records(conn, seen_asins, limit=stale_limit)
 
