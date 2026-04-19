@@ -4,7 +4,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
-import ShareButton from "@/components/ShareButton";
 import BackToTop from "@/components/BackToTop";
 import { slugifyArtist } from "@/lib/slugify";
 
@@ -117,10 +116,10 @@ export default async function DiscoPage({
   // Label for the "Atual" stat card — compare dates in BRT
   const dataAtual = disco.precos.at(-1)?.capturadoEm;
 
-  // Hours since last price capture — same source as the chart's newest point
-  const horasUpdate = dataAtual
-    ? Math.floor((Date.now() - dataAtual.getTime()) / (1000 * 60 * 60))
-    : Math.floor((Date.now() - disco.updatedAt.getTime()) / (1000 * 60 * 60));
+  // Hours since the product was last crawled — updatedAt is touched on every
+  // crawl even when the price is unchanged, so this reflects the true check time
+  // rather than the last HistoricoPreco insertion (which deduplicates within 23h).
+  const horasUpdate = Math.floor((Date.now() - disco.updatedAt.getTime()) / (1000 * 60 * 60));
   const updateLabel =
     horasUpdate === 0
       ? "menos de 1 hora"
@@ -355,7 +354,6 @@ export default async function DiscoPage({
                   Não disponível
                 </span>
               )}
-              <ShareButton titulo={disco.titulo} artista={disco.artista} />
             </div>
             <p className="text-ash text-xs mt-2">
               Atualizado há {updateLabel} · Preços podem variar
