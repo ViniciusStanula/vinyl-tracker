@@ -9,10 +9,10 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
     },
     sitemap: [
-      `${base}/sitemap/static.xml`,
-      `${base}/sitemap/artists.xml`,
+      `${base}/sitemap/estatico.xml`,
+      `${base}/sitemap/artistas.xml`,
       `${base}/sitemap/discos.xml`,
-      `${base}/sitemap/styles.xml`,
+      `${base}/sitemap/estilos.xml`,
     ],
   };
 }

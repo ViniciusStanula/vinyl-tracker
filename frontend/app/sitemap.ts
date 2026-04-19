@@ -9,7 +9,7 @@ const base =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
 
 export async function generateSitemaps() {
-  return [{ id: "static" }, { id: "artists" }, { id: "discos" }, { id: "styles" }];
+  return [{ id: "estatico" }, { id: "artistas" }, { id: "discos" }, { id: "estilos" }];
 }
 
 export default async function sitemap(props: {
@@ -17,11 +17,11 @@ export default async function sitemap(props: {
 }): Promise<MetadataRoute.Sitemap> {
   const id = await props.id;
 
-  if (id === "static") {
+  if (id === "estatico") {
     return [{ url: base, changeFrequency: "daily", priority: 1 }];
   }
 
-  if (id === "artists") {
+  if (id === "artistas") {
     const artistRows = await prisma.disco.findMany({
       select: { artista: true },
       distinct: ["artista"],
@@ -57,7 +57,7 @@ export default async function sitemap(props: {
     }));
   }
 
-  if (id === "styles") {
+  if (id === "estilos") {
     const rows = await prisma.$queryRaw<{ tag: string }[]>`
       SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
       FROM "Disco"
