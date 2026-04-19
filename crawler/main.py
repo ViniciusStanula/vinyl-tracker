@@ -53,7 +53,7 @@ MAX_PAGES_CATEGORY   = 10      # per genre URL — capped at 10; Amazon rarely y
 MAX_PAGES_EXTRA      = 5       # per extra sort URL — first 5 pages captures most new/distinct products
 DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi browser impersonation
 MAX_CATEGORY_WORKERS = int(os.environ.get("CATEGORY_WORKERS", "4"))  # parallel threads for genre category crawling
-MIN_PRICE_BRL      = 10.0
+MIN_PRICE_BRL      = 30.0
 
 # Stale-records session hygiene: rotate after a random number of product-page
 # hits in this range.  Amazon degrades sessions to skeleton pages after ~1-2
