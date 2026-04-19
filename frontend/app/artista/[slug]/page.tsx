@@ -6,6 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { slugifyArtist } from "@/lib/slugify";
 import { Suspense, cache } from "react";
+import { unstable_cache } from "next/cache";
 
 // Covers the full set of accented characters produced by slugifyArtist()'s
 // NFD normalization for Portuguese, Spanish, French, German, and other common
@@ -14,65 +15,142 @@ import { Suspense, cache } from "react";
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
 const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";
 
-export const dynamic = "force-dynamic";
-
 type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
 
+type SerializedPageData = {
+  canonical: string;
+  discos: {
+    id: string;
+    asin: string;
+    titulo: string;
+    artista: string;
+    slug: string;
+    estilo: string | null;
+    imgUrl: string | null;
+    url: string;
+    rating: string | null;
+    reviewCount: number | null;
+    precos: { precoBrl: string; capturadoEm: number }[];
+  }[];
+  dealMeta: Record<string, {
+    id: string;
+    deal_score: number | null;
+    confidence_level: string | null;
+    last_crawled_at: string | null;
+    disponivel: boolean;
+  }>;
+};
+
 /**
- * Returns all distinct artist name variants that map to the given slug,
- * plus a canonical display name (the one that looks cleanest — no commas,
- * prefer mixed-case over ALL CAPS).
- *
- * Wrapped with React cache() so that generateMetadata and the page component
- * share a single DB query per request instead of issuing two identical ones.
+ * Fetches and serializes all data needed to render an artist page.
+ * Returns JSON-safe values so the result survives unstable_cache serialization.
+ * Dates are stored as millisecond timestamps (numbers) or ISO strings.
+ * Wrapped with React cache() so generateMetadata and the page share one result per request.
  */
-const resolveArtista = cache(async function resolveArtista(
-  slug: string
-): Promise<{ canonical: string; variants: string[] } | null> {
-  // Pre-filter at the DB level using a SQL slug approximation so we transfer
-  // only candidates instead of the full artist table. Two expressions cover:
-  //   1. Regular names: lower(regexp_replace(artista, '[^a-z0-9]+', '-', 'g'))
-  //   2. Inverted "LAST,FIRST" names: swap parts before slugifying
-  // The JS slugifyArtist() filter below is the exact match safety-net for
-  // edge cases (accent stripping via NFD that SQL doesn't reproduce exactly).
-  // Mirror slugifyArtist() in SQL: unaccent → lowercase → strip non-alphanumeric
-  // → strip leading/trailing hyphens → truncate to 60 chars.
-  // lowercase must come BEFORE the regex so uppercase letters aren't stripped
-  // (PostgreSQL [^a-z0-9] treats uppercase as non-alphanumeric).
-  const candidates = await prisma.$queryRaw<{ artista: string }[]>`
-    SELECT DISTINCT artista FROM "Disco"
-    WHERE left(
-            regexp_replace(
-              regexp_replace(translate(lower(artista), ${ACCENT_FROM}, ${ACCENT_TO}), '[^a-z0-9]+', '-', 'g'),
-              '^-+|-+$', '', 'g'
-            ), 60) = ${slug}
-       OR left(
-            regexp_replace(
+const _getArtistaPageData = unstable_cache(
+  async (slug: string): Promise<SerializedPageData | null> => {
+    // Pre-filter at the DB level using a SQL slug approximation so we transfer
+    // only candidates instead of the full artist table. Two expressions cover:
+    //   1. Regular names: lower(regexp_replace(artista, '[^a-z0-9]+', '-', 'g'))
+    //   2. Inverted "LAST,FIRST" names: swap parts before slugifying
+    // The JS slugifyArtist() filter below is the exact match safety-net for
+    // edge cases (accent stripping via NFD that SQL doesn't reproduce exactly).
+    const candidates = await prisma.$queryRaw<{ artista: string }[]>`
+      SELECT DISTINCT artista FROM "Disco"
+      WHERE left(
               regexp_replace(
-                translate(
-                  lower(trim(split_part(artista, ',', 2)) || ' ' || trim(split_part(artista, ',', 1))),
-                  ${ACCENT_FROM}, ${ACCENT_TO}
+                regexp_replace(translate(lower(artista), ${ACCENT_FROM}, ${ACCENT_TO}), '[^a-z0-9]+', '-', 'g'),
+                '^-+|-+$', '', 'g'
+              ), 60) = ${slug}
+         OR left(
+              regexp_replace(
+                regexp_replace(
+                  translate(
+                    lower(trim(split_part(artista, ',', 2)) || ' ' || trim(split_part(artista, ',', 1))),
+                    ${ACCENT_FROM}, ${ACCENT_TO}
+                  ),
+                  '[^a-z0-9]+', '-', 'g'
                 ),
-                '[^a-z0-9]+', '-', 'g'
-              ),
-              '^-+|-+$', '', 'g'
-            ), 60) = ${slug}
-  `;
-  const variants = candidates
-    .map((r) => r.artista)
-    .filter((a) => slugifyArtist(a) === slug);
+                '^-+|-+$', '', 'g'
+              ), 60) = ${slug}
+    `;
 
-  if (variants.length === 0) return null;
+    const variants = candidates
+      .map((r) => r.artista)
+      .filter((a) => slugifyArtist(a) === slug);
 
-  // Pick the cleanest name: prefer no comma, then shortest (usually proper-cased)
-  const canonical = variants.sort((a, b) => {
-    const aScore = (a.includes(",") ? 1 : 0) + (a === a.toUpperCase() ? 1 : 0);
-    const bScore = (b.includes(",") ? 1 : 0) + (b === b.toUpperCase() ? 1 : 0);
-    return aScore - bScore || a.length - b.length;
-  })[0];
+    if (variants.length === 0) return null;
 
-  return { canonical, variants };
-});
+    // Pick the cleanest name: prefer no comma, then shortest (usually proper-cased)
+    const canonical = variants.slice().sort((a, b) => {
+      const aScore = (a.includes(",") ? 1 : 0) + (a === a.toUpperCase() ? 1 : 0);
+      const bScore = (b.includes(",") ? 1 : 0) + (b === b.toUpperCase() ? 1 : 0);
+      return aScore - bScore || a.length - b.length;
+    })[0];
+
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+
+    const discos = await prisma.disco.findMany({
+      where: { artista: { in: variants } },
+      include: {
+        precos: {
+          where: { capturadoEm: { gte: oneYearAgo } },
+          orderBy: { capturadoEm: "desc" },
+          take: 60,
+        },
+      },
+    });
+
+    if (discos.length === 0) return null;
+
+    const discoIds = discos.map((d) => d.id);
+
+    const dealMetaRows = await prisma.$queryRaw<{
+      id: string;
+      deal_score: number | null;
+      confidence_level: string | null;
+      last_crawled_at: Date | null;
+      disponivel: boolean;
+    }[]>`
+      SELECT id::text, deal_score, confidence_level, last_crawled_at, disponivel
+      FROM "Disco"
+      WHERE id::text = ANY(${discoIds})
+    `;
+
+    return {
+      canonical,
+      discos: discos.map((d) => ({
+        id: d.id,
+        asin: d.asin,
+        titulo: d.titulo,
+        artista: d.artista,
+        slug: d.slug,
+        estilo: d.estilo,
+        imgUrl: d.imgUrl,
+        url: d.url,
+        rating: d.rating ? String(d.rating) : null,
+        reviewCount: d.reviewCount,
+        precos: d.precos.map((p) => ({
+          precoBrl: String(p.precoBrl),
+          capturadoEm: p.capturadoEm.getTime(),
+        })),
+      })),
+      dealMeta: Object.fromEntries(
+        dealMetaRows.map((r) => [r.id, {
+          id: r.id,
+          deal_score: r.deal_score !== null ? Number(r.deal_score) : null,
+          confidence_level: r.confidence_level,
+          last_crawled_at: r.last_crawled_at ? new Date(r.last_crawled_at).toISOString() : null,
+          disponivel: r.disponivel,
+        }])
+      ),
+    };
+  },
+  ["artista-page"],
+  { tags: ["prices"] }
+);
+
+const getArtistaPageData = cache(_getArtistaPageData);
 
 export async function generateMetadata({
   params,
@@ -80,9 +158,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const resolved = await resolveArtista(slug);
-  if (!resolved) return {};
-  const { canonical } = resolved;
+  const data = await getArtistaPageData(slug);
+  if (!data) return {};
+  const { canonical } = data;
   return {
     title: `${canonical} — Discos em Promoção | Garimpa Vinil`,
     description: `Melhores ofertas de ${canonical} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`,
@@ -101,11 +179,11 @@ export default async function ArtistaPage({
   const precoMax =
     precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
 
-  let resolved;
+  let data: SerializedPageData | null = null;
   try {
-    resolved = await resolveArtista(slug);
+    data = await getArtistaPageData(slug);
   } catch (err) {
-    console.error("[ArtistaPage] resolveArtista failed for slug=%s:", slug, err);
+    console.error("[ArtistaPage] getArtistaPageData failed for slug=%s:", slug, err);
     return (
       <main className="max-w-7xl mx-auto px-4 py-24 text-center">
         <p className="font-display text-parchment text-lg font-semibold mb-2">
@@ -115,46 +193,14 @@ export default async function ArtistaPage({
       </main>
     );
   }
-  if (!resolved) notFound();
-  const { canonical: artista, variants: artistaVariants } = resolved;
+  if (!data) notFound();
 
-  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-
-  const discos = await prisma.disco.findMany({
-    where: { artista: { in: artistaVariants } },
-    include: {
-      precos: {
-        where: { capturadoEm: { gte: oneYearAgo } },
-        orderBy: { capturadoEm: "desc" },
-        take: 60,
-      },
-    },
-  });
-
-  if (discos.length === 0) notFound();
-
-  // Fetch deal_score and confidence_level for these discos.
-  // These columns live outside the Prisma schema (managed by the crawler),
-  // so a targeted raw query is the lightest way to pull them in.
-  const discoIds = discos.map((d) => d.id);
-  type DealMeta = {
-    id: string;
-    deal_score: number | null;
-    confidence_level: string | null;
-    last_crawled_at: Date | null;
-    disponivel: boolean;
-  };
-  const dealMetaRows = await prisma.$queryRaw<DealMeta[]>`
-    SELECT id::text, deal_score, confidence_level, last_crawled_at, disponivel
-    FROM "Disco"
-    WHERE id::text = ANY(${discoIds})
-  `;
-  const dealMeta = Object.fromEntries(dealMetaRows.map((r) => [r.id, r]));
+  const { canonical: artista, discos, dealMeta } = data;
 
   // Filter out unavailable products from the artist page listing
   const discosDisponiveis = discos.filter((d) => dealMeta[d.id]?.disponivel !== false);
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
   const discosProcessados = discosDisponiveis.map((disco) => {
     const precos = disco.precos.map((p) => Number(p.precoBrl));
@@ -165,10 +211,11 @@ export default async function ArtistaPage({
         : precoAtual;
     const desconto = media > 0 ? (media - precoAtual) / media : 0;
 
-    // Build sparkline from last 10 price points within the 30-day window
+    // Build sparkline from last 10 price points within the 30-day window.
+    // capturadoEm is stored as a millisecond timestamp in the serialized cache.
     const sparkline = [...disco.precos]
-      .filter((p) => p.capturadoEm >= thirtyDaysAgo)
-      .sort((a, b) => a.capturadoEm.getTime() - b.capturadoEm.getTime())
+      .filter((p) => p.capturadoEm >= thirtyDaysAgoMs)
+      .sort((a, b) => a.capturadoEm - b.capturadoEm)
       .slice(-10)
       .map((p) => Number(p.precoBrl));
 

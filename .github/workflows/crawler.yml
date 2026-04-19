@@ -43,6 +43,8 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
 
       - name: Open issue on failure
         if: failure()

@@ -8,7 +8,7 @@ import ShareButton from "@/components/ShareButton";
 import BackToTop from "@/components/BackToTop";
 import { slugifyArtist } from "@/lib/slugify";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 7200;
 
 export async function generateMetadata({
   params,

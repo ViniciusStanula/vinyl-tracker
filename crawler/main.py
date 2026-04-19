@@ -2103,6 +2103,21 @@ def parse_args():
     return parser.parse_args()
 
 
+def _notify_revalidate() -> None:
+    """POST to the Next.js on-demand revalidation endpoint after a successful crawl."""
+    import requests as _requests
+
+    url = os.environ.get("REVALIDATE_URL")
+    secret = os.environ.get("REVALIDATE_SECRET")
+    if not url or not secret:
+        return
+    try:
+        resp = _requests.post(url, json={"secret": secret}, timeout=10)
+        log.info("Revalidation triggered: HTTP %s", resp.status_code)
+    except Exception as exc:
+        log.warning("Revalidation request failed (non-fatal): %s", exc)
+
+
 def main():
     args = parse_args()
 
@@ -2335,6 +2350,7 @@ def main():
 
     log.info("Total runtime: %.0fs", time.monotonic() - t_start)
     log.info("Done. ✓")
+    _notify_revalidate()
 
 
 if __name__ == "__main__":
