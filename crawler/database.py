@@ -305,9 +305,9 @@ def ensure_schema_extras(conn) -> None:
     log.info("ensure_schema_extras: schema migration applied.")
 
 
-def fetch_active_deals(conn, limit: int = 500) -> list[dict]:
+def fetch_active_deals(conn) -> list[dict]:
     """
-    Returns Disco records that are currently on an active deal.
+    Returns all Disco records that are currently on an active deal.
 
     A deal is active when deal_score IS NOT NULL — i.e. the deal scorer
     (deal_scorer.score_deals) has evaluated the product and assigned a tier.
@@ -324,9 +324,7 @@ def fetch_active_deals(conn, limit: int = 500) -> list[dict]:
             FROM "Disco"
             WHERE deal_score IS NOT NULL
             ORDER BY deal_score DESC, "updatedAt" ASC
-            LIMIT %s
             """,
-            (limit,),
         )
         return [
             {"asin": row[0], "id": str(row[1]), "titulo": row[2]}
