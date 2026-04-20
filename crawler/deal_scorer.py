@@ -92,6 +92,18 @@ ROLLING_WINDOW_LONG   = 90     # days for secondary average (avg_90d)
 LOW_PROXIMITY_MARGIN  = 0.02   # within 2% of period low to reach DEAL_TIER_BEST
 EARLY_REFLAG_DROP     = 0.05   # 5% further drop overrides cooldown
 
+# Prices below this threshold are excluded from all benchmark calculations and
+# deal scoring. Must be kept in sync with MIN_PRICE_BRL in main.py.
+# Without this filter, old sub-threshold records in HistoricoPreco (from before
+# the threshold was raised) cause phantom deals at prices like R$20.
+MIN_DEAL_PRICE_BRL    = 30.0
+
+# Clear an active deal if no qualifying price record has been written within
+# this window. Catches products where Phase 0 is repeatedly CAPTCHA-blocked:
+# the stale R$205 price persists in HistoricoPreco while Amazon's real price
+# has moved to R$300, and the deal badge would otherwise hang indefinitely.
+STALE_DEAL_HOURS      = 48
+
 # Deal tier backend identifiers (stored as deal_score in DB)
 DEAL_TIER_GOOD  = 1  # pt-BR: "Boa Oferta"
 DEAL_TIER_GREAT = 2  # pt-BR: "Ótima Oferta"
@@ -210,6 +222,11 @@ def score_deals(conn) -> dict:
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         # Single query: compute all rolling benchmarks and fetch current deal state.
         # avg_30d is adaptive — falls back to all-time average when < 30 days of data.
+        #
+        # Both CTEs filter h."precoBrl" >= MIN_DEAL_PRICE_BRL so that old sub-threshold
+        # records (inserted before the price floor was raised) never pollute benchmark
+        # averages or appear as the "current price".  Products whose entire price history
+        # is below the threshold are absent from the join and won't receive a deal score.
         cur.execute(
             """
             WITH stats AS (
@@ -242,13 +259,18 @@ def score_deals(conn) -> dict:
                              THEN h."precoBrl" END
                     )::float                                           AS avg_90d
                 FROM "HistoricoPreco" h
+                WHERE h."precoBrl" >= %s
                 GROUP BY h."discoId"
             ),
             latest AS (
                 SELECT DISTINCT ON ("discoId")
                     "discoId",
-                    "precoBrl"::float AS current_price
+                    "precoBrl"::float AS current_price,
+                    -- Fetched so the Python loop can detect price data that hasn't
+                    -- been refreshed in STALE_DEAL_HOURS and clear the deal badge.
+                    "capturadoEm"     AS latest_captured_at
                 FROM "HistoricoPreco"
+                WHERE "precoBrl" >= %s
                 ORDER BY "discoId", "capturadoEm" DESC
             )
             SELECT
@@ -258,6 +280,7 @@ def score_deals(conn) -> dict:
                 d.last_flagged_at,
                 d.last_flagged_price::float    AS last_flagged_price,
                 l.current_price,
+                l.latest_captured_at,
                 s.total_points::integer        AS total_points,
                 s.history_days,
                 s.low_all_time,
@@ -277,7 +300,8 @@ def score_deals(conn) -> dict:
             FROM "Disco" d
             INNER JOIN stats  s ON s."discoId" = d.id
             INNER JOIN latest l ON l."discoId" = d.id
-            """
+            """,
+            (MIN_DEAL_PRICE_BRL, MIN_DEAL_PRICE_BRL),
         )
         products = cur.fetchall()
 
@@ -289,6 +313,8 @@ def score_deals(conn) -> dict:
     #                      — only for products transitioning NULL → non-NULL
 
     total = scored = flagged = cleared = skipped = 0
+    stale_clear_updates = []  # (last_flagged_at, disco_id) — stale deal clears
+    orphan_count = 0
 
     for p in products:
         total += 1
@@ -329,6 +355,25 @@ def score_deals(conn) -> dict:
                             "Cooldown active for %s (expires %s) — skipping re-flag",
                             p["asin"], cooldown_expires.isoformat(),
                         )
+
+        # Staleness check: clear an active deal badge if the most recent qualifying
+        # price record is older than STALE_DEAL_HOURS. Catches CAPTCHA-blocked products
+        # where the crawler can't write a fresh price (e.g. Phase 0 repeatedly blocked).
+        latest_captured_at = p.get("latest_captured_at")
+        if latest_captured_at is not None and getattr(latest_captured_at, "tzinfo", None) is None:
+            latest_captured_at = latest_captured_at.replace(tzinfo=timezone.utc)
+        if (
+            current_db_score is not None
+            and latest_captured_at is not None
+            and (now - latest_captured_at).total_seconds() > STALE_DEAL_HOURS * 3600
+        ):
+            stale_hours = (now - latest_captured_at).total_seconds() / 3600
+            log.warning(
+                "Stale deal cleared: %s — price unconfirmed for %.0fh (threshold %dh)",
+                p["asin"], stale_hours, STALE_DEAL_HOURS,
+            )
+            effective_score = None
+            stale_clear_updates.append((now, disco_id))
 
         new_score = effective_score
 
@@ -393,18 +438,58 @@ def score_deals(conn) -> dict:
                 page_size=500,
             )
 
+        # Batch write 3: stamp last_flagged_at on stale-cleared products so the
+        # 6h cooldown prevents them from being immediately re-flagged on the next run.
+        if stale_clear_updates:
+            psycopg2.extras.execute_batch(
+                cur,
+                """
+                UPDATE "Disco"
+                SET last_flagged_at = %s
+                WHERE id = %s
+                """,
+                stale_clear_updates,
+                page_size=500,
+            )
+
+        # Orphan cleanup: products whose entire price history is sub-threshold are
+        # absent from the main INNER JOIN so Batch write 1 never touches them.
+        # Clear their deal badge explicitly so phantom deals can't linger.
+        cur.execute(
+            """
+            UPDATE "Disco"
+            SET deal_score      = NULL,
+                last_flagged_at = NOW()
+            WHERE deal_score IS NOT NULL
+              AND id NOT IN (
+                SELECT DISTINCT "discoId"
+                FROM "HistoricoPreco"
+                WHERE "precoBrl" >= %s
+              )
+            """,
+            (MIN_DEAL_PRICE_BRL,),
+        )
+        orphan_count = cur.rowcount
+        if orphan_count:
+            log.warning(
+                "Orphan deal cleanup: cleared %d products with no qualifying price history",
+                orphan_count,
+            )
+
     conn.commit()
 
     summary = {
-        "total":   total,
-        "scored":  scored,
-        "flagged": flagged,
-        "cleared": cleared,
-        "skipped": skipped,
+        "total":           total,
+        "scored":          scored,
+        "flagged":         flagged,
+        "cleared":         cleared,
+        "skipped":         skipped,
+        "stale_cleared":   len(stale_clear_updates),
+        "orphans_cleared": orphan_count,
     }
     log.info(
         "score_deals done — total=%d | newly_flagged=%d | maintained=%d"
-        " | cleared=%d | cooldown_skipped=%d",
-        total, flagged, scored, cleared, skipped,
+        " | cleared=%d (stale=%d) | orphans=%d | cooldown_skipped=%d",
+        total, flagged, scored, cleared, len(stale_clear_updates), orphan_count, skipped,
     )
     return summary

@@ -98,6 +98,7 @@ export async function queryDiscos(params: {
         SELECT "precoBrl"
         FROM   "HistoricoPreco"
         WHERE  "discoId" = d.id
+          AND  "precoBrl" >= 30
         ORDER  BY "capturadoEm" DESC
         LIMIT  1
       ) hp_latest ON true
@@ -134,6 +135,7 @@ export async function queryDiscos(params: {
               FROM   "HistoricoPreco"
               WHERE  "discoId" = d.id
                 AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
+                AND  "precoBrl" >= 30
               ORDER  BY "capturadoEm" DESC
               LIMIT  10
             ) sp
@@ -143,6 +145,7 @@ export async function queryDiscos(params: {
           SELECT "precoBrl"
           FROM   "HistoricoPreco"
           WHERE  "discoId" = d.id
+            AND  "precoBrl" >= 30
           ORDER  BY "capturadoEm" DESC
           LIMIT  1
         ) hp_latest ON true
@@ -153,6 +156,7 @@ export async function queryDiscos(params: {
             COUNT(*)::INTEGER    AS cnt
           FROM   "HistoricoPreco"
           WHERE  "capturadoEm" >= NOW() - INTERVAL '30 days'
+            AND  "precoBrl" >= 30
           GROUP  BY "discoId"
         ) hp_avg ON hp_avg."discoId" = d.id
         WHERE d.disponivel = TRUE ${whereSearch} ${whereArtista} ${wherePrecoMax}
