@@ -2,7 +2,7 @@ name: Vinyl Crawler
 
 on:
   schedule:
-    - cron: '0 * * * *'  # every hour
+    - cron: '0 */2 * * *'  # every 2 hours
   workflow_dispatch:        # manual trigger from the GitHub Actions UI
 
 # Prevent concurrent runs: if a previous crawl is still going when the next
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 60    # hard ceiling; crawler --time-limit 50 stops 10 min before
+    timeout-minutes: 130   # hard ceiling; crawler --time-limit 110 stops 20 min before
     permissions:
       issues: write        # needed for the "open issue on failure" step
     env:
@@ -34,11 +34,11 @@ jobs:
         run: pip install -r crawler/requirements.txt
 
       - name: Run crawler
-        # --stale-max 300  caps stale re-fetches so in-flight tasks finish before the deadline.
+        # --stale-max 2000  increased ceiling; longer budget means Phase 3 can actually reach it.
         # --stale-workers 4  runs Phase 0 (deal re-validation) and Phase 3 in parallel;
         #                    cuts Phase 0 time from ~27 min to ~14 min, freeing budget for Phase 3.
-        # --time-limit 50  leaves a 10-min buffer before the GHA 60-min ceiling.
-        run: python crawler/main.py --max-pages 300 --stale-max 1500 --stale-workers 4 --time-limit 50
+        # --time-limit 110  leaves a 20-min buffer before the GHA 130-min ceiling.
+        run: python crawler/main.py --max-pages 300 --stale-max 2000 --stale-workers 4 --time-limit 110
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}

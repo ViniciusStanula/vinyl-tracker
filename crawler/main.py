@@ -49,10 +49,10 @@ LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 # ─────────────────────────────────────────────────────────────
 ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
 MAX_PAGES_DEFAULT    = 100     # main popularity URL — generous ceiling, early-exit handles the rest
-MAX_PAGES_CATEGORY   = 10      # per genre URL — capped at 10; Amazon rarely yields useful results beyond that
-MAX_PAGES_EXTRA      = 5       # per extra sort URL — first 5 pages captures most new/distinct products
+MAX_PAGES_CATEGORY   = 20      # per genre URL — 20 pages covers ~480 products; larger metal/rock categories exceed 10
+MAX_PAGES_EXTRA      = 10      # per extra sort URL — 10 pages captures more distinct products across sort orders
 DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi browser impersonation
-MAX_CATEGORY_WORKERS = int(os.environ.get("CATEGORY_WORKERS", "4"))  # parallel threads for genre category crawling
+MAX_CATEGORY_WORKERS = int(os.environ.get("CATEGORY_WORKERS", "6"))  # parallel threads for genre category crawling
 MIN_PRICE_BRL      = 30.0
 
 # Stale-records session hygiene: rotate after a random number of product-page
@@ -92,6 +92,8 @@ EXTRA_SORT_URLS = [
     BASE_URL + "/s?i=popular&srs=19549018011&rh=n%3A19549018011&s=date-desc-rank&fs=true",   # New releases
     BASE_URL + "/s?i=popular&srs=19549018011&rh=n%3A19549018011&s=review-rank&fs=true",       # Most reviewed
     BASE_URL + "/s?i=popular&srs=19549018011&rh=n%3A19549018011&s=featured-rank&fs=true",     # Featured / editorial
+    BASE_URL + "/s?i=popular&srs=19549018011&rh=n%3A19549018011&s=price-asc-rank&fs=true",    # Price low→high (surfaces cheap/niche records missed by popularity sort)
+    BASE_URL + "/s?i=popular&srs=19549018011&rh=n%3A19549018011&s=price-desc-rank&fs=true",   # Price high→low (surfaces expensive/rare records)
 ]
 
 # URLs de categorias de gênero — cada uma é paginada separadamente
@@ -2362,7 +2364,7 @@ def main():
                         disc_session, _ = make_session(proxy=disc_proxy)
                         _quick_warmup(disc_session)
                         browse_records: list[dict] = []
-                        cap = list(truly_new)[:50]
+                        cap = list(truly_new)[:100]
                         for idx, asin in enumerate(cap):
                             if deadline is not None and time.monotonic() >= deadline:
                                 log.warning(
