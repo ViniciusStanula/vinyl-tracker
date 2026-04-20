@@ -1123,15 +1123,50 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
                         )
                         break
 
+        # Fallback: some pages only render #tmmSwatches (no #twister rows).
+        # The vinyl swatch may be hidden (display:none) when a different format's
+        # ASIN was fetched, but its price is still present in aria-label attributes.
+        if tmm_vinyl_price is None:
+            for swatch in soup.select("#tmmSwatches .swatchElement"):
+                if _VINYL_LABEL_RE.search(swatch.get_text(" ", strip=True)):
+                    for price_el in swatch.select("[aria-label]"):
+                        p = parse_price_br(price_el.get("aria-label", "").replace("\xa0", ""))
+                        if p and p >= MIN_PRICE_BRL:
+                            tmm_vinyl_price = p
+                            log.debug(
+                                "parse_product_page: vinyl price from tmmSwatches swatch: %.2f", p
+                            )
+                            break
+                    if tmm_vinyl_price is None:
+                        offscreen = swatch.select_one(".a-offscreen")
+                        if offscreen:
+                            p = parse_price_br(offscreen.get_text(strip=True).replace("\xa0", ""))
+                            if p and p >= MIN_PRICE_BRL:
+                                tmm_vinyl_price = p
+                                log.debug(
+                                    "parse_product_page: vinyl price from tmmSwatches offscreen: %.2f", p
+                                )
+                    if tmm_vinyl_price is not None:
+                        break
+
     # Step 2: which format is currently selected?
     selected_swatch = soup.select_one("#tmmSwatches .swatchElement.selected")
     if selected_swatch is not None:
         selected_is_vinyl = bool(
             _VINYL_LABEL_RE.search(selected_swatch.get_text(" ", strip=True))
         )
-    else:
-        # No swatch widget → single-format page; treat as vinyl.
+    elif not has_format_switcher:
+        # No swatch widget at all → single-format page; treat as vinyl.
         selected_is_vinyl = True
+    else:
+        # Multi-format page but no swatch marked selected (page loaded for a
+        # non-vinyl ASIN, e.g. the CD ASIN on a CD+Vinyl listing).
+        # Vinyl is only "selected" if no other vinyl swatch exists to contradict it.
+        any_vinyl_swatch = any(
+            _VINYL_LABEL_RE.search(s.get_text(" ", strip=True))
+            for s in soup.select("#tmmSwatches .swatchElement")
+        )
+        selected_is_vinyl = not any_vinyl_swatch
 
     # Step 3 & 4: OOS / wrong format guard.
     if has_format_switcher and tmm_vinyl_price is None:
