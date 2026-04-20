@@ -2417,25 +2417,31 @@ def main():
                     # availability, so deal scores may have changed.  Without this,
                     # products that came back in-stock (or dropped in price) during
                     # Phase 3 won't receive deal badges until the next full run.
-                    log.info("═" * 60)
-                    t0 = time.monotonic()
-                    scoring_summary = score_deals(conn)
-                    log.info(
-                        "Phase 3.5 scoring: %.0fs — flagged=%d | maintained=%d"
-                        " | cleared=%d | cooldown_skipped=%d",
-                        time.monotonic() - t0,
-                        scoring_summary["flagged"],
-                        scoring_summary["scored"],
-                        scoring_summary["cleared"],
-                        scoring_summary["skipped"],
-                    )
+                    if deadline is not None and time.monotonic() >= deadline:
+                        log.warning("Time limit reached — skipping Phase 3.5 re-scoring.")
+                    else:
+                        log.info("═" * 60)
+                        t0 = time.monotonic()
+                        scoring_summary = score_deals(conn)
+                        log.info(
+                            "Phase 3.5 scoring: %.0fs — flagged=%d | maintained=%d"
+                            " | cleared=%d | cooldown_skipped=%d",
+                            time.monotonic() - t0,
+                            scoring_summary["flagged"],
+                            scoring_summary["scored"],
+                            scoring_summary["cleared"],
+                            scoring_summary["skipped"],
+                        )
                 else:
                     log.info("No stale records — all known records appeared in this crawl.")
 
         # ── Phase 4: History cleanup ───────────────────────────────────────
-        t0 = time.monotonic()
-        limpar_historico_antigo(conn)
-        log.info("Phase 4 cleanup: %.0fs", time.monotonic() - t0)
+        if deadline is not None and time.monotonic() >= deadline:
+            log.warning("Time limit reached — skipping Phase 4 history cleanup.")
+        else:
+            t0 = time.monotonic()
+            limpar_historico_antigo(conn)
+            log.info("Phase 4 cleanup: %.0fs", time.monotonic() - t0)
     finally:
         conn.close()
 
