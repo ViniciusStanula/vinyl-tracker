@@ -5,6 +5,7 @@ import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, cache } from "react";
+import { truncateTitle, truncateDesc } from "@/lib/seo";
 import { unstable_cache } from "next/cache";
 
 // Same accent-normalization constants as the artist page SQL slug matching
@@ -190,9 +191,23 @@ export async function generateMetadata({
   if (!data) return {};
   const { canonical } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
+  const title = truncateTitle(`${displayName} — Discos em Promoção | Garimpa Vinil`);
+  const description = truncateDesc(`Melhores ofertas de discos de ${displayName} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`);
   return {
-    title: `${displayName} — Discos em Promoção | Garimpa Vinil`,
-    description: `Melhores ofertas de discos de ${displayName} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`,
+    title,
+    description,
+    alternates: { canonical: `/estilo/${slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/estilo/${slug}`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
   };
 }
 
@@ -267,8 +282,26 @@ export default async function EstiloPage({
     }
   });
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
+
+  const breadcrumbJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: `${siteUrl}/` },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: displayName,
+        item: `${siteUrl}/estilo/${slug}`,
+      },
+    ],
+  });
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
           Início

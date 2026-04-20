@@ -39,6 +39,20 @@ export const metadata = {
   title: "Sobre — Garimpa Vinil",
   description:
     "Como o Garimpa Vinil funciona: monitoramento de preços de discos de vinil na Amazon Brasil, histórico e detecção automática de ofertas.",
+  alternates: { canonical: "/sobre" },
+  openGraph: {
+    title: "Sobre — Garimpa Vinil",
+    description:
+      "Como o Garimpa Vinil funciona: monitoramento de preços de discos de vinil na Amazon Brasil, histórico e detecção automática de ofertas.",
+    url: "/sobre",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Sobre — Garimpa Vinil",
+    description:
+      "Como o Garimpa Vinil funciona: monitoramento de preços de discos de vinil na Amazon Brasil, histórico e detecção automática de ofertas.",
+  },
 };
 
 export default function SobrePage() {

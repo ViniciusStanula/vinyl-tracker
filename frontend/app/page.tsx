@@ -13,6 +13,20 @@ export const metadata = {
   title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
   description:
     "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços atualizado 2× ao dia.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+    description:
+      "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços atualizado 2× ao dia.",
+    url: "/",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+    description:
+      "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços atualizado 2× ao dia.",
+  },
 };
 
 export default async function HomePage({

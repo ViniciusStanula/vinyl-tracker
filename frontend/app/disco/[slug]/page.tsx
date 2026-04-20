@@ -8,6 +8,7 @@ import BackToTop from "@/components/BackToTop";
 import StyleTags from "@/components/StyleTags";
 import { slugifyArtist } from "@/lib/slugify";
 import { parseStyleTags } from "@/lib/styleUtils";
+import { truncateTitle, truncateDesc } from "@/lib/seo";
 
 export const revalidate = 7200;
 
@@ -19,9 +20,24 @@ export async function generateMetadata({
   const { slug } = await params;
   const disco = await prisma.disco.findUnique({ where: { slug } });
   if (!disco) return {};
+  const title = truncateTitle(`${disco.titulo} — ${disco.artista} em Vinil | Histórico de Preços`);
+  const description = truncateDesc(`Compre ${disco.titulo} de ${disco.artista} pelo melhor preço. Veja o histórico de preços e as melhores ofertas disponíveis agora.`);
   return {
-    title: `${disco.titulo} — ${disco.artista} em Vinil | Histórico de Preços`,
-    description: `Compre ${disco.titulo} de ${disco.artista} pelo melhor preço. Veja o histórico de preços e as melhores ofertas disponíveis agora.`,
+    title,
+    description,
+    alternates: { canonical: `/disco/${slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/disco/${slug}`,
+      type: "website",
+      ...(disco.imgUrl ? { images: [{ url: disco.imgUrl, alt: disco.titulo }] } : {}),
+    },
+    twitter: {
+      card: disco.imgUrl ? "summary_large_image" : "summary",
+      title,
+      description,
+    },
   };
 }
 
@@ -239,8 +255,58 @@ export default async function DiscoPage({
     };
   });
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
+
+  const productJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: disco.titulo,
+    image: disco.imgUrl ?? undefined,
+    brand: { "@type": "Brand", name: disco.artista },
+    offers: {
+      "@type": "Offer",
+      url: disco.url,
+      priceCurrency: "BRL",
+      price: precoAtual.toFixed(2),
+      availability: disponivel
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      seller: { "@type": "Organization", name: "Amazon Brasil" },
+    },
+    ...(rating && disco.reviewCount && disco.reviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: rating.toFixed(1),
+            reviewCount: disco.reviewCount,
+            bestRating: "5",
+            worstRating: "1",
+          },
+        }
+      : {}),
+  });
+
+  const breadcrumbJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: `${siteUrl}/` },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: disco.artista,
+        item: `${siteUrl}/artista/${slugifyArtist(disco.artista)}`,
+      },
+      { "@type": "ListItem", position: 3, name: disco.titulo },
+    ],
+  });
+
   return (
     <main className="max-w-3xl mx-auto px-4 py-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: productJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">

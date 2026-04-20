@@ -6,6 +6,7 @@ import StyleTags from "@/components/StyleTags";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { slugifyArtist } from "@/lib/slugify";
+import { truncateTitle, truncateDesc } from "@/lib/seo";
 import { getTopStyles } from "@/lib/styleUtils";
 import { Suspense, cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -175,9 +176,23 @@ export async function generateMetadata({
   const data = await getArtistaPageData(slug);
   if (!data) return {};
   const { canonical } = data;
+  const title = truncateTitle(`${canonical} — Discos em Promoção | Garimpa Vinil`);
+  const description = truncateDesc(`Melhores ofertas de ${canonical} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`);
   return {
-    title: `${canonical} — Discos em Promoção | Garimpa Vinil`,
-    description: `Melhores ofertas de ${canonical} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`,
+    title,
+    description,
+    alternates: { canonical: `/artista/${slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/artista/${slug}`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
   };
 }
 
@@ -281,8 +296,26 @@ export default async function ArtistaPage({
     }
   });
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
+
+  const breadcrumbJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: `${siteUrl}/` },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: artista,
+        item: `${siteUrl}/artista/${slug}`,
+      },
+    ],
+  });
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
           Início

@@ -11,6 +11,20 @@ export const metadata = {
   title: "Todos os Discos — Garimpa Vinil",
   description:
     "Todos os discos de vinil em promoção na Amazon Brasil. Filtre por preço, artista e ordenação.",
+  alternates: { canonical: "/disco" },
+  openGraph: {
+    title: "Todos os Discos — Garimpa Vinil",
+    description:
+      "Todos os discos de vinil em promoção na Amazon Brasil. Filtre por preço, artista e ordenação.",
+    url: "/disco",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Todos os Discos — Garimpa Vinil",
+    description:
+      "Todos os discos de vinil em promoção na Amazon Brasil. Filtre por preço, artista e ordenação.",
+  },
 };
 
 export default async function DiscosPage({
