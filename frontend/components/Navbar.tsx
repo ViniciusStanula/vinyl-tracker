@@ -46,6 +46,14 @@ export default function Navbar() {
             <SearchBar />
           </Suspense>
         </div>
+
+        {/* ── Nav links ── */}
+        <Link
+          href="/sobre"
+          className="shrink-0 hidden sm:block text-dust hover:text-gold text-sm transition-colors"
+        >
+          Sobre
+        </Link>
       </div>
     </nav>
   );
