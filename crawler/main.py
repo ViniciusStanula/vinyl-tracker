@@ -2405,11 +2405,14 @@ def main():
                 )
 
                 if stale:
+                    # Reserve 10 min before the hard deadline for Phase 3.5 scoring
+                    # and Phase 4 cleanup so they aren't starved when Phase 3 runs long.
+                    phase3_deadline = (deadline - 10 * 60) if deadline is not None else None
                     t0 = time.monotonic()
                     crawl_stale_records(
                         stale, args.delay, conn,
                         dry_run=False, max_workers=args.stale_workers,
-                        deadline=deadline,
+                        deadline=phase3_deadline,
                     )
                     log.info("Phase 3 stale: %.0fs", time.monotonic() - t0)
 
