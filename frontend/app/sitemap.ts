@@ -22,63 +22,75 @@ export default async function sitemap(props: {
   }
 
   if (id === "artistas") {
-    const artistRows = await prisma.disco.findMany({
-      select: { artista: true },
-      distinct: ["artista"],
-    });
-
-    const seenSlugs = new Set<string>();
-    const routes: MetadataRoute.Sitemap = [];
-
-    for (const { artista } of artistRows) {
-      const slug = slugifyArtist(artista);
-      if (!slug || seenSlugs.has(slug)) continue;
-      seenSlugs.add(slug);
-      routes.push({
-        url: `${base}/artista/${slug}`,
-        changeFrequency: "weekly",
-        priority: 0.6,
+    try {
+      const artistRows = await prisma.disco.findMany({
+        select: { artista: true },
+        distinct: ["artista"],
       });
-    }
 
-    return routes;
+      const seenSlugs = new Set<string>();
+      const routes: MetadataRoute.Sitemap = [];
+
+      for (const { artista } of artistRows) {
+        const slug = slugifyArtist(artista);
+        if (!slug || seenSlugs.has(slug)) continue;
+        seenSlugs.add(slug);
+        routes.push({
+          url: `${base}/artista/${slug}`,
+          changeFrequency: "weekly",
+          priority: 0.6,
+        });
+      }
+
+      return routes;
+    } catch {
+      return [];
+    }
   }
 
   if (id === "discos") {
-    const discos = await prisma.disco.findMany({
-      select: { slug: true, updatedAt: true },
-    });
+    try {
+      const discos = await prisma.disco.findMany({
+        select: { slug: true, updatedAt: true },
+      });
 
-    return discos.map((d) => ({
-      url: `${base}/disco/${d.slug}`,
-      lastModified: d.updatedAt,
-      changeFrequency: "daily",
-      priority: 0.8,
-    }));
+      return discos.map((d) => ({
+        url: `${base}/disco/${d.slug}`,
+        lastModified: d.updatedAt,
+        changeFrequency: "daily",
+        priority: 0.8,
+      }));
+    } catch {
+      return [];
+    }
   }
 
   if (id === "estilos") {
-    const rows = await prisma.$queryRaw<{ tag: string }[]>`
-      SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
-      FROM "Disco"
-      WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
-    `;
+    try {
+      const rows = await prisma.$queryRaw<{ tag: string }[]>`
+        SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
+        FROM "Disco"
+        WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
+      `;
 
-    const seenSlugs = new Set<string>();
-    const routes: MetadataRoute.Sitemap = [];
+      const seenSlugs = new Set<string>();
+      const routes: MetadataRoute.Sitemap = [];
 
-    for (const { tag } of rows) {
-      const slug = slugifyStyle(tag);
-      if (!slug || seenSlugs.has(slug)) continue;
-      seenSlugs.add(slug);
-      routes.push({
-        url: `${base}/estilo/${slug}`,
-        changeFrequency: "weekly",
-        priority: 0.5,
-      });
+      for (const { tag } of rows) {
+        const slug = slugifyStyle(tag);
+        if (!slug || seenSlugs.has(slug)) continue;
+        seenSlugs.add(slug);
+        routes.push({
+          url: `${base}/estilo/${slug}`,
+          changeFrequency: "weekly",
+          priority: 0.5,
+        });
+      }
+
+      return routes;
+    } catch {
+      return [];
     }
-
-    return routes;
   }
 
   return [];
