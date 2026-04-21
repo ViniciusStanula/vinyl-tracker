@@ -220,16 +220,19 @@ export default function GraficoPreco({ precos }: Props) {
           onMouseMove={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const ratio = (e.clientX - rect.left) / rect.width;
-            const idx = Math.max(
-              0,
-              Math.min(
-                precos.length - 1,
-                Math.round(ratio * (precos.length - 1))
-              )
-            );
+            const idx = Math.max(0, Math.min(precos.length - 1, Math.round(ratio * (precos.length - 1))));
             setHoveredIdx(idx);
           }}
           onMouseLeave={() => setHoveredIdx(null)}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = e.currentTarget.getBoundingClientRect();
+            const ratio = (touch.clientX - rect.left) / rect.width;
+            const idx = Math.max(0, Math.min(precos.length - 1, Math.round(ratio * (precos.length - 1))));
+            setHoveredIdx(idx);
+          }}
+          onTouchEnd={() => setHoveredIdx(null)}
         />
       </svg>
 
@@ -242,7 +245,7 @@ export default function GraficoPreco({ precos }: Props) {
             <span className="text-parchment">{hovered.dataFull}</span>
           </>
         ) : (
-          <span className="text-ash">Passe o mouse para ver o valor</span>
+          <span className="text-ash">Toque ou passe o mouse para ver o valor</span>
         )}
       </div>
     </div>

@@ -212,7 +212,8 @@ export default async function ArtistaPage({
   try {
     data = await getArtistaPageData(slug);
   } catch (err) {
-    console.error("[ArtistaPage] getArtistaPageData failed for slug=%s:", slug, err);
+    console.error("[ArtistaPage] getArtistaPageData failed for slug=%s", slug);
+    if (process.env.NODE_ENV === "development") console.error(err);
     return (
       <main className="max-w-7xl mx-auto px-4 py-24 text-center">
         <p className="font-display text-parchment text-lg font-semibold mb-2">

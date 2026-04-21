@@ -65,12 +65,12 @@ export default function Pagination({
       {currentPage > 1 ? (
         <Link
           href={buildUrl(currentPage - 1, searchParams, basePath)}
-          className={`${btnBase} ${btnIdle} px-3 py-1.5`}
+          className={`${btnBase} ${btnIdle} px-4 py-2.5`}
         >
           ← Anterior
         </Link>
       ) : (
-        <span className={`${btnBase} ${btnDisabled} px-3 py-1.5`}>
+        <span className={`${btnBase} ${btnDisabled} px-4 py-2.5`}>
           ← Anterior
         </span>
       )}
@@ -89,7 +89,7 @@ export default function Pagination({
             key={p}
             href={buildUrl(p, searchParams, basePath)}
             aria-current={p === currentPage ? "page" : undefined}
-            className={`${btnBase} ${p === currentPage ? btnActive : btnIdle} w-9 h-9`}
+            className={`${btnBase} ${p === currentPage ? btnActive : btnIdle} w-11 h-11`}
           >
             {p}
           </Link>
@@ -100,12 +100,12 @@ export default function Pagination({
       {currentPage < totalPages ? (
         <Link
           href={buildUrl(currentPage + 1, searchParams, basePath)}
-          className={`${btnBase} ${btnIdle} px-3 py-1.5`}
+          className={`${btnBase} ${btnIdle} px-4 py-2.5`}
         >
           Próxima →
         </Link>
       ) : (
-        <span className={`${btnBase} ${btnDisabled} px-3 py-1.5`}>
+        <span className={`${btnBase} ${btnDisabled} px-4 py-2.5`}>
           Próxima →
         </span>
       )}

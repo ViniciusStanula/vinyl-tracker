@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, DM_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -23,6 +23,12 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.verc
 const DEFAULT_TITLE = "Garimpa Vinil — Melhores ofertas em discos de vinil";
 const DEFAULT_DESC  =
   "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços e alertas de promoção.";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

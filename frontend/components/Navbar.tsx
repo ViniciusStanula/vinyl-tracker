@@ -50,7 +50,7 @@ export default function Navbar() {
         {/* ── Nav links ── */}
         <Link
           href="/sobre"
-          className="shrink-0 hidden sm:block text-dust hover:text-gold text-sm transition-colors"
+          className="shrink-0 text-dust hover:text-gold text-sm transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center sm:min-w-0 sm:min-h-0 sm:inline"
         >
           Sobre
         </Link>

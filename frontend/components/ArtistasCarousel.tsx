@@ -43,7 +43,7 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
           <button
             onClick={() => ref.current?.scrollBy({ left: -SCROLL_AMOUNT, behavior: "smooth" })}
             disabled={!canLeft}
-            className="w-8 h-8 flex items-center justify-center rounded-full border border-groove hover:border-wax text-cream text-lg disabled:opacity-20 disabled:cursor-default transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
+            className="w-11 h-11 flex items-center justify-center rounded-full border border-groove hover:border-wax text-cream text-lg disabled:opacity-20 disabled:cursor-default transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
             aria-label="Rolar para esquerda"
           >
             ‹
@@ -51,7 +51,7 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
           <button
             onClick={() => ref.current?.scrollBy({ left: SCROLL_AMOUNT, behavior: "smooth" })}
             disabled={!canRight}
-            className="w-8 h-8 flex items-center justify-center rounded-full border border-groove hover:border-wax text-cream text-lg disabled:opacity-20 disabled:cursor-default transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
+            className="w-11 h-11 flex items-center justify-center rounded-full border border-groove hover:border-wax text-cream text-lg disabled:opacity-20 disabled:cursor-default transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
             aria-label="Rolar para direita"
           >
             ›

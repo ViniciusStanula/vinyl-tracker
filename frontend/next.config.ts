@@ -1,14 +1,24 @@
 import type { NextConfig } from "next";
 
 const SECURITY_HEADERS = [
-  // Prevents this site from being embedded in iframes (clickjacking protection)
   { key: "X-Frame-Options", value: "DENY" },
-  // Prevents browsers from MIME-sniffing a response away from the declared content-type
   { key: "X-Content-Type-Options", value: "nosniff" },
-  // Controls how much referrer info is included in requests
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // Restricts access to browser features not needed by this app
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' https: data:",
+      "font-src 'self'",
+      "connect-src 'self' https://*.supabase.co https://ws.audioscrobbler.com https://www.google-analytics.com https://www.googletagmanager.com",
+      "frame-src https://www.googletagmanager.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ].join("; "),
+  },
 ];
 
 const nextConfig: NextConfig = {
