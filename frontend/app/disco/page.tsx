@@ -50,13 +50,13 @@ export default async function DiscosPage({
   const searchTerm = q?.trim() ?? "";
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
-  const { items, total, totalPages } = await queryDiscos({
-    searchTerm,
-    sort,
-    artista,
-    precoMax,
-    page,
-  });
+  let items: Awaited<ReturnType<typeof queryDiscos>>["items"] = [];
+  let total = 0, totalPages = 0;
+  try {
+    ({ items, total, totalPages } = await queryDiscos({ searchTerm, sort, artista, precoMax, page }));
+  } catch {
+    // DB unavailable — render empty state
+  }
 
   const currentPage = Math.min(page, totalPages);
 

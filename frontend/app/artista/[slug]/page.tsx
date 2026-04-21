@@ -173,7 +173,12 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const data = await getArtistaPageData(slug);
+  let data;
+  try {
+    data = await getArtistaPageData(slug);
+  } catch {
+    return {};
+  }
   if (!data) return {};
   const { canonical } = data;
   const title = truncateTitle(`${canonical} — Discos em Promoção | Garimpa Vinil`);

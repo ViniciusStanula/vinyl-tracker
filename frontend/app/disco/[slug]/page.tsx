@@ -18,27 +18,31 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const disco = await prisma.disco.findUnique({ where: { slug } });
-  if (!disco) return {};
-  const title = truncateTitle(`${disco.titulo} — ${disco.artista} em Vinil | Histórico de Preços`);
-  const description = truncateDesc(`Compre ${disco.titulo} de ${disco.artista} pelo melhor preço. Veja o histórico de preços e as melhores ofertas disponíveis agora.`);
-  return {
-    title,
-    description,
-    alternates: { canonical: `/disco/${slug}` },
-    openGraph: {
+  try {
+    const disco = await prisma.disco.findUnique({ where: { slug } });
+    if (!disco) return {};
+    const title = truncateTitle(`${disco.titulo} — ${disco.artista} em Vinil | Histórico de Preços`);
+    const description = truncateDesc(`Compre ${disco.titulo} de ${disco.artista} pelo melhor preço. Veja o histórico de preços e as melhores ofertas disponíveis agora.`);
+    return {
       title,
       description,
-      url: `/disco/${slug}`,
-      type: "website",
-      ...(disco.imgUrl ? { images: [{ url: disco.imgUrl, alt: disco.titulo }] } : {}),
-    },
-    twitter: {
-      card: disco.imgUrl ? "summary_large_image" : "summary",
-      title,
-      description,
-    },
-  };
+      alternates: { canonical: `/disco/${slug}` },
+      openGraph: {
+        title,
+        description,
+        url: `/disco/${slug}`,
+        type: "website",
+        ...(disco.imgUrl ? { images: [{ url: disco.imgUrl, alt: disco.titulo }] } : {}),
+      },
+      twitter: {
+        card: disco.imgUrl ? "summary_large_image" : "summary",
+        title,
+        description,
+      },
+    };
+  } catch {
+    return {};
+  }
 }
 
 type RelatedDeal = {

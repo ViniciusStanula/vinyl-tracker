@@ -187,7 +187,12 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const data = await getEstiloPageData(slug);
+  let data;
+  try {
+    data = await getEstiloPageData(slug);
+  } catch {
+    return {};
+  }
   if (!data) return {};
   const { canonical } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());

@@ -53,12 +53,16 @@ export default async function HomePage({
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
   // Fetch main grid and carousel in parallel
-  const [{ items, total, totalPages }, carouselItems] = await Promise.all([
-    queryDiscos({ searchTerm, sort, artista, precoMax, page }),
-    // Only load the carousel on the unfiltered first page — when the user is
-    // searching or filtering, the carousel would distract from their intent.
-    searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscos(),
-  ]);
+  let items: Awaited<ReturnType<typeof queryDiscos>>["items"] = [];
+  let total = 0, totalPages = 0, carouselItems: Awaited<ReturnType<typeof queryCarouselDiscos>> = [];
+  try {
+    ([{ items, total, totalPages }, carouselItems] = await Promise.all([
+      queryDiscos({ searchTerm, sort, artista, precoMax, page }),
+      searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscos(),
+    ]));
+  } catch {
+    // DB unavailable — render empty state
+  }
 
   const currentPage = Math.min(page, totalPages);
 

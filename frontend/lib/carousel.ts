@@ -31,6 +31,7 @@ const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
  * Returns [] when LASTFM_API_KEY is unset or no matches are found.
  */
 export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
+  try {
   const topArtists = await fetchTopArtists();
   if (topArtists.length === 0) return [];
 
@@ -159,4 +160,7 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
       lastfmTags:      row.lastfmTags ?? null,
     }];
   });
+  } catch {
+    return [];
+  }
 }
