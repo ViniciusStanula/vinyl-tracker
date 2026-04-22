@@ -579,6 +579,8 @@ _EMBEDDED_PRICE_RE = re.compile(r"\d+[,\.]\d{2}")  # catches "0,00", "29.90" etc
 def _is_plausible_artist(text: str) -> bool:
     if not text or len(text) > 120:
         return False
+    if not re.search(r"[a-zA-ZÀ-ÿ]", text):  # must contain at least one letter
+        return False
     if _PRICE_START_RE.match(text):
         return False
     if is_fake_artist(text):
@@ -1273,6 +1275,7 @@ def parse_product_page_discovery(soup, asin: str) -> dict | None:
         el = soup.select_one(sel)
         if el:
             text = re.sub(r"^(por|by|de)\s+", "", el.get_text(strip=True), flags=re.IGNORECASE).strip()
+            text = text.lstrip(":·•–—,;").strip()
             if _is_plausible_artist(text):
                 artist = normalize_artist(text)
                 break
@@ -1404,6 +1407,8 @@ def extract_artist(card) -> str:
         # strip "por/by/de" prefix even when not followed by a space
         # e.g. "por$uicideboy$" → "$uicideboy$"
         text = re.sub(r"^(por|by|de)(?=\s|[^a-zA-ZÀ-ÿ])", "", text, flags=re.IGNORECASE).strip()
+        # strip leading punctuation left behind by label elements e.g. ": Artist"
+        text = text.lstrip(":·•–—,;").strip()
         # strip trailing year/format suffix e.g. "|2022" or "| 2022 (Deluxe Edition)"
         text = re.sub(r"\s*\|\s*\d{4}\b.*$", "", text).strip()
         if _is_plausible_artist(text):
