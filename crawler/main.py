@@ -558,6 +558,10 @@ _ARTIST_REJECT_PHRASES = (
     "mais opções de comprar", # same
     "opções de comprar",      # same
     "dias de",                # "90 dias de ..."
+    # Page-chrome and price labels leaked by broad CSS selectors
+    "página",                 # "Página do Produtor$ 0,00r$0,00 Preço"
+    "preço",                  # same
+    "r$",                     # embedded Brazilian real sign e.g. "r$0,00"
 )
 _UNKNOWN_ARTIST = "Artista não identificado"
 
@@ -569,6 +573,9 @@ def is_fake_artist(artist: str) -> bool:
     return any(phrase in low for phrase in _ARTIST_REJECT_PHRASES)
 
 
+_EMBEDDED_PRICE_RE = re.compile(r"\d+[,\.]\d{2}")  # catches "0,00", "29.90" etc.
+
+
 def _is_plausible_artist(text: str) -> bool:
     if not text or len(text) > 120:
         return False
@@ -577,6 +584,8 @@ def _is_plausible_artist(text: str) -> bool:
     if is_fake_artist(text):
         return False
     if re.fullmatch(r"[\d.,\s/\\-]+", text):
+        return False
+    if _EMBEDDED_PRICE_RE.search(text):
         return False
     return True
 
