@@ -175,7 +175,7 @@ def upsert_batch(conn, items: list[dict]) -> int:
             INSERT INTO "HistoricoPreco" (id, "discoId", "precoBrl", "capturadoEm")
             SELECT gen_random_uuid(), %s, %s, %s
             WHERE NOT EXISTS (
-                SELECT 1 FROM "Disco" WHERE id = %s::uuid AND deal_score IS NOT NULL
+                SELECT 1 FROM "Disco" WHERE id = %s AND deal_score IS NOT NULL
             )
             """,
             preco_rows,

@@ -2490,10 +2490,10 @@ def main():
             log.info("Phase 4 cleanup: %.0fs", time.monotonic() - t0)
     finally:
         conn.close()
+        _notify_revalidate()
 
     log.info("Total runtime: %.0fs", time.monotonic() - t_start)
     log.info("Done. ✓")
-    _notify_revalidate()
 
 
 if __name__ == "__main__":
