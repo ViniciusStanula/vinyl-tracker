@@ -2490,6 +2490,16 @@ def main():
             t0 = time.monotonic()
             limpar_historico_antigo(conn)
             log.info("Phase 4 cleanup: %.0fs", time.monotonic() - t0)
+
+        # ── IndexNow: notify Bing of updated URLs ─────────────────────────
+        if all_items:
+            from indexnow import submit_crawl_results as _indexnow_submit
+            with conn.cursor() as _cur:
+                _cur.execute(
+                    'SELECT estilo FROM "Disco" WHERE estilo IS NOT NULL AND disponivel = true'
+                )
+                _db_estilos = [row[0] for row in _cur.fetchall()]
+            _indexnow_submit(all_items, db_estilos=_db_estilos)
     finally:
         conn.close()
         _notify_revalidate()
