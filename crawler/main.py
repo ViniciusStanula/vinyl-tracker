@@ -562,6 +562,8 @@ _ARTIST_REJECT_PHRASES = (
     "página",                 # "Página do Produtor$ 0,00r$0,00 Preço"
     "preço",                  # same
     "r$",                     # embedded Brazilian real sign e.g. "r$0,00"
+    "outro formato",          # "Outro formato:" — Amazon format-switcher label
+    "other format",           # same in English
 )
 _UNKNOWN_ARTIST = "Artista não identificado"
 
@@ -1275,7 +1277,7 @@ def parse_product_page_discovery(soup, asin: str) -> dict | None:
         el = soup.select_one(sel)
         if el:
             text = re.sub(r"^(por|by|de)\s+", "", el.get_text(strip=True), flags=re.IGNORECASE).strip()
-            text = text.lstrip(":·•–—,;").strip()
+            text = text.lstrip(":·•–—,;").rstrip(":·•–—,;").strip()
             if _is_plausible_artist(text):
                 artist = normalize_artist(text)
                 break
@@ -1407,8 +1409,8 @@ def extract_artist(card) -> str:
         # strip "por/by/de" prefix even when not followed by a space
         # e.g. "por$uicideboy$" → "$uicideboy$"
         text = re.sub(r"^(por|by|de)(?=\s|[^a-zA-ZÀ-ÿ])", "", text, flags=re.IGNORECASE).strip()
-        # strip leading punctuation left behind by label elements e.g. ": Artist"
-        text = text.lstrip(":·•–—,;").strip()
+        # strip leading/trailing punctuation left behind by label elements e.g. ": Artist" or "Label:"
+        text = text.lstrip(":·•–—,;").rstrip(":·•–—,;").strip()
         # strip trailing year/format suffix e.g. "|2022" or "| 2022 (Deluxe Edition)"
         text = re.sub(r"\s*\|\s*\d{4}\b.*$", "", text).strip()
         if _is_plausible_artist(text):
