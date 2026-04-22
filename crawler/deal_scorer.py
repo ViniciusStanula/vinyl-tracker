@@ -343,11 +343,15 @@ def score_deals(conn) -> dict:
             if last_flagged_at is not None:
                 cooldown_expires = last_flagged_at + timedelta(hours=DEAL_COOLDOWN_HOURS)
                 if now < cooldown_expires:
-                    # Within cooldown — allow early re-flag only on further significant drop
+                    # Within cooldown — allow early re-flag on further significant drop
+                    # OR when price is at the 30-day floor (Phase 0 deal_cleared after
+                    # a parse failure can wipe a valid floor-level deal; re-flag immediately).
                     allow_early = False
                     if last_flagged_price is not None and last_flagged_price > 0:
                         further_drop = (last_flagged_price - current_price) / last_flagged_price
                         allow_early = further_drop >= EARLY_REFLAG_DROP
+                    if not allow_early and low_30d is not None and low_30d > 0:
+                        allow_early = current_price <= low_30d * (1.0 + LOW_PROXIMITY_MARGIN)
                     if not allow_early:
                         effective_score = None
                         skipped += 1
