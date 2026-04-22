@@ -37,7 +37,6 @@ from database import (
     fetch_stale_records,
     mark_stale_price,
     mark_unavailable,
-    clear_deal_score,
 )
 from bs4 import BeautifulSoup
 from deal_scorer import score_deals
@@ -1170,9 +1169,9 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
                 "— clearing deal but preserving availability status"
             )
             # Return in_stock as-is (not hardcoded False): if vinyl is OOS but another
-            # format is in stock, the product still exists. Returning in_stock=True here
-            # causes _fetch_one_stale to call clear_deal_score() instead of
-            # mark_unavailable(), so the record stays disponivel=TRUE.
+            # format is in stock, the product still exists. price=None triggers the
+            # deal_cleared outcome → mark_unavailable(), hiding the record until the
+            # category crawl re-discovers it with a confirmed vinyl price.
             return None, in_stock, review_count
         if not selected_is_vinyl:
             log.debug(
@@ -2079,11 +2078,13 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
             # Full page received (passed #ppd check) but price extraction still
             # returned None — genuine parse failure: unqualified buy-box, vinyl OOS
             # on a multi-format page, or wrong swatch selected with no TMM price.
-            # Clear deal_score so this product stops appearing as a deal.
+            # The scraped price in our DB is likely for a different format (e.g. CD),
+            # so mark unavailable to hide stale/wrong data until the category crawl
+            # re-discovers this product with a confirmed vinyl price.
             log.warning(
                 "[DEAL-CLEARED] ASIN %s — full page received but vinyl price "
                 "could not be confirmed (unqualified buy-box / vinyl OOS / "
-                "wrong swatch). Clearing deal score.",
+                "wrong swatch). Marking unavailable.",
                 record["asin"],
             )
             result["outcome"] = "deal_cleared"
@@ -2117,7 +2118,7 @@ def crawl_stale_records(
       - HTTP 404            → mark_unavailable()
       - Out-of-stock page         → mark_unavailable()
       - In-stock + price          → mark_stale_price()
-      - In-stock, no vinyl price  → clear_deal_score()
+      - In-stock, no vinyl price  → mark_unavailable() (price unconfirmable = stale data)
       - Transient error           → warning; DB not touched (will retry next run)
 
     Returns (updated, unavailable, errors).
@@ -2187,7 +2188,7 @@ def crawl_stale_records(
                 updated += 1
             elif outcome == "deal_cleared":
                 if not dry_run:
-                    clear_deal_score(conn, disco_id)
+                    mark_unavailable(conn, disco_id)
                 deals_cleared += 1
             elif outcome == "skipped":
                 skipped += 1
