@@ -1337,6 +1337,7 @@ def extract_title(card) -> str:
     PROMO_PHRASES = (
         "ouça com amazon music", "ouça com music unlimited", "listen with amazon music",
         "adicionar ao carrinho", "add to cart", "comprar agora", "buy now",
+        "patrocinado", "sponsored",
     )
     candidates = []
     for sel in [
