@@ -346,9 +346,8 @@ def mark_stale_price(
     confirmed it is still available, and resets disponivel to TRUE (in case it
     had previously been marked unavailable).
 
-    Skips the HistoricoPreco insert when the price matches the last recorded
-    value (within R$0.01) to avoid polluting the history table on unchanged
-    prices during frequent runs.
+    Always inserts — no dedup window. Matches upsert_batch behaviour so Phase 0
+    and Phase 3 records appear in the chart on every crawl cycle.
 
     If review_count is provided it overwrites the stored value; otherwise the
     existing count is preserved via COALESCE.
@@ -357,15 +356,9 @@ def mark_stale_price(
         cur.execute(
             """
             INSERT INTO "HistoricoPreco" (id, "discoId", "precoBrl", "capturadoEm")
-            SELECT gen_random_uuid(), %s, %s, %s
-            WHERE NOT EXISTS (
-                SELECT 1 FROM "HistoricoPreco"
-                WHERE "discoId" = %s
-                  AND ABS("precoBrl" - %s) < 0.01
-                  AND "capturadoEm" > NOW() - INTERVAL '3 hours'
-            )
+            VALUES (gen_random_uuid(), %s, %s, %s)
             """,
-            (disco_id, price_brl, captured_at, disco_id, price_brl),
+            (disco_id, price_brl, captured_at),
         )
         cur.execute(
             """
