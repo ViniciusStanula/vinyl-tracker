@@ -106,13 +106,13 @@ export default async function DiscoPage({
   const minRecord =
     disco.precos.length > 0
       ? disco.precos.reduce((a, b) =>
-          Number(a.precoBrl) <= Number(b.precoBrl) ? a : b
+          Number(a.precoBrl) < Number(b.precoBrl) ? a : b
         )
       : null;
   const maxRecord =
     disco.precos.length > 0
       ? disco.precos.reduce((a, b) =>
-          Number(a.precoBrl) >= Number(b.precoBrl) ? a : b
+          Number(a.precoBrl) > Number(b.precoBrl) ? a : b
         )
       : null;
 

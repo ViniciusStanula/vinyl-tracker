@@ -48,9 +48,9 @@ LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 #  Configuration
 # ─────────────────────────────────────────────────────────────
 ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
-MAX_PAGES_DEFAULT    = 100     # main popularity URL — generous ceiling, early-exit handles the rest
-MAX_PAGES_CATEGORY   = 20      # per genre URL — 20 pages covers ~480 products; larger metal/rock categories exceed 10
-MAX_PAGES_EXTRA      = 10      # per extra sort URL — 10 pages captures more distinct products across sort orders
+MAX_PAGES_DEFAULT    = 400     # main popularity URL — high ceiling; early-exit (5 consecutive empty) handles real termination
+MAX_PAGES_CATEGORY   = 500     # per genre URL — effectively unlimited; consecutive-empty logic stops at true end of results
+MAX_PAGES_EXTRA      = 100     # per extra sort URL — same reasoning
 DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi browser impersonation
 MAX_CATEGORY_WORKERS = int(os.environ.get("CATEGORY_WORKERS", "6"))  # parallel threads for genre category crawling
 MIN_PRICE_BRL      = 30.0
@@ -1762,6 +1762,7 @@ def crawl_single_url(
     seen_asins: set,
     max_consecutive_empty: int = 5,
     proxy: str | None = None,
+    deadline: float | None = None,
 ):
     """
     Crawls a single paginated URL until exhausted or max_pages reached.
@@ -1778,6 +1779,10 @@ def crawl_single_url(
     prev_url: str | None = None
 
     for page in range(1, max_pages + 1):
+        if deadline is not None and time.monotonic() >= deadline:
+            log.info("[%s] Time limit reached — stopping at page %d.", label, page)
+            break
+
         url = url_builder(page)
         log.info("[%s] Page %d", label, page)
         soup, session, proxy = safe_get(session, url, proxy=proxy, referer=prev_url)
@@ -1787,17 +1792,22 @@ def crawl_single_url(
             log.warning("[%s] Page %d failed, skipping.", label, page)
             continue
 
+        page_items = parse_page(soup)
         new_on_page = 0
-        for item in parse_page(soup):
+        for item in page_items:
             if item["asin"] not in seen_asins:
                 seen_asins.add(item["asin"])
                 items.append(item)
                 new_on_page += 1
 
-        if new_on_page == 0:
+        # Only count a page as "empty" when it has zero product cards at all —
+        # that is the true end of Amazon's catalogue for this URL.  Pages that
+        # contain cards but all ASINs are already seen are duplicates, not the
+        # end of results; keep paginating through them.
+        if len(page_items) == 0:
             consecutive_empty += 1
             log.info(
-                "[%s] No new products on page %d (%d/%d consecutive).",
+                "[%s] Truly empty page %d (%d/%d consecutive).",
                 label, page, consecutive_empty, max_consecutive_empty,
             )
             if consecutive_empty >= max_consecutive_empty:
@@ -1805,6 +1815,8 @@ def crawl_single_url(
                 break
         else:
             consecutive_empty = 0
+            if new_on_page == 0:
+                log.info("[%s] Page %d: all %d cards already seen, continuing.", label, page, len(page_items))
 
         if not has_next_page(soup):
             log.info("[%s] No next page — stopping at page %d.", label, page)
@@ -1818,7 +1830,7 @@ def crawl_single_url(
     return items, session, proxy
 
 
-def _crawl_one_category(cat_url: str, label: str, delay: float) -> list[dict]:
+def _crawl_one_category(cat_url: str, label: str, delay: float, deadline: float | None = None) -> list[dict]:
     """
     Thread worker: crawl a single genre category URL end-to-end.
 
@@ -1841,13 +1853,14 @@ def _crawl_one_category(cat_url: str, label: str, delay: float) -> list[dict]:
         local_seen,
         max_consecutive_empty=3,
         proxy=proxy,
+        deadline=deadline,
     )
     for item in items:
         item["source_category_url"] = cat_url
     return items
 
 
-def _crawl_one_extra(extra_url: str, label: str, delay: float) -> list[dict]:
+def _crawl_one_extra(extra_url: str, label: str, delay: float, deadline: float | None = None) -> list[dict]:
     """
     Thread worker: crawl a single extra sort URL end-to-end.
 
@@ -1870,6 +1883,7 @@ def _crawl_one_extra(extra_url: str, label: str, delay: float) -> list[dict]:
         local_seen,
         max_consecutive_empty=3,
         proxy=proxy,
+        deadline=deadline,
     )
     return items
 
@@ -1907,6 +1921,7 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
         seen_asins,
         max_consecutive_empty=5,
         proxy=proxy,
+        deadline=deadline,
     )
     all_items.extend(items)
     log.info("Main URL complete — %d products.", len(items))
@@ -1924,11 +1939,11 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
     # futures value: ("cat", index) or ("extra", index) to tell results apart.
     with ThreadPoolExecutor(max_workers=MAX_CATEGORY_WORKERS) as pool:
         futures: dict = {
-            pool.submit(_crawl_one_category, cat_url, f"cat-{i}", delay): ("cat", i)
+            pool.submit(_crawl_one_category, cat_url, f"cat-{i}", delay, deadline): ("cat", i)
             for i, cat_url in enumerate(CATEGORY_URLS, 1)
         }
         for i, extra_url in enumerate(EXTRA_SORT_URLS, 1):
-            fut = pool.submit(_crawl_one_extra, extra_url, f"extra-{i}", delay)
+            fut = pool.submit(_crawl_one_extra, extra_url, f"extra-{i}", delay, deadline)
             futures[fut] = ("extra", i)
 
         for future in as_completed(futures):

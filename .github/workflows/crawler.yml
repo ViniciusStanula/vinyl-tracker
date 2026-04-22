@@ -14,7 +14,7 @@ concurrency:
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 130   # hard ceiling; crawler --time-limit 110 stops 20 min before
+    timeout-minutes: 180   # hard ceiling (3h); crawler --time-limit 160 stops 20 min before
     permissions:
       issues: write        # needed for the "open issue on failure" step
     env:
@@ -37,8 +37,8 @@ jobs:
         # --stale-max 2000  increased ceiling; longer budget means Phase 3 can actually reach it.
         # --stale-workers 4  runs Phase 0 (deal re-validation) and Phase 3 in parallel;
         #                    cuts Phase 0 time from ~27 min to ~14 min, freeing budget for Phase 3.
-        # --time-limit 110  leaves a 20-min buffer before the GHA 130-min ceiling.
-        run: python crawler/main.py --max-pages 300 --stale-max 2000 --stale-workers 4 --time-limit 110
+        # --time-limit 160  leaves a 20-min buffer before the GHA 180-min ceiling.
+        run: python crawler/main.py --max-pages 400 --stale-max 2000 --stale-workers 4 --time-limit 160
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}

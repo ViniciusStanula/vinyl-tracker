@@ -66,8 +66,8 @@ export default function GraficoPreco({ precos }: Props) {
   });
 
   // Indices for min and max annotation markers
-  const minIdx = valores.reduce((best, v, i) => v < valores[best] ? i : best, 0);
-  const maxIdx = valores.reduce((best, v, i) => v > valores[best] ? i : best, 0);
+  const minIdx = valores.reduce((best, v, i) => v <= valores[best] ? i : best, 0);
+  const maxIdx = valores.reduce((best, v, i) => v >= valores[best] ? i : best, 0);
   const hasRange = vMin !== vMax;
 
   const hovered = hoveredIdx !== null ? precos[hoveredIdx] : null;
