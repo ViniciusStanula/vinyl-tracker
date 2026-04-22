@@ -156,18 +156,27 @@ def upsert_batch(conn, items: list[dict]) -> int:
         # ── Step 3: write HistoricoPreco every crawl ──────────────────────────
         # Record every price capture regardless of whether the price changed.
         # Gives 2-hour granularity for the chart and deal scorer.
+        #
+        # Skip active deals (deal_score IS NOT NULL): their prices come from
+        # Phase 0 product-page fetches which are authoritative. Search-result
+        # cards can show the CD price for a multi-format vinyl ASIN (Amazon
+        # aggregates the cheapest format in listings), which would corrupt the
+        # chart and the deal scorer with a false low price.
         preco_rows = []
         for item in items:
             disco_id = asin_to_id.get(item["asin"])
             if disco_id is None:
                 continue
-            preco_rows.append((str(disco_id), item["precoBrl"], item["capturadoEm"]))
+            preco_rows.append((str(disco_id), item["precoBrl"], item["capturadoEm"], str(disco_id)))
 
         psycopg2.extras.execute_batch(
             cur,
             """
             INSERT INTO "HistoricoPreco" (id, "discoId", "precoBrl", "capturadoEm")
-            VALUES (gen_random_uuid(), %s, %s, %s)
+            SELECT gen_random_uuid(), %s, %s, %s
+            WHERE NOT EXISTS (
+                SELECT 1 FROM "Disco" WHERE id = %s::uuid AND deal_score IS NOT NULL
+            )
             """,
             preco_rows,
             page_size=500,
