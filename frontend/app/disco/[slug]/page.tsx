@@ -6,7 +6,6 @@ import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
 import StyleTags from "@/components/StyleTags";
-import TempoAtualizado from "@/components/TempoAtualizado";
 import { slugifyArtist } from "@/lib/slugify";
 import { parseStyleTags } from "@/lib/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
@@ -424,7 +423,7 @@ export default async function DiscoPage({
               )}
             </div>
             <p className="text-ash text-xs mt-2">
-              <TempoAtualizado updatedAt={disco.updatedAt} />
+              Preços podem variar
             </p>
           </div>
         </div>
