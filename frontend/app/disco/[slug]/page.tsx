@@ -6,6 +6,7 @@ import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
 import StyleTags from "@/components/StyleTags";
+import TempoAtualizado from "@/components/TempoAtualizado";
 import { slugifyArtist } from "@/lib/slugify";
 import { parseStyleTags } from "@/lib/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
@@ -142,16 +143,6 @@ export default async function DiscoPage({
   // Label for the "Atual" stat card — compare dates in BRT
   const dataAtual = disco.precos.at(-1)?.capturadoEm;
 
-  // Hours since the product was last crawled — updatedAt is touched on every
-  // crawl even when the price is unchanged, so this reflects the true check time
-  // rather than the last HistoricoPreco insertion (which deduplicates within 23h).
-  const horasUpdate = Math.floor((Date.now() - disco.updatedAt.getTime()) / (1000 * 60 * 60));
-  const updateLabel =
-    horasUpdate === 0
-      ? "menos de 1 hora"
-      : horasUpdate === 1
-      ? "1 hora"
-      : `${horasUpdate} horas`;
   const isHoje =
     dataAtual
       ? dataAtual.toLocaleDateString("pt-BR", { timeZone: BRT }) ===
@@ -433,7 +424,7 @@ export default async function DiscoPage({
               )}
             </div>
             <p className="text-ash text-xs mt-2">
-              Atualizado há {updateLabel} · Preços podem variar
+              <TempoAtualizado updatedAt={disco.updatedAt} />
             </p>
           </div>
         </div>
