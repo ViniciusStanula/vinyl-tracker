@@ -39,6 +39,7 @@ from database import (
     mark_unavailable,
     clear_deal_score,
 )
+from bs4 import BeautifulSoup
 from deal_scorer import score_deals
 from utils import gerar_slug
 
@@ -414,6 +415,42 @@ _RATING_TEXT_RE = re.compile(
 _PRICE_START_RE = re.compile(r"^R\$|^\$|^\d+[.,]")
 _VINYL_LABEL_RE = re.compile(r"vinil|vinyl", re.IGNORECASE)
 
+_CD_RE = re.compile(
+    r"\bcd\b|\[cd\]|\(cd\)|compact disc|\bcd\s*\d",
+    re.IGNORECASE,
+)
+_VINYL_TITLE_RE = re.compile(
+    r"vinil|vinyl|\blp\b"
+    r'|\b7["\']\b'
+    r'|\b10["\']?\b\s*(?:inch|polegadas)'
+    r'|\b12["\']?\b\s*(?:inch|polegadas)'
+    r"|33\s?rpm|45\s?rpm"
+    r"|180\s?g(?:r(?:am)?)?"
+    r"|picture\s+(?:disc|vinyl)|gatefold"
+    r"|disco\s+(?:de\s+)?vinil|single\s+de\s+vinil"
+    r"|\b7\s*polegadas\b|\b12\s*polegadas\b",
+    re.IGNORECASE,
+)
+_VINYL_CARD_RE = re.compile(
+    r"vinil|vinyl|\blp\b|180\s?g(?:r(?:am)?)?|gatefold|picture\s+disc"
+    r"|disco\s+(?:de\s+)?vinil|formato:\s*vinil|format:\s*vinyl|33\s+rpm|45\s+rpm",
+    re.IGNORECASE,
+)
+_BOT_SIGNAL_RE = re.compile(
+    r"Robot Check"
+    r"|Verificação de robô"
+    r"|Digite os caracteres"
+    r"|just need to make sure you.re not a robot"
+    r"|automated access to Amazon"
+    r"|Access Denied"
+    r"|Enter the characters you see"
+    r"|validateCaptcha"
+    r"|Prove you.re not a robot",
+    re.IGNORECASE,
+)
+_PRICE_CLEAN_RE = re.compile(r"R\$\s*|\xa0|\s")
+_PRICE_NUM_RE   = re.compile(r"\d+\.?\d*")
+
 # ─────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────
@@ -442,9 +479,9 @@ def affiliate_link(asin: str) -> str:
 def parse_price_br(text: str) -> float | None:
     if not text:
         return None
-    cleaned = re.sub(r"R\$\s*|\xa0|\s", "", text)
+    cleaned = _PRICE_CLEAN_RE.sub("", text)
     cleaned = cleaned.replace(".", "").replace(",", ".")
-    m = re.search(r"\d+\.?\d*", cleaned)
+    m = _PRICE_NUM_RE.search(cleaned)
     if m is None:
         log.debug("parse_price_br: no numeric value found in %r (cleaned: %r)", text, cleaned)
         return None
@@ -452,38 +489,16 @@ def parse_price_br(text: str) -> float | None:
 
 
 def is_vinyl(title: str, card=None) -> bool:
-    title_lower = title.lower()
+    if _CD_RE.search(title):
+        return False
 
-    cd_patterns = [r"\bcd\b", r"\[cd\]", r"\(cd\)", r"compact disc", r"\bcd\s*\d"]
-    for pat in cd_patterns:
-        if re.search(pat, title_lower):
-            return False
-
-    vinyl_title_signals = [
-        "vinil", "vinyl", r"\blp\b",
-        r"\b7[\"\']\b", r'\b10["\']?\b\s*(?:inch|polegadas)',
-        r'\b12["\']?\b\s*(?:inch|polegadas)',
-        "33rpm", "33 rpm", "45rpm", "45 rpm",
-        "180g", "180 g", "180gr", "180gram",
-        "picture disc", "picture vinyl", "gatefold",
-        "disco de vinil", "disco vinil", "single de vinil",
-        r"\b7\s*polegadas\b", r"\b12\s*polegadas\b",
-    ]
-    for sig in vinyl_title_signals:
-        if re.search(sig, title_lower):
-            return True
+    if _VINYL_TITLE_RE.search(title):
+        return True
 
     if card is not None:
-        card_text = card.get_text(" ", strip=True).lower()
-        vinyl_card_signals = [
-            "disco de vinil", "vinil", "vinyl", r"\blp\b",
-            "180g", "gatefold", "picture disc",
-            "formato: vinil", "format: vinyl", "33 rpm", "45 rpm",
-        ]
-        for sig in vinyl_card_signals:
-            if re.search(sig, card_text):
-                if re.search(r"\bcd\b", card_text) and not re.search(r"vinil|vinyl|\blp\b", title_lower):
-                    continue
+        card_text = card.get_text(" ", strip=True)
+        if _VINYL_CARD_RE.search(card_text):
+            if not (_CD_RE.search(card_text) and not _VINYL_TITLE_RE.search(title)):
                 return True
 
     return True
@@ -772,7 +787,6 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
     always gets the current live session back regardless of what happened
     during retries.
     """
-    from bs4 import BeautifulSoup
     pool = get_proxy_pool()
     req_headers = {}
     if referer:
@@ -792,7 +806,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
                 time.sleep(random.uniform(6, 12))
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
-                warm_up(session)
+                _quick_warmup(session)
                 continue
             resp.raise_for_status()
         except Exception as exc:
@@ -807,17 +821,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
         verdict = "ok"
         # Keep CAPTCHA signals in sync with fetch_product_page — both functions
         # must detect the same bot-challenge pages.
-        if any(s in resp.text for s in (
-            "Robot Check",
-            "Verificação de robô",
-            "Digite os caracteres",
-            "Sorry, we just need to make sure you're not a robot",
-            "To discuss automated access to Amazon data please contact",
-            "Access Denied",
-            "Enter the characters you see below",
-            "amazon.com.br/errors/validateCaptcha",
-            "Prove you're not a robot",
-        )):
+        if _BOT_SIGNAL_RE.search(resp.text):
             verdict = "captcha"
             log.warning(
                 "[safe_get] CAPTCHA detected proxy=%s size=%d — rotating session",
@@ -826,7 +830,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
             pool.report_block(proxy)
             proxy = pool.acquire()
             session, _ = make_session(proxy=proxy)
-            warm_up(session)
+            _quick_warmup(session)
             return None, session, proxy
 
         log.debug(
@@ -835,7 +839,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
             _mask_proxy(proxy) if proxy else "none", verdict,
         )
         pool.report_ok(proxy)
-        return BeautifulSoup(resp.text, "lxml"), session, proxy
+        return BeautifulSoup(resp.content, "lxml"), session, proxy
 
     return None, session, proxy
 
@@ -896,7 +900,6 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
       None         → transient error (rate-limit, network, CAPTCHA); skip this run
       2xx / other  → soup is populated; parse normally
     """
-    from bs4 import BeautifulSoup
     pool = get_proxy_pool()
     req_headers = {"Referer": referer or _VINYL_SEARCH_REFERER}
 
@@ -921,7 +924,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 time.sleep(random.uniform(6, 12))
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
-                warm_up(session)
+                _quick_warmup(session)
                 continue
             resp.raise_for_status()
         except Exception as exc:
@@ -936,17 +939,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 continue
             return None, None, session, proxy
 
-        if any(s in resp.text for s in (
-            "Robot Check",
-            "Verificação de robô",
-            "Digite os caracteres",
-            "Sorry, we just need to make sure you're not a robot",
-            "To discuss automated access to Amazon data please contact",
-            "Access Denied",
-            "Enter the characters you see below",
-            "amazon.com.br/errors/validateCaptcha",
-            "Prove you're not a robot",
-        )):
+        if _BOT_SIGNAL_RE.search(resp.text):
             log.warning(
                 "[BOT-DETECTED] CAPTCHA proxy=%s size=%d — %s (attempt %d)",
                 _mask_proxy(proxy) if proxy else "none", size, url[:80], attempt,
@@ -954,7 +947,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
             pool.report_block(proxy)
             return None, None, session, proxy
 
-        soup = BeautifulSoup(resp.text, "lxml")
+        soup = BeautifulSoup(resp.content, "lxml")
 
         # Amazon silently serves ~290 KB skeleton pages to suspected bots: correct
         # title + nav chrome, but #dp-container is empty — no #ppd, no buy-box, no
