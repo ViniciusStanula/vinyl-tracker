@@ -84,6 +84,17 @@ def fetch_active_deals(conn) -> dict:
     deal_scorer.py) because Disco has no precoBrl column.
     """
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        # Diagnostic: show deal_score distribution so 0-result issues are obvious
+        cur.execute("""
+            SELECT deal_score, COUNT(*) AS n
+            FROM "Disco"
+            WHERE deal_score IS NOT NULL
+            GROUP BY deal_score
+            ORDER BY deal_score
+        """)
+        for row in cur.fetchall():
+            log.info("deal_score=%s → %d rows", row["deal_score"], row["n"])
+
         cur.execute("""
             SELECT
                 d.asin,

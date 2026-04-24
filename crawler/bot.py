@@ -210,13 +210,16 @@ def run_edit_pass(conn) -> None:
                 bp.preco_brl,
                 bp.avg_30d,
                 bp.low_all_time,
-                ls.id               AS sent_row_id,
+                ls.sent_row_id,
                 ls.telegram_message_id,
-                COALESCE(ls.last_edit_price, ls.preco_brl) AS ref_price
+                ls.ref_price
             FROM bot_pending bp
             JOIN (
                 SELECT DISTINCT ON (asin)
-                    id, asin, telegram_message_id, preco_brl, last_edit_price
+                    id                                       AS sent_row_id,
+                    asin,
+                    telegram_message_id,
+                    COALESCE(last_edit_price, preco_brl)    AS ref_price
                 FROM bot_sent
                 ORDER BY asin, sent_at DESC
             ) ls ON ls.asin = bp.asin
