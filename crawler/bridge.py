@@ -78,26 +78,37 @@ def ensure_schema(conn) -> None:
 
 
 def fetch_active_deals(conn) -> dict:
-    """Returns {asin: row_dict} for all deals with deal_score >= 2."""
+    """Returns {asin: row_dict} for all deals with deal_score >= 2.
+
+    Current price comes from the latest HistoricoPreco row (same approach as
+    deal_scorer.py) because Disco has no precoBrl column.
+    """
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT
-                asin,
-                titulo,
-                artista,
-                estilo,
-                "imgUrl"   AS img_url,
-                url        AS affiliate_url,
-                "precoBrl" AS preco_brl,
-                avg_30d,
-                low_all_time,
-                deal_score
-            FROM "Disco"
-            WHERE deal_score >= 2
-              AND disponivel = TRUE
-              AND avg_30d IS NOT NULL
-              AND avg_30d > 0
-              AND "precoBrl" IS NOT NULL
+                d.asin,
+                d.titulo,
+                d.artista,
+                d.estilo,
+                d."imgUrl" AS img_url,
+                d.url      AS affiliate_url,
+                l.preco_brl,
+                d.avg_30d,
+                d.low_all_time,
+                d.deal_score
+            FROM "Disco" d
+            JOIN (
+                SELECT DISTINCT ON ("discoId")
+                    "discoId",
+                    "precoBrl" AS preco_brl
+                FROM "HistoricoPreco"
+                WHERE "precoBrl" >= 30
+                ORDER BY "discoId", "capturadoEm" DESC
+            ) l ON l."discoId" = d.id
+            WHERE d.deal_score >= 2
+              AND d.disponivel = TRUE
+              AND d.avg_30d IS NOT NULL
+              AND d.avg_30d > 0
         """)
         return {row["asin"]: dict(row) for row in cur.fetchall()}
 
