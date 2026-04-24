@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { queryDiscos } from "@/lib/queryDiscos";
 
 const ALLOWED_SORTS = new Set(["desconto", "menor-preco", "maior-preco", "avaliados", "az", "deals"]);
+
+const getCachedDiscos = unstable_cache(
+  (params: Parameters<typeof queryDiscos>[0]) => queryDiscos(params),
+  ["discos-query"],
+  { tags: ["prices"], revalidate: 3600 }
+);
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
@@ -15,7 +22,7 @@ export async function GET(req: NextRequest) {
   const precoMax    = precoMaxStr ? Number(precoMaxStr) : null;
 
   try {
-    const { items, total, totalPages } = await queryDiscos({
+    const { items, total, totalPages } = await getCachedDiscos({
       searchTerm: q.trim(),
       sort,
       artista,

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { slugifyArtist } from "@/lib/slugify";
@@ -57,7 +58,7 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
-export default function DiscoCard({
+export default memo(function DiscoCard({
   disco,
   priority = false,
 }: {
@@ -194,4 +195,4 @@ export default function DiscoCard({
       </div>
     </div>
   );
-}
+});
