@@ -32,7 +32,7 @@ CHANNEL_ID        = os.environ.get("TELEGRAM_CHANNEL_ID")
 SAO_PAULO         = ZoneInfo("America/Sao_Paulo")
 SEND_HOUR_START   = 8
 SEND_HOUR_END     = 22
-DRIP_MINUTES      = 30
+DRIP_MINUTES      = 20
 EDIT_THRESHOLD    = 0.95   # edit if current price < ref * 0.95 (≥5% drop)
 RESEND_THRESHOLD  = 0.90   # bridge re-opens at this level; bot just sends normally
 
@@ -253,22 +253,8 @@ def run_edit_pass(conn) -> None:
 # Send pass: pick top-priority pending deal and send it
 # ---------------------------------------------------------------------------
 
-def run_send_pass(conn) -> None:
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute("""
-            SELECT *
-            FROM bot_pending
-            WHERE status = 'pending'
-            ORDER BY priority_score DESC NULLS LAST
-            LIMIT 1
-        """)
-        deal = cur.fetchone()
-
-    if not deal:
-        log.info("No pending deals")
-        return
-
-    deal = dict(deal)
+def _send_one(conn, deal: dict) -> bool:
+    """Attempt to send a single deal. Returns True on success."""
     asin  = deal["asin"]
     price = float(deal["preco_brl"])
 
@@ -294,10 +280,10 @@ def run_send_pass(conn) -> None:
         now_sp_date  = datetime.now(SAO_PAULO).date()
 
         if sent_sp_date == now_sp_date:
-            ref = float(last_sent["ref_price"])
+            ref  = float(last_sent["ref_price"])
             drop = (ref - price) / ref if ref > 0 else 0
-            if drop < RESEND_THRESHOLD - 1:  # effectively: drop < 0.10
-                # Sent today at a similar price — nothing new to say
+            if drop < 0.10:
+                # Sent today at a similar price — discard silently
                 with conn.cursor() as cur:
                     cur.execute(
                         "UPDATE bot_pending SET status = 'discarded' WHERE asin = %s",
@@ -305,8 +291,7 @@ def run_send_pass(conn) -> None:
                     )
                 conn.commit()
                 log.info("ASIN %s sent today at similar price, discarded", asin)
-                return
-            # drop >= 10%: fall through and send as a fresh deal
+                return False  # don't count as a send; caller will try next deal
 
     caption = build_caption(
         deal["titulo"], deal["artista"], deal.get("estilo"),
@@ -320,8 +305,8 @@ def run_send_pass(conn) -> None:
     message_id = send_photo(img_url, caption) if img_url else None
 
     if not message_id:
-        log.error("Failed to send deal for ASIN %s — will retry next run", asin)
-        return
+        log.error("Failed to send ASIN %s — will retry next run", asin)
+        return False
 
     now = datetime.now(timezone.utc)
     with conn.cursor() as cur:
@@ -333,9 +318,56 @@ def run_send_pass(conn) -> None:
             "UPDATE bot_pending SET status = 'sent' WHERE asin = %s", (asin,)
         )
     conn.commit()
-
     set_last_sent_at(conn)
     log.info("Sent ASIN %s — R$%.2f — message_id=%d", asin, price, message_id)
+    return True
+
+
+def run_send_pass(conn, batch_size: int = 5) -> None:
+    """Send up to batch_size deals, prioritizing top artists then highest discount."""
+    sent = 0
+    # Track ASINs already processed this batch to avoid re-querying same row
+    # after a discard (which doesn't consume a send slot but advances the queue).
+    skip_asins: list[str] = []
+
+    while sent < batch_size:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            if skip_asins:
+                cur.execute("""
+                    SELECT *
+                    FROM bot_pending
+                    WHERE status = 'pending'
+                      AND asin <> ALL(%s)
+                    ORDER BY is_top_artist DESC NULLS LAST,
+                             priority_score  DESC NULLS LAST
+                    LIMIT 1
+                """, (skip_asins,))
+            else:
+                cur.execute("""
+                    SELECT *
+                    FROM bot_pending
+                    WHERE status = 'pending'
+                    ORDER BY is_top_artist DESC NULLS LAST,
+                             priority_score  DESC NULLS LAST
+                    LIMIT 1
+                """)
+            deal = cur.fetchone()
+
+        if not deal:
+            log.info("No more pending deals (sent %d this batch)", sent)
+            break
+
+        deal = dict(deal)
+        success = _send_one(conn, deal)
+        if success:
+            sent += 1
+        else:
+            # Discarded or failed — skip this ASIN and try the next one,
+            # but only if we haven't hit the batch limit yet.
+            skip_asins.append(deal["asin"])
+
+    if sent == 0:
+        log.info("No deals sent this batch")
 
 
 # ---------------------------------------------------------------------------

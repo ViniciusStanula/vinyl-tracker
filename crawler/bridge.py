@@ -2,18 +2,23 @@
 """
 bridge.py — Syncs active deals from Supabase into the bot_pending queue.
 
-Reads Disco rows where deal_score >= 2 and disponivel = TRUE, upserts them
+Reads Disco rows where deal_score >= 1 and disponivel = TRUE, upserts them
 into bot_pending, and discards deals that have disappeared from Supabase.
+Marks deals whose artist appears in the Last.fm top-1000 chart as is_top_artist
+so bot.py can prioritize them in the send queue.
 Exits non-zero on connection failure so the downstream bot.py step is skipped.
 """
 
 import logging
 import os
+import re
 import sys
+import unicodedata
 from datetime import datetime, timezone
 
 import psycopg2
 import psycopg2.extras
+import requests
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,7 +27,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL  = os.environ.get("DATABASE_URL")
+LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS bot_pending (
@@ -37,6 +43,7 @@ CREATE TABLE IF NOT EXISTS bot_pending (
     low_all_time    DECIMAL(10,2),
     deal_score      SMALLINT NOT NULL,
     priority_score  REAL,
+    is_top_artist   BOOLEAN NOT NULL DEFAULT FALSE,
     first_seen_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     status          TEXT NOT NULL DEFAULT 'pending'
 );
@@ -57,6 +64,11 @@ CREATE TABLE IF NOT EXISTS bot_state (
 );
 """
 
+# Adds is_top_artist to tables created before this column existed.
+_SCHEMA_EXTRAS = """
+ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS is_top_artist BOOLEAN NOT NULL DEFAULT FALSE;
+"""
+
 
 def connect() -> psycopg2.extensions.connection:
     if not DATABASE_URL:
@@ -74,17 +86,68 @@ def connect() -> psycopg2.extensions.connection:
 def ensure_schema(conn) -> None:
     with conn.cursor() as cur:
         cur.execute(_SCHEMA)
+        cur.execute(_SCHEMA_EXTRAS)
     conn.commit()
 
 
+# ---------------------------------------------------------------------------
+# Last.fm top-artist matching (mirrors frontend/lib/slugify.ts + lastfm.ts)
+# ---------------------------------------------------------------------------
+
+def _slugify_artist(name: str) -> str:
+    """Mirrors the TypeScript slugifyArtist() used by the homepage carousel."""
+    if "," in name:
+        last, *rest = name.split(",")
+        first = ",".join(rest).strip()
+        name = f"{first} {last.strip()}" if first else name
+    normalized = unicodedata.normalize("NFD", name)
+    stripped = "".join(c for c in normalized if unicodedata.category(c) != "Mn")
+    slug = stripped.lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", slug)
+    slug = slug.strip("-")
+    return slug[:60]
+
+
+def fetch_top_artist_slugs() -> set:
+    """Fetches Last.fm chart.getTopArtists top-1000 and returns slugified names."""
+    if not LASTFM_API_KEY:
+        log.warning("LASTFM_API_KEY not set — is_top_artist will be FALSE for all deals")
+        return set()
+
+    slugs: set[str] = set()
+    for page in (1, 2):
+        try:
+            resp = requests.get(
+                "https://ws.audioscrobbler.com/2.0/",
+                params={
+                    "method": "chart.getTopArtists",
+                    "api_key": LASTFM_API_KEY,
+                    "format":  "json",
+                    "limit":   500,
+                    "page":    page,
+                },
+                timeout=15,
+            )
+            data = resp.json()
+            artists = (data.get("artists") or {}).get("artist") or []
+            for artist in artists:
+                name = artist.get("name", "")
+                if name:
+                    slugs.add(_slugify_artist(name))
+        except Exception as exc:
+            log.warning("Last.fm page %d fetch failed: %s", page, exc)
+
+    log.info("Fetched %d Last.fm top-artist slugs", len(slugs))
+    return slugs
+
+
 def fetch_active_deals(conn) -> dict:
-    """Returns {asin: row_dict} for all deals with deal_score >= 2.
+    """Returns {asin: row_dict} for all deals with deal_score >= 1.
 
     Current price comes from the latest HistoricoPreco row (same approach as
     deal_scorer.py) because Disco has no precoBrl column.
     """
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        # Diagnostic: show deal_score distribution so 0-result issues are obvious
         cur.execute("""
             SELECT deal_score, COUNT(*) AS n
             FROM "Disco"
@@ -124,23 +187,24 @@ def fetch_active_deals(conn) -> dict:
         return {row["asin"]: dict(row) for row in cur.fetchall()}
 
 
-def sync_pending(conn, active: dict) -> None:
+def sync_pending(conn, active: dict, top_slugs: set) -> None:
     now = datetime.now(timezone.utc)
 
     with conn.cursor() as cur:
-        # 1. Upsert every active deal into bot_pending.
+        # 1. Upsert every active deal.
         #    Preserve first_seen_at and status ('pending'/'sent'); only reopen 'discarded'.
         for asin, d in active.items():
-            avg = float(d["avg_30d"])
+            avg   = float(d["avg_30d"])
             price = float(d["preco_brl"])
-            priority = round((avg - price) / avg * 100, 2)
+            priority     = round((avg - price) / avg * 100, 2)
+            is_top_artist = _slugify_artist(d["artista"]) in top_slugs
 
             cur.execute("""
                 INSERT INTO bot_pending
                     (asin, titulo, artista, estilo, img_url, affiliate_url,
                      preco_brl, avg_30d, low_all_time, deal_score, priority_score,
-                     first_seen_at, status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending')
+                     is_top_artist, first_seen_at, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending')
                 ON CONFLICT (asin) DO UPDATE SET
                     titulo         = EXCLUDED.titulo,
                     artista        = EXCLUDED.artista,
@@ -152,6 +216,7 @@ def sync_pending(conn, active: dict) -> None:
                     low_all_time   = EXCLUDED.low_all_time,
                     deal_score     = EXCLUDED.deal_score,
                     priority_score = EXCLUDED.priority_score,
+                    is_top_artist  = EXCLUDED.is_top_artist,
                     status = CASE
                         WHEN bot_pending.status = 'discarded' THEN 'pending'
                         ELSE bot_pending.status
@@ -160,7 +225,7 @@ def sync_pending(conn, active: dict) -> None:
                 asin, d["titulo"], d["artista"], d.get("estilo"),
                 d.get("img_url"), d["affiliate_url"],
                 price, avg, d.get("low_all_time"),
-                int(d["deal_score"]), priority, now,
+                int(d["deal_score"]), priority, is_top_artist, now,
             ))
 
         # 2. Immediately discard pending deals no longer active in Supabase.
@@ -187,7 +252,6 @@ def sync_pending(conn, active: dict) -> None:
 
         # 4. Re-open 'sent' deals where price dropped >10% vs last send/edit,
         #    but only if at least 6 hours have passed since the last action.
-        #    bot.py will pick these up as new sends.
         cur.execute("""
             UPDATE bot_pending bp
             SET status = 'pending'
@@ -206,7 +270,8 @@ def sync_pending(conn, active: dict) -> None:
         """)
 
     conn.commit()
-    log.info("Sync complete — %d active deals", len(active))
+    top_count = sum(1 for d in active.values() if _slugify_artist(d["artista"]) in top_slugs)
+    log.info("Sync complete — %d active deals (%d top artists)", len(active), top_count)
 
 
 def main() -> None:
@@ -214,9 +279,10 @@ def main() -> None:
     conn = connect()
     try:
         ensure_schema(conn)
-        active = fetch_active_deals(conn)
+        top_slugs = fetch_top_artist_slugs()
+        active    = fetch_active_deals(conn)
         log.info("Active deals in Supabase: %d", len(active))
-        sync_pending(conn, active)
+        sync_pending(conn, active, top_slugs)
     except Exception as exc:
         log.error("Bridge error: %s", exc)
         try:
