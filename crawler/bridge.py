@@ -116,7 +116,7 @@ def fetch_active_deals(conn) -> dict:
                 WHERE "precoBrl" >= 30
                 ORDER BY "discoId", "capturadoEm" DESC
             ) l ON l."discoId" = d.id
-            WHERE d.deal_score >= 2
+            WHERE d.deal_score >= 1
               AND d.disponivel = TRUE
               AND d.avg_30d IS NOT NULL
               AND d.avg_30d > 0
