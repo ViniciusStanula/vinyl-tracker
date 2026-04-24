@@ -3,6 +3,7 @@ import { Fraunces, DM_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 /* Fraunces — optical-size variable serif; editorial, distinctive */
 const fraunces = Fraunces({
@@ -89,6 +90,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJsonLd }} />
         <Navbar />
         {children}
+        <Footer />
       </body>
     </html>
   );
