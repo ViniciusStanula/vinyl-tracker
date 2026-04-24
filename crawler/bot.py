@@ -96,7 +96,7 @@ def send_photo(photo_url: str, caption: str) -> int | None:
         "chat_id":    CHANNEL_ID,
         "photo":      photo_url,
         "caption":    caption,
-        "parse_mode": "MarkdownV2",
+        "parse_mode": "HTML",
     })
     if result:
         return result.get("message_id")
@@ -130,7 +130,7 @@ def edit_caption(message_id: int, caption: str) -> bool:
         "chat_id":    CHANNEL_ID,
         "message_id": message_id,
         "caption":    caption,
-        "parse_mode": "MarkdownV2",
+        "parse_mode": "HTML",
     })
     return result is not None
 
@@ -139,38 +139,53 @@ def edit_caption(message_id: int, caption: str) -> bool:
 # Caption formatting
 # ---------------------------------------------------------------------------
 
-_MD_ESCAPE = re.compile(r'([_*\[\]()~`>#+\-=|{}.!\\])')
+# Strips bracketed/parenthesised vinyl labels from Amazon titles.
+# e.g. "The Wall [Disco de Vinil]" → "The Wall"
+_VINYL_LABEL_RE = re.compile(
+    r'\s*[\[(]\s*(?:disco\s+de\s+vinil|vinil|vinyl|\d*\s*lp|picture\s+disc|180\s*g[r]?)\s*[\])]\s*',
+    re.IGNORECASE,
+)
 
 
-def _esc(value) -> str:
-    """Escape a value for Telegram MarkdownV2."""
-    return _MD_ESCAPE.sub(r'\\\1', str(value))
+def _clean_titulo(titulo: str) -> str:
+    return _VINYL_LABEL_RE.sub(" ", titulo).strip(" -–—|,")
+
+
+def _esc_html(value) -> str:
+    return str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _brl(value: float) -> str:
+    """Format as Brazilian Real string: 1234.56 → '1.234,56'"""
+    return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def build_caption(titulo: str, artista: str, estilo: str | None,
                   preco_brl: float, avg_30d: float | None,
                   low_all_time: float | None, affiliate_url: str) -> str:
-    genre = _esc(estilo or "Vinil")
+    album = _esc_html(_clean_titulo(titulo))
+    artist = _esc_html(artista)
 
-    if avg_30d and avg_30d > preco_brl:
-        pct = round((avg_30d - preco_brl) / avg_30d * 100)
-        price_line = (
-            f"💸 *{_esc(pct)}% abaixo da média* — "
-            f"de R\\${_esc(f'{avg_30d:.2f}')} por R\\${_esc(f'{preco_brl:.2f}')}\n"
-        )
-    else:
-        price_line = f"💸 R\\${_esc(f'{preco_brl:.2f}')}\n"
-
-    atl_badge = ""
+    atl_line = ""
     if low_all_time is not None and preco_brl <= float(low_all_time):
-        atl_badge = "🏆 Menor preço histórico\\!\n"
+        atl_line = "🏆 Menor preço histórico\n"
+
+    price_block = f"✅ Por: R$ {_brl(preco_brl)}\n"
+    if avg_30d and avg_30d > preco_brl:
+        pct      = round((avg_30d - preco_brl) / avg_30d * 100)
+        savings  = avg_30d - preco_brl
+        price_block += (
+            f"De: R$ {_brl(avg_30d)}\n"
+            f"\nDesconto: {pct}% OFF\n"
+            f"Economia: R$ {_brl(savings)}\n"
+        )
 
     return (
-        f"🎵 *{_esc(titulo)}* — {_esc(artista)}\n"
-        f"💿 Gênero: {genre}\n\n"
-        f"{price_line}"
-        f"{atl_badge}"
-        f"\n🛒 [Comprar na Amazon]({affiliate_url})"
+        f"🔥 <b>OFERTA</b>\n"
+        f"{artist} — {album}\n"
+        f"{atl_line}"
+        f"\n{price_block}"
+        f"\n🛒 <a href='{affiliate_url}'>Comprar na Amazon</a> 👉"
     )
 
 
