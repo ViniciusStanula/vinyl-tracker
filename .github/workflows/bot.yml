@@ -1,0 +1,45 @@
+name: Telegram Bot Dispatcher
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # every 5 minutes; Python enforces the 08:00–22:00 SP send window
+  workflow_dispatch:
+
+# Queue rather than cancel: if a dispatch job is still running when the next
+# one fires, let it finish before the next one starts.
+concurrency:
+  group: telegram-bot
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: crawler/bot_requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r crawler/bot_requirements.txt
+
+      # bridge.py exits non-zero on Supabase connection failure,
+      # which causes GHA to skip all subsequent steps automatically.
+      - name: Sync deals from Supabase
+        run: python crawler/bridge.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Dispatch to Telegram
+        run: python crawler/bot.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
