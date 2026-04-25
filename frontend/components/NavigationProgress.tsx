@@ -3,14 +3,16 @@
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
+type State = 'idle' | 'running' | 'completing'
+
 export default function NavigationProgress() {
   const pathname = usePathname()
-  const [active, setActive] = useState(false)
+  const [state, setState] = useState<State>('idle')
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
+  // URL changed → fill bar to 100% and fade out
   useEffect(() => {
-    setActive(false)
-    clearTimeout(timer.current)
+    setState(prev => (prev === 'running' ? 'completing' : prev))
   }, [pathname])
 
   useEffect(() => {
@@ -26,9 +28,9 @@ export default function NavigationProgress() {
         href.startsWith('tel') ||
         href === pathname
       ) return
-      setActive(true)
+      setState('running')
       clearTimeout(timer.current)
-      timer.current = setTimeout(() => setActive(false), 8000)
+      timer.current = setTimeout(() => setState('completing'), 8000)
     }
     document.addEventListener('click', onClick)
     return () => {
@@ -37,7 +39,7 @@ export default function NavigationProgress() {
     }
   }, [pathname])
 
-  if (!active) return null
+  if (state === 'idle') return null
 
   return (
     <div
@@ -45,7 +47,16 @@ export default function NavigationProgress() {
       aria-label="Carregando página"
       className="fixed top-0 left-0 right-0 z-[200] h-[2px] pointer-events-none"
     >
-      <div className="h-full bg-gold" style={{ animation: 'nav-progress 8s ease-out forwards' }} />
+      <div
+        className="h-full bg-gold"
+        style={{
+          animation:
+            state === 'running'
+              ? 'nav-progress 8s ease-out forwards'
+              : 'nav-complete 500ms ease-out forwards',
+        }}
+        onAnimationEnd={state === 'completing' ? () => setState('idle') : undefined}
+      />
     </div>
   )
 }

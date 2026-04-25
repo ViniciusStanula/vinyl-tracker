@@ -91,3 +91,9 @@ body {
   from { width: 0% }
   to   { width: 92% }
 }
+
+@keyframes nav-complete {
+  0%   { width: 100%; opacity: 1; }
+  50%  { width: 100%; opacity: 1; }
+  100% { width: 100%; opacity: 0; }
+}
