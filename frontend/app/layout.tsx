@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import NavigationProgress from "@/components/NavigationProgress";
 
 /* Fraunces — optical-size variable serif; editorial, distinctive */
 const fraunces = Fraunces({
@@ -65,6 +66,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${fraunces.variable} ${dmSans.variable}`}>
       <head>
+        <link rel="preconnect" href="https://m.media-amazon.com" />
+        <link rel="preconnect" href="https://images-na.ssl-images-amazon.com" />
         <Script
           id="gtm-script"
           strategy="afterInteractive"
@@ -88,6 +91,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         </noscript>
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJsonLd }} />
+        <NavigationProgress />
         <Navbar />
         {children}
         <Footer />
