@@ -38,6 +38,7 @@ export async function generateMetadata({
         card: disco.imgUrl ? "summary_large_image" : "summary",
         title,
         description,
+        ...(disco.imgUrl ? { images: [disco.imgUrl] } : {}),
       },
     };
   } catch {
@@ -262,9 +263,13 @@ export default async function DiscoPage({
   const productJsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Product",
+    "@id": `${siteUrl}/disco/${slug}`,
     name: disco.titulo,
+    description: `Compre ${disco.titulo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis na Amazon Brasil.`,
+    sku: disco.asin,
     image: disco.imgUrl ?? undefined,
     brand: { "@type": "Brand", name: disco.artista },
+    url: `${siteUrl}/disco/${slug}`,
     offers: {
       "@type": "Offer",
       url: disco.url,

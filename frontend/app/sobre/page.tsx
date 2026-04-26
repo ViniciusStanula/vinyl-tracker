@@ -2,6 +2,17 @@ import BackToTop from "@/components/BackToTop";
 import GraficoPreco from "@/components/GraficoPreco";
 import Link from "next/link";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
+
+const breadcrumbJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Início", item: `${SITE_URL}/` },
+    { "@type": "ListItem", position: 2, name: "Sobre", item: `${SITE_URL}/sobre` },
+  ],
+});
+
 const EXEMPLO_PRECOS = [
   { data: "21/03", dataFull: "21/03/2026", valor: 199.90 },
   { data: "22/03", dataFull: "22/03/2026", valor: 199.90 },
@@ -58,6 +69,8 @@ export const metadata = {
 export default function SobrePage() {
   return (
     <main className="max-w-3xl mx-auto px-4 py-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
 
       {/* ── Breadcrumbs ─────────────────────────────────────────── */}
       <nav className="mb-6 text-sm text-dust flex gap-2">

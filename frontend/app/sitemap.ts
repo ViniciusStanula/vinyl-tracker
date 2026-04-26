@@ -18,7 +18,11 @@ export default async function sitemap(props: {
   const id = await props.id;
 
   if (id === "estatico") {
-    return [{ url: base, changeFrequency: "daily", priority: 1 }];
+    return [
+      { url: base,              changeFrequency: "daily",  priority: 1.0 },
+      { url: `${base}/disco`,   changeFrequency: "daily",  priority: 0.9 },
+      { url: `${base}/sobre`,   changeFrequency: "monthly", priority: 0.3 },
+    ];
   }
 
   if (id === "artistas") {

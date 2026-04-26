@@ -254,6 +254,7 @@ export async function generateMetadata({
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
   const title = truncateTitle(`${displayName} — Discos em Promoção | Garimpa Vinil`);
   const description = truncateDesc(`Melhores ofertas de discos de ${displayName} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`);
+  const firstImage = data.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
   return {
     title,
     description,
@@ -263,11 +264,13 @@ export async function generateMetadata({
       description,
       url: `/estilo/${slug}`,
       type: "website",
+      ...(firstImage ? { images: [{ url: firstImage, alt: displayName }] } : {}),
     },
     twitter: {
-      card: "summary",
+      card: firstImage ? "summary_large_image" : "summary",
       title,
       description,
+      ...(firstImage ? { images: [firstImage] } : {}),
     },
   };
 }

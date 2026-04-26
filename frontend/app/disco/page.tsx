@@ -63,6 +63,10 @@ export default async function DiscosPage({
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
 
+      <h1 className="font-display text-3xl font-bold text-cream mb-6">
+        Todos os Discos
+      </h1>
+
       {/* ── Sort bar ────────────────────────────────────────────── */}
       <div className="mb-5">
         <Suspense>

@@ -193,6 +193,7 @@ export async function generateMetadata({
   const { canonical } = data;
   const title = truncateTitle(`${canonical} — Discos em Promoção | Garimpa Vinil`);
   const description = truncateDesc(`Melhores ofertas de ${canonical} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`);
+  const firstImage = data.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
   return {
     title,
     description,
@@ -202,11 +203,13 @@ export async function generateMetadata({
       description,
       url: `/artista/${slug}`,
       type: "website",
+      ...(firstImage ? { images: [{ url: firstImage, alt: canonical }] } : {}),
     },
     twitter: {
-      card: "summary",
+      card: firstImage ? "summary_large_image" : "summary",
       title,
       description,
+      ...(firstImage ? { images: [firstImage] } : {}),
     },
   };
 }
@@ -328,10 +331,20 @@ export default async function ArtistaPage({
     ],
   });
 
+  const musicArtistJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "MusicArtist",
+    name: artista,
+    url: `${siteUrl}/artista/${slug}`,
+    ...(topStyles.length > 0 ? { genre: topStyles } : {}),
+  });
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: musicArtistJsonLd }} />
       <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
           Início
