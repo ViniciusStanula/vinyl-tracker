@@ -53,6 +53,7 @@ type SerializedPageData = {
  */
 const _getArtistaPageData = unstable_cache(
   async (slug: string): Promise<SerializedPageData | null> => {
+    const t0 = Date.now();
     // Pre-filter at the DB level using a SQL slug approximation so we transfer
     // only candidates instead of the full artist table. Two expressions cover:
     //   1. Regular names: lower(regexp_replace(artista, '[^a-z0-9]+', '-', 'g'))
@@ -78,6 +79,9 @@ const _getArtistaPageData = unstable_cache(
                 '^-+|-+$', '', 'g'
               ), 60) = ${slug}
     `;
+
+    const t1 = Date.now();
+    console.log(`[PERF artista/${slug}] candidates: ${t1 - t0}ms`);
 
     const variants = candidates
       .map((r) => r.artista)
@@ -105,6 +109,9 @@ const _getArtistaPageData = unstable_cache(
       },
     });
 
+    const t2 = Date.now();
+    console.log(`[PERF artista/${slug}] findMany+precos: ${t2 - t1}ms (${discos.length} discos)`);
+
     if (discos.length === 0) return null;
 
     const discoIds = discos.map((d) => d.id);
@@ -127,6 +134,9 @@ const _getArtistaPageData = unstable_cache(
         WHERE id::text = ANY(${discoIds})
       `,
     ]);
+    const t3 = Date.now();
+    console.log(`[PERF artista/${slug}] dealMeta+lastfm (parallel): ${t3 - t2}ms | total: ${t3 - t0}ms`);
+
     const lastfmTagsById = Object.fromEntries(
       lastfmTagsRows.map((r) => [r.id, r.lastfmTags])
     );

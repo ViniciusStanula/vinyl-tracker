@@ -68,6 +68,7 @@ export default async function DiscoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const t0 = Date.now();
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
   const disco = await prisma.disco.findUnique({
@@ -79,6 +80,8 @@ export default async function DiscoPage({
       },
     },
   });
+  const t1 = Date.now();
+  console.log(`[PERF disco/${slug}] findUnique+precos: ${t1 - t0}ms`);
 
   if (!disco) notFound();
 
@@ -86,6 +89,8 @@ export default async function DiscoPage({
   const metaRow = await prisma.$queryRaw<[{ disponivel: boolean; lastfmTags: string | null }]>`
     SELECT disponivel, lastfm_tags AS "lastfmTags" FROM "Disco" WHERE slug = ${slug}
   `;
+  const t2 = Date.now();
+  console.log(`[PERF disco/${slug}] metaRow: ${t2 - t1}ms`);
   const disponivel = metaRow[0]?.disponivel ?? true;
   const artistLower = disco.artista.toLowerCase();
   const styleTags = parseStyleTags(metaRow[0]?.lastfmTags ?? null)
@@ -172,6 +177,7 @@ export default async function DiscoPage({
   // Related deals — 4 other records with an active deal score.
   // Uses deal_score IS NOT NULL so the query is consistent with the scorer's
   // multi-window logic rather than re-implementing a weaker inline version.
+  const t3 = Date.now();
   const relatedDeals = await prisma.$queryRaw<RelatedDeal[]>`
     WITH latest AS (
       SELECT DISTINCT ON ("discoId")
@@ -226,6 +232,8 @@ export default async function DiscoPage({
     ORDER BY d.deal_score DESC, RANDOM()
     LIMIT 4
   `;
+  const t4 = Date.now();
+  console.log(`[PERF disco/${slug}] relatedDeals: ${t4 - t3}ms | total: ${t4 - t0}ms`);
 
   // Process related deals into DiscoCard-compatible shape
   const processedDeals = relatedDeals.map((deal) => {

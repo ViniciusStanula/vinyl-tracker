@@ -7,6 +7,7 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
+  console.log('[PERF prisma] new Pool+PrismaClient created')
   const pool = new Pool({ connectionString: process.env.DATABASE_URL! })
   const adapter = new PrismaPg(pool)
   return new PrismaClient({ adapter })

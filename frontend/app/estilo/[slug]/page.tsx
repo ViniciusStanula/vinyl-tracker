@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { Suspense, cache } from "react";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
 import { unstable_cache } from "next/cache";
+import { slugifyStyle } from "@/lib/styleUtils";
 
 // Same accent-normalization constants as the artist page SQL slug matching
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
@@ -43,6 +44,7 @@ type SerializedEstiloData = {
  */
 const _getEstiloPageData = unstable_cache(
   async (slug: string): Promise<SerializedEstiloData | null> => {
+    const t0 = Date.now();
     // Find the canonical display name by applying the same slug transform in SQL
     const canonicalRow = await prisma.$queryRaw<{ tag: string }[]>`
       WITH tags AS (
@@ -60,6 +62,9 @@ const _getEstiloPageData = unstable_cache(
             ) = ${slug}
       LIMIT 1
     `;
+
+    const t1 = Date.now();
+    console.log(`[PERF estilo/${slug}] canonicalRow: ${t1 - t0}ms`);
 
     if (canonicalRow.length === 0) return null;
     const canonical = canonicalRow[0].tag;
@@ -135,6 +140,9 @@ const _getEstiloPageData = unstable_cache(
       LIMIT 96
     `;
 
+    const t2 = Date.now();
+    console.log(`[PERF estilo/${slug}] mainQuery: ${t2 - t1}ms (${rows.length} discos) | total: ${t2 - t0}ms`);
+
     return {
       canonical,
       discos: rows.map((row) => {
@@ -180,6 +188,54 @@ const _getEstiloPageData = unstable_cache(
 );
 
 const getEstiloPageData = cache(_getEstiloPageData);
+
+type RelatedEstilo = { tag: string; slug: string };
+
+const _getRelatedEstilos = unstable_cache(
+  async (canonical: string): Promise<RelatedEstilo[]> => {
+    const rows = await prisma.$queryRaw<{ tag: string }[]>`
+      WITH current_discos AS (
+        SELECT id FROM "Disco"
+        WHERE disponivel = TRUE
+          AND LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
+      ),
+      all_tags AS (
+        SELECT tag, COUNT(DISTINCT id)::float AS total
+        FROM (
+          SELECT id, LOWER(unnest(string_to_array(lastfm_tags, ', '))) AS tag
+          FROM "Disco"
+          WHERE disponivel = TRUE
+        ) t
+        GROUP BY tag
+      ),
+      shared_tags AS (
+        SELECT tag, COUNT(DISTINCT id)::float AS shared
+        FROM (
+          SELECT d.id, LOWER(unnest(string_to_array(d.lastfm_tags, ', '))) AS tag
+          FROM "Disco" d
+          INNER JOIN current_discos cd ON cd.id = d.id
+          WHERE d.disponivel = TRUE
+        ) t
+        GROUP BY tag
+      ),
+      current_size AS (SELECT COUNT(*)::float AS cnt FROM current_discos)
+      SELECT s.tag
+      FROM shared_tags s
+      JOIN all_tags a ON a.tag = s.tag
+      CROSS JOIN current_size cs
+      WHERE s.tag != LOWER(${canonical})
+        AND s.shared > 0
+      ORDER BY s.shared / (cs.cnt + a.total - s.shared) DESC
+      LIMIT 10
+    `;
+    console.log(`[PERF estilo-related/${canonical}] ${rows.length} related styles`);
+    return rows.map((r) => ({ tag: r.tag, slug: slugifyStyle(r.tag) }));
+  },
+  ["estilo-related"],
+  { tags: ["prices"] }
+);
+
+const getRelatedEstilos = cache(_getRelatedEstilos);
 
 export async function generateMetadata({
   params,
@@ -247,6 +303,13 @@ export default async function EstiloPage({
 
   const { canonical, discos } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
+
+  let relatedEstilos: RelatedEstilo[] = [];
+  try {
+    relatedEstilos = await getRelatedEstilos(canonical);
+  } catch (err) {
+    console.error("[EstiloPage] getRelatedEstilos failed for canonical=%s", canonical, err);
+  }
 
   const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
 
@@ -356,6 +419,26 @@ export default async function EstiloPage({
           </p>
           <p className="text-dust text-sm">Tente ajustar os filtros.</p>
         </div>
+      )}
+
+
+      {relatedEstilos.length > 0 && (
+        <section className="mt-12 pt-8 border-t border-groove">
+          <h2 className="text-dust text-xs font-semibold uppercase tracking-widest mb-3">
+            Outros estilos
+          </h2>
+          <div className="flex flex-wrap gap-1.5">
+            {relatedEstilos.map((e) => (
+              <Link
+                key={e.slug}
+                href={`/estilo/${e.slug}`}
+                className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+              >
+                {e.tag.replace(/\b\w/g, (c) => c.toUpperCase())}
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       <BackToTop />
