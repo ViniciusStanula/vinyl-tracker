@@ -9,6 +9,8 @@ import { truncateTitle, truncateDesc } from "@/lib/seo";
 import { unstable_cache } from "next/cache";
 import { slugifyStyle } from "@/lib/styleUtils";
 
+export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
+
 // Same accent-normalization constants as the artist page SQL slug matching
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
 const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
@@ -12,6 +13,21 @@ import { truncateTitle, truncateDesc } from "@/lib/seo";
 
 export const revalidate = 7200;
 
+// Shared between generateMetadata and DiscoPage so both callers within the same
+// render pass hit the DB only once (React cache() deduplicates by argument).
+const getDiscoWithPrecos = cache(async (slug: string) => {
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+  return prisma.disco.findUnique({
+    where: { slug },
+    include: {
+      precos: {
+        where: { capturadoEm: { gte: oneYearAgo } },
+        orderBy: { capturadoEm: "asc" },
+      },
+    },
+  });
+});
+
 export async function generateMetadata({
   params,
 }: {
@@ -19,7 +35,7 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   try {
-    const disco = await prisma.disco.findUnique({ where: { slug } });
+    const disco = await getDiscoWithPrecos(slug);
     if (!disco) return {};
     const title = truncateTitle(`${disco.titulo} — ${disco.artista} em Vinil | Histórico de Preços`);
     const description = truncateDesc(`Compre ${disco.titulo} de ${disco.artista} pelo melhor preço. Veja o histórico de preços e as melhores ofertas disponíveis agora.`);
@@ -70,28 +86,21 @@ export default async function DiscoPage({
 }) {
   const { slug } = await params;
   const t0 = Date.now();
-  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
-  const disco = await prisma.disco.findUnique({
-    where: { slug },
-    include: {
-      precos: {
-        where: { capturadoEm: { gte: oneYearAgo } },
-        orderBy: { capturadoEm: "asc" },
-      },
-    },
-  });
+  // Both queries use only the slug — run in parallel to save one DB roundtrip.
+  // getDiscoWithPrecos is React-cached, so generateMetadata's prior call is free.
+  const [disco, metaRow] = await Promise.all([
+    getDiscoWithPrecos(slug),
+    // disponivel and lastfm_tags live outside the Prisma schema (managed by the crawler)
+    prisma.$queryRaw<[{ disponivel: boolean; lastfmTags: string | null }]>`
+      SELECT disponivel, lastfm_tags AS "lastfmTags" FROM "Disco" WHERE slug = ${slug}
+    `,
+  ]);
   const t1 = Date.now();
-  console.log(`[PERF disco/${slug}] findUnique+precos: ${t1 - t0}ms`);
+  console.log(`[PERF disco/${slug}] findUnique+metaRow parallel: ${t1 - t0}ms`);
 
   if (!disco) notFound();
 
-  // disponivel and lastfm_tags live outside the Prisma schema (managed by the crawler)
-  const metaRow = await prisma.$queryRaw<[{ disponivel: boolean; lastfmTags: string | null }]>`
-    SELECT disponivel, lastfm_tags AS "lastfmTags" FROM "Disco" WHERE slug = ${slug}
-  `;
-  const t2 = Date.now();
-  console.log(`[PERF disco/${slug}] metaRow: ${t2 - t1}ms`);
   const disponivel = metaRow[0]?.disponivel ?? true;
   const artistLower = disco.artista.toLowerCase();
   const styleTags = parseStyleTags(metaRow[0]?.lastfmTags ?? null)

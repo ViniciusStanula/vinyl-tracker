@@ -2251,17 +2251,37 @@ def parse_args():
     return parser.parse_args()
 
 
-def _notify_revalidate() -> None:
-    """POST to the Next.js on-demand revalidation endpoint after a successful crawl."""
+def _notify_revalidate(last_write_at: float | None = None) -> None:
+    """POST to the Next.js on-demand revalidation endpoint after a successful crawl.
+
+    last_write_at: time.time() recorded right after the final DB commit.
+    Used to log the write→revalidate gap. If gap > 30 s, something is slow.
+    """
     import requests as _requests
 
     url = os.environ.get("REVALIDATE_URL")
     secret = os.environ.get("REVALIDATE_SECRET")
     if not url or not secret:
+        log.warning("REVALIDATE_URL or REVALIDATE_SECRET not set — skipping cache purge")
         return
     try:
+        t0 = time.time()
         resp = _requests.post(url, json={"secret": secret}, timeout=10)
-        log.info("Revalidation triggered: HTTP %s", resp.status_code)
+        elapsed_ms = int((time.time() - t0) * 1000)
+        gap_s = t0 - last_write_at if last_write_at is not None else None
+        gap_label = f" | write→notify: {gap_s:.1f}s" if gap_s is not None else ""
+        log.info(
+            "Revalidation: HTTP %s in %dms%s",
+            resp.status_code, elapsed_ms, gap_label,
+        )
+        if gap_s is not None and gap_s > 30:
+            log.warning(
+                "SLOW PIPELINE: %.1fs from last DB write to revalidate POST — "
+                "users may see stale prices during this window",
+                gap_s,
+            )
+        if resp.status_code != 200:
+            log.warning("Unexpected revalidation status %s: %s", resp.status_code, resp.text[:200])
     except Exception as exc:
         log.warning("Revalidation request failed (non-fatal): %s", exc)
 
@@ -2517,8 +2537,9 @@ def main():
                 _db_estilos = [row[0] for row in _cur.fetchall()]
             _indexnow_submit(all_items, db_estilos=_db_estilos)
     finally:
+        t_pipeline_end = time.time()
         conn.close()
-        _notify_revalidate()
+        _notify_revalidate(last_write_at=t_pipeline_end)
 
     log.info("Total runtime: %.0fs", time.monotonic() - t_start)
     log.info("Done. ✓")

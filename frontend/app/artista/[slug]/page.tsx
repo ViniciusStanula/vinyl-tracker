@@ -11,6 +11,8 @@ import { getTopStyles } from "@/lib/styleUtils";
 import { Suspense, cache } from "react";
 import { unstable_cache } from "next/cache";
 
+export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
+
 // Covers the full set of accented characters produced by slugifyArtist()'s
 // NFD normalization for Portuguese, Spanish, French, German, and other common
 // artist name origins. translate() is a built-in PostgreSQL function that

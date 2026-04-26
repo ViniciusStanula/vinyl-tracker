@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { slugifyArtist } from "@/lib/slugify";
 import { slugifyStyle } from "@/lib/styleUtils";
 
-export const revalidate = 21600; // regenerate every 6 hours
+export const revalidate = 86400; // regenerate every 24 hours — sitemap staleness is fine for SEO
 
 const base =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
