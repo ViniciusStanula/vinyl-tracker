@@ -2476,13 +2476,14 @@ def main():
                 # Exclude both Phase 1 discoveries and Phase 0 deal re-checks so
                 # we don't fetch the same product pages a second time this run.
                 seen_asins = {item["asin"] for item in all_items} | phase0_asins
-                stale_limit = args.stale_max if args.stale_max > 0 else 10_000
+                stale_limit = args.stale_max if args.stale_max > 0 else 999_999
                 stale = fetch_stale_records(conn, seen_asins, limit=stale_limit)
 
                 log.info("═" * 60)
                 log.info(
-                    "Phase 3 stale-records — %d records not seen in this run (limit %d).",
-                    len(stale), stale_limit,
+                    "Phase 3 stale-records — %d records not seen in this run (limit %s).",
+                    len(stale),
+                    stale_limit if args.stale_max > 0 else "unlimited",
                 )
 
                 if stale:

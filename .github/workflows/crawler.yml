@@ -2,7 +2,7 @@ name: Vinyl Crawler
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # every 2 hours
+    - cron: '0 */6 * * *'  # every 6 hours — safety net only; self-trigger handles continuous operation
   workflow_dispatch:        # manual trigger from the GitHub Actions UI
 
 # Prevent concurrent runs: if a previous crawl is still going when the next
@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 180   # hard ceiling (3h); crawler --time-limit 160 stops 20 min before
     permissions:
       issues: write        # needed for the "open issue on failure" step
+      actions: write       # needed to self-trigger the next run on completion
     env:
       # Opt into Node.js 24 now before it becomes mandatory on 2026-06-02.
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -34,11 +35,12 @@ jobs:
         run: pip install -r crawler/requirements.txt
 
       - name: Run crawler
-        # --stale-max 2000  increased ceiling; longer budget means Phase 3 can actually reach it.
-        # --stale-workers 4  runs Phase 0 (deal re-validation) and Phase 3 in parallel;
-        #                    cuts Phase 0 time from ~27 min to ~14 min, freeing budget for Phase 3.
+        # --stale-max 0     unlimited stale records; Phase 3 crawls until the time budget
+        #                   runs out, not until an arbitrary count is hit.
+        # --stale-workers 4 runs Phase 0 (deal re-validation) and Phase 3 in parallel;
+        #                   cuts Phase 0 time from ~27 min to ~14 min, freeing budget for Phase 3.
         # --time-limit 160  leaves a 20-min buffer before the GHA 180-min ceiling.
-        run: python crawler/main.py --max-pages 400 --stale-max 2000 --stale-workers 4 --time-limit 160
+        run: python crawler/main.py --max-pages 400 --stale-max 0 --stale-workers 4 --time-limit 160
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
@@ -60,3 +62,12 @@ jobs:
               body: `The hourly crawler workflow failed.\n\n[View run](${runUrl})`,
               labels: ['crawler-failure'],
             });
+
+      - name: Trigger next run
+        # Runs on success or failure — skipped only if the job was manually cancelled.
+        # This keeps the crawler running 24/7 with zero gap between runs.
+        # The 6-hourly schedule above is a safety net in case this step fails.
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run crawler.yml --ref ${{ github.ref_name }}
