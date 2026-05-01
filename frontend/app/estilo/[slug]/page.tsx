@@ -88,30 +88,39 @@ const _getEstiloPageData = unstable_cache(
       desconto: number;
       sparkline: unknown;
     }[]>`
-      WITH latest AS (
+      WITH candidates AS (
+        SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
+               deal_score, confidence_level, last_crawled_at
+        FROM "Disco"
+        WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
+          AND disponivel = TRUE
+      ),
+      latest AS (
         SELECT DISTINCT ON ("discoId")
           "discoId", "precoBrl"::float AS preco
         FROM "HistoricoPreco"
+        WHERE "discoId" IN (SELECT id FROM candidates)
         ORDER BY "discoId", "capturadoEm" DESC
       ),
       avgd AS (
         SELECT "discoId", AVG("precoBrl")::float AS media
         FROM "HistoricoPreco"
-        WHERE "capturadoEm" >= NOW() - INTERVAL '30 days'
+        WHERE "discoId" IN (SELECT id FROM candidates)
+          AND "capturadoEm" >= NOW() - INTERVAL '30 days'
         GROUP BY "discoId"
       )
       SELECT
-        d.id,
-        d.titulo,
-        d.artista,
-        d.slug,
-        d."imgUrl",
-        d.url,
-        d.estilo,
-        d.rating::text,
-        d.deal_score       AS "dealScore",
-        d.confidence_level AS "confidenceLevel",
-        d.last_crawled_at  AS "lastCrawledAt",
+        c.id,
+        c.titulo,
+        c.artista,
+        c.slug,
+        c."imgUrl",
+        c.url,
+        c.estilo,
+        c.rating::text,
+        c.deal_score       AS "dealScore",
+        c.confidence_level AS "confidenceLevel",
+        c.last_crawled_at  AS "lastCrawledAt",
         l.preco            AS "precoAtual",
         COALESCE(a.media, l.preco) AS "mediaPreco",
         CASE
@@ -127,18 +136,16 @@ const _getEstiloPageData = unstable_cache(
           FROM (
             SELECT "precoBrl", "capturadoEm"
             FROM "HistoricoPreco"
-            WHERE "discoId" = d.id
+            WHERE "discoId" = c.id
               AND "capturadoEm" >= NOW() - INTERVAL '30 days'
             ORDER BY "capturadoEm" ASC
             LIMIT 10
           ) sp
         ) AS sparkline
-      FROM "Disco" d
-      INNER JOIN latest l ON l."discoId" = d.id
-      LEFT  JOIN avgd   a ON a."discoId" = d.id
-      WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(d.lastfm_tags), ', '))
-        AND d.disponivel = TRUE
-      ORDER BY d.deal_score DESC NULLS LAST, desconto DESC NULLS LAST
+      FROM candidates c
+      INNER JOIN latest l ON l."discoId" = c.id
+      LEFT  JOIN avgd   a ON a."discoId" = c.id
+      ORDER BY c.deal_score DESC NULLS LAST, desconto DESC NULLS LAST
       LIMIT 96
     `;
 

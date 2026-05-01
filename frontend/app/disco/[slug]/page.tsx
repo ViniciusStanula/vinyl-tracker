@@ -189,29 +189,41 @@ export default async function DiscoPage({
   // multi-window logic rather than re-implementing a weaker inline version.
   const t3 = Date.now();
   const relatedDeals = await prisma.$queryRaw<RelatedDeal[]>`
-    WITH latest AS (
+    WITH candidates AS (
+      SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
+             deal_score, confidence_level
+      FROM "Disco"
+      WHERE id != ${disco.id}
+        AND deal_score IS NOT NULL
+        AND disponivel = TRUE
+      ORDER BY deal_score DESC, RANDOM()
+      LIMIT 4
+    ),
+    latest AS (
       SELECT DISTINCT ON ("discoId")
         "discoId", "precoBrl"::float AS preco
       FROM "HistoricoPreco"
+      WHERE "discoId" IN (SELECT id FROM candidates)
       ORDER BY "discoId", "capturadoEm" DESC
     ),
     avgd AS (
       SELECT "discoId", AVG("precoBrl")::float AS media
       FROM "HistoricoPreco"
-      WHERE "capturadoEm" >= NOW() - INTERVAL '30 days'
+      WHERE "discoId" IN (SELECT id FROM candidates)
+        AND "capturadoEm" >= NOW() - INTERVAL '30 days'
       GROUP BY "discoId"
     )
     SELECT
-      d.id,
-      d.titulo,
-      d.artista,
-      d.slug,
-      d."imgUrl",
-      d.url,
-      d.estilo,
-      d.rating,
-      d.deal_score                                         AS "dealScore",
-      d.confidence_level                                   AS "confidenceLevel",
+      c.id,
+      c.titulo,
+      c.artista,
+      c.slug,
+      c."imgUrl",
+      c.url,
+      c.estilo,
+      c.rating,
+      c.deal_score                                         AS "dealScore",
+      c.confidence_level                                   AS "confidenceLevel",
       l.preco                                              AS "precoAtual",
       COALESCE(a.media, l.preco)                           AS "mediaPreco",
       CASE
@@ -227,20 +239,15 @@ export default async function DiscoPage({
         FROM (
           SELECT "precoBrl", "capturadoEm"
           FROM   "HistoricoPreco"
-          WHERE  "discoId" = d.id
+          WHERE  "discoId" = c.id
             AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
           ORDER  BY "capturadoEm" ASC
           LIMIT  10
         ) sp
       ) AS sparkline
-    FROM "Disco" d
-    INNER JOIN latest l ON l."discoId" = d.id
-    LEFT  JOIN avgd   a ON a."discoId" = d.id
-    WHERE d.id != ${disco.id}
-      AND d.deal_score IS NOT NULL
-      AND d.disponivel = TRUE
-    ORDER BY d.deal_score DESC, RANDOM()
-    LIMIT 4
+    FROM candidates c
+    INNER JOIN latest l ON l."discoId" = c.id
+    LEFT  JOIN avgd   a ON a."discoId" = c.id
   `;
   const t4 = Date.now();
   console.log(`[PERF disco/${slug}] relatedDeals: ${t4 - t3}ms | total: ${t4 - t0}ms`);

@@ -149,16 +149,15 @@ export async function queryDiscos(params: {
           ORDER  BY "capturadoEm" DESC
           LIMIT  1
         ) hp_latest ON true
-        LEFT JOIN (
+        LEFT JOIN LATERAL (
           SELECT
-            "discoId",
             AVG("precoBrl")      AS media,
             COUNT(*)::INTEGER    AS cnt
           FROM   "HistoricoPreco"
-          WHERE  "capturadoEm" >= NOW() - INTERVAL '30 days'
+          WHERE  "discoId" = d.id
+            AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
             AND  "precoBrl" >= 30
-          GROUP  BY "discoId"
-        ) hp_avg ON hp_avg."discoId" = d.id
+        ) hp_avg ON true
         WHERE d.disponivel = TRUE ${whereSearch} ${whereArtista} ${wherePrecoMax}
       )
       SELECT
