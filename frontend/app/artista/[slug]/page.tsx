@@ -116,7 +116,10 @@ const _getArtistaPageData = unstable_cache(
 
     if (discos.length === 0) return null;
 
-    const discoIds = discos.map((d) => d.id);
+    const filteredDiscos = discos.filter((d) => d.precos.length >= 5);
+    if (filteredDiscos.length === 0) return null;
+
+    const discoIds = filteredDiscos.map((d) => d.id);
 
     const [dealMetaRows, lastfmTagsRows] = await Promise.all([
       prisma.$queryRaw<{
@@ -145,7 +148,7 @@ const _getArtistaPageData = unstable_cache(
 
     return {
       canonical,
-      discos: discos.map((d) => ({
+      discos: filteredDiscos.map((d) => ({
         id: d.id,
         asin: d.asin,
         titulo: d.titulo,

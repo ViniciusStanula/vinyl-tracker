@@ -94,6 +94,7 @@ const _getEstiloPageData = unstable_cache(
         FROM "Disco"
         WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
           AND disponivel = TRUE
+          AND price_count >= 5
       ),
       latest AS (
         SELECT DISTINCT ON ("discoId")

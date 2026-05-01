@@ -196,6 +196,7 @@ export default async function DiscoPage({
       WHERE id != ${disco.id}
         AND deal_score IS NOT NULL
         AND disponivel = TRUE
+        AND price_count >= 5
       ORDER BY deal_score DESC, RANDOM()
       LIMIT 4
     ),

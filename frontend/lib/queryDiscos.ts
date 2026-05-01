@@ -102,7 +102,9 @@ export async function queryDiscos(params: {
         ORDER  BY "capturadoEm" DESC
         LIMIT  1
       ) hp_latest ON true
-      WHERE  d.disponivel = TRUE ${whereSearch} ${whereArtista} ${wherePrecoMax}
+      WHERE  d.disponivel = TRUE
+        AND  d.price_count >= 5
+        ${whereSearch} ${whereArtista} ${wherePrecoMax}
     `,
 
     prisma.$queryRaw<DiscoRow[]>`
@@ -158,7 +160,9 @@ export async function queryDiscos(params: {
             AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
             AND  "precoBrl" >= 30
         ) hp_avg ON true
-        WHERE d.disponivel = TRUE ${whereSearch} ${whereArtista} ${wherePrecoMax}
+        WHERE d.disponivel = TRUE
+          AND d.price_count >= 5
+          ${whereSearch} ${whereArtista} ${wherePrecoMax}
       )
       SELECT
         *,

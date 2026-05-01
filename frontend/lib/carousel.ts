@@ -93,13 +93,14 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
         ORDER  BY "capturadoEm" DESC
         LIMIT  1
       ) hp_latest ON true
-      LEFT JOIN (
-        SELECT "discoId", AVG("precoBrl") AS media
+      LEFT JOIN LATERAL (
+        SELECT AVG("precoBrl") AS media
         FROM   "HistoricoPreco"
-        WHERE  "capturadoEm" >= NOW() - INTERVAL '30 days'
-        GROUP  BY "discoId"
-      ) hp_avg ON hp_avg."discoId" = d.id
+        WHERE  "discoId" = d.id
+          AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
+      ) hp_avg ON true
       WHERE  d.disponivel = TRUE
+        AND  d.price_count >= 5
         AND  d.artista = ANY(${matchedArtistas})
       ORDER  BY d.artista,
                d.deal_score DESC NULLS LAST,
