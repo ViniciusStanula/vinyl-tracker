@@ -172,11 +172,16 @@ def upsert_batch(conn, items: list[dict]) -> int:
         psycopg2.extras.execute_batch(
             cur,
             """
-            INSERT INTO "HistoricoPreco" (id, "discoId", "precoBrl", "capturadoEm")
-            SELECT gen_random_uuid(), %s, %s, %s
-            WHERE NOT EXISTS (
-                SELECT 1 FROM "Disco" WHERE id = %s AND deal_score IS NOT NULL
+            WITH ins AS (
+                INSERT INTO "HistoricoPreco" (id, "discoId", "precoBrl", "capturadoEm")
+                SELECT gen_random_uuid(), %s, %s, %s
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM "Disco" WHERE id = %s AND deal_score IS NOT NULL
+                )
+                RETURNING "discoId"
             )
+            UPDATE "Disco" SET price_count = price_count + 1
+            WHERE id IN (SELECT "discoId" FROM ins)
             """,
             preco_rows,
             page_size=500,
@@ -223,6 +228,12 @@ def ensure_schema_extras(conn) -> None:
         — UTC timestamp of the most recent crawler visit (upsert or stale-check).
           Set on every write, including price-unchanged upserts. Used by the
           frontend to suppress deal badges older than 4 hours.
+
+      Disco.price_count INTEGER
+        — Total number of HistoricoPreco rows for this disco (all time).
+          Incremented atomically via CTE on every HistoricoPreco insert.
+          Used by the frontend to filter out discos with fewer than 5
+          datapoints (price_count >= 5).
     """
     with _cursor(conn) as cur:
         # Fast path: check the catalog first. After the first successful run
@@ -234,12 +245,12 @@ def ensure_schema_extras(conn) -> None:
               AND column_name IN (
                 'disponivel','deal_score','last_flagged_at','last_flagged_price',
                 'avg_30d','avg_90d','low_30d','low_all_time','confidence_level',
-                'history_days','last_crawled_at','lastfm_tags'
+                'history_days','last_crawled_at','lastfm_tags','price_count'
               )
             """
         )
         existing = cur.fetchone()[0]
-        if existing == 12:
+        if existing == 13:
             log.debug("ensure_schema_extras: schema already complete, skipping DDL.")
             return
 
@@ -261,7 +272,8 @@ def ensure_schema_extras(conn) -> None:
                 ADD COLUMN IF NOT EXISTS confidence_level VARCHAR(30),
                 ADD COLUMN IF NOT EXISTS history_days     INTEGER,
                 ADD COLUMN IF NOT EXISTS last_crawled_at  TIMESTAMPTZ,
-                ADD COLUMN IF NOT EXISTS lastfm_tags      TEXT
+                ADD COLUMN IF NOT EXISTS lastfm_tags      TEXT,
+                ADD COLUMN IF NOT EXISTS price_count      INTEGER DEFAULT 0
             """
         )
         # Partial index for fast active-deal lookups (Phase 0 re-validation)
@@ -270,6 +282,12 @@ def ensure_schema_extras(conn) -> None:
             CREATE INDEX IF NOT EXISTS "Disco_deal_score_idx"
                 ON "Disco" (deal_score)
                 WHERE deal_score IS NOT NULL
+            """
+        )
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS "Disco_price_count_idx"
+                ON "Disco" (price_count)
             """
         )
     conn.commit()
@@ -373,6 +391,7 @@ def mark_stale_price(
             """
             UPDATE "Disco"
             SET disponivel      = TRUE,
+                price_count     = price_count + 1,
                 "reviewCount"   = COALESCE(%s, "reviewCount"),
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
