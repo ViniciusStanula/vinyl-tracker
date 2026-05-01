@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-05-01 — Continuous crawler operation + stale-phase record cap removed
+
+### Problem 1 — stale phase stopped at an arbitrary record count
+
+`main.py` had a hardcoded fallback of `10_000` records when `--stale-max 0`
+(unlimited) was passed. With 9,500+ discos and growing, Phase 3 could hit
+that ceiling and leave the remaining time budget idle — even though the
+deadline mechanism was already in place to stop processing gracefully.
+
+**Fix (`crawler/main.py`):**
+- Fallback changed from `10_000` → `999_999`
+- Phase 3 now fetches all stale records and relies solely on the existing
+  deadline (`phase3_deadline = hard_deadline − 10 min`) to stop gracefully
+- Log message updated: shows `"unlimited"` instead of `999999` when
+  `--stale-max 0` is used
+- Workflow updated: `--stale-max 2000` → `--stale-max 0`
+
+### Problem 2 — 2-hour gaps between crawler runs
+
+The workflow ran on a `0 */2 * * *` cron schedule, leaving up to 2 hours
+of crawl capacity unused per cycle.
+
+**Fix (`.github/workflows/crawler.yml`):**
+
+| Change | Detail |
+|--------|--------|
+| Self-trigger step added | Final step runs `gh workflow run crawler.yml` via GitHub CLI on job completion (success or failure). Skipped only on manual cancel. |
+| `actions: write` permission added | Required for the built-in `GITHUB_TOKEN` to trigger new workflow runs |
+| Schedule changed to `0 */6 * * *` | Cron is now a 6-hour safety net only; under normal operation the self-trigger handles continuity |
+
+**Result:** ~30–60 second gap between runs instead of up to 2 hours.
+Crawler runs 24/7 back-to-back, maximising records crawled per day.
+
+---
+
 ## 2026-05-01 — Query performance overhaul + 5-datapoint minimum filter
 
 ### Problem
