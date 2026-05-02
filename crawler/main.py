@@ -37,6 +37,7 @@ from database import (
     fetch_stale_records,
     mark_stale_price,
     mark_unavailable,
+    delete_record,
 )
 from bs4 import BeautifulSoup
 from deal_scorer import score_deals
@@ -416,6 +417,14 @@ _VINYL_LABEL_RE = re.compile(r"vinil|vinyl", re.IGNORECASE)
 
 _CD_RE = re.compile(
     r"\bcd\b|\[cd\]|\(cd\)|compact disc|\bcd\s*\d",
+    re.IGNORECASE,
+)
+# Positive signal that a product-page title names a confirmed non-vinyl format.
+# Only formats where the title leaves no ambiguity (CD, cassette/fita cassete).
+# Does NOT include "no vinyl keyword" — many vinyl titles omit the word entirely.
+_CONFIRMED_NON_VINYL_RE = re.compile(
+    r"\bcd\b|\[cd\]|\(cd\)|compact disc|\bcd\s*\d"
+    r"|\bcassete\b|\bcassette\b|\bfita\s+cassete\b",
     re.IGNORECASE,
 )
 _VINYL_TITLE_RE = re.compile(
@@ -1399,6 +1408,65 @@ def fetch_catalog_discovery(
 
 
 # ─────────────────────────────────────────────────────────────
+#  Stale-phase format + condition guards
+# ─────────────────────────────────────────────────────────────
+
+def _is_confirmed_non_vinyl(soup) -> bool:
+    """
+    Returns True only when a product page gives an unambiguous signal that
+    this ASIN is NOT a vinyl record.
+
+    Two checks, both required to be conservative (avoid false deletes):
+
+    1. Title contains a hard non-vinyl format keyword (CD, cassete/cassette).
+       "No vinyl keyword" is NOT enough — many vinyl titles omit the word.
+
+    2. (If a format switcher is present) every swatch is non-vinyl AND at
+       least one swatch is explicitly a non-vinyl format.  This catches pages
+       where the title is neutral but the product is offered only as CD/MP3.
+       Skipped when #tmmSwatches is absent (single-format page — title check
+       is the sole gate).
+    """
+    title_el = soup.select_one("#productTitle")
+    title = title_el.get_text(strip=True) if title_el else ""
+
+    if title and _CONFIRMED_NON_VINYL_RE.search(title):
+        log.debug("_is_confirmed_non_vinyl: title match — %r", title[:80])
+        return True
+
+    # Format-switcher check: if every swatch is non-vinyl, this ASIN has no
+    # vinyl offer at all.  Require at least one swatch to avoid triggering on
+    # pages where #tmmSwatches renders empty shells.
+    swatches = soup.select("#tmmSwatches .swatchElement")
+    if swatches:
+        has_vinyl_swatch = any(
+            _VINYL_LABEL_RE.search(s.get_text(" ", strip=True))
+            for s in swatches
+        )
+        if not has_vinyl_swatch:
+            log.debug(
+                "_is_confirmed_non_vinyl: format switcher present, zero vinyl swatches"
+                " (%d swatches total)",
+                len(swatches),
+            )
+            return True
+
+    return False
+
+
+def _is_used_condition(soup) -> bool:
+    """
+    Returns True only when #usedOnlyBuybox is present, meaning Amazon is
+    showing exclusively a used offer with no new option available.
+
+    Deliberately narrow: does NOT fire when a used accordion section appears
+    alongside a new/qualified buy box — that would risk deleting vinyl records
+    that happen to have a used offer listed in addition to a new one.
+    """
+    return bool(soup.select_one("#usedOnlyBuybox"))
+
+
+# ─────────────────────────────────────────────────────────────
 #  Extraction
 # ─────────────────────────────────────────────────────────────
 def extract_title(card) -> str:
@@ -2154,27 +2222,44 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
     elif soup is None:
         result["outcome"] = "error"
     else:
-        price, in_stock, review_count = parse_product_page(soup)
-        if not in_stock:
-            result["outcome"] = "unavailable"
-        elif price is None:
-            # Full page received (passed #ppd check) but price extraction still
-            # returned None — genuine parse failure: unqualified buy-box, vinyl OOS
-            # on a multi-format page, or wrong swatch selected with no TMM price.
-            # The scraped price in our DB is likely for a different format (e.g. CD),
-            # so mark unavailable to hide stale/wrong data until the category crawl
-            # re-discovers this product with a confirmed vinyl price.
+        # ── Format + condition guards (checked before price extraction) ──────
+        # These run only on fully-rendered pages (#ppd present, passed bot check).
+        if _is_confirmed_non_vinyl(soup):
             log.warning(
-                "[DEAL-CLEARED] ASIN %s — full page received but vinyl price "
-                "could not be confirmed (unqualified buy-box / vinyl OOS / "
-                "wrong swatch). Marking unavailable.",
+                "[DELETE] ASIN %s — confirmed non-vinyl format on product page."
+                " Deleting record.",
                 record["asin"],
             )
-            result["outcome"] = "deal_cleared"
+            result["outcome"] = "non_vinyl"
+        elif _is_used_condition(soup):
+            log.warning(
+                "[DELETE] ASIN %s — #usedOnlyBuybox present, no new offer."
+                " Deleting record.",
+                record["asin"],
+            )
+            result["outcome"] = "used_condition"
         else:
-            result["outcome"] = "updated"
-            result["price"] = price
-            result["review_count"] = review_count
+            price, in_stock, review_count = parse_product_page(soup)
+            if not in_stock:
+                result["outcome"] = "unavailable"
+            elif price is None:
+                # Full page received (passed #ppd check) but price extraction still
+                # returned None — genuine parse failure: unqualified buy-box, vinyl OOS
+                # on a multi-format page, or wrong swatch selected with no TMM price.
+                # The scraped price in our DB is likely for a different format (e.g. CD),
+                # so mark unavailable to hide stale/wrong data until the category crawl
+                # re-discovers this product with a confirmed vinyl price.
+                log.warning(
+                    "[DEAL-CLEARED] ASIN %s — full page received but vinyl price "
+                    "could not be confirmed (unqualified buy-box / vinyl OOS / "
+                    "wrong swatch). Marking unavailable.",
+                    record["asin"],
+                )
+                result["outcome"] = "deal_cleared"
+            else:
+                result["outcome"] = "updated"
+                result["price"] = price
+                result["review_count"] = review_count
 
     # Per-worker delay so the combined request rate stays at ≤ max_workers/delay req/s.
     time.sleep(_human_delay(delay))
@@ -2208,7 +2293,7 @@ def crawl_stale_records(
     """
     _stale_abort.clear()
     now = datetime.now(timezone.utc)
-    updated = unavailable = deals_cleared = errors = 0
+    updated = unavailable = deals_cleared = deleted = errors = 0
     total = len(stale)
 
     log.info("Stale-records: %d records, %d parallel workers", total, max_workers)
@@ -2288,6 +2373,10 @@ def crawl_stale_records(
                 if not dry_run:
                     mark_unavailable(conn, disco_id)
                 deals_cleared += 1
+            elif outcome in ("non_vinyl", "used_condition"):
+                if not dry_run:
+                    delete_record(conn, disco_id, asin)
+                deleted += 1
             elif outcome == "skipped":
                 skipped += 1
             else:
@@ -2295,8 +2384,8 @@ def crawl_stale_records(
 
     log.info(
         "Stale-records check done — %d updated | %d unavailable | %d deals_cleared"
-        " | %d skipped | %d errors",
-        updated, unavailable, deals_cleared, skipped, errors,
+        " | %d deleted | %d skipped | %d errors",
+        updated, unavailable, deals_cleared, deleted, skipped, errors,
     )
     return updated, unavailable, errors
 

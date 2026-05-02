@@ -445,6 +445,25 @@ def mark_unavailable(conn, disco_id: str) -> None:
     conn.commit()
 
 
+def delete_record(conn, disco_id: str, asin: str) -> None:
+    """
+    Permanently removes a Disco record and all dependent data.
+
+    Deletion order:
+      1. bot_pending / bot_sent — reference asin TEXT, no FK cascade.
+      2. Disco — cascades to HistoricoPreco (onDelete: Cascade) and
+                 DiscoCategorias (ON DELETE CASCADE) automatically.
+
+    Called when the stale phase confirms a record is either a non-vinyl
+    format (CD, cassette) or a used-only listing with no new offer.
+    """
+    with _cursor(conn) as cur:
+        cur.execute("DELETE FROM bot_pending WHERE asin = %s", (asin,))
+        cur.execute("DELETE FROM bot_sent    WHERE asin = %s", (asin,))
+        cur.execute('DELETE FROM "Disco"     WHERE id   = %s', (disco_id,))
+    conn.commit()
+
+
 def ensure_category_tables(conn, category_seed: list[tuple[str, str]]) -> None:
     """
     Idempotently creates the Categoria and DiscoCategorias tables and seeds
