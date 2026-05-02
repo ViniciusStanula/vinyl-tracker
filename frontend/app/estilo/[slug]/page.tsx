@@ -90,25 +90,11 @@ const _getEstiloPageData = unstable_cache(
     }[]>`
       WITH candidates AS (
         SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
-               deal_score, confidence_level, last_crawled_at
+               deal_score, confidence_level, last_crawled_at, avg_30d
         FROM "Disco"
         WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
           AND disponivel = TRUE
           AND price_count >= 5
-      ),
-      latest AS (
-        SELECT DISTINCT ON ("discoId")
-          "discoId", "precoBrl"::float AS preco
-        FROM "HistoricoPreco"
-        WHERE "discoId" IN (SELECT id FROM candidates)
-        ORDER BY "discoId", "capturadoEm" DESC
-      ),
-      avgd AS (
-        SELECT "discoId", AVG("precoBrl")::float AS media
-        FROM "HistoricoPreco"
-        WHERE "discoId" IN (SELECT id FROM candidates)
-          AND "capturadoEm" >= NOW() - INTERVAL '30 days'
-        GROUP BY "discoId"
       )
       SELECT
         c.id,
@@ -122,11 +108,12 @@ const _getEstiloPageData = unstable_cache(
         c.deal_score       AS "dealScore",
         c.confidence_level AS "confidenceLevel",
         c.last_crawled_at  AS "lastCrawledAt",
-        l.preco            AS "precoAtual",
-        COALESCE(a.media, l.preco) AS "mediaPreco",
+        hp_latest.preco                                        AS "precoAtual",
+        COALESCE(c.avg_30d::float, hp_latest.preco)           AS "mediaPreco",
         CASE
-          WHEN COALESCE(a.media, 0) > 0
-          THEN (COALESCE(a.media, l.preco) - l.preco) / COALESCE(a.media, l.preco)
+          WHEN COALESCE(c.avg_30d::float, 0) > 0
+          THEN (COALESCE(c.avg_30d::float, hp_latest.preco) - hp_latest.preco)
+               / COALESCE(c.avg_30d::float, hp_latest.preco)
           ELSE 0
         END AS desconto,
         (
@@ -144,8 +131,13 @@ const _getEstiloPageData = unstable_cache(
           ) sp
         ) AS sparkline
       FROM candidates c
-      INNER JOIN latest l ON l."discoId" = c.id
-      LEFT  JOIN avgd   a ON a."discoId" = c.id
+      INNER JOIN LATERAL (
+        SELECT "precoBrl"::float AS preco
+        FROM "HistoricoPreco"
+        WHERE "discoId" = c.id
+        ORDER BY "capturadoEm" DESC
+        LIMIT 1
+      ) hp_latest ON true
       ORDER BY c.deal_score DESC NULLS LAST, desconto DESC NULLS LAST
       LIMIT 96
     `;

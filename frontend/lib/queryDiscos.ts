@@ -125,8 +125,8 @@ export async function queryDiscos(params: {
           d.last_crawled_at   AS "lastCrawledAt",
           d.lastfm_tags       AS "lastfmTags",
           hp_latest."precoBrl"                              AS "precoAtual",
-          COALESCE(hp_avg.media, hp_latest."precoBrl")      AS "mediaPreco",
-          COALESCE(hp_avg.cnt, 0)::INTEGER                  AS "totalPrecos",
+          COALESCE(d.avg_30d::float, hp_latest."precoBrl")  AS "mediaPreco",
+          d.price_count::INTEGER                            AS "totalPrecos",
           (
             SELECT COALESCE(
               json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"),
@@ -151,15 +151,6 @@ export async function queryDiscos(params: {
           ORDER  BY "capturadoEm" DESC
           LIMIT  1
         ) hp_latest ON true
-        LEFT JOIN LATERAL (
-          SELECT
-            AVG("precoBrl")      AS media,
-            COUNT(*)::INTEGER    AS cnt
-          FROM   "HistoricoPreco"
-          WHERE  "discoId" = d.id
-            AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
-            AND  "precoBrl" >= 30
-        ) hp_avg ON true
         WHERE d.disponivel = TRUE
           AND d.price_count >= 5
           ${whereSearch} ${whereArtista} ${wherePrecoMax}

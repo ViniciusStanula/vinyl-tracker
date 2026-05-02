@@ -72,8 +72,8 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
         d.confidence_level        AS "confidenceLevel",
         d.last_crawled_at         AS "lastCrawledAt",
         d.lastfm_tags             AS "lastfmTags",
-        hp_latest."precoBrl"                               AS "precoAtual",
-        COALESCE(hp_avg.media, hp_latest."precoBrl")       AS "mediaPreco",
+        hp_latest."precoBrl"                                          AS "precoAtual",
+        COALESCE(d.avg_30d::float, hp_latest."precoBrl")              AS "mediaPreco",
         (
           SELECT COALESCE(json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"), '[]'::json)
           FROM (
@@ -93,19 +93,13 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
         ORDER  BY "capturadoEm" DESC
         LIMIT  1
       ) hp_latest ON true
-      LEFT JOIN LATERAL (
-        SELECT AVG("precoBrl") AS media
-        FROM   "HistoricoPreco"
-        WHERE  "discoId" = d.id
-          AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
-      ) hp_avg ON true
       WHERE  d.disponivel = TRUE
         AND  d.price_count >= 5
         AND  d.artista = ANY(${matchedArtistas})
       ORDER  BY d.artista,
                d.deal_score DESC NULLS LAST,
-               (COALESCE(hp_avg.media, hp_latest."precoBrl") - hp_latest."precoBrl")
-               / NULLIF(COALESCE(hp_avg.media, hp_latest."precoBrl"), 0) DESC NULLS LAST
+               (COALESCE(d.avg_30d::float, hp_latest."precoBrl") - hp_latest."precoBrl")
+               / NULLIF(COALESCE(d.avg_30d::float, hp_latest."precoBrl"), 0) DESC NULLS LAST
     )
     SELECT
       *,
