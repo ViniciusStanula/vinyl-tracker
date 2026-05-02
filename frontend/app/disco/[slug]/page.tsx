@@ -191,7 +191,7 @@ export default async function DiscoPage({
   const relatedDeals = await prisma.$queryRaw<RelatedDeal[]>`
     WITH candidates AS (
       SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
-             deal_score, confidence_level
+             deal_score, confidence_level, avg_30d
       FROM "Disco"
       WHERE id != ${disco.id}
         AND deal_score IS NOT NULL
@@ -206,13 +206,6 @@ export default async function DiscoPage({
       FROM "HistoricoPreco"
       WHERE "discoId" IN (SELECT id FROM candidates)
       ORDER BY "discoId", "capturadoEm" DESC
-    ),
-    avgd AS (
-      SELECT "discoId", AVG("precoBrl")::float AS media
-      FROM "HistoricoPreco"
-      WHERE "discoId" IN (SELECT id FROM candidates)
-        AND "capturadoEm" >= NOW() - INTERVAL '30 days'
-      GROUP BY "discoId"
     )
     SELECT
       c.id,
@@ -226,10 +219,10 @@ export default async function DiscoPage({
       c.deal_score                                         AS "dealScore",
       c.confidence_level                                   AS "confidenceLevel",
       l.preco                                              AS "precoAtual",
-      COALESCE(a.media, l.preco)                           AS "mediaPreco",
+      COALESCE(c.avg_30d::float, l.preco)                  AS "mediaPreco",
       CASE
-        WHEN COALESCE(a.media, 0) > 0
-        THEN (COALESCE(a.media, l.preco) - l.preco) / COALESCE(a.media, l.preco)
+        WHEN COALESCE(c.avg_30d::float, 0) > 0
+        THEN (COALESCE(c.avg_30d::float, l.preco) - l.preco) / COALESCE(c.avg_30d::float, l.preco)
         ELSE 0
       END                                                  AS desconto,
       (
@@ -248,7 +241,6 @@ export default async function DiscoPage({
       ) AS sparkline
     FROM candidates c
     INNER JOIN latest l ON l."discoId" = c.id
-    LEFT  JOIN avgd   a ON a."discoId" = c.id
   `;
   const t4 = Date.now();
   console.log(`[PERF disco/${slug}] relatedDeals: ${t4 - t3}ms | total: ${t4 - t0}ms`);
