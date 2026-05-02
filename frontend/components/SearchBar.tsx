@@ -60,7 +60,9 @@ export default function SearchBar() {
 
       <input
         ref={inputRef}
+        id="site-search"
         type="search"
+        aria-label="Buscar discos de vinil"
         placeholder="Busque por artista, álbum ou código..."
         defaultValue={searchParams.get("q") ?? ""}
         onChange={handleChange}

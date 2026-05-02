@@ -105,8 +105,12 @@ export default memo(function DiscoCard({
             loading={priority ? undefined : "lazy"}
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-patina text-5xl select-none">
-            ♪
+          <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" className="w-12 h-12 text-patina opacity-60">
+              <path d="M18 34V16l18-4v18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="14" cy="34" r="4" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="32" cy="30" r="4" stroke="currentColor" strokeWidth="2"/>
+            </svg>
           </div>
         )}
 
@@ -122,17 +126,17 @@ export default memo(function DiscoCard({
 
         {/* Deal tier badges — bottom-left, clear of the discount badge */}
         {dealScore === 3 && (
-          <div className="absolute bottom-2 left-2 z-20 bg-gold text-record text-[10px] font-black px-2 py-0.5 rounded-md shadow-md flex items-center gap-1">
+          <div className="absolute bottom-2 left-2 z-20 bg-gold text-record text-xs font-black px-2 py-0.5 rounded-md shadow-md flex items-center gap-1">
             ✦ Melhor Preço
           </div>
         )}
         {dealScore === 2 && (
-          <div className="absolute bottom-2 left-2 z-20 bg-deal text-cream text-[10px] font-bold px-2 py-0.5 rounded-md shadow-md">
+          <div className="absolute bottom-2 left-2 z-20 bg-deal text-cream text-xs font-bold px-2 py-0.5 rounded-md shadow-md">
             ✓ Ótima Oferta
           </div>
         )}
         {dealScore === 1 && (
-          <div className="absolute bottom-2 left-2 z-20 bg-record/70 text-parchment text-[10px] font-medium px-2 py-0.5 rounded-md border border-wax/60 backdrop-blur-sm">
+          <div className="absolute bottom-2 left-2 z-20 bg-record/70 text-parchment text-xs font-medium px-2 py-0.5 rounded-md border border-wax/60 backdrop-blur-sm">
             Boa Oferta
           </div>
         )}
@@ -187,7 +191,7 @@ export default memo(function DiscoCard({
 
           {/* Low-confidence warning */}
           {confidenceLevel === "low_confidence" && dealScore !== null && (
-            <p className="text-[10px] mt-0.5 text-goldmute">
+            <p className="text-xs mt-0.5 text-goldmute">
               ⚠ Poucos dados disponíveis
             </p>
           )}

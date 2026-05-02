@@ -15,7 +15,7 @@ export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
 const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";
 
-type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
+type Sort = "deals" | "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
 
 type SerializedEstiloData = {
   canonical: string;
@@ -342,6 +342,8 @@ export default async function EstiloPage({
 
   const sorted = [...filtrados].sort((a, b) => {
     switch (sort as Sort) {
+      case "deals":
+        return (b.dealScore ?? -1) - (a.dealScore ?? -1) || b.desconto - a.desconto;
       case "menor-preco":
         return a.precoAtual - b.precoAtual;
       case "maior-preco":

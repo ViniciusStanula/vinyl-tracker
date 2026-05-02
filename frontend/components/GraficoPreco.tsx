@@ -245,7 +245,7 @@ export default function GraficoPreco({ precos }: Props) {
             <span className="text-parchment">{hovered.dataFull}</span>
           </>
         ) : (
-          <span className="text-ash">Toque ou passe o mouse para ver o valor</span>
+          <span className="text-dust">Toque ou passe o mouse para ver o valor</span>
         )}
       </div>
     </div>

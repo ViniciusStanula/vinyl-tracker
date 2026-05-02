@@ -20,7 +20,7 @@ export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
 const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";
 
-type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
+type Sort = "deals" | "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
 
 type SerializedPageData = {
   canonical: string;
@@ -306,6 +306,8 @@ export default async function ArtistaPage({
   // Apply sort
   const sorted = [...filtrados].sort((a, b) => {
     switch (sort as Sort) {
+      case "deals":
+        return (b.dealScore ?? -1) - (a.dealScore ?? -1) || b.desconto - a.desconto;
       case "menor-preco":
         return a.precoAtual - b.precoAtual;
       case "maior-preco":
@@ -397,7 +399,15 @@ export default async function ArtistaPage({
           <p className="font-display text-parchment text-lg font-semibold mb-2">
             Nenhum disco encontrado
           </p>
-          <p className="text-dust text-sm">Tente ajustar os filtros.</p>
+          <p className="text-dust text-sm mb-4">Tente ajustar os filtros.</p>
+          {(precoMax !== null || sort !== "desconto") && (
+            <Link
+              href={`/artista/${slug}`}
+              className="inline-flex items-center gap-2 bg-groove hover:bg-wax text-parchment text-sm px-5 py-2 rounded-full transition-colors border border-wax/60"
+            >
+              Limpar filtros
+            </Link>
+          )}
         </div>
       )}
 

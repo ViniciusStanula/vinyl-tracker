@@ -462,23 +462,23 @@ export default async function DiscoPage({
         <div className="grid grid-cols-2 gap-3 mb-5">
           {/* Mínimo */}
           <div className="bg-groove rounded-lg p-3 border-l-4 border-deal">
-            <p className="text-[11px] text-dust mb-1 flex items-center gap-1">
-              Mínimo <span className="text-deallit text-[10px] font-bold">↓</span>
+            <p className="text-xs text-dust mb-1 flex items-center gap-1">
+              Mínimo <span className="text-deallit text-xs font-bold">↓</span>
             </p>
             <p className="font-bold text-deallit text-sm tabular-nums">{fmt(precoMin)}</p>
             {minRecord && (
-              <p className="text-[10px] text-dust mt-0.5">{fmtDateTime(minRecord.capturadoEm)}</p>
+              <p className="text-xs text-dust mt-0.5">{fmtDateTime(minRecord.capturadoEm)}</p>
             )}
           </div>
 
           {/* Máximo */}
           <div className="bg-groove rounded-lg p-3 border-l-4 border-cut">
-            <p className="text-[11px] text-dust mb-1 flex items-center gap-1">
-              Máximo <span className="text-cut text-[10px] font-bold">↑</span>
+            <p className="text-xs text-dust mb-1 flex items-center gap-1">
+              Máximo <span className="text-cut text-xs font-bold">↑</span>
             </p>
             <p className="font-bold text-cut text-sm tabular-nums">{fmt(precoMax)}</p>
             {maxRecord && (
-              <p className="text-[10px] text-dust mt-0.5">{fmtDateTime(maxRecord.capturadoEm)}</p>
+              <p className="text-xs text-dust mt-0.5">{fmtDateTime(maxRecord.capturadoEm)}</p>
             )}
           </div>
         </div>
@@ -494,7 +494,7 @@ export default async function DiscoPage({
             <div className="mt-3 max-h-52 overflow-y-auto">
               <table className="w-full text-xs text-left">
                 <thead>
-                  <tr className="text-ash border-b border-groove">
+                  <tr className="text-dust border-b border-groove">
                     <th className="pb-2 font-medium">Data</th>
                     <th className="pb-2 font-medium text-right">Preço</th>
                     <th className="pb-2 font-medium text-right">Variação</th>

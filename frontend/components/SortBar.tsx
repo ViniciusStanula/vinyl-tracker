@@ -59,22 +59,32 @@ export default function SortBar() {
 
         {/* ── Price range ── */}
         <div className="flex items-center gap-3">
-          <span className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0">
+          <label
+            htmlFor="preco-range"
+            className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0 cursor-pointer"
+          >
             Preço
-          </span>
+          </label>
           <input
+            id="preco-range"
             type="range"
             min={0}
             max={PRECO_MAX}
             step={50}
             value={sliderValue}
+            aria-label="Preço máximo"
+            aria-valuetext={
+              sliderValue >= PRECO_MAX
+                ? "Até R$ 1.000"
+                : `Até R$ ${sliderValue.toLocaleString("pt-BR")}`
+            }
             onChange={(e) => setSliderValue(Number(e.target.value))}
             onPointerUp={(e) =>
               commitPreco(Number((e.target as HTMLInputElement).value))
             }
             className="w-24 sm:w-44 accent-gold cursor-pointer"
           />
-          <span className="text-xs sm:text-sm text-cream font-semibold w-[5rem] sm:w-[6.5rem] shrink-0 tabular-nums">
+          <span className="text-xs sm:text-sm text-cream font-semibold w-[5rem] sm:w-[6.5rem] shrink-0 tabular-nums" aria-hidden="true">
             {sliderValue >= PRECO_MAX
               ? "Até R$ 1.000"
               : `Até R$ ${sliderValue.toLocaleString("pt-BR")}`}
@@ -86,10 +96,14 @@ export default function SortBar() {
 
         {/* ── Sort ── */}
         <div className="flex items-center gap-2.5">
-          <span className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0">
+          <label
+            htmlFor="sort-select"
+            className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0 cursor-pointer"
+          >
             Ordenar
-          </span>
+          </label>
           <select
+            id="sort-select"
             value={current}
             onChange={(e) => handleSort(e.target.value)}
             className="bg-groove text-cream text-sm border border-wax/60 rounded-lg px-3 py-1.5 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 cursor-pointer transition-colors"

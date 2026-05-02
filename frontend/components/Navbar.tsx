@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Suspense } from "react";
+import { usePathname } from "next/navigation";
 import SearchBar from "./SearchBar";
 
 function VinylLogo() {
@@ -23,6 +26,8 @@ function VinylLogo() {
 }
 
 export default function Navbar() {
+  const pathname = usePathname();
+
   return (
     <nav className="sticky top-0 z-50 bg-record/95 backdrop-blur-md border-b border-groove/60">
       <div className="max-w-7xl mx-auto px-4 h-[62px] flex items-center gap-2 sm:gap-5">
@@ -50,7 +55,12 @@ export default function Navbar() {
         {/* ── Nav links ── */}
         <Link
           href="/sobre"
-          className="shrink-0 text-dust hover:text-gold text-sm transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center sm:min-w-0 sm:min-h-0 sm:inline"
+          aria-current={pathname === "/sobre" ? "page" : undefined}
+          className={`shrink-0 text-sm transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center sm:min-w-0 sm:min-h-0 sm:inline ${
+            pathname === "/sobre"
+              ? "text-cream font-semibold"
+              : "text-dust hover:text-gold"
+          }`}
         >
           Sobre
         </Link>

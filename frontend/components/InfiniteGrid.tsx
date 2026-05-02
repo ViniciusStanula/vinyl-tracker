@@ -144,7 +144,7 @@ export default function InfiniteGrid({
 
       {/* Infinite scroll: sentinel + status */}
       {mode === "infinite" && (
-        <div ref={sentinelRef} className="mt-10 text-center h-px" aria-hidden="true">
+        <div ref={sentinelRef} className="mt-10 text-center min-h-[2rem]" aria-hidden="true">
           {loading && (
             <p className="text-dust text-sm animate-pulse">
               Carregando mais discos…
