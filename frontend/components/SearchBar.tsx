@@ -72,7 +72,7 @@ export default function SearchBar() {
 
       <button
         onClick={handleBuscar}
-        className="shrink-0 bg-gold hover:bg-goldlit text-record font-bold text-sm px-5 rounded-r-full transition-colors cursor-pointer"
+        className="shrink-0 bg-gold hover:bg-goldlit text-record font-bold text-sm px-3 sm:px-5 rounded-r-full transition-colors cursor-pointer"
         aria-label="Buscar"
       >
         Buscar

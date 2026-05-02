@@ -25,7 +25,7 @@ function VinylLogo() {
 export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 bg-record/95 backdrop-blur-md border-b border-groove/60">
-      <div className="max-w-7xl mx-auto px-4 h-[62px] flex items-center gap-5">
+      <div className="max-w-7xl mx-auto px-4 h-[62px] flex items-center gap-2 sm:gap-5">
 
         {/* ── Brand ── */}
         <Link href="/" className="flex items-center gap-3 shrink-0 group">
@@ -41,7 +41,7 @@ export default function Navbar() {
         </Link>
 
         {/* ── Search ── */}
-        <div className="flex-1 max-w-2xl">
+        <div className="flex-1 min-w-0 max-w-2xl">
           <Suspense>
             <SearchBar />
           </Suspense>

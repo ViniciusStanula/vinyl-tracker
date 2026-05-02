@@ -72,9 +72,9 @@ export default function SortBar() {
             onPointerUp={(e) =>
               commitPreco(Number((e.target as HTMLInputElement).value))
             }
-            className="w-32 sm:w-44 accent-gold cursor-pointer"
+            className="w-24 sm:w-44 accent-gold cursor-pointer"
           />
-          <span className="text-sm text-cream font-semibold w-[6.5rem] shrink-0 tabular-nums">
+          <span className="text-xs sm:text-sm text-cream font-semibold w-[5rem] sm:w-[6.5rem] shrink-0 tabular-nums">
             {sliderValue >= PRECO_MAX
               ? "Até R$ 1.000"
               : `Até R$ ${sliderValue.toLocaleString("pt-BR")}`}
