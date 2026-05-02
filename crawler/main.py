@@ -714,6 +714,56 @@ class ProxyPool:
 _proxy_pool: ProxyPool | None = None
 
 
+# ─────────────────────────────────────────────────────────────
+#  Circuit breaker + bot-detection stats
+# ─────────────────────────────────────────────────────────────
+_CIRCUIT_BREAKER_THRESHOLD = 3  # consecutive per-thread bot-detection failures → abort
+
+# Set by _fetch_one_stale when a worker hits the threshold; cleared at the start
+# of each crawl_stale_records call so Phase 0 and Phase 3 each get a clean slate.
+_stale_abort = _threading.Event()
+
+
+class _BotStats:
+    """Thread-safe per-run bot-detection counters."""
+
+    _KEYS = (
+        "listing_block",    # safe_get: HTTP 403/429/503
+        "listing_captcha",  # safe_get: CAPTCHA string matched
+        "product_block",    # fetch_product_page: HTTP 403/429/503
+        "product_captcha",  # fetch_product_page: CAPTCHA string matched
+        "product_skeleton", # fetch_product_page: skeleton page (no #ppd)
+    )
+
+    def __init__(self) -> None:
+        self._lock = _threading.Lock()
+        self._counts: dict[str, int] = dict.fromkeys(self._KEYS, 0)
+
+    def reset(self) -> None:
+        with self._lock:
+            for k in self._KEYS:
+                self._counts[k] = 0
+
+    def inc(self, key: str) -> None:
+        with self._lock:
+            self._counts[key] += 1
+
+    def snapshot(self) -> dict[str, int]:
+        with self._lock:
+            return dict(self._counts)
+
+
+_bot_stats = _BotStats()
+
+
+def _bot_phase_summary(before: dict[str, int], after: dict[str, int]) -> str:
+    """Return compact bot-detection summary for events between two snapshots."""
+    delta = {k: after[k] - before[k] for k in after if after[k] > before[k]}
+    if not delta:
+        return "none"
+    return " | ".join(f"{k}={v}" for k, v in delta.items())
+
+
 def get_proxy_pool() -> ProxyPool:
     global _proxy_pool
     if _proxy_pool is None:
@@ -814,6 +864,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
                     "[safe_get] Rate-limited %s proxy=%s size=%d — backing off",
                     resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
                 )
+                _bot_stats.inc("listing_block")
                 pool.report_block(proxy)
                 time.sleep(random.uniform(6, 12))
                 proxy = pool.acquire()
@@ -839,6 +890,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
                 "[safe_get] CAPTCHA detected proxy=%s size=%d — rotating session",
                 _mask_proxy(proxy) if proxy else "none", size,
             )
+            _bot_stats.inc("listing_captcha")
             pool.report_block(proxy)
             proxy = pool.acquire()
             session, _ = make_session(proxy=proxy)
@@ -932,6 +984,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                     "[fetch_product] Rate-limited %s proxy=%s size=%d — backing off",
                     resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
                 )
+                _bot_stats.inc("product_block")
                 pool.report_block(proxy)
                 time.sleep(random.uniform(6, 12))
                 proxy = pool.acquire()
@@ -956,6 +1009,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 "[BOT-DETECTED] CAPTCHA proxy=%s size=%d — %s (attempt %d)",
                 _mask_proxy(proxy) if proxy else "none", size, url[:80], attempt,
             )
+            _bot_stats.inc("product_captcha")
             pool.report_block(proxy)
             return None, None, session, proxy
 
@@ -972,6 +1026,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 "Session will be rotated; deal score preserved.",
                 _mask_proxy(proxy) if proxy else "none", size, url[:80],
             )
+            _bot_stats.inc("product_skeleton")
             pool.report_block(proxy)
             return None, None, session, proxy
 
@@ -2047,6 +2102,9 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
     if deadline is not None and time.monotonic() >= deadline:
         return {"record": record, "outcome": "skipped", "price": None, "review_count": None}
 
+    if _stale_abort.is_set():
+        return {"record": record, "outcome": "skipped", "price": None, "review_count": None}
+
     # Stagger worker starts so they don't all fire simultaneously.
     time.sleep(worker_idx * random.uniform(1.0, 2.0))
 
@@ -2073,12 +2131,21 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
     _tl.proxy   = proxy
 
     if soup is not None:
-        # Successful fetch — increment hit counter.
+        # Successful fetch — increment hit counter and reset failure streak.
         _tl.hit_count = getattr(_tl, "hit_count", 0) + 1
+        _tl.consecutive_failures = 0
     elif status is None:
         # Bot-detection (CAPTCHA or skeleton page): discard session so the next
         # task gets a fresh warmed one.
         _invalidate_worker_session()
+        _tl.consecutive_failures = getattr(_tl, "consecutive_failures", 0) + 1
+        if _tl.consecutive_failures >= _CIRCUIT_BREAKER_THRESHOLD:
+            log.warning(
+                "[circuit-breaker] Worker %d: %d consecutive bot-detection failures"
+                " — aborting stale phase.",
+                worker_idx, _tl.consecutive_failures,
+            )
+            _stale_abort.set()
 
     result = {"record": record, "outcome": "error", "price": None, "review_count": None}
 
@@ -2139,6 +2206,7 @@ def crawl_stale_records(
 
     Returns (updated, unavailable, errors).
     """
+    _stale_abort.clear()
     now = datetime.now(timezone.utc)
     updated = unavailable = deals_cleared = errors = 0
     total = len(stale)
@@ -2160,6 +2228,20 @@ def crawl_stale_records(
         skipped = 0
         for future in as_completed(futures):
             completed += 1
+
+            # Circuit breaker: a worker signalled that sessions are all hitting
+            # bot-detection walls — no point continuing; let remaining tasks drain
+            # via the abort check at the top of _fetch_one_stale.
+            if _stale_abort.is_set():
+                pending = sum(1 for f in futures if not f.done())
+                log.warning(
+                    "[circuit-breaker] Aborting stale harvest — "
+                    "cancelling %d pending futures.",
+                    pending,
+                )
+                for f in futures:
+                    f.cancel()
+                break
 
             # Hard deadline: cancel every future that hasn't started yet and stop
             # harvesting results.  pool.submit() is non-blocking, so all tasks are
@@ -2300,6 +2382,7 @@ def main():
 
     t_start = time.monotonic()
     deadline = t_start + args.time_limit * 60
+    _bot_stats.reset()
 
     if args.dry_run:
         log.info("DRY RUN — skipping DB phases; running crawl only.")
@@ -2345,6 +2428,7 @@ def main():
             )
             if active_deals:
                 phase0_asins = {d["asin"] for d in active_deals}
+                _snap_pre0 = _bot_stats.snapshot()
                 crawl_stale_records(
                     active_deals, args.delay, conn,
                     dry_run=False, max_workers=args.stale_workers,
@@ -2357,14 +2441,17 @@ def main():
                 # Phase 2.5 never executes.
                 score_deals(conn)
                 log.info("Phase 0 done: %.0fs", time.monotonic() - t0)
+                log.info("Phase 0 bot-detection: %s", _bot_phase_summary(_snap_pre0, _bot_stats.snapshot()))
             else:
                 log.info("No active deals found — skipping re-validation.")
 
         # ── Phase 1: Regular crawl ─────────────────────────────────────────
         log.info("═" * 60)
         t0 = time.monotonic()
+        _snap_pre1 = _bot_stats.snapshot()
         all_items, asin_categories, browse_asins = crawl(args.max_pages, args.delay, deadline=deadline)
         log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
+        log.info("Phase 1 bot-detection: %s", _bot_phase_summary(_snap_pre1, _bot_stats.snapshot()))
 
         if not all_items:
             log.warning("No products found. Nothing to write.")
@@ -2491,12 +2578,14 @@ def main():
                     # and Phase 4 cleanup so they aren't starved when Phase 3 runs long.
                     phase3_deadline = (deadline - 10 * 60) if deadline is not None else None
                     t0 = time.monotonic()
+                    _snap_pre3 = _bot_stats.snapshot()
                     crawl_stale_records(
                         stale, args.delay, conn,
                         dry_run=False, max_workers=args.stale_workers,
                         deadline=phase3_deadline,
                     )
                     log.info("Phase 3 stale: %.0fs", time.monotonic() - t0)
+                    log.info("Phase 3 bot-detection: %s", _bot_phase_summary(_snap_pre3, _bot_stats.snapshot()))
 
                     # Re-score after Phase 3: stale-records can change prices and
                     # availability, so deal scores may have changed.  Without this,
@@ -2543,6 +2632,12 @@ def main():
         _notify_revalidate(last_write_at=t_pipeline_end)
 
     log.info("Total runtime: %.0fs", time.monotonic() - t_start)
+    _final = _bot_stats.snapshot()
+    if any(_final.values()):
+        log.info(
+            "Bot-detection run totals: %s",
+            " | ".join(f"{k}={v}" for k, v in _final.items() if v > 0),
+        )
     log.info("Done. ✓")
 
 
