@@ -17,6 +17,9 @@ model Disco {
   url       String
   rating      Decimal? @db.Decimal(3, 1)
   reviewCount Int?
+  disponivel  Boolean  @default(true)
+  priceCount  Int      @default(0)    @map("price_count")
+  avg30d      Decimal? @db.Decimal(10, 2) @map("avg_30d")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

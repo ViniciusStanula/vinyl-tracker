@@ -37,6 +37,7 @@ type SerializedPageData = {
     url: string;
     rating: string | null;
     reviewCount: number | null;
+    avg30d: string | null;
     precos: { precoBrl: string; capturadoEm: number }[];
   }[];
   dealMeta: Record<string, {
@@ -105,15 +106,17 @@ const _getArtistaPageData = unstable_cache(
       return aScore - bScore || a.length - b.length;
     })[0];
 
-    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     const discos = await prisma.disco.findMany({
-      where: { artista: { in: variants } },
+      where: { artista: { in: variants }, priceCount: { gte: 5 }, disponivel: true },
+      orderBy: { priceCount: "desc" },
+      take: 300,
       include: {
         precos: {
-          where: { capturadoEm: { gte: oneYearAgo } },
+          where: { capturadoEm: { gte: thirtyDaysAgo }, precoBrl: { gte: 30 } },
           orderBy: { capturadoEm: "desc" },
-          take: 60,
+          take: 10,
         },
       },
     });
@@ -123,10 +126,7 @@ const _getArtistaPageData = unstable_cache(
 
     if (discos.length === 0) return null;
 
-    const filteredDiscos = discos.filter((d) => d.precos.length >= 5);
-    if (filteredDiscos.length === 0) return null;
-
-    const discoIds = filteredDiscos.map((d) => d.id);
+    const discoIds = discos.map((d) => d.id);
 
     const [dealMetaRows, lastfmTagsRows] = await Promise.all([
       prisma.$queryRaw<{
@@ -155,7 +155,7 @@ const _getArtistaPageData = unstable_cache(
 
     return {
       canonical,
-      discos: filteredDiscos.map((d) => ({
+      discos: discos.map((d) => ({
         id: d.id,
         asin: d.asin,
         titulo: d.titulo,
@@ -167,6 +167,7 @@ const _getArtistaPageData = unstable_cache(
         url: d.url,
         rating: d.rating ? String(d.rating) : null,
         reviewCount: d.reviewCount,
+        avg30d: d.avg30d ? String(d.avg30d) : null,
         precos: d.precos.map((p) => ({
           precoBrl: String(p.precoBrl),
           capturadoEm: p.capturadoEm.getTime(),
@@ -258,27 +259,14 @@ export default async function ArtistaPage({
   const { canonical: artista, discos, dealMeta } = data;
   const topStyles = getTopStyles(discos.map((d) => d.lastfmTags), 5, artista);
 
-  // Filter out unavailable products from the artist page listing
-  const discosDisponiveis = discos.filter((d) => dealMeta[d.id]?.disponivel !== false);
-
-  const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
-
-  const discosProcessados = discosDisponiveis.map((disco) => {
-    const precos = disco.precos.map((p) => Number(p.precoBrl));
-    const precoAtual = precos[0] ?? 0;
-    const media =
-      precos.length > 0
-        ? precos.reduce((a, b) => a + b, 0) / precos.length
-        : precoAtual;
+  const discosProcessados = discos.map((disco) => {
+    const precoAtual = Number(disco.precos[0]?.precoBrl ?? 0);
+    const media = disco.avg30d !== null ? Number(disco.avg30d) : precoAtual;
     const desconto = media > 0 ? (media - precoAtual) / media : 0;
 
-    // Build sparkline from last 10 price points within the 30-day window.
-    // capturadoEm is stored as a millisecond timestamp in the serialized cache.
-    const sparkline = [...disco.precos]
-      .filter((p) => p.capturadoEm >= thirtyDaysAgoMs)
-      .sort((a, b) => a.capturadoEm - b.capturadoEm)
-      .slice(-10)
-      .map((p) => Number(p.precoBrl));
+    // DB returns precos desc (newest first), limited to 10 within 30 days.
+    // Reverse to get oldest→newest order for sparkline chart.
+    const sparkline = [...disco.precos].reverse().map((p) => Number(p.precoBrl));
 
     const meta = dealMeta[disco.id];
     const rawDealScore = meta?.deal_score !== null && meta?.deal_score !== undefined
