@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import DiscoCard from "@/components/DiscoCard";
 import SortBar from "@/components/SortBar";
 import BackToTop from "@/components/BackToTop";
@@ -62,11 +63,17 @@ const _getArtistaPageData = unstable_cache(
     //   2. Inverted "LAST,FIRST" names: swap parts before slugifying
     // The JS slugifyArtist() filter below is the exact match safety-net for
     // edge cases (accent stripping via NFD that SQL doesn't reproduce exactly).
+    // Inlined as Prisma.raw() (not bound parameters) so PostgreSQL can match
+    // idx_disco_artista_slug_expr and idx_disco_artista_slug_inverted exactly.
+    // Safe: these are hardcoded constants, not user input.
+    const AF = Prisma.raw(`'${ACCENT_FROM}'`);
+    const AT = Prisma.raw(`'${ACCENT_TO}'`);
+
     const candidates = await prisma.$queryRaw<{ artista: string }[]>`
       SELECT DISTINCT artista FROM "Disco"
       WHERE left(
               regexp_replace(
-                regexp_replace(translate(lower(artista), ${ACCENT_FROM}, ${ACCENT_TO}), '[^a-z0-9]+', '-', 'g'),
+                regexp_replace(translate(lower(artista), ${AF}, ${AT}), '[^a-z0-9]+', '-', 'g'),
                 '^-+|-+$', '', 'g'
               ), 60) = ${slug}
          OR left(
@@ -74,7 +81,7 @@ const _getArtistaPageData = unstable_cache(
                 regexp_replace(
                   translate(
                     lower(trim(split_part(artista, ',', 2)) || ' ' || trim(split_part(artista, ',', 1))),
-                    ${ACCENT_FROM}, ${ACCENT_TO}
+                    ${AF}, ${AT}
                   ),
                   '[^a-z0-9]+', '-', 'g'
                 ),

@@ -90,22 +90,37 @@ export async function queryDiscos(params: {
       : Prisma.sql``;
   const order = buildOrderBy(sort);
 
+  // COUNT skips the HistoricoPreco LATERAL when there is no price-max filter:
+  // price_count >= 5 already guarantees at least one price record exists, so
+  // joining HistoricoPreco just to count is unnecessary for the common case.
+  const countQuery =
+    precoMax !== null && !isNaN(precoMax)
+      ? prisma.$queryRaw<[{ total: bigint }]>`
+          SELECT COUNT(*) AS total
+          FROM   "Disco" d
+          INNER JOIN LATERAL (
+            SELECT "precoBrl"
+            FROM   "HistoricoPreco"
+            WHERE  "discoId" = d.id
+              AND  "precoBrl" >= 30
+            ORDER  BY "capturadoEm" DESC
+            LIMIT  1
+          ) hp_latest ON true
+          WHERE  d.disponivel = TRUE
+            AND  d.price_count >= 5
+            ${whereSearch} ${whereArtista}
+            AND hp_latest."precoBrl" <= ${precoMax}
+        `
+      : prisma.$queryRaw<[{ total: bigint }]>`
+          SELECT COUNT(*) AS total
+          FROM   "Disco" d
+          WHERE  d.disponivel = TRUE
+            AND  d.price_count >= 5
+            ${whereSearch} ${whereArtista}
+        `;
+
   const [countResult, rows] = await Promise.all([
-    prisma.$queryRaw<[{ total: bigint }]>`
-      SELECT COUNT(*) AS total
-      FROM   "Disco" d
-      INNER JOIN LATERAL (
-        SELECT "precoBrl"
-        FROM   "HistoricoPreco"
-        WHERE  "discoId" = d.id
-          AND  "precoBrl" >= 30
-        ORDER  BY "capturadoEm" DESC
-        LIMIT  1
-      ) hp_latest ON true
-      WHERE  d.disponivel = TRUE
-        AND  d.price_count >= 5
-        ${whereSearch} ${whereArtista} ${wherePrecoMax}
-    `,
+    countQuery,
 
     prisma.$queryRaw<DiscoRow[]>`
       WITH base AS (

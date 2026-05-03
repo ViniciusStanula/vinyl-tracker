@@ -461,14 +461,15 @@ def score_deals(conn) -> dict:
         # Clear their deal badge explicitly so phantom deals can't linger.
         cur.execute(
             """
-            UPDATE "Disco"
+            UPDATE "Disco" d
             SET deal_score      = NULL,
                 last_flagged_at = NOW()
             WHERE deal_score IS NOT NULL
-              AND id NOT IN (
-                SELECT DISTINCT "discoId"
-                FROM "HistoricoPreco"
-                WHERE "precoBrl" >= %s
+              AND NOT EXISTS (
+                SELECT 1
+                FROM "HistoricoPreco" hp
+                WHERE hp."discoId" = d.id
+                  AND hp."precoBrl" >= %s
               )
             """,
             (MIN_DEAL_PRICE_BRL,),
