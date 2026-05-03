@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { Prisma } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 
 export const PAGE_SIZE = 24;
 
@@ -249,3 +250,11 @@ export async function queryDiscos(params: {
 
   return { items, total, totalPages };
 }
+
+// Cache homepage grid queries — invalidated by crawler webhook (prices tag),
+// with a 30-minute TTL as fallback if the webhook fails.
+export const queryDiscosWithCache = unstable_cache(
+  queryDiscos,
+  ["discos-homepage"],
+  { tags: ["prices"], revalidate: 1800 },
+);

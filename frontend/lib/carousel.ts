@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { slugifyArtist } from "./slugify";
 import { fetchTopArtists } from "./lastfm";
 import type { ProcessedDisco } from "./queryDiscos";
+import { unstable_cache } from "next/cache";
 
 type CarouselRow = {
   id: string;
@@ -159,3 +160,14 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
     return [];
   }
 }
+
+// Two-layer cache:
+//   - fetchTopArtists() inside is cached 1 week under the `lastfm` tag.
+//   - This outer cache is keyed under `prices` so crawler webhook invalidations
+//     refresh deal data while keeping the artist lineup stable for a week.
+//   - 30-minute TTL fallback if the webhook never fires.
+export const queryCarouselDiscosWithCache = unstable_cache(
+  queryCarouselDiscos,
+  ["carousel-discos"],
+  { tags: ["prices"], revalidate: 1800 },
+);

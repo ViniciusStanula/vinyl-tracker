@@ -2428,7 +2428,9 @@ def _notify_revalidate(last_write_at: float | None = None) -> None:
     last_write_at: time.time() recorded right after the final DB commit.
     Used to log the write→revalidate gap. If gap > 30 s, something is slow.
     """
+    import threading
     import requests as _requests
+    from urllib.parse import urljoin as _urljoin
 
     url = os.environ.get("REVALIDATE_URL")
     secret = os.environ.get("REVALIDATE_SECRET")
@@ -2453,6 +2455,27 @@ def _notify_revalidate(last_write_at: float | None = None) -> None:
             )
         if resp.status_code != 200:
             log.warning("Unexpected revalidation status %s: %s", resp.status_code, resp.text[:200])
+            return
+
+        # Cache warm-up: fire a GET to the homepage so the SSR executes and
+        # fills the prices cache before any real user hits it. Runs in a
+        # background thread so a slow or failed warm-up never blocks the crawler.
+        homepage = _urljoin(url, "/")
+
+        def _warmup() -> None:
+            try:
+                t1 = time.time()
+                _requests.get(homepage, timeout=30)
+                log.info("Cache warm-up: homepage primed in %.0fms", (time.time() - t1) * 1000)
+            except Exception as exc:
+                log.warning("Cache warm-up failed (non-fatal): %s", exc)
+
+        warmup_thread = threading.Thread(target=_warmup, daemon=True)
+        warmup_thread.start()
+        warmup_thread.join(timeout=30)
+        if warmup_thread.is_alive():
+            log.warning("Cache warm-up did not finish within 30s — moving on")
+
     except Exception as exc:
         log.warning("Revalidation request failed (non-fatal): %s", exc)
 

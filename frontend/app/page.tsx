@@ -1,5 +1,5 @@
-import { queryDiscos } from "@/lib/queryDiscos";
-import { queryCarouselDiscos } from "@/lib/carousel";
+import { queryDiscosWithCache } from "@/lib/queryDiscos";
+import { queryCarouselDiscosWithCache } from "@/lib/carousel";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
 import ArtistasCarousel from "@/components/ArtistasCarousel";
@@ -67,12 +67,12 @@ export default async function HomePage({
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
   // Fetch main grid and carousel in parallel
-  let items: Awaited<ReturnType<typeof queryDiscos>>["items"] = [];
-  let total = 0, totalPages = 0, carouselItems: Awaited<ReturnType<typeof queryCarouselDiscos>> = [];
+  let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
+  let total = 0, totalPages = 0, carouselItems: Awaited<ReturnType<typeof queryCarouselDiscosWithCache>> = [];
   try {
     ([{ items, total, totalPages }, carouselItems] = await Promise.all([
-      queryDiscos({ searchTerm, sort, artista, precoMax, page }),
-      searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscos(),
+      queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }),
+      searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscosWithCache(),
     ]));
   } catch {
     // DB unavailable — render empty state

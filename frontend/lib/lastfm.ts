@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+
 const BASE = "https://ws.audioscrobbler.com/2.0/";
 
 interface LfmArtist {
@@ -13,14 +15,13 @@ async function fetchPage(apiKey: string, page: number): Promise<LfmArtist[]> {
     `&api_key=${encodeURIComponent(apiKey)}` +
     `&format=json&limit=500&page=${page}`;
 
-  // next.revalidate uses Next.js's persistent fetch data cache (survives HMR).
-  const res = await fetch(url, { next: { revalidate: 86400 } });
+  const res = await fetch(url);
   if (!res.ok) return [];
   const d = (await res.json()) as LfmResponse;
   return d.artists?.artist ?? [];
 }
 
-export async function fetchTopArtists(): Promise<string[]> {
+async function _fetchTopArtists(): Promise<string[]> {
   const key = process.env.LASTFM_API_KEY;
   if (!key) return [];
 
@@ -31,3 +32,11 @@ export async function fetchTopArtists(): Promise<string[]> {
 
   return [...new Set([...p1, ...p2].map((a) => a.name).filter(Boolean))];
 }
+
+// Cache Last.fm chart for 1 week — artist lineup changes slowly.
+// Tag `lastfm` allows manual invalidation independent of price data.
+export const fetchTopArtists = unstable_cache(
+  _fetchTopArtists,
+  ["lastfm-top-artists"],
+  { tags: ["lastfm"], revalidate: 604800 },
+);
