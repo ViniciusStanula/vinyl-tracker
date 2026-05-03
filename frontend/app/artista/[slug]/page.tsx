@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import DiscoCard from "@/components/DiscoCard";
+import Pagination from "@/components/Pagination";
 import SortBar from "@/components/SortBar";
 import BackToTop from "@/components/BackToTop";
 import StyleTags from "@/components/StyleTags";
@@ -9,6 +10,7 @@ import { notFound } from "next/navigation";
 import { slugifyArtist } from "@/lib/slugify";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
 import { getTopStyles } from "@/lib/styleUtils";
+import type { ProcessedDisco } from "@/lib/queryDiscos";
 import { Suspense, cache } from "react";
 import { unstable_cache } from "next/cache";
 
@@ -21,42 +23,59 @@ export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
 const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";
 
+const PAGE_SIZE = 24;
+
 type Sort = "deals" | "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
 
-type SerializedPageData = {
-  canonical: string;
-  discos: {
-    id: string;
-    asin: string;
-    titulo: string;
-    artista: string;
-    slug: string;
-    estilo: string | null;
-    lastfmTags: string | null;
-    imgUrl: string | null;
-    url: string;
-    rating: string | null;
-    reviewCount: number | null;
-    avg30d: string | null;
-    precos: { precoBrl: string; capturadoEm: number }[];
-  }[];
-  dealMeta: Record<string, {
-    id: string;
-    deal_score: number | null;
-    confidence_level: string | null;
-    last_crawled_at: string | null;
-    disponivel: boolean;
-  }>;
+function buildOrderBy(sort: string): Prisma.Sql {
+  switch (sort as Sort) {
+    case "menor-preco": return Prisma.sql`"precoAtual" ASC`;
+    case "maior-preco": return Prisma.sql`"precoAtual" DESC`;
+    case "avaliados":   return Prisma.sql`COALESCE(rating::numeric, 0) DESC`;
+    case "az":          return Prisma.sql`titulo ASC`;
+    case "deals":       return Prisma.sql`deal_score DESC NULLS LAST, desconto DESC NULLS LAST`;
+    case "desconto":
+    default:            return Prisma.sql`desconto DESC NULLS LAST, COALESCE("reviewCount", 0) DESC`;
+  }
+}
+
+type ArtistaRow = {
+  id: string;
+  titulo: string;
+  artista: string;
+  slug: string;
+  estilo: string | null;
+  imgUrl: string | null;
+  url: string;
+  rating: string | null;
+  reviewCount: string | null;
+  precoAtual: string;
+  mediaPreco: string;
+  totalPrecos: string;
+  desconto: string;
+  sparkline: unknown;
+  dealScore: string | null;
+  confidenceLevel: string | null;
+  historyDays: string | null;
+  lastCrawledAt: Date | null;
+  lastfmTags: string | null;
 };
 
-/**
- * Fetches and serializes all data needed to render an artist page.
- * Returns JSON-safe values so the result survives unstable_cache serialization.
- * Dates are stored as millisecond timestamps (numbers) or ISO strings.
- * Wrapped with React cache() so generateMetadata and the page share one result per request.
- */
+type ArtistaPageData = {
+  canonical: string;
+  items: ProcessedDisco[];
+  total: number;
+  totalPages: number;
+  topStyles: string[];
+};
+
 const _getArtistaPageData = unstable_cache(
-  async (slug: string): Promise<SerializedPageData | null> => {
+  async (
+    slug: string,
+    page: number,
+    sort: string,
+    precoMax: number | null,
+  ): Promise<ArtistaPageData | null> => {
     const t0 = Date.now();
     // Pre-filter at the DB level using a SQL slug approximation so we transfer
     // only candidates instead of the full artist table. Two expressions cover:
@@ -106,83 +125,176 @@ const _getArtistaPageData = unstable_cache(
       return aScore - bScore || a.length - b.length;
     })[0];
 
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const order = buildOrderBy(sort);
+    const offset = (page - 1) * PAGE_SIZE;
+    const wherePrecoMax =
+      precoMax !== null && !isNaN(precoMax)
+        ? Prisma.sql`AND hp_latest."precoBrl" <= ${precoMax}`
+        : Prisma.sql``;
 
-    const discos = await prisma.disco.findMany({
-      where: { artista: { in: variants }, priceCount: { gte: 5 }, disponivel: true },
-      orderBy: { priceCount: "desc" },
-      take: 300,
-      include: {
-        precos: {
-          where: { capturadoEm: { gte: thirtyDaysAgo }, precoBrl: { gte: 30 } },
-          orderBy: { capturadoEm: "desc" },
-          take: 10,
-        },
-      },
-    });
+    // COUNT skips the HistoricoPreco LATERAL when there is no price-max filter
+    const countQuery =
+      precoMax !== null && !isNaN(precoMax)
+        ? prisma.$queryRaw<[{ total: bigint }]>`
+            SELECT COUNT(*) AS total
+            FROM   "Disco" d
+            INNER JOIN LATERAL (
+              SELECT "precoBrl"
+              FROM   "HistoricoPreco"
+              WHERE  "discoId" = d.id AND "precoBrl" >= 30
+              ORDER  BY "capturadoEm" DESC LIMIT 1
+            ) hp_latest ON true
+            WHERE  d.artista = ANY(${variants})
+              AND  d.disponivel = TRUE
+              AND  d.price_count >= 5
+              AND  hp_latest."precoBrl" <= ${precoMax}
+          `
+        : prisma.$queryRaw<[{ total: bigint }]>`
+            SELECT COUNT(*) AS total
+            FROM   "Disco" d
+            WHERE  d.artista = ANY(${variants})
+              AND  d.disponivel = TRUE
+              AND  d.price_count >= 5
+          `;
+
+    // Fetch all lastfm_tags for this artist to compute stable topStyles across pages
+    const tagsQuery = prisma.$queryRaw<{ lastfmTags: string | null }[]>`
+      SELECT lastfm_tags AS "lastfmTags"
+      FROM   "Disco"
+      WHERE  artista = ANY(${variants})
+        AND  disponivel = TRUE
+        AND  price_count >= 5
+        AND  lastfm_tags IS NOT NULL AND lastfm_tags != ''
+    `;
+
+    const mainQuery = prisma.$queryRaw<ArtistaRow[]>`
+      WITH base AS (
+        SELECT
+          d.id,
+          d.titulo,
+          d.artista,
+          d.slug,
+          d.estilo,
+          d."imgUrl",
+          d.url,
+          d.rating,
+          d."reviewCount",
+          d.deal_score        AS "dealScore",
+          d.confidence_level  AS "confidenceLevel",
+          d.history_days      AS "historyDays",
+          d.last_crawled_at   AS "lastCrawledAt",
+          d.lastfm_tags       AS "lastfmTags",
+          hp_latest."precoBrl"                              AS "precoAtual",
+          COALESCE(d.avg_30d::float, hp_latest."precoBrl")  AS "mediaPreco",
+          d.price_count::INTEGER                            AS "totalPrecos",
+          (
+            SELECT COALESCE(
+              json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"),
+              '[]'::json
+            )
+            FROM (
+              SELECT "precoBrl", "capturadoEm"
+              FROM   "HistoricoPreco"
+              WHERE  "discoId" = d.id
+                AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
+                AND  "precoBrl" >= 30
+              ORDER  BY "capturadoEm" DESC
+              LIMIT  10
+            ) sp
+          ) AS sparkline
+        FROM   "Disco" d
+        INNER JOIN LATERAL (
+          SELECT "precoBrl"
+          FROM   "HistoricoPreco"
+          WHERE  "discoId" = d.id AND "precoBrl" >= 30
+          ORDER  BY "capturadoEm" DESC LIMIT 1
+        ) hp_latest ON true
+        WHERE  d.artista = ANY(${variants})
+          AND  d.disponivel = TRUE
+          AND  d.price_count >= 5
+          ${wherePrecoMax}
+      )
+      SELECT
+        *,
+        CASE WHEN "mediaPreco" > 0
+          THEN ("mediaPreco" - "precoAtual") / "mediaPreco"
+          ELSE 0
+        END AS desconto
+      FROM  base
+      ORDER BY ${order}
+      LIMIT  ${PAGE_SIZE}
+      OFFSET ${offset}
+    `;
+
+    const [countResult, rows, tagsRows] = await Promise.all([
+      countQuery,
+      mainQuery,
+      tagsQuery,
+    ]);
 
     const t2 = Date.now();
-    console.log(`[PERF artista/${slug}] findMany+precos: ${t2 - t1}ms (${discos.length} discos)`);
+    console.log(`[PERF artista/${slug}] count+query+tags (parallel): ${t2 - t1}ms | total: ${t2 - t0}ms`);
 
-    if (discos.length === 0) return null;
+    const total = Number(countResult[0].total);
+    if (total === 0) return null;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const topStyles = getTopStyles(tagsRows.map((r) => r.lastfmTags), 5, canonical);
 
-    const discoIds = discos.map((d) => d.id);
+    const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
 
-    const [dealMetaRows, lastfmTagsRows] = await Promise.all([
-      prisma.$queryRaw<{
-        id: string;
-        deal_score: number | null;
-        confidence_level: string | null;
-        last_crawled_at: Date | null;
-        disponivel: boolean;
-      }[]>`
-        SELECT id::text, deal_score, confidence_level, last_crawled_at, disponivel
-        FROM "Disco"
-        WHERE id::text = ANY(${discoIds})
-      `,
-      prisma.$queryRaw<{ id: string; lastfmTags: string | null }[]>`
-        SELECT id::text, lastfm_tags AS "lastfmTags"
-        FROM "Disco"
-        WHERE id::text = ANY(${discoIds})
-      `,
-    ]);
-    const t3 = Date.now();
-    console.log(`[PERF artista/${slug}] dealMeta+lastfm (parallel): ${t3 - t2}ms | total: ${t3 - t0}ms`);
+    const items = rows.flatMap((row): ProcessedDisco[] => {
+      const precoAtual = Number(row.precoAtual);
+      const mediaPreco = Number(row.mediaPreco);
+      const desconto   = Number(row.desconto);
 
-    const lastfmTagsById = Object.fromEntries(
-      lastfmTagsRows.map((r) => [r.id, r.lastfmTags])
-    );
+      if (isNaN(precoAtual) || isNaN(mediaPreco) || isNaN(desconto)) {
+        // eslint-disable-next-line no-console
+        console.warn("[artista/%s] NaN numeric field for disco id=%s — skipping", slug, row.id);
+        return [];
+      }
 
-    return {
-      canonical,
-      discos: discos.map((d) => ({
-        id: d.id,
-        asin: d.asin,
-        titulo: d.titulo,
-        artista: d.artista,
-        slug: d.slug,
-        estilo: d.estilo,
-        lastfmTags: lastfmTagsById[d.id] ?? null,
-        imgUrl: d.imgUrl,
-        url: d.url,
-        rating: d.rating ? String(d.rating) : null,
-        reviewCount: d.reviewCount,
-        avg30d: d.avg30d ? String(d.avg30d) : null,
-        precos: d.precos.map((p) => ({
-          precoBrl: String(p.precoBrl),
-          capturadoEm: p.capturadoEm.getTime(),
-        })),
-      })),
-      dealMeta: Object.fromEntries(
-        dealMetaRows.map((r) => [r.id, {
-          id: r.id,
-          deal_score: r.deal_score !== null ? Number(r.deal_score) : null,
-          confidence_level: r.confidence_level,
-          last_crawled_at: r.last_crawled_at ? new Date(r.last_crawled_at).toISOString() : null,
-          disponivel: r.disponivel,
-        }])
-      ),
-    };
+      let sparkline: number[] = [];
+      if (Array.isArray(row.sparkline)) {
+        sparkline = (row.sparkline as unknown[]).map(Number).filter((n) => !isNaN(n));
+      } else if (typeof row.sparkline === "string") {
+        try {
+          sparkline = (JSON.parse(row.sparkline) as unknown[]).map(Number).filter((n) => !isNaN(n));
+        } catch {
+          sparkline = [];
+        }
+      }
+
+      const rawDealScore =
+        row.dealScore !== null && row.dealScore !== undefined
+          ? Number(row.dealScore)
+          : null;
+      const crawledAt = row.lastCrawledAt ? new Date(row.lastCrawledAt).getTime() : null;
+      const dealIsStale = crawledAt === null || Date.now() - crawledAt > DEAL_STALE_MS;
+      const dealScore = rawDealScore !== null && !dealIsStale ? rawDealScore : null;
+
+      return [{
+        id:              row.id,
+        slug:            row.slug,
+        titulo:          row.titulo,
+        artista:         row.artista,
+        estilo:          row.estilo,
+        imgUrl:          row.imgUrl,
+        url:             row.url,
+        rating:          row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
+        reviewCount:     row.reviewCount !== null && row.reviewCount !== undefined ? Number(row.reviewCount) : null,
+        precoAtual,
+        mediaPreco,
+        emPromocao:      dealScore !== null,
+        desconto,
+        sparkline,
+        dealScore,
+        confidenceLevel: row.confidenceLevel ?? null,
+        historyDays:     row.historyDays !== null && row.historyDays !== undefined ? Number(row.historyDays) : null,
+        lastfmTags:      row.lastfmTags ?? null,
+      }];
+    });
+
+    return { canonical, items, total, totalPages, topStyles };
   },
   ["artista-page"],
   { tags: ["prices"] }
@@ -198,7 +310,7 @@ export async function generateMetadata({
   const { slug } = await params;
   let data;
   try {
-    data = await getArtistaPageData(slug);
+    data = await getArtistaPageData(slug, 1, "desconto", null);
   } catch {
     return {};
   }
@@ -206,7 +318,7 @@ export async function generateMetadata({
   const { canonical } = data;
   const title = truncateTitle(`${canonical} — Discos em Promoção | Garimpa Vinil`);
   const description = truncateDesc(`Melhores ofertas de ${canonical} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`);
-  const firstImage = data.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
+  const firstImage = data.items.find((d) => d.imgUrl)?.imgUrl ?? null;
   return {
     title,
     description,
@@ -232,16 +344,17 @@ export default async function ArtistaPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string; precoMax?: string }>;
+  searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
 }) {
   const { slug } = await params;
-  const { sort = "desconto", precoMax: precoMaxStr } = await searchParams;
+  const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
   const precoMax =
     precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
+  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 
-  let data: SerializedPageData | null = null;
+  let data: ArtistaPageData | null = null;
   try {
-    data = await getArtistaPageData(slug);
+    data = await getArtistaPageData(slug, currentPage, sort, precoMax);
   } catch (err) {
     console.error("[ArtistaPage] getArtistaPageData failed for slug=%s", slug);
     if (process.env.NODE_ENV === "development") console.error(err);
@@ -256,66 +369,7 @@ export default async function ArtistaPage({
   }
   if (!data) notFound();
 
-  const { canonical: artista, discos, dealMeta } = data;
-  const topStyles = getTopStyles(discos.map((d) => d.lastfmTags), 5, artista);
-
-  const discosProcessados = discos.map((disco) => {
-    const precoAtual = Number(disco.precos[0]?.precoBrl ?? 0);
-    const media = disco.avg30d !== null ? Number(disco.avg30d) : precoAtual;
-    const desconto = media > 0 ? (media - precoAtual) / media : 0;
-
-    // DB returns precos desc (newest first), limited to 10 within 30 days.
-    // Reverse to get oldest→newest order for sparkline chart.
-    const sparkline = [...disco.precos].reverse().map((p) => Number(p.precoBrl));
-
-    const meta = dealMeta[disco.id];
-    const rawDealScore = meta?.deal_score !== null && meta?.deal_score !== undefined
-      ? Number(meta.deal_score)
-      : null;
-
-    const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
-    const crawledAt = meta?.last_crawled_at ? new Date(meta.last_crawled_at).getTime() : null;
-    const dealIsStale = crawledAt === null || Date.now() - crawledAt > DEAL_STALE_MS;
-    const dealScore = rawDealScore !== null && !dealIsStale ? rawDealScore : null;
-
-    return {
-      ...disco,
-      rating:          disco.rating ? Number(disco.rating) : null,
-      precoAtual,
-      mediaPreco:      media,
-      // emPromocao mirrors the scorer: a product is on promotion iff deal_score is set
-      emPromocao:      dealScore !== null,
-      desconto,
-      sparkline,
-      dealScore,
-      confidenceLevel: meta?.confidence_level ?? null,
-    };
-  });
-
-  // Apply price filter
-  const filtrados =
-    precoMax !== null && !isNaN(precoMax)
-      ? discosProcessados.filter((d) => d.precoAtual <= precoMax)
-      : discosProcessados;
-
-  // Apply sort
-  const sorted = [...filtrados].sort((a, b) => {
-    switch (sort as Sort) {
-      case "deals":
-        return (b.dealScore ?? -1) - (a.dealScore ?? -1) || b.desconto - a.desconto;
-      case "menor-preco":
-        return a.precoAtual - b.precoAtual;
-      case "maior-preco":
-        return b.precoAtual - a.precoAtual;
-      case "avaliados":
-        return (b.rating ?? 0) - (a.rating ?? 0);
-      case "az":
-        return a.titulo.localeCompare(b.titulo, "pt-BR");
-      case "desconto":
-      default:
-        return b.desconto - a.desconto;
-    }
-  });
+  const { canonical: artista, items, total, totalPages, topStyles } = data;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
 
@@ -360,8 +414,8 @@ export default async function ArtistaPage({
           {artista}
         </h1>
         <p className="mt-1 text-dust text-sm">
-          {sorted.length}{" "}
-          {sorted.length === 1 ? "disco" : "discos"}
+          {total}{" "}
+          {total === 1 ? "disco" : "discos"}
           {precoMax !== null && !isNaN(precoMax)
             ? ` até R$ ${precoMax.toLocaleString("pt-BR")}`
             : " rastreados"}
@@ -375,12 +429,22 @@ export default async function ArtistaPage({
         </Suspense>
       </div>
 
-      {sorted.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-          {sorted.map((disco, index) => (
-            <DiscoCard key={disco.id} disco={disco} priority={index < 4} />
-          ))}
-        </div>
+      {items.length > 0 ? (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+            {items.map((disco, index) => (
+              <DiscoCard key={disco.id} disco={disco} priority={index < 4} />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              searchParams={{ sort: sort !== "desconto" ? sort : undefined, precoMax: precoMaxStr }}
+              basePath={`/artista/${slug}`}
+            />
+          )}
+        </>
       ) : (
         <div className="text-center py-24 text-dust">
           <div className="inline-block mb-5 opacity-40">
