@@ -2601,8 +2601,8 @@ def parse_args():
         help="Parallel workers for stale-records fetching (default: 2)",
     )
     parser.add_argument(
-        "--discovery-max", type=int, default=150, metavar="N",
-        help="Max ASINs to validate from the discovery queue per run (0 = unlimited, default: 150)",
+        "--discovery-max", type=int, default=500, metavar="N",
+        help="Max ASINs to validate from the discovery queue per run (0 = unlimited, default: 500)",
     )
     parser.add_argument(
         "--skip-stale", action="store_true",
