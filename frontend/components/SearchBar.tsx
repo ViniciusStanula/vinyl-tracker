@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition, useRef } from "react";
+import { useTransition, useRef, useState, useEffect } from "react";
+import SearchDropdown from "./SearchDropdown";
 
 export default function SearchBar() {
   const router = useRouter();
@@ -9,8 +10,17 @@ export default function SearchBar() {
   const [isPending, startTransition] = useTransition();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Debounced value that drives the live-search dropdown
+  const [liveQuery, setLiveQuery] = useState("");
+  // True after user explicitly dismisses the dropdown (Escape / outside click / selection)
+  const [dismissed, setDismissed] = useState(false);
+
+  const showDropdown = !dismissed && liveQuery.length >= 2;
 
   function navigate(value: string) {
+    setDismissed(true);
     const params = new URLSearchParams();
     const sort    = searchParams.get("sort");
     const artista = searchParams.get("artista");
@@ -25,8 +35,10 @@ export default function SearchBar() {
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setDismissed(false);
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => navigate(e.target.value.trim()), 300);
+    timerRef.current = setTimeout(() => setLiveQuery(val.trim()), 300);
   }
 
   function handleBuscar() {
@@ -39,12 +51,26 @@ export default function SearchBar() {
       if (timerRef.current) clearTimeout(timerRef.current);
       navigate((e.target as HTMLInputElement).value.trim());
     }
+    if (e.key === "Escape") {
+      setDismissed(true);
+    }
   }
 
+  // Dismiss dropdown when user clicks outside the search bar area
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setDismissed(true);
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, []);
+
   return (
-    <div className="relative flex w-full">
-      {/* Icon / spinner */}
-      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+    <div ref={containerRef} className="relative flex w-full">
+      {/* Search icon / pending spinner */}
+      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10">
         {isPending ? (
           <svg className="w-4 h-4 text-gold animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -62,7 +88,10 @@ export default function SearchBar() {
         ref={inputRef}
         id="site-search"
         type="search"
+        autoComplete="off"
         aria-label="Buscar discos de vinil"
+        aria-expanded={showDropdown}
+        aria-haspopup="listbox"
         placeholder="Busque por artista, álbum ou código..."
         defaultValue={searchParams.get("q") ?? ""}
         onChange={handleChange}
@@ -79,6 +108,13 @@ export default function SearchBar() {
       >
         Buscar
       </button>
+
+      {showDropdown && (
+        <SearchDropdown
+          query={liveQuery}
+          onClose={() => setDismissed(true)}
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,35 @@ function likePct(term: string): string {
   return `%${term.replace(/[%_\\]/g, "\\$&")}%`;
 }
 
+/**
+ * Build a prefix tsquery string for FTS.
+ * Each word gets ':*' so "beatl" matches "beatles".
+ * Non-alphanumeric/non-accented chars are stripped to keep tsquery syntax valid.
+ * Returns null when no usable words remain (caller falls back to ILIKE).
+ */
+function buildTsQuery(term: string): string | null {
+  const words = term
+    .trim()
+    .split(/\s+/)
+    .map(w => w.replace(/[^a-zA-Z0-9À-ɏ]/g, ""))
+    .filter(w => w.length > 0);
+  if (words.length === 0) return null;
+  return words.map(w => `${w}:*`).join(" & ");
+}
+
+/**
+ * WHERE fragment for search. Uses FTS when search_vector is populated,
+ * falls back to ILIKE for very short/symbol-only queries.
+ */
+function buildSearchWhere(term: string): Prisma.Sql {
+  if (!term.trim()) return Prisma.sql``;
+  const tsq = buildTsQuery(term);
+  if (tsq) {
+    return Prisma.sql`AND d.search_vector @@ to_tsquery('simple', ${tsq})`;
+  }
+  return Prisma.sql`AND (d.titulo ILIKE ${likePct(term)} OR d.artista ILIKE ${likePct(term)})`;
+}
+
 function buildOrderBy(sort: string): Prisma.Sql {
   switch (sort as Sort) {
     case "menor-preco": return Prisma.sql`"precoAtual" ASC`;
@@ -79,9 +108,7 @@ export async function queryDiscos(params: {
 }): Promise<{ items: ProcessedDisco[]; total: number; totalPages: number }> {
   const { searchTerm, sort, artista, precoMax, page } = params;
 
-  const whereSearch = searchTerm
-    ? Prisma.sql`AND (d.titulo ILIKE ${likePct(searchTerm)} OR d.artista ILIKE ${likePct(searchTerm)})`
-    : Prisma.sql``;
+  const whereSearch = buildSearchWhere(searchTerm);
   const whereArtista = artista
     ? Prisma.sql`AND d.artista = ${artista}`
     : Prisma.sql``;
