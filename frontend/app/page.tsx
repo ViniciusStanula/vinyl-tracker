@@ -1,4 +1,5 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
+import { formatDiscoCount } from "@/lib/formatters";
 import { queryCarouselDiscosWithCache } from "@/lib/carousel";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
@@ -110,9 +111,7 @@ export default async function HomePage({
       {/* ── Result count + active artist badge ──────────────────── */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <p className="text-dust text-sm">
-          {total === 0
-            ? "Nenhum disco encontrado"
-            : `${total} ${total === 1 ? "disco encontrado" : "discos encontrados"}`}
+          {formatDiscoCount(total)}
           {searchTerm && (
             <span className="text-parchment">
               {" "}para{" "}

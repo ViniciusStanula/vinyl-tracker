@@ -1,4 +1,5 @@
 import { queryDiscos } from "@/lib/queryDiscos";
+import { formatDiscoCount } from "@/lib/formatters";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
 import BackToTop from "@/components/BackToTop";
@@ -77,9 +78,7 @@ export default async function DiscosPage({
       {/* ── Result count + active filters ───────────────────────── */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <p className="text-dust text-sm">
-          {total === 0
-            ? "Nenhum disco encontrado"
-            : `${total} ${total === 1 ? "disco encontrado" : "discos encontrados"}`}
+          {formatDiscoCount(total)}
           {searchTerm && (
             <span className="text-parchment">
               {" "}para{" "}

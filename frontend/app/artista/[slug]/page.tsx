@@ -10,6 +10,7 @@ import { notFound } from "next/navigation";
 import { slugifyArtist } from "@/lib/slugify";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
 import { getTopStyles } from "@/lib/styleUtils";
+import { formatDiscoCount } from "@/lib/formatters";
 import type { ProcessedDisco } from "@/lib/queryDiscos";
 import { Suspense, cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -414,11 +415,10 @@ export default async function ArtistaPage({
           {artista}
         </h1>
         <p className="mt-1 text-dust text-sm">
-          {total}{" "}
-          {total === 1 ? "disco" : "discos"}
+          {formatDiscoCount(total)}
           {precoMax !== null && !isNaN(precoMax)
             ? ` até R$ ${precoMax.toLocaleString("pt-BR")}`
-            : " rastreados"}
+            : ""}
         </p>
         <StyleTags tags={topStyles} />
       </header>

@@ -8,6 +8,7 @@ import { Suspense, cache } from "react";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
 import { unstable_cache } from "next/cache";
 import { slugifyStyle } from "@/lib/styleUtils";
+import { formatDiscoCount } from "@/lib/formatters";
 
 export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
@@ -391,11 +392,10 @@ export default async function EstiloPage({
           {displayName}
         </h1>
         <p className="mt-1 text-dust text-sm">
-          {sorted.length}{" "}
-          {sorted.length === 1 ? "disco" : "discos"}
+          {formatDiscoCount(sorted.length)}
           {precoMax !== null && !isNaN(precoMax)
             ? ` até R$ ${precoMax.toLocaleString("pt-BR")}`
-            : " rastreados"}
+            : ""}
         </p>
       </header>
 
