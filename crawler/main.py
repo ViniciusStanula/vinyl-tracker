@@ -2364,6 +2364,91 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
     return result
 
 
+def _fetch_one_discovery(asin: str, delay: float, worker_idx: int,
+                         deadline: float | None = None) -> dict:
+    """
+    Worker function: validates a single ASIN from the Last.fm discovery queue
+    using a persistent per-thread session with the same session-rotation strategy
+    as _fetch_one_stale.
+
+    Called from a ThreadPoolExecutor — must not touch the DB connection.
+    Returns {"asin": asin, "record": record_or_none, "skipped": bool}.
+    """
+    if deadline is not None and time.monotonic() >= deadline:
+        return {"asin": asin, "record": None, "skipped": True}
+
+    if _stale_abort.is_set():
+        return {"asin": asin, "record": None, "skipped": True}
+
+    time.sleep(worker_idx * random.uniform(1.0, 2.0))
+
+    hit_count = getattr(_tl, "hit_count", 0)
+    max_hits  = getattr(_tl, "max_hits", random.randint(*_STALE_MAX_HITS_RANGE))
+    if hit_count >= max_hits:
+        log.debug(
+            "[discovery] Worker %d: proactive rotation after %d hits",
+            worker_idx, hit_count,
+        )
+        _invalidate_worker_session()
+
+    session, proxy = _get_worker_session()
+
+    url = affiliate_link(asin)
+    soup, status, session, proxy = fetch_product_page(session, url, proxy=proxy)
+    _tl.session = session
+    _tl.proxy   = proxy
+
+    record = None
+    if soup is not None:
+        _tl.hit_count = getattr(_tl, "hit_count", 0) + 1
+        _tl.consecutive_failures = 0
+        record = parse_product_page_discovery(soup, asin)
+        if record is not None:
+            vinyl_asin = _extract_vinyl_variant_asin(soup, asin)
+            if vinyl_asin:
+                log.info(
+                    "[discovery] Worker %d: ASIN %s is non-vinyl, fetching vinyl variant %s.",
+                    worker_idx, asin, vinyl_asin,
+                )
+                v_soup, _v_status, session, proxy = fetch_product_page(
+                    session, affiliate_link(vinyl_asin), proxy=proxy
+                )
+                _tl.session = session
+                _tl.proxy   = proxy
+                if v_soup is not None:
+                    v_title_el = v_soup.select_one("#productTitle")
+                    if v_title_el:
+                        record["titulo"] = v_title_el.get_text(strip=True)
+                    for sel in ("#landingImage", "#imgBlkFront", "#main-image"):
+                        img_el = v_soup.select_one(sel)
+                        if img_el:
+                            src = (
+                                img_el.get("src", "").strip()
+                                or img_el.get("data-old-hires", "").strip()
+                            )
+                            if src and not src.startswith("data:"):
+                                record["imgUrl"] = re.sub(
+                                    r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", src
+                                )
+                                break
+                    record["asin"]  = vinyl_asin
+                    record["slug"]  = gerar_slug(record["titulo"], vinyl_asin)
+                    record["url"]   = affiliate_link(vinyl_asin)
+    elif status is None:
+        _invalidate_worker_session()
+        _tl.consecutive_failures = getattr(_tl, "consecutive_failures", 0) + 1
+        if _tl.consecutive_failures >= _CIRCUIT_BREAKER_THRESHOLD:
+            log.warning(
+                "[circuit-breaker] Discovery worker %d: %d consecutive bot-detection"
+                " failures — aborting discovery phase.",
+                worker_idx, _tl.consecutive_failures,
+            )
+            _stale_abort.set()
+
+    time.sleep(delay + random.uniform(0.5, 1.5))
+    return {"asin": asin, "record": record, "skipped": False}
+
+
 def crawl_stale_records(
     stale: list[dict],
     delay: float,
@@ -2514,6 +2599,10 @@ def parse_args():
     parser.add_argument(
         "--stale-workers", type=int, default=2, metavar="N",
         help="Parallel workers for stale-records fetching (default: 2)",
+    )
+    parser.add_argument(
+        "--discovery-max", type=int, default=150, metavar="N",
+        help="Max ASINs to validate from the discovery queue per run (0 = unlimited, default: 150)",
     )
     parser.add_argument(
         "--skip-stale", action="store_true",
@@ -2778,41 +2867,61 @@ def main():
 
             # ── Phase 2.8: Last.fm discovery queue ─────────────────────────
             # Process ASINs queued by lastfm_discovery.py that aren't in Disco
-            # yet.  Each ASIN gets a full product-page fetch via fetch_catalog_discovery
+            # yet.  Each ASIN gets a full product-page fetch (_fetch_one_discovery)
             # so vinyl is confirmed and metadata is complete before it enters the
             # catalog.  Non-vinyl / unconfirmable pages are deleted from the queue.
+            # Uses ThreadPoolExecutor(2) + thread-local session rotation (same
+            # strategy as Phase 3) to handle more ASINs without bot-detection.
             if not (deadline is not None and time.monotonic() >= deadline):
                 log.info("═" * 60)
                 t0 = time.monotonic()
-                pending = fetch_pending_discovered(conn, limit=50)
-                log.info("Phase 2.8 discovery queue — %d pending ASIN(s).", len(pending))
+                disc_limit = args.discovery_max if args.discovery_max > 0 else 999_999
+                pending = fetch_pending_discovered(conn, limit=disc_limit)
+                log.info(
+                    "Phase 2.8 discovery queue — %d pending ASIN(s) (limit %s).",
+                    len(pending),
+                    disc_limit if args.discovery_max > 0 else "unlimited",
+                )
                 if pending:
-                    disc_proxy   = get_proxy_pool().acquire()
-                    disc_session, _ = make_session(proxy=disc_proxy)
-                    _quick_warmup(disc_session)
+                    _stale_abort.clear()
                     accepted: list[dict] = []
                     processed: list[str] = []
-                    for idx, asin in enumerate(pending):
-                        if deadline is not None and time.monotonic() >= deadline:
-                            log.warning("Phase 2.8: time limit at %d/%d.", idx, len(pending))
-                            break
-                        record, disc_session, disc_proxy = fetch_catalog_discovery(
-                            disc_session, asin, proxy=disc_proxy,
-                        )
-                        processed.append(asin)
-                        if record:
-                            accepted.append(record)
-                            log.debug("  [accepted] %s — %s", asin, record["titulo"][:50])
-                        else:
-                            log.debug("  [rejected] %s — not vinyl or unconfirmable", asin)
-                        time.sleep(DELAY_SECONDS + random.uniform(0.5, 1.5))
+                    with ThreadPoolExecutor(max_workers=args.stale_workers) as pool:
+                        futs = {
+                            pool.submit(
+                                _fetch_one_discovery, asin, args.delay,
+                                i % args.stale_workers, deadline,
+                            ): asin
+                            for i, asin in enumerate(pending)
+                        }
+                        for fut in as_completed(futs):
+                            try:
+                                res = fut.result()
+                            except Exception as exc:
+                                log.error("Phase 2.8: unexpected worker error: %s", exc)
+                                continue
+                            if res["skipped"]:
+                                log.info("Phase 2.8: time/abort limit — stopping early.")
+                                # Cancel remaining futures; already-submitted tasks
+                                # self-cancel via deadline check in _fetch_one_discovery.
+                                break
+                            processed.append(res["asin"])
+                            if res["record"]:
+                                accepted.append(res["record"])
+                                log.debug(
+                                    "  [accepted] %s — %s",
+                                    res["asin"], res["record"]["titulo"][:50],
+                                )
+                            else:
+                                log.debug("  [rejected] %s", res["asin"])
                     if accepted:
                         upsert_batch(conn, accepted)
                         log.info("Phase 2.8: upserted %d new vinyl record(s).", len(accepted))
                     rejected = len(processed) - len(accepted)
                     if rejected:
                         log.info("Phase 2.8: %d ASIN(s) rejected (not vinyl / no price).", rejected)
-                    delete_discovered_vinyls(conn, processed)
+                    if processed:
+                        delete_discovered_vinyls(conn, processed)
                     log.info("Phase 2.8 done: %.0fs", time.monotonic() - t0)
 
             # ── Phase 3: Stale-records check ───────────────────────────────
