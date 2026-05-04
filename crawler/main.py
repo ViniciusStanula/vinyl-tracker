@@ -1263,7 +1263,11 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
     price: float | None = None
 
     # Priority 0: vinyl-specific price from the MediaMatrix format table.
-    if tmm_vinyl_price is not None:
+    # Only use when vinyl is NOT the selected format — i.e. we're on a CD page
+    # and need the vinyl price from the switcher row.  When vinyl IS selected,
+    # the buy-box already reflects the real current price (Priority 1), and the
+    # format table can show a stale or different-seller price.
+    if tmm_vinyl_price is not None and not selected_is_vinyl:
         price = tmm_vinyl_price
 
     # Priority 1: priceToPay / apex-pricetopay-value buy-box containers.
