@@ -458,6 +458,7 @@ _BOT_SIGNAL_RE = re.compile(
 )
 _PRICE_CLEAN_RE = re.compile(r"R\$\s*|\xa0|\s")
 _PRICE_NUM_RE   = re.compile(r"\d+\.?\d*")
+_ASIN_PATH_RE   = re.compile(r"/dp/([A-Z0-9]{10})", re.IGNORECASE)
 
 # ─────────────────────────────────────────────────────────────
 #  Helpers
@@ -1385,6 +1386,28 @@ def parse_product_page_discovery(soup, asin: str) -> dict | None:
     }
 
 
+def _extract_vinyl_variant_asin(soup, current_asin: str) -> str | None:
+    """
+    If a multi-format page has a vinyl swatch but the selected format is NOT
+    vinyl (e.g. the CD ASIN was fetched), return the vinyl variant's ASIN so
+    the caller can fetch the correct page for title/image/URL.
+    Returns None when already on the vinyl page or no vinyl variant found.
+    """
+    if not soup.select_one("#tmmSwatches"):
+        return None
+    selected = soup.select_one("#tmmSwatches .swatchElement.selected")
+    if selected and _VINYL_LABEL_RE.search(selected.get_text(" ", strip=True)):
+        return None
+    for swatch in soup.select("#tmmSwatches .swatchElement"):
+        if _VINYL_LABEL_RE.search(swatch.get_text(" ", strip=True)):
+            link = swatch.select_one("a[href]")
+            if link:
+                m = _ASIN_PATH_RE.search(link["href"])
+                if m and m.group(1).upper() != current_asin.upper():
+                    return m.group(1).upper()
+    return None
+
+
 def fetch_catalog_discovery(
     session,
     asin: str,
@@ -1404,6 +1427,36 @@ def fetch_catalog_discovery(
     if soup is None:
         return None, session, proxy
     record = parse_product_page_discovery(soup, asin)
+    if record is not None:
+        vinyl_asin = _extract_vinyl_variant_asin(soup, asin)
+        if vinyl_asin:
+            log.info(
+                "[catalog-discovery] ASIN %s: non-vinyl format selected, vinyl variant %s"
+                " — fetching vinyl page for title/image/URL.",
+                asin, vinyl_asin,
+            )
+            v_soup, _v_status, session, proxy = fetch_product_page(
+                session, affiliate_link(vinyl_asin), proxy=proxy
+            )
+            if v_soup is not None:
+                v_title_el = v_soup.select_one("#productTitle")
+                if v_title_el:
+                    record["titulo"] = v_title_el.get_text(strip=True)
+                for sel in ("#landingImage", "#imgBlkFront", "#main-image"):
+                    img_el = v_soup.select_one(sel)
+                    if img_el:
+                        src = (
+                            img_el.get("src", "").strip()
+                            or img_el.get("data-old-hires", "").strip()
+                        )
+                        if src and not src.startswith("data:"):
+                            record["imgUrl"] = re.sub(
+                                r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", src
+                            )
+                            break
+                record["asin"] = vinyl_asin
+                record["slug"] = gerar_slug(record["titulo"], vinyl_asin)
+                record["url"] = affiliate_link(vinyl_asin)
     return record, session, proxy
 
 
