@@ -39,6 +39,8 @@ from database import (
     mark_unavailable,
     delete_record,
     update_disco_metadata,
+    fetch_pending_discovered,
+    delete_discovered_vinyls,
 )
 from bs4 import BeautifulSoup
 from deal_scorer import score_deals
@@ -2773,6 +2775,45 @@ def main():
                         else:
                             log.info("Phase 2.7: no new records built from %d new ASINs.", len(truly_new))
                 log.info("Phase 2.7 done: %.0fs", time.monotonic() - t0)
+
+            # ── Phase 2.8: Last.fm discovery queue ─────────────────────────
+            # Process ASINs queued by lastfm_discovery.py that aren't in Disco
+            # yet.  Each ASIN gets a full product-page fetch via fetch_catalog_discovery
+            # so vinyl is confirmed and metadata is complete before it enters the
+            # catalog.  Non-vinyl / unconfirmable pages are deleted from the queue.
+            if not (deadline is not None and time.monotonic() >= deadline):
+                log.info("═" * 60)
+                t0 = time.monotonic()
+                pending = fetch_pending_discovered(conn, limit=50)
+                log.info("Phase 2.8 discovery queue — %d pending ASIN(s).", len(pending))
+                if pending:
+                    disc_proxy   = get_proxy_pool().acquire()
+                    disc_session, _ = make_session(proxy=disc_proxy)
+                    _quick_warmup(disc_session)
+                    accepted: list[dict] = []
+                    processed: list[str] = []
+                    for idx, asin in enumerate(pending):
+                        if deadline is not None and time.monotonic() >= deadline:
+                            log.warning("Phase 2.8: time limit at %d/%d.", idx, len(pending))
+                            break
+                        record, disc_session, disc_proxy = fetch_catalog_discovery(
+                            disc_session, asin, proxy=disc_proxy,
+                        )
+                        processed.append(asin)
+                        if record:
+                            accepted.append(record)
+                            log.debug("  [accepted] %s — %s", asin, record["titulo"][:50])
+                        else:
+                            log.debug("  [rejected] %s — not vinyl or unconfirmable", asin)
+                        time.sleep(DELAY_SECONDS + random.uniform(0.5, 1.5))
+                    if accepted:
+                        upsert_batch(conn, accepted)
+                        log.info("Phase 2.8: upserted %d new vinyl record(s).", len(accepted))
+                    rejected = len(processed) - len(accepted)
+                    if rejected:
+                        log.info("Phase 2.8: %d ASIN(s) rejected (not vinyl / no price).", rejected)
+                    delete_discovered_vinyls(conn, processed)
+                    log.info("Phase 2.8 done: %.0fs", time.monotonic() - t0)
 
             # ── Phase 3: Stale-records check ───────────────────────────────
             if args.skip_stale:

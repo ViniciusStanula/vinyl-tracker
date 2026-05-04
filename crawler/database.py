@@ -496,6 +496,47 @@ def delete_record(conn, disco_id: str, asin: str) -> None:
     conn.commit()
 
 
+def fetch_pending_discovered(conn, limit: int = 50) -> list[str]:
+    """
+    Returns up to `limit` ASINs from discovered_vinyls that are not yet in Disco.
+    Returns [] if the discovered_vinyls table doesn't exist yet (first run before
+    the discovery script has ever executed).
+    """
+    try:
+        with _cursor(conn) as cur:
+            cur.execute(
+                """
+                SELECT asin FROM discovered_vinyls
+                WHERE asin NOT IN (SELECT asin FROM "Disco")
+                ORDER BY discovered_at ASC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            return [row[0] for row in cur.fetchall()]
+    except Exception as exc:
+        # Table doesn't exist yet — swallow, rollback, return empty.
+        conn.rollback()
+        log.debug("fetch_pending_discovered: skipping — %s", exc)
+        return []
+
+
+def delete_discovered_vinyls(conn, asins: list[str]) -> None:
+    """Remove processed ASINs from discovered_vinyls (both accepted and rejected)."""
+    if not asins:
+        return
+    try:
+        with _cursor(conn) as cur:
+            cur.execute(
+                "DELETE FROM discovered_vinyls WHERE asin = ANY(%s)",
+                (asins,),
+            )
+        conn.commit()
+    except Exception as exc:
+        conn.rollback()
+        log.debug("delete_discovered_vinyls: skipping — %s", exc)
+
+
 def ensure_category_tables(conn, category_seed: list[tuple[str, str]]) -> None:
     """
     Idempotently creates the Categoria and DiscoCategorias tables and seeds
