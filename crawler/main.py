@@ -2895,6 +2895,26 @@ def main():
                             for i, asin in enumerate(pending)
                         }
                         for fut in as_completed(futs):
+                            if _stale_abort.is_set():
+                                pending_count = sum(1 for f in futs if not f.done())
+                                log.warning(
+                                    "[circuit-breaker] Phase 2.8: aborting — "
+                                    "cancelling %d pending futures.", pending_count,
+                                )
+                                for f in futs:
+                                    f.cancel()
+                                break
+
+                            if deadline is not None and time.monotonic() >= deadline:
+                                pending_count = sum(1 for f in futs if not f.done())
+                                log.warning(
+                                    "Phase 2.8: time limit — cancelling %d pending futures.",
+                                    pending_count,
+                                )
+                                for f in futs:
+                                    f.cancel()
+                                break
+
                             try:
                                 res = fut.result()
                             except Exception as exc:
@@ -2902,8 +2922,8 @@ def main():
                                 continue
                             if res["skipped"]:
                                 log.info("Phase 2.8: time/abort limit — stopping early.")
-                                # Cancel remaining futures; already-submitted tasks
-                                # self-cancel via deadline check in _fetch_one_discovery.
+                                for f in futs:
+                                    f.cancel()
                                 break
                             processed.append(res["asin"])
                             if res["record"]:
