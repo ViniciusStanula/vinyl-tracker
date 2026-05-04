@@ -402,6 +402,38 @@ def mark_stale_price(
     conn.commit()
 
 
+def update_disco_metadata(
+    conn,
+    disco_id: str,
+    asin: str,
+    titulo: str,
+    img_url: str | None,
+    url: str,
+    slug: str,
+) -> None:
+    """
+    Overwrites metadata fields on an existing Disco record.
+    Used when a stale-records fetch reveals the stored ASIN is a CD variant
+    and the real vinyl ASIN/title/image need to be backfilled.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            UPDATE "Disco"
+            SET asin            = %s,
+                titulo          = %s,
+                "imgUrl"        = %s,
+                url             = %s,
+                slug            = %s,
+                "updatedAt"     = NOW(),
+                last_crawled_at = NOW()
+            WHERE id = %s
+            """,
+            (asin, titulo, img_url or None, url, slug, disco_id),
+        )
+    conn.commit()
+
+
 def clear_deal_score(conn, disco_id: str) -> None:
     """
     Clears deal_score so the product stops appearing as a deal, without

@@ -38,6 +38,7 @@ from database import (
     mark_stale_price,
     mark_unavailable,
     delete_record,
+    update_disco_metadata,
 )
 from bs4 import BeautifulSoup
 from deal_scorer import score_deals
@@ -2292,7 +2293,45 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
             )
             result["outcome"] = "used_condition"
         else:
-            price, in_stock, review_count = parse_product_page(soup)
+            # If the stored ASIN is a CD variant, redirect to the vinyl page
+            # before extracting price and collecting metadata.
+            active_soup = soup
+            vinyl_asin = _extract_vinyl_variant_asin(soup, record["asin"])
+            if vinyl_asin:
+                log.info(
+                    "[stale] ASIN %s: CD variant detected, fetching vinyl page %s.",
+                    record["asin"], vinyl_asin,
+                )
+                session, proxy = _get_worker_session()
+                v_soup, _v_status, session, proxy = fetch_product_page(
+                    session, affiliate_link(vinyl_asin), proxy=proxy
+                )
+                _tl.session = session
+                _tl.proxy   = proxy
+                if v_soup is not None:
+                    active_soup = v_soup
+                    v_title_el = v_soup.select_one("#productTitle")
+                    v_title = v_title_el.get_text(strip=True) if v_title_el else record.get("titulo", "")
+                    v_img = None
+                    for sel in ("#landingImage", "#imgBlkFront", "#main-image"):
+                        img_el = v_soup.select_one(sel)
+                        if img_el:
+                            src = (
+                                img_el.get("src", "").strip()
+                                or img_el.get("data-old-hires", "").strip()
+                            )
+                            if src and not src.startswith("data:"):
+                                v_img = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", src)
+                                break
+                    result["vinyl_metadata"] = {
+                        "asin":   vinyl_asin,
+                        "titulo": v_title,
+                        "imgUrl": v_img,
+                        "url":    affiliate_link(vinyl_asin),
+                        "slug":   gerar_slug(v_title, vinyl_asin),
+                    }
+
+            price, in_stock, review_count = parse_product_page(active_soup)
             if not in_stock:
                 result["outcome"] = "unavailable"
             elif price is None:
@@ -2420,6 +2459,16 @@ def crawl_stale_records(
             elif outcome == "updated":
                 log.info("  R$ %.2f  reviews=%s", res["price"], res["review_count"])
                 if not dry_run:
+                    vm = res.get("vinyl_metadata")
+                    if vm:
+                        log.info(
+                            "  [stale] correcting CD→vinyl metadata: ASIN %s → %s",
+                            asin, vm["asin"],
+                        )
+                        update_disco_metadata(
+                            conn, disco_id,
+                            vm["asin"], vm["titulo"], vm["imgUrl"], vm["url"], vm["slug"],
+                        )
                     mark_stale_price(conn, disco_id, res["price"], now, res["review_count"])
                 updated += 1
             elif outcome == "deal_cleared":
