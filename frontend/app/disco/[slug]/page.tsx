@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
@@ -78,6 +79,67 @@ type RelatedDeal = {
   dealScore: number | null;
   confidenceLevel: string | null;
 };
+
+const getRelatedDeals = unstable_cache(
+  async (discoId: string): Promise<RelatedDeal[]> => {
+    return prisma.$queryRaw<RelatedDeal[]>`
+      WITH candidates AS (
+        SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
+               deal_score, confidence_level, avg_30d
+        FROM "Disco"
+        WHERE id != ${discoId}
+          AND deal_score IS NOT NULL
+          AND disponivel = TRUE
+          AND price_count >= 5
+        ORDER BY deal_score DESC, RANDOM()
+        LIMIT 4
+      ),
+      latest AS (
+        SELECT DISTINCT ON ("discoId")
+          "discoId", "precoBrl"::float AS preco
+        FROM "HistoricoPreco"
+        WHERE "discoId" IN (SELECT id FROM candidates)
+        ORDER BY "discoId", "capturadoEm" DESC
+      )
+      SELECT
+        c.id,
+        c.titulo,
+        c.artista,
+        c.slug,
+        c."imgUrl",
+        c.url,
+        c.estilo,
+        c.rating,
+        c.deal_score                                         AS "dealScore",
+        c.confidence_level                                   AS "confidenceLevel",
+        l.preco                                              AS "precoAtual",
+        COALESCE(c.avg_30d::float, l.preco)                  AS "mediaPreco",
+        CASE
+          WHEN COALESCE(c.avg_30d::float, 0) > 0
+          THEN (COALESCE(c.avg_30d::float, l.preco) - l.preco) / COALESCE(c.avg_30d::float, l.preco)
+          ELSE 0
+        END                                                  AS desconto,
+        (
+          SELECT COALESCE(
+            json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"),
+            '[]'::json
+          )
+          FROM (
+            SELECT "precoBrl", "capturadoEm"
+            FROM   "HistoricoPreco"
+            WHERE  "discoId" = c.id
+              AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
+            ORDER  BY "capturadoEm" ASC
+            LIMIT  10
+          ) sp
+        ) AS sparkline
+      FROM candidates c
+      INNER JOIN latest l ON l."discoId" = c.id
+    `;
+  },
+  ["disco-related-deals"],
+  { tags: ["prices"], revalidate: 1800 }
+);
 
 export default async function DiscoPage({
   params,
@@ -185,63 +247,9 @@ export default async function DiscoPage({
   const precosDisplay = [...disco.precos].reverse();
 
   // Related deals — 4 other records with an active deal score.
-  // Uses deal_score IS NOT NULL so the query is consistent with the scorer's
-  // multi-window logic rather than re-implementing a weaker inline version.
+  // Cached per disco under "prices" tag; crawler webhook invalidates on each run.
   const t3 = Date.now();
-  const relatedDeals = await prisma.$queryRaw<RelatedDeal[]>`
-    WITH candidates AS (
-      SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
-             deal_score, confidence_level, avg_30d
-      FROM "Disco"
-      WHERE id != ${disco.id}
-        AND deal_score IS NOT NULL
-        AND disponivel = TRUE
-        AND price_count >= 5
-      ORDER BY deal_score DESC, RANDOM()
-      LIMIT 4
-    ),
-    latest AS (
-      SELECT DISTINCT ON ("discoId")
-        "discoId", "precoBrl"::float AS preco
-      FROM "HistoricoPreco"
-      WHERE "discoId" IN (SELECT id FROM candidates)
-      ORDER BY "discoId", "capturadoEm" DESC
-    )
-    SELECT
-      c.id,
-      c.titulo,
-      c.artista,
-      c.slug,
-      c."imgUrl",
-      c.url,
-      c.estilo,
-      c.rating,
-      c.deal_score                                         AS "dealScore",
-      c.confidence_level                                   AS "confidenceLevel",
-      l.preco                                              AS "precoAtual",
-      COALESCE(c.avg_30d::float, l.preco)                  AS "mediaPreco",
-      CASE
-        WHEN COALESCE(c.avg_30d::float, 0) > 0
-        THEN (COALESCE(c.avg_30d::float, l.preco) - l.preco) / COALESCE(c.avg_30d::float, l.preco)
-        ELSE 0
-      END                                                  AS desconto,
-      (
-        SELECT COALESCE(
-          json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"),
-          '[]'::json
-        )
-        FROM (
-          SELECT "precoBrl", "capturadoEm"
-          FROM   "HistoricoPreco"
-          WHERE  "discoId" = c.id
-            AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
-          ORDER  BY "capturadoEm" ASC
-          LIMIT  10
-        ) sp
-      ) AS sparkline
-    FROM candidates c
-    INNER JOIN latest l ON l."discoId" = c.id
-  `;
+  const relatedDeals = await getRelatedDeals(disco.id);
   const t4 = Date.now();
   console.log(`[PERF disco/${slug}] relatedDeals: ${t4 - t3}ms | total: ${t4 - t0}ms`);
 
