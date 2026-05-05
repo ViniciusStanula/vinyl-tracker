@@ -96,7 +96,7 @@ export default memo(function DiscoCard({
         {disco.imgUrl ? (
           <Image
             src={disco.imgUrl}
-            alt={disco.titulo}
+            alt={`${disco.titulo} por ${disco.artista} — capa do álbum`}
             fill
             sizes="(max-width: 767px) 50vw, (max-width: 1199px) 33vw, 25vw"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"

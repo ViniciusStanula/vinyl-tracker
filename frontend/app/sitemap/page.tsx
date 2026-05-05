@@ -121,7 +121,7 @@ export default async function SitemapPage() {
   const grouped = groupByLetter(artists);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
       {/* ── Breadcrumbs ─────────────────────────────────────────── */}
       <nav className="mb-6 text-sm text-dust flex gap-2">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
@@ -203,9 +203,9 @@ export default async function SitemapPage() {
           <div className="space-y-8">
             {grouped.map(([letter, group]) => (
               <div key={letter} id={`letra-${letter}`}>
-                <p className="text-gold font-display font-bold text-lg mb-3 border-b border-groove pb-1">
+                <h3 className="text-gold font-display font-bold text-lg mb-3 border-b border-groove pb-1">
                   {letter}
-                </p>
+                </h3>
                 <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-1.5">
                   {group.map(({ nome, slug }) => (
                     <li key={slug}>

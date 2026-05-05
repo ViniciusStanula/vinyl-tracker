@@ -62,7 +62,7 @@ export default async function DiscosPage({
   const currentPage = Math.min(page, totalPages);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
 
       <h1 className="font-display text-3xl font-bold text-cream mb-6">
         Todos os Discos

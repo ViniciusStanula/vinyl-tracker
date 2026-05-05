@@ -13,6 +13,61 @@ const breadcrumbJsonLd = JSON.stringify({
   ],
 });
 
+const faqJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "O que é o Garimpa Vinil?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Um rastreador de preços de discos de vinil na Amazon Brasil. Monitora centenas de títulos de hora em hora, guarda o histórico completo e avisa quando o preço cai de verdade — não só quando a Amazon coloca um banner vermelho.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Como o Garimpa Vinil monitora os preços?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "A cada hora, um crawler percorre as páginas de produto na Amazon Brasil e registra o preço atual de cada disco rastreado. Esse valor vai para um banco de dados junto com a data e hora exatas da captura. Com esse histórico, calculamos médias e mínimos reais baseados nos preços registrados ao longo do tempo.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Como funciona a detecção de ofertas?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Para um disco aparecer como oferta, duas condições precisam ser verdadeiras ao mesmo tempo: o preço atual precisa estar pelo menos 10% abaixo da média dos últimos 30 dias e a queda em reais precisa ser de pelo menos R$2. Isso evita que variações mínimas de centavos disparem alertas falsos.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "O que significa 'Boa Oferta'?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Preço pelo menos 10% abaixo da média dos últimos 30 dias e queda de no mínimo R$2. A condição base — confirma que há um desconto real em relação ao comportamento recente do preço.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "O que significa 'Ótima Oferta'?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Além de ser uma Boa Oferta, o preço atual também está abaixo da média dos últimos 90 dias. Esse segundo filtro só é aplicado quando o disco tem histórico suficiente — pelo menos 30 registros e 45 dias de dados — então quando aparece, é sinal mais confiável.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "O que significa 'Melhor Preço'?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "O preço atual está igual ou muito próximo (margem de 2%) do menor preço dos últimos 30 dias. É o badge mais forte — indica que o disco está na faixa mais baixa do período recente, independente da média.",
+      },
+    },
+  ],
+});
+
 const EXEMPLO_PRECOS = [
   { data: "21/03", dataFull: "21/03/2026", valor: 199.90 },
   { data: "22/03", dataFull: "22/03/2026", valor: 199.90 },
@@ -68,9 +123,11 @@ export const metadata = {
 
 export default function SobrePage() {
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8">
+    <main id="main-content" className="max-w-3xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqJsonLd }} />
 
       {/* ── Breadcrumbs ─────────────────────────────────────────── */}
       <nav className="mb-6 text-sm text-dust flex gap-2">

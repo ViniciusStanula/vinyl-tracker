@@ -82,7 +82,7 @@ export default async function HomePage({
   const currentPage = Math.min(page, totalPages);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: websiteJsonLd }} />
 
@@ -144,9 +144,9 @@ export default async function HomePage({
           basePath="/disco"
         />
       ) : (
-        <div className="text-center py-24 text-dust">
+        <section aria-label="Sem resultados" className="text-center py-24 text-dust">
           <div className="inline-block mb-5 opacity-40">
-            <svg viewBox="0 0 64 64" fill="none" className="w-16 h-16 mx-auto">
+            <svg viewBox="0 0 64 64" fill="none" className="w-16 h-16 mx-auto" aria-hidden="true">
               <circle cx="32" cy="32" r="30" className="fill-gold" opacity="0.3" />
               <circle cx="32" cy="32" r="20" className="fill-record" opacity="0.8" />
               <circle cx="32" cy="32" r="5"  className="fill-gold" opacity="0.4" />
@@ -165,7 +165,7 @@ export default async function HomePage({
           >
             Ver todos os discos
           </Link>
-        </div>
+        </section>
       )}
 
       <BackToTop />

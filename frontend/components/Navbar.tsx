@@ -33,7 +33,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 h-[62px] flex items-center gap-2 sm:gap-5">
 
         {/* ── Brand ── */}
-        <Link href="/" className="flex items-center gap-3 shrink-0 group">
+        <Link href="/" className="flex items-center gap-3 shrink-0 group" aria-label="Garimpa Vinil — página inicial">
           <VinylLogo />
           <div className="hidden sm:flex flex-col leading-none">
             <span className="font-display text-[21px] font-black text-cream tracking-tight">

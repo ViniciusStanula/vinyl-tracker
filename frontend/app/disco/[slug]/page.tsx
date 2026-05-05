@@ -48,8 +48,8 @@ export async function generateMetadata({
         title,
         description,
         url: `/disco/${slug}`,
-        type: "website",
-        ...(disco.imgUrl ? { images: [{ url: disco.imgUrl, alt: disco.titulo }] } : {}),
+        type: "music.album",
+        ...(disco.imgUrl ? { images: [{ url: disco.imgUrl, alt: `${disco.titulo} por ${disco.artista} — capa do álbum` }] } : {}),
       },
       twitter: {
         card: disco.imgUrl ? "summary_large_image" : "summary",
@@ -287,6 +287,9 @@ export default async function DiscoPage({
     image: disco.imgUrl ?? undefined,
     brand: { "@type": "Brand", name: disco.artista },
     url: `${siteUrl}/disco/${slug}`,
+    ...(disco.precos.length > 0
+      ? { dateModified: disco.precos.at(-1)!.capturadoEm.toISOString() }
+      : {}),
     offers: {
       "@type": "Offer",
       url: disco.url,
@@ -310,6 +313,19 @@ export default async function DiscoPage({
       : {}),
   });
 
+  const musicAlbumJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "MusicAlbum",
+    name: disco.titulo,
+    url: `${siteUrl}/disco/${slug}`,
+    ...(disco.imgUrl ? { image: disco.imgUrl } : {}),
+    byArtist: {
+      "@type": "MusicArtist",
+      name: disco.artista,
+      url: `${siteUrl}/artista/${slugifyArtist(disco.artista)}`,
+    },
+  });
+
   const breadcrumbJsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -326,9 +342,11 @@ export default async function DiscoPage({
   });
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8">
+    <main id="main-content" className="max-w-3xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: productJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: musicAlbumJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* Breadcrumbs */}
@@ -355,7 +373,7 @@ export default async function DiscoPage({
           <div className="relative w-full sm:w-72 sm:h-72 aspect-square sm:aspect-auto shrink-0 bg-label rounded-2xl overflow-hidden">
             <Image
               src={disco.imgUrl}
-              alt={disco.titulo}
+              alt={`${disco.titulo} por ${disco.artista} — capa do álbum`}
               fill
               sizes="(max-width: 640px) 100vw, 288px"
               className="object-cover"
@@ -467,29 +485,29 @@ export default async function DiscoPage({
         </h2>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
+        <dl className="grid grid-cols-2 gap-3 mb-5">
           {/* Mínimo */}
           <div className="bg-groove rounded-lg p-3 border-l-4 border-deal">
-            <p className="text-xs text-dust mb-1 flex items-center gap-1">
+            <dt className="text-xs text-dust mb-1 flex items-center gap-1">
               Mínimo <span className="text-deallit text-xs font-bold">↓</span>
-            </p>
-            <p className="font-bold text-deallit text-sm tabular-nums">{fmt(precoMin)}</p>
+            </dt>
+            <dd className="font-bold text-deallit text-sm tabular-nums">{fmt(precoMin)}</dd>
             {minRecord && (
-              <p className="text-xs text-dust mt-0.5">{fmtDateTime(minRecord.capturadoEm)}</p>
+              <dd className="text-xs text-dust mt-0.5">{fmtDateTime(minRecord.capturadoEm)}</dd>
             )}
           </div>
 
           {/* Máximo */}
           <div className="bg-groove rounded-lg p-3 border-l-4 border-cut">
-            <p className="text-xs text-dust mb-1 flex items-center gap-1">
+            <dt className="text-xs text-dust mb-1 flex items-center gap-1">
               Máximo <span className="text-cut text-xs font-bold">↑</span>
-            </p>
-            <p className="font-bold text-cut text-sm tabular-nums">{fmt(precoMax)}</p>
+            </dt>
+            <dd className="font-bold text-cut text-sm tabular-nums">{fmt(precoMax)}</dd>
             {maxRecord && (
-              <p className="text-xs text-dust mt-0.5">{fmtDateTime(maxRecord.capturadoEm)}</p>
+              <dd className="text-xs text-dust mt-0.5">{fmtDateTime(maxRecord.capturadoEm)}</dd>
             )}
           </div>
-        </div>
+        </dl>
 
         <GraficoPreco precos={chartPrecos} />
 

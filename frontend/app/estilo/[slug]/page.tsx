@@ -375,10 +375,26 @@ export default async function EstiloPage({
     ],
   });
 
+  const itemListJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Discos de ${displayName}`,
+    url: `${siteUrl}/estilo/${slug}`,
+    numberOfItems: sorted.length,
+    itemListElement: sorted.slice(0, 10).map((disco, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/disco/${disco.slug}`,
+      name: disco.titulo,
+    })),
+  });
+
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
       <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
           Início
@@ -434,17 +450,18 @@ export default async function EstiloPage({
           <h2 className="text-dust text-xs font-semibold uppercase tracking-widest mb-3">
             Outros estilos
           </h2>
-          <div className="flex flex-wrap gap-1.5">
+          <ul className="flex flex-wrap gap-1.5">
             {relatedEstilos.map((e) => (
-              <Link
-                key={e.slug}
-                href={`/estilo/${e.slug}`}
-                className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-              >
-                {e.tag.replace(/\b\w/g, (c) => c.toUpperCase())}
-              </Link>
+              <li key={e.slug}>
+                <Link
+                  href={`/estilo/${e.slug}`}
+                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+                >
+                  {e.tag.replace(/\b\w/g, (c) => c.toUpperCase())}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 

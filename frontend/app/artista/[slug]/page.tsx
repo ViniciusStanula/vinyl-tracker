@@ -388,6 +388,20 @@ export default async function ArtistaPage({
     ],
   });
 
+  const itemListJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Discos de ${artista}`,
+    url: `${siteUrl}/artista/${slug}`,
+    numberOfItems: total,
+    itemListElement: items.slice(0, 10).map((disco, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${siteUrl}/disco/${disco.slug}`,
+      name: disco.titulo,
+    })),
+  });
+
   const musicArtistJsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "MusicArtist",
@@ -397,9 +411,11 @@ export default async function ArtistaPage({
   });
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: musicArtistJsonLd }} />
       <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
