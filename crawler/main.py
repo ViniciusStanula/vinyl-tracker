@@ -2556,6 +2556,21 @@ def crawl_stale_records(
                             "  [stale] correcting CD→vinyl metadata: ASIN %s → %s",
                             asin, vm["asin"],
                         )
+                        # Guard: vinyl ASIN may already be tracked as its own row.
+                        # Updating asin= would violate the UNIQUE constraint — delete
+                        # the CD duplicate instead and let the vinyl row stand.
+                        with conn.cursor() as chk:
+                            chk.execute('SELECT 1 FROM "Disco" WHERE asin = %s', (vm["asin"],))
+                            vinyl_already_tracked = chk.fetchone() is not None
+                        if vinyl_already_tracked:
+                            log.info(
+                                "  [stale] vinyl ASIN %s already tracked — "
+                                "deleting CD duplicate %s.",
+                                vm["asin"], asin,
+                            )
+                            delete_record(conn, disco_id, asin)
+                            deleted += 1
+                            continue
                         update_disco_metadata(
                             conn, disco_id,
                             vm["asin"], vm["titulo"], vm["imgUrl"], vm["url"], vm["slug"],
