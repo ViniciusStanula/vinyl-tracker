@@ -43,6 +43,7 @@ export default function Footer() {
             <Link href="/"       className="text-dust hover:text-cream transition-colors">Início</Link>
             <Link href="/disco"  className="text-dust hover:text-cream transition-colors">Todos os Discos</Link>
             <Link href="/sobre"  className="text-dust hover:text-cream transition-colors">Sobre</Link>
+            <Link href="/sitemap" className="text-dust hover:text-cream transition-colors">Mapa do Site</Link>
           </div>
           <div className="mt-4">
             <Link
