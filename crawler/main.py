@@ -2030,15 +2030,15 @@ def crawl_single_url(
     return items, session, proxy
 
 
-def _load_category_offset() -> int:
+def _load_crawl_offset(key: str) -> int:
     try:
         with open(_CRAWL_STATE_PATH) as f:
-            return int(json.load(f).get("category_offset", 0))
+            return int(json.load(f).get(key, 0))
     except (FileNotFoundError, ValueError, KeyError):
         return 0
 
 
-def _save_category_offset(offset: int) -> None:
+def _save_crawl_offset(key: str, offset: int) -> None:
     try:
         state: dict = {}
         try:
@@ -2046,7 +2046,7 @@ def _save_category_offset(offset: int) -> None:
                 state = json.load(f)
         except (FileNotFoundError, ValueError):
             pass
-        state["category_offset"] = offset
+        state[key] = offset
         with open(_CRAWL_STATE_PATH, "w") as f:
             json.dump(state, f)
     except OSError as exc:
@@ -2132,12 +2132,20 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
     seen_asins: set[str] = set()
     all_items: list[dict] = []
 
-    # ── 1. Main popularity URL ─────────────────────────────────────────────
+    # ── 1. Main popularity URL (rotating page slice) ───────────────────────
+    main_page_offset = _load_crawl_offset("main_page_offset")
+    main_page_offset = main_page_offset % 400  # guard against ceiling change
+    next_main_offset = (main_page_offset + max_pages) % 400
+    _save_crawl_offset("main_page_offset", next_main_offset)
+
     log.info("═" * 50)
-    log.info("Crawling main popularity URL...")
+    log.info(
+        "Crawling main popularity URL — pages %d–%d of 400...",
+        main_page_offset + 1, main_page_offset + max_pages,
+    )
     items, session, proxy = crawl_single_url(
         session,
-        build_page_url,
+        lambda page: build_page_url(page + main_page_offset),
         "main",
         max_pages,
         delay,
@@ -2156,11 +2164,11 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
     # so each run covers a fraction of genres, freeing time for Phase 3.
     total_cats = len(CATEGORY_URLS)
     slice_size = max(1, round(total_cats * CATEGORY_SLICE_FRACTION))
-    cat_offset = _load_category_offset()
+    cat_offset = _load_crawl_offset("category_offset")
     cat_offset = cat_offset % total_cats  # guard against list shrinking
     active_cats = CATEGORY_URLS[cat_offset:cat_offset + slice_size]
-    next_offset = (cat_offset + slice_size) % total_cats
-    _save_category_offset(next_offset)
+    next_cat_offset = (cat_offset + slice_size) % total_cats
+    _save_crawl_offset("category_offset", next_cat_offset)
 
     log.info("═" * 50)
     log.info(
