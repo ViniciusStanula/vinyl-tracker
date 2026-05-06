@@ -17,6 +17,7 @@ Dependencies:
 """
 import os
 import re
+import json
 import time
 import random
 import logging
@@ -63,6 +64,12 @@ MIN_PRICE_BRL      = 30.0
 # hits in this range.  Amazon degrades sessions to skeleton pages after ~1-2
 # hits; jittering the rotation count removes the mechanical every-N pattern.
 _STALE_MAX_HITS_RANGE = (1, 4)
+
+# Category slice rotation — each run crawls only a fraction of all genre URLs,
+# advancing a persistent offset so the full list is covered across N runs.
+# Set CATEGORY_SLICE_FRACTION=1.0 to disable slicing and crawl all categories.
+CATEGORY_SLICE_FRACTION = float(os.environ.get("CATEGORY_SLICE_FRACTION", "0.2"))
+_CRAWL_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".crawl_state.json")
 
 # ─────────────────────────────────────────────────────────────
 #  Proxy configuration
@@ -2022,6 +2029,29 @@ def crawl_single_url(
     return items, session, proxy
 
 
+def _load_category_offset() -> int:
+    try:
+        with open(_CRAWL_STATE_PATH) as f:
+            return int(json.load(f).get("category_offset", 0))
+    except (FileNotFoundError, ValueError, KeyError):
+        return 0
+
+
+def _save_category_offset(offset: int) -> None:
+    try:
+        state: dict = {}
+        try:
+            with open(_CRAWL_STATE_PATH) as f:
+                state = json.load(f)
+        except (FileNotFoundError, ValueError):
+            pass
+        state["category_offset"] = offset
+        with open(_CRAWL_STATE_PATH, "w") as f:
+            json.dump(state, f)
+    except OSError as exc:
+        log.warning("Could not save crawl state: %s", exc)
+
+
 def _crawl_one_category(cat_url: str, label: str, delay: float, deadline: float | None = None) -> list[dict]:
     """
     Thread worker: crawl a single genre category URL end-to-end.
@@ -2121,10 +2151,23 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
     # ── 2. Genre category URLs + extra sort URLs (parallel) ───────────────
     # Extra sort URLs run in the same executor as categories so they overlap
     # with the category crawl rather than running sequentially after it.
+    # Category URLs are crawled in rotating slices (CATEGORY_SLICE_FRACTION)
+    # so each run covers a fraction of genres, freeing time for Phase 3.
+    total_cats = len(CATEGORY_URLS)
+    slice_size = max(1, round(total_cats * CATEGORY_SLICE_FRACTION))
+    cat_offset = _load_category_offset()
+    cat_offset = cat_offset % total_cats  # guard against list shrinking
+    active_cats = CATEGORY_URLS[cat_offset:cat_offset + slice_size]
+    next_offset = (cat_offset + slice_size) % total_cats
+    _save_category_offset(next_offset)
+
     log.info("═" * 50)
     log.info(
-        "Crawling %d category URLs + %d extra sort URLs with %d parallel workers...",
-        len(CATEGORY_URLS), len(EXTRA_SORT_URLS), MAX_CATEGORY_WORKERS,
+        "Crawling category slice %d–%d of %d (%.0f%%) + %d extra sort URLs"
+        " with %d parallel workers...",
+        cat_offset, cat_offset + len(active_cats) - 1, total_cats,
+        100 * len(active_cats) / total_cats,
+        len(EXTRA_SORT_URLS), MAX_CATEGORY_WORKERS,
     )
     cat_items_all: list[dict] = []
     extra_items_all: list[dict] = []
@@ -2132,7 +2175,7 @@ def crawl(max_pages: int, delay: float, deadline: float | None = None) -> list[d
     with ThreadPoolExecutor(max_workers=MAX_CATEGORY_WORKERS) as pool:
         futures: dict = {
             pool.submit(_crawl_one_category, cat_url, f"cat-{i}", delay, deadline): ("cat", i)
-            for i, cat_url in enumerate(CATEGORY_URLS, 1)
+            for i, cat_url in enumerate(active_cats, 1)
         }
         for i, extra_url in enumerate(EXTRA_SORT_URLS, 1):
             fut = pool.submit(_crawl_one_extra, extra_url, f"extra-{i}", delay, deadline)
