@@ -53,7 +53,10 @@ LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 #  Configuration
 # ─────────────────────────────────────────────────────────────
 ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
-MAX_PAGES_DEFAULT    = 400     # main popularity URL — high ceiling; early-exit (5 consecutive empty) handles real termination
+# Fraction of work done per run — applies to both main URL pages and category URL slices.
+# Default 0.2 = 20% per run; 5 runs cover everything. Set 1.0 to disable slicing.
+CATEGORY_SLICE_FRACTION = float(os.environ.get("CATEGORY_SLICE_FRACTION", "0.2"))
+MAX_PAGES_DEFAULT    = max(1, round(400 * CATEGORY_SLICE_FRACTION))  # 400 full ceiling × fraction
 MAX_PAGES_CATEGORY   = 500     # per genre URL — effectively unlimited; consecutive-empty logic stops at true end of results
 MAX_PAGES_EXTRA      = 100     # per extra sort URL — same reasoning
 DELAY_SECONDS        = 1.5     # seconds between requests; safe with curl_cffi browser impersonation
@@ -67,8 +70,6 @@ _STALE_MAX_HITS_RANGE = (1, 4)
 
 # Category slice rotation — each run crawls only a fraction of all genre URLs,
 # advancing a persistent offset so the full list is covered across N runs.
-# Set CATEGORY_SLICE_FRACTION=1.0 to disable slicing and crawl all categories.
-CATEGORY_SLICE_FRACTION = float(os.environ.get("CATEGORY_SLICE_FRACTION", "0.2"))
 _CRAWL_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".crawl_state.json")
 
 # ─────────────────────────────────────────────────────────────
