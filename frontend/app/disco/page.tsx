@@ -1,4 +1,4 @@
-import { queryDiscos } from "@/lib/queryDiscos";
+import { queryDiscosWithCache } from "@/lib/queryDiscos";
 import { formatDiscoCount } from "@/lib/formatters";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
@@ -6,7 +6,7 @@ import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import { Suspense } from "react";
 
-export const revalidate = 300;
+export const revalidate = false;
 
 export const metadata = {
   title: "Todos os Discos — Garimpa Vinil",
@@ -51,10 +51,10 @@ export default async function DiscosPage({
   const searchTerm = q?.trim() ?? "";
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
-  let items: Awaited<ReturnType<typeof queryDiscos>>["items"] = [];
+  let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
   let total = 0, totalPages = 0;
   try {
-    ({ items, total, totalPages } = await queryDiscos({ searchTerm, sort, artista, precoMax, page }));
+    ({ items, total, totalPages } = await queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }));
   } catch {
     // DB unavailable — render empty state
   }
