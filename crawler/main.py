@@ -585,6 +585,8 @@ _ARTIST_REJECT_PHRASES = (
     "r$",                     # embedded Brazilian real sign e.g. "r$0,00"
     "outro formato",          # "Outro formato:" — Amazon format-switcher label
     "other format",           # same in English
+    "músicas mp3",            # Amazon digital-music label leaked by fallback selectors
+    "musicas mp3",            # ASCII variant
 )
 _UNKNOWN_ARTIST = "Artista não identificado"
 
