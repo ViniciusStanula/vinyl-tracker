@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import DiscoCard from "./DiscoCard";
 import type { ProcessedDisco } from "@/lib/queryDiscos";
 
@@ -36,9 +37,17 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-display text-xl font-bold text-cream">
-          Artistas mais Ouvidos
-        </h2>
+        <div className="flex items-baseline gap-3">
+          <h2 className="font-display text-xl font-bold text-cream">
+            Artistas mais Ouvidos
+          </h2>
+          <Link
+            href="/artistas"
+            className="text-parchment hover:text-gold text-xs transition-colors"
+          >
+            Ver todos →
+          </Link>
+        </div>
         <div className="flex gap-1.5">
           <button
             onClick={() => ref.current?.scrollBy({ left: -SCROLL_AMOUNT, behavior: "smooth" })}
