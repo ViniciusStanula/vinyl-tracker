@@ -40,10 +40,12 @@ export default function Footer() {
             Monitora preços de vinis na Amazon a cada 2 horas. Histórico completo de preços e detecção automática de promoções.
           </p>
           <div className="mt-4 flex flex-col gap-1">
-            <Link href="/"       className="text-dust hover:text-cream transition-colors">Início</Link>
-            <Link href="/disco"  className="text-dust hover:text-cream transition-colors">Todos os Discos</Link>
-            <Link href="/sobre"  className="text-dust hover:text-cream transition-colors">Sobre</Link>
-            <Link href="/sitemap" className="text-dust hover:text-cream transition-colors">Mapa do Site</Link>
+            <Link href="/"                        className="text-dust hover:text-cream transition-colors">Início</Link>
+            <Link href="/disco"                   className="text-dust hover:text-cream transition-colors">Todos os Discos</Link>
+            <Link href="/discos-abaixo-de-200"    className="text-dust hover:text-cream transition-colors">Discos abaixo de R$ 200</Link>
+            <Link href="/artistas-mais-ouvidos"   className="text-dust hover:text-cream transition-colors">Artistas mais Ouvidos</Link>
+            <Link href="/sobre"                   className="text-dust hover:text-cream transition-colors">Sobre</Link>
+            <Link href="/sitemap"                 className="text-dust hover:text-cream transition-colors">Mapa do Site</Link>
           </div>
           <div className="mt-4">
             <Link

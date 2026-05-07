@@ -77,7 +77,6 @@ export async function queryPriceUnder200(): Promise<ProcessedDisco[]> {
         AND  hp_latest."precoBrl" >= 30
         AND  hp_latest."precoBrl" <= 200
       ORDER  BY d.deal_score DESC NULLS LAST, desconto DESC NULLS LAST
-      LIMIT  40
     `;
 
     return rows.flatMap((row): ProcessedDisco[] => {

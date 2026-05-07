@@ -19,9 +19,11 @@ export default async function sitemap(props: {
 
   if (id === "estatico") {
     return [
-      { url: base,              changeFrequency: "daily",  priority: 1.0 },
-      { url: `${base}/disco`,   changeFrequency: "daily",  priority: 0.9 },
-      { url: `${base}/sobre`,   changeFrequency: "monthly", priority: 0.3 },
+      { url: base,                                    changeFrequency: "daily",   priority: 1.0 },
+      { url: `${base}/disco`,                         changeFrequency: "daily",   priority: 0.9 },
+      { url: `${base}/discos-abaixo-de-200`,          changeFrequency: "daily",   priority: 0.8 },
+      { url: `${base}/artistas-mais-ouvidos`,         changeFrequency: "daily",   priority: 0.7 },
+      { url: `${base}/sobre`,                         changeFrequency: "monthly", priority: 0.3 },
     ];
   }
 

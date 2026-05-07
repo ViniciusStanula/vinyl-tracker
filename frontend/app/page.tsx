@@ -1,11 +1,9 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
 import { formatDiscoCount } from "@/lib/formatters";
 import { queryCarouselDiscosWithCache } from "@/lib/carousel";
-import { queryPriceUnder200WithCache } from "@/lib/promos";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
 import ArtistasCarousel from "@/components/ArtistasCarousel";
-import DiscoCarousel from "@/components/DiscoCarousel";
 import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -69,16 +67,13 @@ export default async function HomePage({
   const searchTerm = q?.trim() ?? "";
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
-  // Fetch main grid and all carousels in parallel
+  // Fetch main grid and carousel in parallel
   let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
-  let total = 0, totalPages = 0;
-  let carouselItems: Awaited<ReturnType<typeof queryCarouselDiscosWithCache>> = [];
-  let under200Items: Awaited<ReturnType<typeof queryPriceUnder200WithCache>> = [];
+  let total = 0, totalPages = 0, carouselItems: Awaited<ReturnType<typeof queryCarouselDiscosWithCache>> = [];
   try {
-    ([{ items, total, totalPages }, carouselItems, under200Items] = await Promise.all([
+    ([{ items, total, totalPages }, carouselItems] = await Promise.all([
       queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }),
       searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscosWithCache(),
-      searchTerm || artista ? Promise.resolve([]) : queryPriceUnder200WithCache(),
     ]));
   } catch {
     // DB unavailable — render empty state
@@ -105,12 +100,6 @@ export default async function HomePage({
 
       {/* ── Artistas mais Ouvidos carousel ──────────────────────── */}
       <ArtistasCarousel items={carouselItems} />
-
-      {/* ── Discos abaixo de R$ 200 carousel ────────────────────── */}
-      <DiscoCarousel
-        title="Discos abaixo de R$ 200"
-        items={under200Items}
-      />
 
       {/* ── Sort bar ────────────────────────────────────────────── */}
       <div className="mb-5">
