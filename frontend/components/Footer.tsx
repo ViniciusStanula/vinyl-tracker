@@ -15,6 +15,20 @@ function TelegramIcon({ className }: { className?: string }) {
 
 const TELEGRAM_URL = "https://t.me/garimpavinil";
 
+const NAV_LINKS = [
+  { label: "Início",               href: "/" },
+  { label: "Todos os Discos",      href: "/disco" },
+  { label: "Discos até R$ 200",    href: "/discos-abaixo-de-200" },
+  { label: "Artistas mais Ouvidos", href: "/artistas-mais-ouvidos" },
+  { label: "Sobre o Site",         href: "/sobre" },
+];
+
+const LEGAL_LINKS = [
+  { label: "Política de Privacidade", href: "/politica-de-privacidade" },
+  { label: "Termos de Uso",           href: "/termos-de-uso" },
+  { label: "Mapa do Site",            href: "/sitemap" },
+];
+
 const TOP_ESTILOS = [
   { nome: "Rock",       slug: "rock" },
   { nome: "Jazz",       slug: "jazz" },
@@ -30,57 +44,107 @@ const TOP_ESTILOS = [
   { nome: "MPB",        slug: "mpb" },
 ];
 
+function FooterHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] uppercase tracking-widest font-semibold text-dust mb-3">
+      {children}
+    </p>
+  );
+}
+
+function FooterLink({ href, children, external }: {
+  href: string;
+  children: React.ReactNode;
+  external?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className="text-dust hover:text-cream transition-colors leading-snug"
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export default function Footer() {
   return (
     <footer className="mt-16 border-t border-groove bg-record">
-      <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-2 sm:grid-cols-4 gap-8 text-sm">
-        <div className="col-span-2 sm:col-span-2">
-          <p className="font-display font-bold text-cream mb-1 text-base">Garimpa Vinil</p>
-          <p className="text-dust text-xs leading-relaxed max-w-xs">
-            Monitora preços de vinis na Amazon a cada 2 horas. Histórico completo de preços e detecção automática de promoções.
-          </p>
-          <div className="mt-4 flex flex-col gap-1">
-            <Link href="/"                        className="text-dust hover:text-cream transition-colors">Início</Link>
-            <Link href="/disco"                   className="text-dust hover:text-cream transition-colors">Todos os Discos</Link>
-            <Link href="/discos-abaixo-de-200"    className="text-dust hover:text-cream transition-colors">Discos abaixo de R$ 200</Link>
-            <Link href="/artistas-mais-ouvidos"   className="text-dust hover:text-cream transition-colors">Artistas mais Ouvidos</Link>
-            <Link href="/sobre"                   className="text-dust hover:text-cream transition-colors">Sobre</Link>
-            <Link href="/sitemap"                 className="text-dust hover:text-cream transition-colors">Mapa do Site</Link>
-          </div>
-          <div className="mt-4">
+      <div className="max-w-7xl mx-auto px-4 py-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8 text-sm">
+
+          {/* ── Brand ────────────────────────────────── */}
+          <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
+            <div>
+              <p className="font-display font-bold text-cream text-base mb-1">Garimpa Vinil</p>
+              <p className="text-dust text-xs leading-relaxed">
+                Monitora preços de vinis na Amazon a cada 2 horas. Histórico completo e detecção automática de promoções reais.
+              </p>
+            </div>
+
             <Link
               href={TELEGRAM_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-dust hover:text-gold transition-colors group"
+              className="inline-flex items-center gap-2 self-start px-3 py-2 rounded-lg border border-groove hover:border-gold/50 bg-sleeve hover:bg-sleeve/80 transition-colors group"
+              aria-label="Canal de ofertas no Telegram"
             >
-              <TelegramIcon className="w-5 h-5 text-[#29ABE2] group-hover:text-gold transition-colors shrink-0" />
-              <span className="text-xs">Canal de ofertas no Telegram</span>
+              <TelegramIcon className="w-4 h-4 text-[#29ABE2] shrink-0" />
+              <span className="text-xs text-dust group-hover:text-cream transition-colors">Canal de Ofertas</span>
             </Link>
           </div>
-        </div>
 
-        <div className="col-span-2 sm:col-span-2">
-          <p className="font-semibold text-cream mb-3">Explorar por Estilo</p>
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
-            {TOP_ESTILOS.map(({ nome, slug }) => (
-              <li key={slug}>
-                <Link href={`/estilo/${slug}`} className="text-dust hover:text-cream transition-colors">
-                  {nome}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {/* ── Navegar ──────────────────────────────── */}
+          <nav aria-label="Navegação do rodapé" className="col-span-1 flex flex-col">
+            <FooterHeading>Navegar</FooterHeading>
+            <ul className="flex flex-col gap-2">
+              {NAV_LINKS.map(({ label, href }) => (
+                <li key={href}>
+                  <FooterLink href={href}>{label}</FooterLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* ── Explorar por Estilo ───────────────────── */}
+          <nav aria-label="Explorar por estilo musical" className="col-span-2 md:col-span-1 flex flex-col">
+            <FooterHeading>Explorar por Estilo</FooterHeading>
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {TOP_ESTILOS.map(({ nome, slug }) => (
+                <li key={slug}>
+                  <FooterLink href={`/estilo/${slug}`}>{nome}</FooterLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* ── Legal ────────────────────────────────── */}
+          <div className="col-span-1 flex flex-col">
+            <FooterHeading>Legal</FooterHeading>
+            <ul className="flex flex-col gap-2">
+              {LEGAL_LINKS.map(({ label, href }) => (
+                <li key={href}>
+                  <FooterLink href={href}>{label}</FooterLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+
         </div>
       </div>
 
-      <div className="border-t border-groove/50 px-4 py-4 text-center text-xs text-dust">
-        <p>
-          Como Associado Amazon, ganhamos comissão nas compras qualificadas sem custo adicional para você. Os preços são da Amazon e podem variar.{" "}
-          <Link href="/sobre" className="hover:text-parchment transition-colors underline underline-offset-2">
-            Saiba mais
-          </Link>
-        </p>
+      {/* ── Bottom bar ───────────────────────────────────────────── */}
+      <div className="border-t border-groove/50 px-4 py-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-dust">
+          <p>© {new Date().getFullYear()} Garimpa Vinil</p>
+          <p className="sm:text-right sm:max-w-md">
+            Como Associado Amazon, ganhamos comissão nas compras qualificadas sem custo adicional para você.{" "}
+            <Link href="/sobre" className="hover:text-parchment transition-colors underline underline-offset-2">
+              Saiba mais
+            </Link>
+          </p>
+        </div>
       </div>
     </footer>
   );
