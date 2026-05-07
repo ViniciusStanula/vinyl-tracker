@@ -26,7 +26,7 @@ export interface DiscoCardProps {
 }
 
 /** 44×18 px SVG sparkline showing the 30-day price trend. */
-function Sparkline({ values }: { values: number[] }) {
+function Sparkline({ values, avg }: { values: number[]; avg: number }) {
   if (values.length < 2) return null;
   const dataMin = Math.min(...values);
   const dataMax = Math.max(...values);
@@ -43,13 +43,15 @@ function Sparkline({ values }: { values: number[] }) {
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
-  const trending = values[values.length - 1] <= values[0];
+  // Green when current price is below historical average, red when above.
+  const currentPrice = values[values.length - 1];
+  const belowAvg = avg > 0 ? currentPrice < avg : currentPrice <= values[0];
   return (
     <svg width={W} height={H} aria-hidden="true" className="shrink-0 opacity-80">
       <polyline
         points={pts}
         fill="none"
-        className={trending ? "stroke-deallit" : "stroke-cut"}
+        className={belowAvg ? "stroke-deallit" : "stroke-cut"}
         strokeWidth="1.5"
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -175,7 +177,7 @@ export default memo(function DiscoCard({
         <div className="mt-auto pt-2">
           {(sparkline.length >= 2 || showOriginalPrice) && (
             <div className="flex items-center gap-2 mb-1">
-              {sparkline.length >= 2 && <Sparkline values={sparkline} />}
+              {sparkline.length >= 2 && <Sparkline values={sparkline} avg={disco.mediaPreco} />}
               {showOriginalPrice && (
                 <p className="text-dust text-xs line-through ml-auto tabular-nums">
                   {fmt(disco.mediaPreco)}
