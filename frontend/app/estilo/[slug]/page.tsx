@@ -47,7 +47,6 @@ type SerializedEstiloData = {
  */
 const _getEstiloPageData = unstable_cache(
   async (slug: string): Promise<SerializedEstiloData | null> => {
-    const t0 = Date.now();
     // Find the canonical display name by applying the same slug transform in SQL
     const canonicalRow = await prisma.$queryRaw<{ tag: string }[]>`
       WITH tags AS (
@@ -65,9 +64,6 @@ const _getEstiloPageData = unstable_cache(
             ) = ${slug}
       LIMIT 1
     `;
-
-    const t1 = Date.now();
-    console.log(`[PERF estilo/${slug}] canonicalRow: ${t1 - t0}ms`);
 
     if (canonicalRow.length === 0) return null;
     const canonical = canonicalRow[0].tag;
@@ -142,9 +138,6 @@ const _getEstiloPageData = unstable_cache(
       ORDER BY c.deal_score DESC NULLS LAST, desconto DESC NULLS LAST
       LIMIT 96
     `;
-
-    const t2 = Date.now();
-    console.log(`[PERF estilo/${slug}] mainQuery: ${t2 - t1}ms (${rows.length} discos) | total: ${t2 - t0}ms`);
 
     return {
       canonical,
@@ -231,7 +224,6 @@ const _getRelatedEstilos = unstable_cache(
       ORDER BY s.shared / (cs.cnt + a.total - s.shared) DESC
       LIMIT 10
     `;
-    console.log(`[PERF estilo-related/${canonical}] ${rows.length} related styles`);
     return rows.map((r) => ({ tag: r.tag, slug: slugifyStyle(r.tag) }));
   },
   ["estilo-related"],

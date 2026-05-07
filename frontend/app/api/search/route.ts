@@ -69,7 +69,7 @@ const getCachedSuggestions = (q: string) =>
   unstable_cache(
     () => fetchSuggestions(q),
     ["search-suggestions", q],
-    { tags: ["prices"], revalidate: 60 }
+    { tags: ["prices"], revalidate: 600 }
   )();
 
 export async function GET(req: NextRequest) {

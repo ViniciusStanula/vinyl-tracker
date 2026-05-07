@@ -147,8 +147,6 @@ export default async function DiscoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const t0 = Date.now();
-
   // Both queries use only the slug — run in parallel to save one DB roundtrip.
   // getDiscoWithPrecos is React-cached, so generateMetadata's prior call is free.
   const [disco, metaRow] = await Promise.all([
@@ -158,9 +156,6 @@ export default async function DiscoPage({
       SELECT disponivel, lastfm_tags AS "lastfmTags" FROM "Disco" WHERE slug = ${slug}
     `,
   ]);
-  const t1 = Date.now();
-  console.log(`[PERF disco/${slug}] findUnique+metaRow parallel: ${t1 - t0}ms`);
-
   if (!disco) notFound();
 
   const disponivel = metaRow[0]?.disponivel ?? true;
@@ -248,10 +243,7 @@ export default async function DiscoPage({
 
   // Related deals — 4 other records with an active deal score.
   // Cached per disco under "prices" tag; crawler webhook invalidates on each run.
-  const t3 = Date.now();
   const relatedDeals = await getRelatedDeals(disco.id);
-  const t4 = Date.now();
-  console.log(`[PERF disco/${slug}] relatedDeals: ${t4 - t3}ms | total: ${t4 - t0}ms`);
 
   // Process related deals into DiscoCard-compatible shape
   const processedDeals = relatedDeals.map((deal) => {

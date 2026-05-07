@@ -77,7 +77,6 @@ const _getArtistaPageData = unstable_cache(
     sort: string,
     precoMax: number | null,
   ): Promise<ArtistaPageData | null> => {
-    const t0 = Date.now();
     // Pre-filter at the DB level using a SQL slug approximation so we transfer
     // only candidates instead of the full artist table. Two expressions cover:
     //   1. Regular names: lower(regexp_replace(artista, '[^a-z0-9]+', '-', 'g'))
@@ -109,9 +108,6 @@ const _getArtistaPageData = unstable_cache(
                 '^-+|-+$', '', 'g'
               ), 60) = ${slug}
     `;
-
-    const t1 = Date.now();
-    console.log(`[PERF artista/${slug}] candidates: ${t1 - t0}ms`);
 
     const variants = candidates
       .map((r) => r.artista)
@@ -232,9 +228,6 @@ const _getArtistaPageData = unstable_cache(
       mainQuery,
       tagsQuery,
     ]);
-
-    const t2 = Date.now();
-    console.log(`[PERF artista/${slug}] count+query+tags (parallel): ${t2 - t1}ms | total: ${t2 - t0}ms`);
 
     const total = Number(countResult[0].total);
     if (total === 0) return null;
