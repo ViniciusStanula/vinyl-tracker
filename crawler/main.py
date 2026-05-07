@@ -3040,6 +3040,14 @@ def main():
                         log.info("Phase 3: deadline reached after %d records.", phase3_total)
                         break
 
+                    # Reconnect before each batch — long Phase 3 runs outlast
+                    # Supabase's SSL session timeout on the transaction pooler.
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                    conn = get_connection()
+
                     batch = fetch_stale_records(conn, seen_asins, limit=_PHASE3_BATCH_SIZE)
                     if not batch:
                         log.info("Phase 3: no more stale records after %d records.", phase3_total)
