@@ -20,3 +20,10 @@ crawler/vinyl_crawler.log
 
 # Claude Code local settings (may contain credentials in Bash permission strings)
 .claude/
+
+# Debug / tooling artifacts
+.bug-hunter/
+debug/
+frontend/dbcheck.mjs
+frontend/scripts/
+logo-export.html
