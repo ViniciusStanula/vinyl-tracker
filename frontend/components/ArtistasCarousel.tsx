@@ -42,7 +42,7 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
             Artistas mais Ouvidos
           </h2>
           <Link
-            href="/artistas"
+            href="/artistas-mais-ouvidos"
             className="text-parchment hover:text-gold text-xs transition-colors"
           >
             Ver todos →

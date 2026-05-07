@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-05-01T19:38:05.328Z",
+  "target": "c:\\Users\\Administrator\\Documents\\GitHub\\vinyl-tracker\\crawler",
+  "totalFiles": 15,
+  "scannableFiles": 15,
+  "strategy": "parallel",
+  "modeFile": "modes/parallel.md",
+  "needsLoop": false,
+  "fileBudget": 60,
+  "avgLines": 499,
+  "avgTokensPerFile": 1996,
+  "estimatedTotalLines": 7485,
+  "sampledFiles": 15,
+  "domains": [
+    {
+      "path": ".",
+      "tier": "HIGH",
+      "fileCount": 15,
+      "riskBreakdown": {
+        "critical": 0,
+        "high": 1,
+        "medium": 14,
+        "low": 0,
+        "context-only": 0
+      }
+    }
+  ],
+  "scanOrder": [
+    "database.py",
+    "backfill_tags.py",
+    "bot.py",
+    "bridge.py",
+    "deal_scorer.py",
+    "debug_asins.py",
+    "debug_search_card.py",
+    "discovery.py",
+    "indexnow.py",
+    "lastfm.py",
+    "lastfm_discovery.py",
+    "main.py",
+    "price_checker.py",
+    "test_used_listing.py",
+    "utils.py"
+  ],
+  "tokenEstimate": {
+    "recon": 300,
+    "perHunterChunk": 29940,
+    "totalPipeline": 33240
+  },
+  "recommendations": [
+    "Large files (avg 499 lines) — FILE_BUDGET is low (60). Chunking is important."
+  ],
+  "riskMap": {
+    "critical": [],
+    "high": [
+      "database.py"
+    ],
+    "medium": [
+      "backfill_tags.py",
+      "bot.py",
+      "bridge.py",
+      "deal_scorer.py",
+      "debug_asins.py",
+      "debug_search_card.py",
+      "discovery.py",
+      "indexnow.py",
+      "lastfm.py",
+      "lastfm_discovery.py",
+      "main.py",
+      "price_checker.py",
+      "test_used_listing.py",
+      "utils.py"
+    ],
+    "low": [],
+    "context-only": []
+  }
+}

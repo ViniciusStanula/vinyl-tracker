@@ -9,12 +9,12 @@ export const metadata: Metadata = {
   title: "Artistas mais Ouvidos — Garimpa Vinil",
   description:
     "Os artistas mais ouvidos do mundo com as melhores ofertas em discos de vinil na Amazon Brasil.",
-  alternates: { canonical: "/artistas" },
+  alternates: { canonical: "/artistas-mais-ouvidos" },
   openGraph: {
     title: "Artistas mais Ouvidos — Garimpa Vinil",
     description:
       "Os artistas mais ouvidos do mundo com as melhores ofertas em discos de vinil na Amazon Brasil.",
-    url: "/artistas",
+    url: "/artistas-mais-ouvidos",
     type: "website",
   },
 };

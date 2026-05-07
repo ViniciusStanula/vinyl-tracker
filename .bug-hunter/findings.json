@@ -1,0 +1,32 @@
+[
+  {
+    "bugId": "BUG-1",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "frontend/app/disco/[slug]/page.tsx",
+    "lines": "270-276",
+    "claim": "Related-deals sparkline subquery is missing AND precoBrl >= 30, so sub-threshold historical prices contaminate the sparkline chart.",
+    "evidence": "disco/[slug]/page.tsx:270-276 — sparkline subquery queries HistoricoPreco with only a date filter, no price floor. Same omission at estilo/[slug]/page.tsx:131-138. Compare to queryDiscos.ts:184 and carousel.ts:86 which both have AND precoBrl >= 30.",
+    "runtimeTrigger": "Any product with historical HistoricoPreco rows with precoBrl < 30 (pre-enforcement records) will show those low prices in sparklines on the related-deals section of disco pages and on estilo pages.",
+    "crossReferences": ["frontend/lib/queryDiscos.ts:184", "frontend/lib/carousel.ts:86", "frontend/app/estilo/[slug]/page.tsx:131-138"],
+    "confidenceScore": 92,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-2",
+    "severity": "Low",
+    "category": "logic",
+    "file": "frontend/app/artista/[slug]/page.tsx",
+    "lines": "259-273",
+    "claim": "Artist page computes precoAtual, media, and sparkline from raw Prisma precos with no precoBrl >= 30 filter and uses an all-time average instead of the 30-day rolling window used everywhere else, causing inconsistent discount display.",
+    "evidence": "artista/[slug]/page.tsx:104-113 Prisma findMany fetches precos with only a date filter (capturadoEm >= oneYearAgo), no precoBrl floor. Lines 259-265: media = all-60-prices average, not 30-day. Lines 269-273: sparkline built without precoBrl >= 30 filter. queryDiscos.ts uses AVG(precoBrl) WHERE capturadoEm >= NOW() - INTERVAL '30 days' AND precoBrl >= 30.",
+    "runtimeTrigger": "Products with old sub-R$30 price records or products whose 30-day avg differs from all-time avg will show a different desconto on the artist page than on the main listing. If the most recent recorded price is < R$30, precoAtual shows that sub-threshold value.",
+    "crossReferences": ["frontend/lib/queryDiscos.ts:81-267", "frontend/app/artista/[slug]/page.tsx:104-113"],
+    "confidenceScore": 82,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  }
+]
