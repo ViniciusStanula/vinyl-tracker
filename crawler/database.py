@@ -130,7 +130,11 @@ def upsert_batch(conn, items: list[dict]) -> int:
             )
             ON CONFLICT (asin) DO UPDATE SET
                 titulo          = EXCLUDED.titulo,
-                artista         = EXCLUDED.artista,
+                artista         = CASE
+                                      WHEN "Disco".artista IS DISTINCT FROM 'Artista não identificado'
+                                      THEN "Disco".artista
+                                      ELSE EXCLUDED.artista
+                                  END,
                 estilo          = COALESCE(EXCLUDED.estilo, "Disco".estilo),
                 "imgUrl"        = EXCLUDED."imgUrl",
                 url             = EXCLUDED.url,
