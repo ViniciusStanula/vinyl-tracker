@@ -10,9 +10,11 @@ import BackToTop from "@/components/BackToTop";
 import StyleTags from "@/components/StyleTags";
 import PriceHistoryTable from "@/components/PriceHistoryTable";
 import CopyLinkButton from "@/components/CopyLinkButton";
+import TabNav from "@/components/TabNav";
 import { slugifyArtist } from "@/lib/slugify";
 import { parseStyleTags } from "@/lib/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
+import { fetchLastfmAlbumInfo } from "@/lib/lastfmAlbum";
 
 export const revalidate = 7200;
 
@@ -149,16 +151,19 @@ export default async function DiscoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  // Both queries use only the slug — run in parallel to save one DB roundtrip.
-  // getDiscoWithPrecos is React-cached, so generateMetadata's prior call is free.
-  const [disco, metaRow] = await Promise.all([
-    getDiscoWithPrecos(slug),
+  // getDiscoWithPrecos is React-cached — generateMetadata's prior call is free.
+  const disco = await getDiscoWithPrecos(slug);
+  if (!disco) notFound();
+
+  // Fetch metadata, Last.fm album info, and related deals in parallel.
+  const [metaRow, albumInfo, relatedDeals] = await Promise.all([
     // disponivel and lastfm_tags live outside the Prisma schema (managed by the crawler)
     prisma.$queryRaw<[{ disponivel: boolean; lastfmTags: string | null }]>`
       SELECT disponivel, lastfm_tags AS "lastfmTags" FROM "Disco" WHERE slug = ${slug}
     `,
+    fetchLastfmAlbumInfo(disco.artista, disco.titulo),
+    getRelatedDeals(disco.id),
   ]);
-  if (!disco) notFound();
 
   const disponivel = metaRow[0]?.disponivel ?? true;
   const artistLower = disco.artista.toLowerCase();
@@ -240,6 +245,13 @@ export default async function DiscoPage({
     valor: Number(p.precoBrl),
   }));
 
+  // 30-day price minimum from already-fetched precos (no extra DB call needed)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const valores30d = disco.precos
+    .filter((p) => p.capturadoEm >= thirtyDaysAgo)
+    .map((p) => Number(p.precoBrl));
+  const precoMin30d = valores30d.length ? Math.min(...valores30d) : null;
+
   // Price history displayed newest-first, with delta vs. previous capture
   const precosDisplay = [...disco.precos].reverse();
   const priceTableRows = precosDisplay.map((p) => ({
@@ -247,9 +259,12 @@ export default async function DiscoPage({
     preco: Number(p.precoBrl),
   }));
 
-  // Related deals — 4 other records with an active deal score.
-  // Cached per disco under "prices" tag; crawler webhook invalidates on each run.
-  const relatedDeals = await getRelatedDeals(disco.id);
+  const fmtCount = (n: number): string =>
+    n >= 1_000_000
+      ? `${(n / 1_000_000).toFixed(1).replace(".", ",")}M`
+      : n >= 1_000
+      ? `${Math.round(n / 1_000).toLocaleString("pt-BR")}K`
+      : n.toLocaleString("pt-BR");
 
   // Process related deals into DiscoCard-compatible shape
   const processedDeals = relatedDeals.map((deal) => {
@@ -487,49 +502,123 @@ export default async function DiscoPage({
         </div>
       </div>
 
-      {/* Price history */}
-      <section className="bg-sleeve rounded-xl border border-groove p-5 mb-6">
-        <h2 className="font-display text-base font-semibold text-cream mb-4">
-          Evolução do preço
-        </h2>
+      <TabNav
+        precosContent={
+          <section className="bg-sleeve rounded-xl border border-groove p-5 space-y-5">
+            {/* Stat cards */}
+            <dl className={`grid gap-3 ${precoMin30d !== null ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+              {/* Atual */}
+              <div className="bg-groove rounded-lg p-3 border-l-4 border-gold">
+                <dt className="text-xs text-dust mb-1">Atual</dt>
+                <dd className="font-bold text-gold text-sm tabular-nums">{fmt(precoAtual)}</dd>
+                <dd className="text-xs text-dust mt-0.5">{dataAtualLabel}</dd>
+              </div>
 
-        {/* Stat cards */}
-        <dl className="grid grid-cols-3 gap-3 mb-5">
-          {/* Atual */}
-          <div className="bg-groove rounded-lg p-3 border-l-4 border-gold">
-            <dt className="text-xs text-dust mb-1">Atual</dt>
-            <dd className="font-bold text-gold text-sm tabular-nums">{fmt(precoAtual)}</dd>
-            <dd className="text-xs text-dust mt-0.5">{dataAtualLabel}</dd>
-          </div>
+              {/* Mín. 30 dias */}
+              {precoMin30d !== null && (
+                <div className="bg-groove rounded-lg p-3 border-l-4 border-deal/60">
+                  <dt className="text-xs text-dust mb-1">Mín. 30 dias</dt>
+                  <dd className="font-bold text-deallit text-sm tabular-nums">{fmt(precoMin30d)}</dd>
+                  <dd className="text-xs text-dust mt-0.5">Últimos 30 dias</dd>
+                </div>
+              )}
 
-          {/* Mínimo */}
-          <div className="bg-groove rounded-lg p-3 border-l-4 border-deal">
-            <dt className="text-xs text-dust mb-1 flex items-center gap-1">
-              Mínimo <span className="text-deallit text-xs font-bold">↓</span>
-            </dt>
-            <dd className="font-bold text-deallit text-sm tabular-nums">{fmt(precoMin)}</dd>
-            {minRecord && (
-              <dd className="text-xs text-dust mt-0.5">{fmtDate(minRecord.capturadoEm)}</dd>
-            )}
-          </div>
+              {/* Mín. histórico */}
+              <div className="bg-groove rounded-lg p-3 border-l-4 border-deal">
+                <dt className="text-xs text-dust mb-1 flex items-center gap-1">
+                  Mín. histórico <span className="text-deallit text-xs font-bold">↓</span>
+                </dt>
+                <dd className="font-bold text-deallit text-sm tabular-nums">{fmt(precoMin)}</dd>
+                {minRecord && (
+                  <dd className="text-xs text-dust mt-0.5">{fmtDate(minRecord.capturadoEm)}</dd>
+                )}
+              </div>
 
-          {/* Máximo */}
-          <div className="bg-groove rounded-lg p-3 border-l-4 border-cut">
-            <dt className="text-xs text-dust mb-1 flex items-center gap-1">
-              Máximo <span className="text-cut text-xs font-bold">↑</span>
-            </dt>
-            <dd className="font-bold text-cut text-sm tabular-nums">{fmt(precoMax)}</dd>
-            {maxRecord && (
-              <dd className="text-xs text-dust mt-0.5">{fmtDate(maxRecord.capturadoEm)}</dd>
-            )}
-          </div>
-        </dl>
+              {/* Máximo */}
+              <div className="bg-groove rounded-lg p-3 border-l-4 border-cut">
+                <dt className="text-xs text-dust mb-1 flex items-center gap-1">
+                  Máximo <span className="text-cut text-xs font-bold">↑</span>
+                </dt>
+                <dd className="font-bold text-cut text-sm tabular-nums">{fmt(precoMax)}</dd>
+                {maxRecord && (
+                  <dd className="text-xs text-dust mt-0.5">{fmtDate(maxRecord.capturadoEm)}</dd>
+                )}
+              </div>
+            </dl>
 
-        <GraficoPreco precos={chartPrecos} />
+            {/* Price chart */}
+            <GraficoPreco precos={chartPrecos} />
 
-        {/* Collapsible price history table */}
-        {valores.length > 1 && <PriceHistoryTable rows={priceTableRows} />}
-      </section>
+            {/* Collapsible table */}
+            {valores.length > 1 && <PriceHistoryTable rows={priceTableRows} />}
+          </section>
+        }
+        sobreContent={
+          albumInfo ? (() => {
+            const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(disco.titulo)}`;
+            return (
+              <section className="space-y-4">
+                {/* Last.fm stats + attribution header */}
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
+                  <a
+                    href={lastfmUrl}
+                    target="_blank"
+                    rel="nofollow noopener noreferrer"
+                    className="text-xs text-dust hover:text-parchment transition-colors flex items-center gap-1"
+                    aria-label={`Ver ${disco.titulo} no Last.fm`}
+                  >
+                    Dados: Last.fm ↗
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-sleeve rounded-xl border border-groove p-4">
+                    <p className="text-xs text-dust mb-1">Ouvintes</p>
+                    <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.listeners)}</p>
+                  </div>
+                  <div className="bg-sleeve rounded-xl border border-groove p-4">
+                    <p className="text-xs text-dust mb-1">Reproduções</p>
+                    <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.playcount)}</p>
+                  </div>
+                </div>
+
+                {albumInfo.wikiSummary && (
+                  <div className="bg-sleeve rounded-xl border border-groove p-4">
+                    <p className="text-sm text-parchment leading-relaxed">{albumInfo.wikiSummary}</p>
+                  </div>
+                )}
+
+                {rating && disco.reviewCount && disco.reviewCount > 0 && (
+                  <div className="bg-sleeve rounded-xl border border-groove p-4">
+                    <h3 className="text-xs font-semibold text-dust uppercase tracking-wide mb-3">Avaliação na Amazon</h3>
+                    <div className="flex items-center gap-3">
+                      <span className="font-display font-black text-gold text-3xl">{rating.toFixed(1)}</span>
+                      <div>
+                        <div className="flex items-center gap-0.5 mb-0.5">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <svg
+                              key={i}
+                              className={`w-3.5 h-3.5 ${i < stars ? "fill-gold text-gold" : "fill-none text-groove"}`}
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              aria-hidden="true"
+                            >
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          ))}
+                        </div>
+                        <p className="text-xs text-dust">{disco.reviewCount.toLocaleString("pt-BR")} avaliações</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+            );
+          })() : undefined
+        }
+      />
 
       {/* Related deals */}
       {processedDeals.length > 0 && (
