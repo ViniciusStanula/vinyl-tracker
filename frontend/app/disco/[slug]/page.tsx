@@ -14,7 +14,6 @@ import TabNav from "@/components/TabNav";
 import { slugifyArtist } from "@/lib/slugify";
 import { parseStyleTags } from "@/lib/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
-import { fetchLastfmAlbumInfo } from "@/lib/lastfmAlbum";
 
 export const revalidate = 7200;
 
@@ -155,19 +154,39 @@ export default async function DiscoPage({
   const disco = await getDiscoWithPrecos(slug);
   if (!disco) notFound();
 
-  // Fetch metadata, Last.fm album info, and related deals in parallel.
-  const [metaRow, albumInfo, relatedDeals] = await Promise.all([
-    // disponivel and lastfm_tags live outside the Prisma schema (managed by the crawler)
-    prisma.$queryRaw<[{ disponivel: boolean; lastfmTags: string | null }]>`
-      SELECT disponivel, lastfm_tags AS "lastfmTags" FROM "Disco" WHERE slug = ${slug}
+  // Fetch metadata and related deals in parallel.
+  // lastfm_* columns are crawler-enriched and read directly from DB — no runtime API calls.
+  const [metaRow, relatedDeals] = await Promise.all([
+    prisma.$queryRaw<[{
+      disponivel: boolean;
+      lastfmTags: string | null;
+      lastfmListeners: number | null;
+      lastfmPlaycount: number | null;
+      lastfmWikiPt: string | null;
+    }]>`
+      SELECT
+        disponivel,
+        lastfm_tags      AS "lastfmTags",
+        lastfm_listeners AS "lastfmListeners",
+        lastfm_playcount AS "lastfmPlaycount",
+        lastfm_wiki_pt   AS "lastfmWikiPt"
+      FROM "Disco" WHERE slug = ${slug}
     `,
-    fetchLastfmAlbumInfo(disco.artista, disco.titulo),
     getRelatedDeals(disco.id),
   ]);
 
-  const disponivel = metaRow[0]?.disponivel ?? true;
+  const meta = metaRow[0];
+  const albumInfo = meta?.lastfmListeners != null
+    ? {
+        listeners:   meta.lastfmListeners,
+        playcount:   meta.lastfmPlaycount ?? 0,
+        wikiSummary: meta.lastfmWikiPt ?? null,
+      }
+    : null;
+
+  const disponivel = meta?.disponivel ?? true;
   const artistLower = disco.artista.toLowerCase();
-  const styleTags = parseStyleTags(metaRow[0]?.lastfmTags ?? null)
+  const styleTags = parseStyleTags(meta?.lastfmTags ?? null)
     .filter((t) => t.toLowerCase() !== artistLower)
     .slice(0, 5);
 

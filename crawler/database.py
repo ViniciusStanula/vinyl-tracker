@@ -249,12 +249,13 @@ def ensure_schema_extras(conn) -> None:
               AND column_name IN (
                 'disponivel','deal_score','last_flagged_at','last_flagged_price',
                 'avg_30d','avg_90d','low_30d','low_all_time','confidence_level',
-                'history_days','last_crawled_at','lastfm_tags','price_count'
+                'history_days','last_crawled_at','lastfm_tags','price_count',
+                'lastfm_listeners','lastfm_playcount','lastfm_wiki_en','lastfm_wiki_pt'
               )
             """
         )
         existing = cur.fetchone()[0]
-        if existing == 13:
+        if existing == 17:
             log.debug("ensure_schema_extras: schema already complete, skipping DDL.")
             return
 
@@ -276,8 +277,12 @@ def ensure_schema_extras(conn) -> None:
                 ADD COLUMN IF NOT EXISTS confidence_level VARCHAR(30),
                 ADD COLUMN IF NOT EXISTS history_days     INTEGER,
                 ADD COLUMN IF NOT EXISTS last_crawled_at  TIMESTAMPTZ,
-                ADD COLUMN IF NOT EXISTS lastfm_tags      TEXT,
-                ADD COLUMN IF NOT EXISTS price_count      INTEGER DEFAULT 0
+                ADD COLUMN IF NOT EXISTS lastfm_tags       TEXT,
+                ADD COLUMN IF NOT EXISTS price_count       INTEGER DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS lastfm_listeners  INTEGER,
+                ADD COLUMN IF NOT EXISTS lastfm_playcount  INTEGER,
+                ADD COLUMN IF NOT EXISTS lastfm_wiki_en    TEXT,
+                ADD COLUMN IF NOT EXISTS lastfm_wiki_pt    TEXT
             """
         )
         # Partial index for fast active-deal lookups (Phase 0 re-validation)
@@ -700,6 +705,78 @@ def bulk_update_tags(conn, artista_to_tags: dict[str, str]) -> int:
     conn.commit()
     log.debug("bulk_update_tags: updated tags for %d artista values.", len(rows))
     return updated
+
+
+def fetch_albums_needing_lastfm_enrichment(conn, limit: int = 500) -> list[dict]:
+    """Albums where lastfm_listeners IS NULL — never enriched via album.getInfo."""
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT id, titulo, artista FROM "Disco"
+            WHERE lastfm_listeners IS NULL
+              AND disponivel = TRUE
+            ORDER BY price_count DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [{"id": r[0], "titulo": r[1], "artista": r[2]} for r in cur.fetchall()]
+
+
+def bulk_update_lastfm_album_info(conn, updates: list[dict]) -> int:
+    """
+    Writes lastfm_listeners, lastfm_playcount, lastfm_wiki_en for album IDs.
+    Each item: {"id": str, "listeners": int, "playcount": int, "wiki_en": str|None}
+    """
+    if not updates:
+        return 0
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            """UPDATE "Disco"
+               SET lastfm_listeners = %(listeners)s,
+                   lastfm_playcount = %(playcount)s,
+                   lastfm_wiki_en   = %(wiki_en)s
+               WHERE id = %(id)s""",
+            updates,
+            page_size=200,
+        )
+    conn.commit()
+    log.debug("bulk_update_lastfm_album_info: updated %d records.", len(updates))
+    return len(updates)
+
+
+def fetch_albums_needing_translation(conn, min_listeners: int = 500_000, limit: int = 200) -> list[dict]:
+    """Albums with enough listeners that have English wiki but no Portuguese translation."""
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT id, lastfm_wiki_en FROM "Disco"
+            WHERE lastfm_listeners >= %s
+              AND lastfm_wiki_en IS NOT NULL
+              AND lastfm_wiki_pt IS NULL
+            ORDER BY lastfm_listeners DESC
+            LIMIT %s
+            """,
+            (min_listeners, limit),
+        )
+        return [{"id": r[0], "wiki_en": r[1]} for r in cur.fetchall()]
+
+
+def bulk_update_wiki_pt(conn, updates: list[dict]) -> int:
+    """Saves translated Portuguese wiki summaries. Each item: {"id": str, "wiki_pt": str}"""
+    if not updates:
+        return 0
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            'UPDATE "Disco" SET lastfm_wiki_pt = %(wiki_pt)s WHERE id = %(id)s',
+            updates,
+            page_size=200,
+        )
+    conn.commit()
+    log.debug("bulk_update_wiki_pt: translated %d records.", len(updates))
+    return len(updates)
 
 
 def limpar_historico_antigo(conn, days: int = 365) -> int:

@@ -15,7 +15,12 @@ import logging
 import urllib.parse
 import urllib.request
 
-from database import fetch_untagged_artists, bulk_update_tags
+from database import (
+    fetch_untagged_artists,
+    bulk_update_tags,
+    fetch_albums_needing_lastfm_enrichment,
+    bulk_update_lastfm_album_info,
+)
 
 log = logging.getLogger(__name__)
 
@@ -138,3 +143,127 @@ def enrich_new_artists(
             time.sleep(delay)
 
     return bulk_update_tags(conn, updates)
+
+
+# ── Album enrichment ──────────────────────────────────────────────────────────
+
+_VINYL_WORDS = re.compile(
+    r"\b(vinyl|vinil|lp|gram|colored|colou?red|remaster(?:ed)?|reissue|gatefold|"
+    r"splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|"
+    r"white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition)\b",
+    re.IGNORECASE,
+)
+
+
+def clean_album_title(title: str, artist: str) -> str:
+    """
+    Strips Amazon vinyl edition suffixes so titles match Last.fm.
+
+    "My Love Is Cool [Disco de Vinil]"               → "My Love Is Cool"
+    "Dark Roots of Earth - Clear Gold Green Splatter" → "Dark Roots of Earth"
+    "Dua Lipa - Dua Lipa [Disco de Vinil]"            → "Dua Lipa"
+    "Fórmula, Vol. 3 (Amazon Exclusive Vinyl)"        → "Fórmula, Vol. 3"
+    """
+    t = title
+    prefix = re.compile(r"^" + re.escape(artist) + r"\s*-\s*", re.IGNORECASE)
+    t = prefix.sub("", t)
+    t = re.sub(r"\s*\[[^\]]*\]", "", t)
+    t = re.sub(
+        r"\s*\([^)]*\)",
+        lambda m: "" if _VINYL_WORDS.search(m.group()) else m.group(),
+        t,
+    )
+    dash = t.rfind(" - ")
+    if dash > 0 and _VINYL_WORDS.search(t[dash + 3:]):
+        t = t[:dash]
+    return t.strip()
+
+
+def _clean_wiki(html: str) -> str:
+    """Strip Last.fm self-links and HTML tags from wiki summary."""
+    text = re.sub(
+        r'<a[^>]*href="https?://www\.last\.fm[^"]*"[^>]*>.*?</a>',
+        "",
+        html,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def fetch_album_info(artist: str, album: str, api_key: str) -> dict | None:
+    """
+    Fetches listeners, playcount, and wiki text from Last.fm album.getInfo.
+    Returns None on any error or if album not found.
+    """
+    params = urllib.parse.urlencode({
+        "method":  "album.getInfo",
+        "artist":  _uninvert(artist),
+        "album":   album,
+        "api_key": api_key,
+        "format":  "json",
+    })
+    try:
+        with urllib.request.urlopen(f"{LASTFM_BASE}?{params}", timeout=10) as resp:
+            data = json.loads(resp.read())
+    except Exception as exc:
+        log.debug("album.getInfo failed for %r / %r: %s", artist, album, exc)
+        return None
+
+    if "error" in data or "album" not in data:
+        log.debug("album.getInfo: no result for %r / %r", artist, album)
+        return None
+
+    info = data["album"]
+    raw_wiki = (info.get("wiki") or {}).get("summary") or ""
+    return {
+        "listeners": int(info.get("listeners") or 0),
+        "playcount": int(info.get("playcount") or 0),
+        "wiki_en":   _clean_wiki(raw_wiki) or None,
+    }
+
+
+def enrich_album_infos(
+    conn,
+    api_key: str | None,
+    delay: float = 0.5,
+    deadline: float | None = None,
+    limit: int = 500,
+) -> int:
+    """
+    Fetches Last.fm album.getInfo for albums where lastfm_listeners IS NULL.
+    Writes listeners, playcount, and English wiki to the DB.
+    Returns the number of albums updated.
+    """
+    if not api_key:
+        log.debug("LASTFM_API_KEY not set — skipping album enrichment.")
+        return 0
+
+    albums = fetch_albums_needing_lastfm_enrichment(conn, limit=limit)
+    if not albums:
+        log.debug("Album enrichment: all albums already enriched.")
+        return 0
+
+    log.info("Album enrichment: fetching Last.fm data for %d albums.", len(albums))
+    updates: list[dict] = []
+
+    for i, album in enumerate(albums, 1):
+        if deadline is not None and time.monotonic() >= deadline:
+            log.info("Album enrichment: deadline reached — processed %d/%d.", i - 1, len(albums))
+            break
+        cleaned = clean_album_title(album["titulo"], album["artista"])
+        info = fetch_album_info(album["artista"], cleaned, api_key)
+        updates.append({
+            "id":        album["id"],
+            "listeners": info["listeners"] if info else 0,
+            "playcount": info["playcount"] if info else 0,
+            "wiki_en":   info["wiki_en"]   if info else None,
+        })
+        log.debug("[%d/%d] %r / %r → listeners=%s",
+                  i, len(albums), album["artista"], cleaned,
+                  info["listeners"] if info else "N/A")
+        if i < len(albums):
+            time.sleep(delay)
+
+    return bulk_update_lastfm_album_info(conn, updates)

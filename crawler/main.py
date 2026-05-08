@@ -3116,6 +3116,35 @@ def main():
             limpar_historico_antigo(conn)
             log.info("Phase 4 cleanup: %.0fs", time.monotonic() - t0)
 
+        # ── Phase 5: Last.fm album enrichment ─────────────────────────────
+        if deadline is not None and time.monotonic() >= deadline:
+            log.warning("Time limit reached — skipping Phase 5 Last.fm album enrichment.")
+        else:
+            from lastfm import enrich_album_infos as _enrich_album_infos
+            t0 = time.monotonic()
+            _enriched = _enrich_album_infos(
+                conn,
+                api_key=os.environ.get("LASTFM_API_KEY"),
+                deadline=deadline,
+                limit=200,
+            )
+            log.info("Phase 5 Last.fm album enrichment: %.0fs — %d albums updated",
+                     time.monotonic() - t0, _enriched)
+
+        # ── Phase 6: Wiki translation ──────────────────────────────────────
+        if deadline is not None and time.monotonic() >= deadline:
+            log.warning("Time limit reached — skipping Phase 6 wiki translation.")
+        else:
+            from translate_wikis import translate_wiki_summaries as _translate_wikis
+            t0 = time.monotonic()
+            _translated = _translate_wikis(
+                conn,
+                email=os.environ.get("MYMEMORY_EMAIL"),
+                deadline=deadline,
+            )
+            log.info("Phase 6 wiki translation: %.0fs — %d wikis translated",
+                     time.monotonic() - t0, _translated)
+
         # ── IndexNow: notify Bing of updated URLs ─────────────────────────
         if all_items:
             from indexnow import submit_crawl_results as _indexnow_submit
