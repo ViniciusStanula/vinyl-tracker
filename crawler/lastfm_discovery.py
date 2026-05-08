@@ -66,6 +66,10 @@ DELAY_PAGE_MAX   = 5.0
 DELAY_ARTIST_MIN = 8.0   # seconds between artists
 DELAY_ARTIST_MAX = 15.0
 
+# Stop processing artists this many seconds before the GHA job timeout so we
+# can still write results and exit cleanly.  Override via env var if needed.
+SOFT_TIMEOUT_SECONDS = int(os.environ.get("SOFT_TIMEOUT_SECONDS", str(105 * 60)))
+
 MIN_PRICE_BRL = 30.0
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -515,8 +519,20 @@ def main() -> None:
     artists_no_results   = 0
     artists_blocked      = 0
     blocked_names: list[str] = []
+    soft_timeout_hit     = False
+
+    run_start = time.monotonic()
 
     for idx, artist in enumerate(artists, 1):
+        elapsed = time.monotonic() - run_start
+        if elapsed >= SOFT_TIMEOUT_SECONDS:
+            log.warning(
+                "Soft timeout reached (%.0fs) at artist [%d/%d] — saving progress and exiting.",
+                elapsed, idx - 1, len(artists),
+            )
+            soft_timeout_hit = True
+            break
+
         log.info("[%d/%d] %r", idx, len(artists), artist)
 
         vinyls, blocked = search_artist(session, artist)
@@ -566,10 +582,12 @@ def main() -> None:
         )
 
     # ── Summary ───────────────────────────────────────────────────────────────
+    run_label = "Partial run (soft timeout)" if soft_timeout_hit else "Run complete"
     log.info(
-        "Run complete — "
+        "%s — "
         "artists_processed=%d  artists_no_vinyl=%d  artists_blocked=%d  "
         "vinyl_asins_found=%d  newly_inserted=%d  already_known=%d",
+        run_label,
         artists_with_results + artists_no_results,
         artists_no_results,
         artists_blocked,
