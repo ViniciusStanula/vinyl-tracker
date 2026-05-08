@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useId } from "react";
 
 interface PricePoint {
   data: string;      // e.g. "13/04"
@@ -20,6 +20,8 @@ const cH = H - PAD.top - PAD.bottom;
 
 export default function GraficoPreco({ precos }: Props) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const rawId = useId();
+  const gradientId = `pg-${rawId.replace(/:/g, "")}`;
 
   if (precos.length < 2) {
     return (
@@ -83,7 +85,7 @@ export default function GraficoPreco({ precos }: Props) {
         aria-label="Gráfico de evolução de preços"
       >
         <defs>
-          <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" style={{ stopColor: "var(--color-gold)", stopOpacity: 0.30 }} />
             <stop offset="100%" style={{ stopColor: "var(--color-gold)", stopOpacity: 0.02 }} />
           </linearGradient>
@@ -128,7 +130,7 @@ export default function GraficoPreco({ precos }: Props) {
         ))}
 
         {/* Area fill */}
-        <path d={fillPath} fill="url(#pg)" />
+        <path d={fillPath} fill={`url(#${gradientId})`} />
 
         {/* Line */}
         <path
@@ -163,7 +165,7 @@ export default function GraficoPreco({ precos }: Props) {
           </g>
         )}
 
-        {/* Max annotation — red dot + label */}
+        {/* Max annotation — red dot + label below dot */}
         {hasRange && (
           <g>
             <circle
@@ -174,9 +176,9 @@ export default function GraficoPreco({ precos }: Props) {
               strokeWidth="1.5"
             />
             <text
-              x={tx(maxIdx)}
-              y={ty(vMax) - 9}
-              textAnchor="middle"
+              x={tx(maxIdx) + 8}
+              y={ty(vMax) + 3.5}
+              textAnchor="start"
               className="fill-cut"
               fontSize="8"
               fontWeight="600"
@@ -235,6 +237,10 @@ export default function GraficoPreco({ precos }: Props) {
           onTouchEnd={() => setHoveredIdx(null)}
         />
       </svg>
+
+      <p className="sr-only">
+        {`Histórico de preços: mínimo ${fmt(vMin)}, máximo ${fmt(vMax)}, valor mais recente ${fmt(valores[valores.length - 1])}.`}
+      </p>
 
       {/* Tooltip row */}
       <div className="h-6 flex items-center justify-center gap-2 text-xs">

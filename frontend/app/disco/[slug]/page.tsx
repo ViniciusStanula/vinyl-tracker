@@ -8,6 +8,8 @@ import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
 import StyleTags from "@/components/StyleTags";
+import PriceHistoryTable from "@/components/PriceHistoryTable";
+import CopyLinkButton from "@/components/CopyLinkButton";
 import { slugifyArtist } from "@/lib/slugify";
 import { parseStyleTags } from "@/lib/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
@@ -240,6 +242,10 @@ export default async function DiscoPage({
 
   // Price history displayed newest-first, with delta vs. previous capture
   const precosDisplay = [...disco.precos].reverse();
+  const priceTableRows = precosDisplay.map((p) => ({
+    dataFormatada: fmtDateTime(p.capturadoEm),
+    preco: Number(p.precoBrl),
+  }));
 
   // Related deals — 4 other records with an active deal score.
   // Cached per disco under "prices" tag; crawler webhook invalidates on each run.
@@ -379,7 +385,7 @@ export default async function DiscoPage({
           <div>
             <Link
               href={`/artista/${slugifyArtist(disco.artista)}`}
-              className="text-parchment hover:text-gold text-sm transition-colors font-medium"
+              className="text-parchment hover:text-gold text-sm transition-colors font-medium block py-2 -my-2"
             >
               {disco.artista}
             </Link>
@@ -387,13 +393,27 @@ export default async function DiscoPage({
               {disco.titulo}
             </h1>
             {rating && (
-              <p className="text-sm mt-2 flex items-center gap-1">
-                <span className="text-gold" aria-hidden="true">
-                  {"★".repeat(stars)}
-                  {"☆".repeat(5 - stars)}
-                </span>
-                <span className="text-dust ml-0.5" aria-label={`Avaliação: ${rating.toFixed(1)} de 5`}>{rating.toFixed(1)}</span>
-              </p>
+              <div
+                className="flex items-center gap-0.5 mt-2"
+                role="img"
+                aria-label={`Avaliação: ${rating.toFixed(1)} de 5`}
+              >
+                {Array.from({ length: 5 }, (_, i) => (
+                  <svg
+                    key={i}
+                    className={`w-4 h-4 ${i < stars ? "fill-gold text-gold" : "fill-none text-groove"}`}
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                ))}
+                <span className="text-dust text-sm ml-1">{rating.toFixed(1)}</span>
+              </div>
             )}
             <StyleTags tags={styleTags} />
           </div>
@@ -419,27 +439,17 @@ export default async function DiscoPage({
               )}
             </div>
 
-            {/* Status label — own line so it never wraps into the price */}
+            {/* Only surface the deal signal — badge already conveys direction for other states */}
             {statusPreco === "menor" && (
               <span className="inline-block text-xs bg-deal text-cream font-bold px-3 py-1 rounded-full mb-1">
                 ↓ Menor Preço Histórico
               </span>
             )}
-            {statusPreco === "aumento" && (
-              <span className="inline-block text-xs bg-cut/20 text-cut font-bold px-3 py-1 rounded-full border border-cut/40 mb-1">
-                ↑ Aumento de Preço
-              </span>
-            )}
-            {statusPreco === "estavel" && (
-              <span className="inline-block text-xs bg-groove text-parchment font-semibold px-3 py-1 rounded-full border border-wax/50 mb-1">
-                → Preço Estável
-              </span>
-            )}
 
-            {/* Historical average with strikethrough */}
+            {/* Historical average */}
             <p className="text-dust text-sm">
               vs. média histórica{" "}
-              <span className="line-through text-ash">{fmt(media)}</span>
+              <span className="text-ash">{fmt(media)}</span>
             </p>
 
             {/* CTA buttons */}
@@ -452,15 +462,23 @@ export default async function DiscoPage({
                   className="inline-flex items-center gap-2 bg-gold hover:bg-goldlit text-record font-bold text-sm px-6 py-3 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-record"
                 >
                   Ver na Amazon
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
                 </a>
               ) : (
-                <span className="inline-flex items-center gap-2 bg-groove text-dust font-bold text-sm px-6 py-3 rounded-full cursor-not-allowed border border-wax/50">
-                  Não disponível
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="inline-flex items-center gap-2 bg-groove text-dust font-bold text-sm px-6 py-3 rounded-full cursor-not-allowed border border-wax/50">
+                    Indisponível na Amazon
+                  </span>
+                  {dataAtual && (
+                    <p className="text-xs text-ash pl-1">
+                      Último registro em {dataAtualLabel}
+                    </p>
+                  )}
+                </div>
               )}
+              <CopyLinkButton />
             </div>
             <p className="text-ash text-xs mt-2">
               Preços podem variar
@@ -473,11 +491,17 @@ export default async function DiscoPage({
       <section className="bg-sleeve rounded-xl border border-groove p-5 mb-6">
         <h2 className="font-display text-base font-semibold text-cream mb-4">
           Evolução do preço
-          <span className="text-dust text-sm font-normal ml-2">· {dataAtualLabel}</span>
         </h2>
 
         {/* Stat cards */}
-        <dl className="grid grid-cols-2 gap-3 mb-5">
+        <dl className="grid grid-cols-3 gap-3 mb-5">
+          {/* Atual */}
+          <div className="bg-groove rounded-lg p-3 border-l-4 border-gold">
+            <dt className="text-xs text-dust mb-1">Atual</dt>
+            <dd className="font-bold text-gold text-sm tabular-nums">{fmt(precoAtual)}</dd>
+            <dd className="text-xs text-dust mt-0.5">{dataAtualLabel}</dd>
+          </div>
+
           {/* Mínimo */}
           <div className="bg-groove rounded-lg p-3 border-l-4 border-deal">
             <dt className="text-xs text-dust mb-1 flex items-center gap-1">
@@ -485,7 +509,7 @@ export default async function DiscoPage({
             </dt>
             <dd className="font-bold text-deallit text-sm tabular-nums">{fmt(precoMin)}</dd>
             {minRecord && (
-              <dd className="text-xs text-dust mt-0.5">{fmtDateTime(minRecord.capturadoEm)}</dd>
+              <dd className="text-xs text-dust mt-0.5">{fmtDate(minRecord.capturadoEm)}</dd>
             )}
           </div>
 
@@ -496,7 +520,7 @@ export default async function DiscoPage({
             </dt>
             <dd className="font-bold text-cut text-sm tabular-nums">{fmt(precoMax)}</dd>
             {maxRecord && (
-              <dd className="text-xs text-dust mt-0.5">{fmtDateTime(maxRecord.capturadoEm)}</dd>
+              <dd className="text-xs text-dust mt-0.5">{fmtDate(maxRecord.capturadoEm)}</dd>
             )}
           </div>
         </dl>
@@ -504,56 +528,7 @@ export default async function DiscoPage({
         <GraficoPreco precos={chartPrecos} />
 
         {/* Collapsible price history table */}
-        {valores.length > 1 && (
-          <details className="mt-4">
-            <summary className="text-xs text-dust cursor-pointer hover:text-cream select-none transition-colors">
-              Ver todos os registros
-            </summary>
-            <div className="mt-3 max-h-52 overflow-y-auto">
-              <table className="w-full text-xs text-left">
-                <thead>
-                  <tr className="text-dust border-b border-groove">
-                    <th className="pb-2 font-medium">Data</th>
-                    <th className="pb-2 font-medium text-right">Preço</th>
-                    <th className="pb-2 font-medium text-right">Variação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {precosDisplay.map((p, i) => {
-                    const prev = precosDisplay[i + 1];
-                    const curr = Number(p.precoBrl);
-                    const delta = prev ? curr - Number(prev.precoBrl) : null;
-                    return (
-                      <tr key={i} className="border-b border-groove/50">
-                        <td className="py-1.5 text-dust">{fmtDateTime(p.capturadoEm)}</td>
-                        <td className="py-1.5 text-right font-medium text-cream tabular-nums">
-                          {curr.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                        </td>
-                        <td
-                          className={`py-1.5 text-right tabular-nums ${
-                            delta === null
-                              ? "text-ash"
-                              : delta > 0
-                              ? "text-cut"
-                              : delta < 0
-                              ? "text-deallit"
-                              : "text-dust"
-                          }`}
-                        >
-                          {delta === null
-                            ? "—"
-                            : delta === 0
-                            ? "="
-                            : `${delta > 0 ? "▲" : "▼"} ${Math.abs(delta).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </details>
-        )}
+        {valores.length > 1 && <PriceHistoryTable rows={priceTableRows} />}
       </section>
 
       {/* Related deals */}
