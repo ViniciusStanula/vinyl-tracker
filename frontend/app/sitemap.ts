@@ -3,7 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { slugifyArtist } from "@/lib/slugify";
 import { slugifyStyle } from "@/lib/styleUtils";
 
-export const revalidate = 86400; // regenerate every 24 hours — sitemap staleness is fine for SEO
+export const revalidate = 86400;
+
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+} // regenerate every 24 hours — sitemap staleness is fine for SEO
 
 const base =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
@@ -32,7 +40,6 @@ export default async function sitemap(props: {
       const artistRows = await prisma.disco.findMany({
         select: { artista: true },
         distinct: ["artista"],
-        orderBy: { artista: "asc" },
       });
 
       const seenSlugs = new Set<string>();
@@ -49,7 +56,7 @@ export default async function sitemap(props: {
         });
       }
 
-      return routes;
+      return shuffle(routes);
     } catch {
       return [];
     }
@@ -59,15 +66,14 @@ export default async function sitemap(props: {
     try {
       const discos = await prisma.disco.findMany({
         select: { slug: true, updatedAt: true },
-        orderBy: { slug: "asc" },
       });
 
-      return discos.map((d) => ({
+      return shuffle(discos.map((d) => ({
         url: `${base}/disco/${d.slug}`,
         lastModified: d.updatedAt,
         changeFrequency: "daily",
         priority: 0.8,
-      }));
+      })));
     } catch {
       return [];
     }
@@ -79,7 +85,6 @@ export default async function sitemap(props: {
         SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
         FROM "Disco"
         WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
-        ORDER BY tag
       `;
 
       const seenSlugs = new Set<string>();
@@ -96,7 +101,7 @@ export default async function sitemap(props: {
         });
       }
 
-      return routes;
+      return shuffle(routes);
     } catch {
       return [];
     }
