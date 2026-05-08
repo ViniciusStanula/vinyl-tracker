@@ -32,6 +32,7 @@ export default async function sitemap(props: {
       const artistRows = await prisma.disco.findMany({
         select: { artista: true },
         distinct: ["artista"],
+        orderBy: { artista: "asc" },
       });
 
       const seenSlugs = new Set<string>();
@@ -58,6 +59,7 @@ export default async function sitemap(props: {
     try {
       const discos = await prisma.disco.findMany({
         select: { slug: true, updatedAt: true },
+        orderBy: { slug: "asc" },
       });
 
       return discos.map((d) => ({
@@ -77,6 +79,7 @@ export default async function sitemap(props: {
         SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
         FROM "Disco"
         WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
+        ORDER BY tag
       `;
 
       const seenSlugs = new Set<string>();
