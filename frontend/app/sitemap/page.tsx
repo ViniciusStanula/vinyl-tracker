@@ -25,9 +25,14 @@ export const metadata: Metadata = {
 };
 
 const STATIC_PAGES = [
-  { nome: "Início",         href: "/" },
-  { nome: "Todos os Discos", href: "/disco" },
-  { nome: "Sobre",          href: "/sobre" },
+  { nome: "Início",                  href: "/" },
+  { nome: "Todos os Discos",         href: "/disco" },
+  { nome: "Discos Abaixo de R$200",  href: "/discos-abaixo-de-200" },
+  { nome: "Artistas Mais Ouvidos",   href: "/artistas-mais-ouvidos" },
+  { nome: "Mapa do Site",            href: "/sitemap" },
+  { nome: "Sobre",                   href: "/sobre" },
+  { nome: "Política de Privacidade", href: "/politica-de-privacidade" },
+  { nome: "Termos de Uso",           href: "/termos-de-uso" },
 ];
 
 const getSitemapData = unstable_cache(
