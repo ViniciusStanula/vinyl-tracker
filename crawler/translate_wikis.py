@@ -21,40 +21,82 @@ from database import get_connection, fetch_albums_needing_translation, bulk_upda
 
 log = logging.getLogger(__name__)
 
-MIN_LISTENERS = 500_000
+MIN_LISTENERS = 0
+
+_CHUNK_MAX = 480  # MyMemory free tier caps at ~500 chars/request
 
 
-def translate_to_pt_br(text: str, email: str | None = None) -> str | None:
+def _split_into_chunks(text: str, max_len: int = _CHUNK_MAX) -> list[str]:
+    """
+    Splits text into chunks of at most max_len characters, breaking on sentence
+    boundaries ('. ', '! ', '? ') to avoid cutting mid-sentence.
+    """
+    if len(text) <= max_len:
+        return [text]
+
+    chunks: list[str] = []
+    remaining = text
+    while len(remaining) > max_len:
+        # Search backwards from max_len for a sentence boundary
+        cut = max_len
+        for sep in (". ", "! ", "? "):
+            idx = remaining.rfind(sep, 0, max_len)
+            if idx > 0:
+                cut = min(cut, idx + len(sep))  # include the separator in chunk
+        # If no boundary found, cut at max_len (last resort)
+        chunks.append(remaining[:cut].strip())
+        remaining = remaining[cut:].strip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
+def translate_to_pt_br(text: str, email: str | None = None, delay: float = 0.5) -> str | None:
     """
     Translates text from English to Brazilian Portuguese via MyMemory API.
-    Returns None on failure — never falls back to English.
+    Long texts are split into chunks and translated sequentially.
+    Returns None if any chunk fails — never falls back to English.
     """
-    params: dict = {"q": text, "langpair": "en|pt-BR"}
-    if email:
-        params["de"] = email
-    url = "https://api.mymemory.translated.net/get?" + urllib.parse.urlencode(params)
-    try:
-        with urllib.request.urlopen(url, timeout=15) as resp:
-            data = json.loads(resp.read())
-        if data.get("responseStatus") != 200:
-            log.debug("MyMemory status %s — skipping.", data.get("responseStatus"))
+    chunks = _split_into_chunks(text)
+    translated_parts: list[str] = []
+
+    for i, chunk in enumerate(chunks):
+        params: dict = {"q": chunk, "langpair": "en|pt-BR"}
+        if email:
+            params["de"] = email
+        url = "https://api.mymemory.translated.net/get?" + urllib.parse.urlencode(params)
+        try:
+            with urllib.request.urlopen(url, timeout=15) as resp:
+                data = json.loads(resp.read())
+            if data.get("responseStatus") != 200:
+                log.debug("MyMemory status %s on chunk %d — skipping.", data.get("responseStatus"), i)
+                return None
+            part = data.get("responseData", {}).get("translatedText") or None
+            if not part:
+                return None
+            translated_parts.append(part)
+        except Exception as exc:
+            log.debug("Translation request failed on chunk %d: %s", i, exc)
             return None
-        return data.get("responseData", {}).get("translatedText") or None
-    except Exception as exc:
-        log.debug("Translation request failed: %s", exc)
-        return None
+        if i < len(chunks) - 1:
+            time.sleep(delay)
+
+    return " ".join(translated_parts) or None
 
 
 def translate_wiki_summaries(
     conn,
     email: str | None = None,
     delay: float = 2.0,
+    chunk_delay: float = 0.5,
     min_listeners: int = MIN_LISTENERS,
     limit: int = 100,
     deadline: float | None = None,
 ) -> int:
     """
     Translates lastfm_wiki_en → lastfm_wiki_pt for qualifying albums.
+    Long wikis are split into chunks; chunk_delay controls pause between chunks.
+    delay controls pause between albums.
     Albums that fail translation stay NULL and are retried next run.
     Returns the number of albums successfully translated.
     """
@@ -70,7 +112,7 @@ def translate_wiki_summaries(
         if deadline is not None and time.monotonic() >= deadline:
             log.info("Translation: deadline reached — translated %d/%d.", len(updates), len(albums))
             break
-        translated = translate_to_pt_br(album["wiki_en"], email=email)
+        translated = translate_to_pt_br(album["wiki_en"], email=email, delay=chunk_delay)
         if translated:
             updates.append({"id": album["id"], "wiki_pt": translated})
             log.debug("[%d/%d] translated OK.", i, len(albums))

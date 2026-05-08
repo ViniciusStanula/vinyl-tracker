@@ -216,7 +216,7 @@ def fetch_album_info(artist: str, album: str, api_key: str) -> dict | None:
         return None
 
     info = data["album"]
-    raw_wiki = (info.get("wiki") or {}).get("summary") or ""
+    raw_wiki = (info.get("wiki") or {}).get("content") or (info.get("wiki") or {}).get("summary") or ""
     return {
         "listeners": int(info.get("listeners") or 0),
         "playcount": int(info.get("playcount") or 0),

@@ -11,6 +11,7 @@ import StyleTags from "@/components/StyleTags";
 import PriceHistoryTable from "@/components/PriceHistoryTable";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import TabNav from "@/components/TabNav";
+import WikiExpander from "@/components/WikiExpander";
 import { slugifyArtist } from "@/lib/slugify";
 import { parseStyleTags } from "@/lib/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
@@ -604,7 +605,7 @@ export default async function DiscoPage({
 
                 {albumInfo.wikiSummary && (
                   <div className="bg-sleeve rounded-xl border border-groove p-4">
-                    <p className="text-sm text-parchment leading-relaxed">{albumInfo.wikiSummary}</p>
+                    <WikiExpander text={albumInfo.wikiSummary} />
                   </div>
                 )}
 
