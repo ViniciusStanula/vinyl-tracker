@@ -180,7 +180,7 @@ def clean_album_title(title: str, artist: str) -> str:
 
 
 def _clean_wiki(html: str) -> str:
-    """Strip Last.fm self-links and HTML tags from wiki summary."""
+    """Strip Last.fm self-links, HTML tags, disambiguation preamble, and legal footer."""
     text = re.sub(
         r'<a[^>]*href="https?://www\.last\.fm[^"]*"[^>]*>.*?</a>',
         "",
@@ -189,6 +189,12 @@ def _clean_wiki(html: str) -> str:
     )
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"\s+", " ", text)
+    # Strip disambiguation preamble — Last.fm marks current album with "(seen here)"
+    text = re.sub(r"^.*?\(seen here\)\s*", "", text, flags=re.IGNORECASE)
+    # Strip legal footer added by Last.fm to all wiki entries
+    text = re.sub(
+        r"\s*User-contributed text.*$", "", text, flags=re.IGNORECASE | re.DOTALL
+    )
     return text.strip()
 
 
