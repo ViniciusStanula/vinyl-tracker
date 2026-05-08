@@ -160,6 +160,18 @@ def _brl(value: float) -> str:
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def build_soldout_caption(titulo: str, artista: str,
+                          preco_brl: float, affiliate_url: str) -> str:
+    album  = _esc_html(_clean_titulo(titulo))
+    artist = _esc_html(artista)
+    return (
+        f"❌ <b>INDISPONÍVEL</b>\n"
+        f"{artist} — {album}\n"
+        f"\n<s>Último preço: R$ {_brl(preco_brl)}</s>\n"
+        f"\n🛒 <a href='{affiliate_url}'>Ver na Amazon</a>"
+    )
+
+
 def build_caption(titulo: str, artista: str, estilo: str | None,
                   preco_brl: float, avg_30d: float | None,
                   low_all_time: float | None, affiliate_url: str) -> str:
@@ -207,6 +219,53 @@ def minutes_since_last_send(conn) -> float:
         last = last.replace(tzinfo=timezone.utc)
     delta = datetime.now(timezone.utc) - last
     return delta.total_seconds() / 60
+
+
+# ---------------------------------------------------------------------------
+# Sold-out pass: edit captions for sent messages whose ASIN is now unavailable
+# ---------------------------------------------------------------------------
+
+def run_soldout_pass(conn) -> None:
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("""
+            SELECT
+                bp.asin,
+                bp.titulo,
+                bp.artista,
+                bp.preco_brl,
+                bp.affiliate_url,
+                bs.telegram_message_id,
+                bs.id AS sent_row_id
+            FROM bot_pending bp
+            JOIN (
+                SELECT DISTINCT ON (asin)
+                    id, asin, telegram_message_id
+                FROM bot_sent
+                ORDER BY asin, sent_at DESC
+            ) bs ON bs.asin = bp.asin
+            JOIN "Disco" d ON d.asin = bp.asin
+            WHERE bp.status = 'sent'
+              AND d.disponivel = FALSE
+        """)
+        rows = cur.fetchall()
+
+    for row in rows:
+        caption = build_soldout_caption(
+            row["titulo"], row["artista"],
+            float(row["preco_brl"]),
+            row["affiliate_url"],
+        )
+        if edit_caption(int(row["telegram_message_id"]), caption):
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE bot_pending SET status = 'sold_out' WHERE asin = %s",
+                    (row["asin"],),
+                )
+            conn.commit()
+            log.info("Sold-out edit: ASIN %s (message_id=%d)",
+                     row["asin"], int(row["telegram_message_id"]))
+        else:
+            log.warning("Could not edit sold-out caption for ASIN %s", row["asin"])
 
 
 # ---------------------------------------------------------------------------
@@ -401,6 +460,7 @@ def main() -> None:
 
     conn = connect()
     try:
+        run_soldout_pass(conn)
         run_edit_pass(conn)
 
         mins = minutes_since_last_send(conn)
