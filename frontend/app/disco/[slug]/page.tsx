@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -85,7 +86,10 @@ type RelatedDeal = {
 };
 
 const getRelatedDeals = unstable_cache(
-  async (discoId: string): Promise<RelatedDeal[]> => {
+  async (discoId: string, tags: string[]): Promise<RelatedDeal[]> => {
+    const tagFilter = tags.length > 0
+      ? Prisma.sql`AND string_to_array(lastfm_tags, ', ') && ARRAY[${Prisma.join(tags)}]::text[]`
+      : Prisma.empty;
     return prisma.$queryRaw<RelatedDeal[]>`
       WITH candidates AS (
         SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
@@ -95,6 +99,7 @@ const getRelatedDeals = unstable_cache(
           AND deal_score IS NOT NULL
           AND disponivel = TRUE
           AND price_count >= 5
+          ${tagFilter}
         ORDER BY deal_score DESC, RANDOM()
         LIMIT 4
       ),
@@ -155,26 +160,23 @@ export default async function DiscoPage({
   const disco = await getDiscoWithPrecos(slug);
   if (!disco) notFound();
 
-  // Fetch metadata and related deals in parallel.
+  // Fetch meta first — needed to extract style tags for the related deals query.
   // lastfm_* columns are crawler-enriched and read directly from DB — no runtime API calls.
-  const [metaRow, relatedDeals] = await Promise.all([
-    prisma.$queryRaw<[{
-      disponivel: boolean;
-      lastfmTags: string | null;
-      lastfmListeners: number | null;
-      lastfmPlaycount: number | null;
-      lastfmWikiPt: string | null;
-    }]>`
-      SELECT
-        disponivel,
-        lastfm_tags      AS "lastfmTags",
-        lastfm_listeners AS "lastfmListeners",
-        lastfm_playcount AS "lastfmPlaycount",
-        lastfm_wiki_pt   AS "lastfmWikiPt"
-      FROM "Disco" WHERE slug = ${slug}
-    `,
-    getRelatedDeals(disco.id),
-  ]);
+  const metaRow = await prisma.$queryRaw<[{
+    disponivel: boolean;
+    lastfmTags: string | null;
+    lastfmListeners: number | null;
+    lastfmPlaycount: number | null;
+    lastfmWikiPt: string | null;
+  }]>`
+    SELECT
+      disponivel,
+      lastfm_tags      AS "lastfmTags",
+      lastfm_listeners AS "lastfmListeners",
+      lastfm_playcount AS "lastfmPlaycount",
+      lastfm_wiki_pt   AS "lastfmWikiPt"
+    FROM "Disco" WHERE slug = ${slug}
+  `;
 
   const meta = metaRow[0];
   const albumInfo = meta?.lastfmListeners != null
@@ -190,6 +192,8 @@ export default async function DiscoPage({
   const styleTags = parseStyleTags(meta?.lastfmTags ?? null)
     .filter((t) => t.toLowerCase() !== artistLower)
     .slice(0, 5);
+
+  const relatedDeals = await getRelatedDeals(disco.id, styleTags);
 
   const valores = disco.precos.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;
