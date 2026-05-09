@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { Prisma } from "@prisma/client";
 import { slugifyArtist } from "./slugify";
 import { fetchTopArtists } from "./lastfm";
 import type { ProcessedDisco } from "./queryDiscos";
@@ -207,8 +208,8 @@ async function queryTopArtistAllDeals(page: number): Promise<{ items: ProcessedD
     const matchedArtistas = await getMatchedTopArtistNamesWithCache();
     if (matchedArtistas.length === 0) return { items: [], total: 0 };
 
-    const offset = BigInt((page - 1) * PER_PAGE);
-    const limit  = BigInt(PER_PAGE);
+    const offset = Prisma.sql`${(page - 1) * PER_PAGE}`;
+    const limit  = Prisma.sql`${PER_PAGE}`;
 
     const rows = await prisma.$queryRaw<AllDealsRow[]>`
       SELECT
