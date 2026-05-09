@@ -1,8 +1,19 @@
 import { prisma } from "./prisma";
+import { Prisma } from "@prisma/client";
 import { slugifyArtist } from "./slugify";
 import { fetchTopArtists } from "./lastfm";
 import type { ProcessedDisco } from "./queryDiscos";
 import { unstable_cache } from "next/cache";
+
+function buildOrderBy(sort: string): Prisma.Sql {
+  switch (sort) {
+    case "menor-preco": return Prisma.sql`"precoAtual" ASC`;
+    case "maior-preco": return Prisma.sql`"precoAtual" DESC`;
+    case "avaliados":   return Prisma.sql`COALESCE(rating::numeric, 0) DESC`;
+    case "az":          return Prisma.sql`d.titulo ASC`;
+    default:            return Prisma.sql`desconto DESC NULLS LAST, d.deal_score DESC NULLS LAST`;
+  }
+}
 
 type CarouselRow = {
   id: string;
@@ -202,12 +213,20 @@ const PER_PAGE = 24;
 
 type AllDealsRow = CarouselRow & { totalCount: string };
 
-async function queryTopArtistAllDeals(page: number): Promise<{ items: ProcessedDisco[]; total: number }> {
+async function queryTopArtistAllDeals(
+  page: number,
+  sort: string,
+  precoMax: number | null,
+): Promise<{ items: ProcessedDisco[]; total: number }> {
   try {
     const matchedArtistas = await getMatchedTopArtistNamesWithCache();
     if (matchedArtistas.length === 0) return { items: [], total: 0 };
 
-    const offset = (page - 1) * PER_PAGE;
+    const offset   = (page - 1) * PER_PAGE;
+    const orderBy  = buildOrderBy(sort);
+    const precoFilter = precoMax !== null
+      ? Prisma.sql`AND hp_latest."precoBrl"::float <= ${precoMax}`
+      : Prisma.empty;
 
     const rows = await prisma.$queryRaw<AllDealsRow[]>`
       SELECT
@@ -254,7 +273,8 @@ async function queryTopArtistAllDeals(page: number): Promise<{ items: ProcessedD
       WHERE  d.disponivel = TRUE
         AND  d.price_count >= 5
         AND  d.artista = ANY(${matchedArtistas})
-      ORDER  BY desconto DESC NULLS LAST, d.deal_score DESC NULLS LAST
+        ${precoFilter}
+      ORDER  BY ${orderBy}
       LIMIT  ${PER_PAGE} OFFSET ${offset}
     `;
 

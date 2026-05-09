@@ -1,7 +1,9 @@
 import { queryTopArtistAllDealsWithCache } from "@/lib/carousel";
 import DiscoCard from "@/components/DiscoCard";
 import Pagination from "@/components/Pagination";
+import SortBar from "@/components/SortBar";
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 
 export const revalidate = 1800;
@@ -25,15 +27,17 @@ const PER_PAGE = 24;
 export default async function ArtistasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string; precoMax?: string }>;
 }) {
-  const { page: pageParam } = await searchParams;
-  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const { page: pageParam, sort: sortParam, precoMax: precoMaxParam } = await searchParams;
+  const page     = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const sort     = sortParam ?? "desconto";
+  const precoMax = precoMaxParam ? Number(precoMaxParam) : null;
 
   let items: Awaited<ReturnType<typeof queryTopArtistAllDealsWithCache>>["items"] = [];
   let total = 0;
   try {
-    ({ items, total } = await queryTopArtistAllDealsWithCache(page));
+    ({ items, total } = await queryTopArtistAllDealsWithCache(page, sort, precoMax));
   } catch {
     // DB unavailable
   }
@@ -42,7 +46,7 @@ export default async function ArtistasPage({
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-      <header className="mb-8">
+      <header className="mb-6">
         <Link
           href="/"
           className="text-parchment hover:text-gold text-sm transition-colors mb-4 inline-block"
@@ -60,6 +64,12 @@ export default async function ArtistasPage({
         </p>
       </header>
 
+      <div className="mb-6">
+        <Suspense>
+          <SortBar />
+        </Suspense>
+      </div>
+
       {items.length === 0 ? (
         <p className="text-dust text-sm">Nenhum resultado disponível no momento.</p>
       ) : (
@@ -74,7 +84,7 @@ export default async function ArtistasPage({
             <Pagination
               currentPage={page}
               totalPages={totalPages}
-              searchParams={{}}
+              searchParams={{ sort: sortParam, precoMax: precoMaxParam }}
               basePath="/artistas-mais-ouvidos"
             />
           )}
