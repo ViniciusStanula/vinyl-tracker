@@ -1,5 +1,4 @@
 import { prisma } from "./prisma";
-import { Prisma } from "@prisma/client";
 import { slugifyArtist } from "./slugify";
 import { fetchTopArtists } from "./lastfm";
 import type { ProcessedDisco } from "./queryDiscos";
