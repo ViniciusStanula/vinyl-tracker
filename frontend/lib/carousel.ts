@@ -208,8 +208,7 @@ async function queryTopArtistAllDeals(page: number): Promise<{ items: ProcessedD
     const matchedArtistas = await getMatchedTopArtistNamesWithCache();
     if (matchedArtistas.length === 0) return { items: [], total: 0 };
 
-    const offset = Prisma.sql`${(page - 1) * PER_PAGE}`;
-    const limit  = Prisma.sql`${PER_PAGE}`;
+    const offset = (page - 1) * PER_PAGE;
 
     const rows = await prisma.$queryRaw<AllDealsRow[]>`
       SELECT
@@ -257,7 +256,7 @@ async function queryTopArtistAllDeals(page: number): Promise<{ items: ProcessedD
         AND  d.price_count >= 5
         AND  d.artista = ANY(${matchedArtistas})
       ORDER  BY d.deal_score DESC NULLS LAST, desconto DESC NULLS LAST
-      LIMIT  ${limit} OFFSET ${offset}
+      LIMIT  ${PER_PAGE} OFFSET ${offset}
     `;
 
     const total = rows.length > 0 ? Number(rows[0].totalCount) : 0;
