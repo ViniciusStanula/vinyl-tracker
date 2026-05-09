@@ -6,6 +6,31 @@ export interface LastfmAlbumInfo {
   wikiSummary: string | null;
 }
 
+const VINYL_WORDS =
+  /\b(vinyl|vinil|lp|gram|colored|coloured|remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition)\b/i;
+
+function cleanAlbumTitle(title: string, artist: string): string {
+  let t = title;
+  // Strip "Artist - " prefix (self-titled Amazon listings)
+  const prefix = new RegExp(
+    `^${artist.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*-\\s*`,
+    "i"
+  );
+  t = t.replace(prefix, "");
+  // Remove square bracket content e.g. [Disco de Vinil]
+  t = t.replace(/\s*\[[^\]]*\]/g, "");
+  // Remove parenthetical vinyl/format descriptors
+  t = t.replace(/\s*\([^)]*\)/g, (match) =>
+    VINYL_WORDS.test(match) ? "" : match
+  );
+  // Remove color/variant suffix after last " - " e.g. "Album - Clear Gold Splatter"
+  const dash = t.lastIndexOf(" - ");
+  if (dash > 0 && VINYL_WORDS.test(t.slice(dash + 3))) {
+    t = t.slice(0, dash);
+  }
+  return t.trim();
+}
+
 function cleanWiki(html: string): string {
   return html
     .replace(/<a[^>]*href="https?:\/\/www\.last\.fm[^"]*"[^>]*>.*?<\/a>/gi, "")
@@ -41,7 +66,7 @@ export const fetchLastfmAlbumInfo = unstable_cache(
       const url = new URL("https://ws.audioscrobbler.com/2.0/");
       url.searchParams.set("method", "album.getInfo");
       url.searchParams.set("artist", artist);
-      url.searchParams.set("album", album);
+      url.searchParams.set("album", cleanAlbumTitle(album, artist));
       url.searchParams.set("api_key", apiKey);
       url.searchParams.set("format", "json");
       const res = await fetch(url.toString(), { cache: "no-store" });

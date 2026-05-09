@@ -51,15 +51,9 @@ def _split_into_chunks(text: str, max_len: int = _CHUNK_MAX) -> list[str]:
     return chunks
 
 
-def translate_to_pt_br(text: str, email: str | None = None, delay: float = 0.5) -> str | None:
-    """
-    Translates text from English to Brazilian Portuguese via MyMemory API.
-    Long texts are split into chunks and translated sequentially.
-    Returns None if any chunk fails — never falls back to English.
-    """
-    chunks = _split_into_chunks(text)
-    translated_parts: list[str] = []
-
+def _translate_chunks(chunks: list[str], email: str | None, delay: float) -> list[str] | None:
+    """Translates a list of text chunks. Returns None if any chunk fails."""
+    translated: list[str] = []
     for i, chunk in enumerate(chunks):
         params: dict = {"q": chunk, "langpair": "en|pt-BR"}
         if email:
@@ -74,14 +68,36 @@ def translate_to_pt_br(text: str, email: str | None = None, delay: float = 0.5) 
             part = data.get("responseData", {}).get("translatedText") or None
             if not part:
                 return None
-            translated_parts.append(part)
+            translated.append(part)
         except Exception as exc:
             log.debug("Translation request failed on chunk %d: %s", i, exc)
             return None
         if i < len(chunks) - 1:
             time.sleep(delay)
+    return translated
 
-    return " ".join(translated_parts) or None
+
+def translate_to_pt_br(text: str, email: str | None = None, delay: float = 0.5) -> str | None:
+    """
+    Translates text from English to Brazilian Portuguese via MyMemory API.
+    Preserves paragraph breaks. Long paragraphs are split into chunks.
+    Returns None if any chunk fails — never falls back to English.
+    """
+    paragraphs = text.split("\n\n")
+    translated_paragraphs: list[str] = []
+
+    for paragraph in paragraphs:
+        stripped = paragraph.strip()
+        if not stripped:
+            translated_paragraphs.append("")
+            continue
+        chunks = _split_into_chunks(stripped)
+        result = _translate_chunks(chunks, email=email, delay=delay)
+        if result is None:
+            return None
+        translated_paragraphs.append(" ".join(result))
+
+    return "\n\n".join(translated_paragraphs) or None
 
 
 def translate_wiki_summaries(

@@ -265,13 +265,6 @@ export default async function DiscoPage({
     valor: Number(p.precoBrl),
   }));
 
-  // 30-day price minimum from already-fetched precos (no extra DB call needed)
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const valores30d = disco.precos
-    .filter((p) => p.capturadoEm >= thirtyDaysAgo)
-    .map((p) => Number(p.precoBrl));
-  const precoMin30d = valores30d.length ? Math.min(...valores30d) : null;
-
   // Price history displayed newest-first, with delta vs. previous capture
   const precosDisplay = [...disco.precos].reverse();
   const priceTableRows = precosDisplay.map((p) => ({
@@ -526,22 +519,13 @@ export default async function DiscoPage({
         precosContent={
           <section className="bg-sleeve rounded-xl border border-groove p-5 space-y-5">
             {/* Stat cards */}
-            <dl className={`grid gap-3 ${precoMin30d !== null ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+            <dl className="grid gap-3 grid-cols-3">
               {/* Atual */}
               <div className="bg-groove rounded-lg p-3 border-l-4 border-gold">
                 <dt className="text-xs text-dust mb-1">Atual</dt>
                 <dd className="font-bold text-gold text-sm tabular-nums">{fmt(precoAtual)}</dd>
                 <dd className="text-xs text-dust mt-0.5">{dataAtualLabel}</dd>
               </div>
-
-              {/* Mín. 30 dias */}
-              {precoMin30d !== null && (
-                <div className="bg-groove rounded-lg p-3 border-l-4 border-deal/60">
-                  <dt className="text-xs text-dust mb-1">Mín. 30 dias</dt>
-                  <dd className="font-bold text-deallit text-sm tabular-nums">{fmt(precoMin30d)}</dd>
-                  <dd className="text-xs text-dust mt-0.5">Últimos 30 dias</dd>
-                </div>
-              )}
 
               {/* Mín. histórico */}
               <div className="bg-groove rounded-lg p-3 border-l-4 border-deal">
