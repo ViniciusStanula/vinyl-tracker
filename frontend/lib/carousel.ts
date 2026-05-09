@@ -224,12 +224,12 @@ async function queryTopArtistAllDeals(page: number): Promise<{ items: ProcessedD
         d.confidence_level        AS "confidenceLevel",
         d.last_crawled_at         AS "lastCrawledAt",
         d.lastfm_tags             AS "lastfmTags",
-        hp_latest."precoBrl"                                       AS "precoAtual",
-        COALESCE(d.avg_30d::float, hp_latest."precoBrl")           AS "mediaPreco",
-        CASE WHEN COALESCE(d.avg_30d::float, hp_latest."precoBrl") > 0
-          THEN (COALESCE(d.avg_30d::float, hp_latest."precoBrl") - hp_latest."precoBrl")
-               / COALESCE(d.avg_30d::float, hp_latest."precoBrl")
-          ELSE 0
+        hp_latest."precoBrl"::float                                AS "precoAtual",
+        COALESCE(d.avg_30d::float, hp_latest."precoBrl"::float)    AS "mediaPreco",
+        CASE WHEN COALESCE(d.avg_30d::float, hp_latest."precoBrl"::float) > 0
+          THEN (COALESCE(d.avg_30d::float, hp_latest."precoBrl"::float) - hp_latest."precoBrl"::float)
+               / COALESCE(d.avg_30d::float, hp_latest."precoBrl"::float)
+          ELSE 0::float
         END                                                        AS desconto,
         (
           SELECT COALESCE(json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"), '[]'::json)
@@ -254,7 +254,7 @@ async function queryTopArtistAllDeals(page: number): Promise<{ items: ProcessedD
       WHERE  d.disponivel = TRUE
         AND  d.price_count >= 5
         AND  d.artista = ANY(${matchedArtistas})
-      ORDER  BY d.deal_score DESC NULLS LAST, desconto DESC NULLS LAST
+      ORDER  BY desconto DESC NULLS LAST, d.deal_score DESC NULLS LAST
       LIMIT  ${PER_PAGE} OFFSET ${offset}
     `;
 
