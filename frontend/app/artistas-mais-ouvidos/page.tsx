@@ -1,5 +1,6 @@
 import { queryTopArtistAllDealsWithCache } from "@/lib/carousel";
 import DiscoCard from "@/components/DiscoCard";
+import Pagination from "@/components/Pagination";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -70,27 +71,12 @@ export default async function ArtistasPage({
           </div>
 
           {totalPages > 1 && (
-            <nav className="mt-10 flex items-center justify-center gap-2" aria-label="Paginação">
-              {page > 1 && (
-                <Link
-                  href={`/artistas-mais-ouvidos?page=${page - 1}`}
-                  className="px-4 py-2 rounded-lg bg-groove text-parchment text-sm hover:text-gold transition-colors"
-                >
-                  ← Anterior
-                </Link>
-              )}
-              <span className="px-4 py-2 text-sm text-dust">
-                {page} / {totalPages}
-              </span>
-              {page < totalPages && (
-                <Link
-                  href={`/artistas-mais-ouvidos?page=${page + 1}`}
-                  className="px-4 py-2 rounded-lg bg-groove text-parchment text-sm hover:text-gold transition-colors"
-                >
-                  Próxima →
-                </Link>
-              )}
-            </nav>
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              searchParams={{}}
+              basePath="/artistas-mais-ouvidos"
+            />
           )}
         </>
       )}
