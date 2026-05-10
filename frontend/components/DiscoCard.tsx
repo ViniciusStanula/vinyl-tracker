@@ -191,12 +191,6 @@ export default memo(function DiscoCard({
             {fmt(disco.precoAtual)}
           </p>
 
-          {/* Low-confidence warning */}
-          {confidenceLevel === "low_confidence" && dealScore !== null && (
-            <p className="text-xs mt-0.5 text-goldmute">
-              ⚠ Poucos dados disponíveis
-            </p>
-          )}
         </div>
       </div>
     </div>
