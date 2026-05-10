@@ -199,7 +199,13 @@ def _clean_wiki(html: str) -> str:
     text = re.sub(
         r"\s*User-contributed text.*$", "", text, flags=re.IGNORECASE | re.DOTALL
     )
-    return text.strip()
+    text = text.strip()
+    # If no paragraph breaks exist, insert them every 4 sentences
+    if "\n" not in text:
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+        chunks = [" ".join(sentences[i:i+4]) for i in range(0, len(sentences), 4)]
+        text = "\n\n".join(chunks)
+    return text
 
 
 def fetch_album_info(artist: str, album: str, api_key: str) -> dict | None:
