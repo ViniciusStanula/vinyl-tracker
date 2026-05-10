@@ -120,7 +120,7 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
         ELSE 0
       END AS desconto
     FROM   best_per_artist
-    ORDER  BY "dealScore" DESC NULLS LAST, desconto DESC NULLS LAST
+    ORDER  BY desconto DESC NULLS LAST, "dealScore" DESC NULLS LAST
     LIMIT  40
   `;
 
