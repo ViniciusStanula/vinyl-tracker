@@ -45,7 +45,7 @@ def translate_to_pt_br(text: str, client: anthropic.Anthropic, delay: float = 0.
     try:
         message = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=600,
+            max_tokens=800,
             system=_SYSTEM_PROMPT,
             messages=[
                 {
