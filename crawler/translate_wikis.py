@@ -19,27 +19,14 @@ log = logging.getLogger(__name__)
 
 MIN_LISTENERS = 0
 
-_SYSTEM_PROMPT = """\
-Você é um redator especializado em música para o Garimpa Vinil, um site brasileiro \
-que rastreia preços de discos de vinil na Amazon Brasil e ajuda colecionadores a \
-encontrar as melhores ofertas. Os usuários são entusiastas de vinil que querem \
-entender a história e o contexto dos álbuns que estão considerando comprar.
+_MAX_INPUT_CHARS = 1500
 
-Sua tarefa é traduzir textos biográficos de álbuns do inglês para o português \
-brasileiro e organizá-los em exatamente 3 parágrafos bem estruturados:
-
-1. Contexto e lançamento do álbum (quando foi lançado, quem fez, contexto da época)
-2. Conteúdo musical e produção (som, temas, faixas principais, processo criativo)
-3. Legado e recepção (crítica, vendas, impacto cultural, curiosidades)
-
-Regras:
-- Escreva em português brasileiro natural e fluente, como um jornalista musical
-- NÃO soe como tradução automática nem como IA
-- NÃO adicione informações que não estejam no texto original
-- NÃO use introduções como "Este álbum..." repetidamente
-- Retorne APENAS os 3 parágrafos separados por linha em branco, sem títulos ou marcadores
-- Se o texto original for muito curto para 3 parágrafos distintos, faça 2 ou 1 parágrafo
-"""
+_SYSTEM_PROMPT = (
+    "Traduza o texto abaixo do inglês para português brasileiro para o site Garimpa Vinil "
+    "(rastreador de preços de vinil). Escreva como jornalista musical: fluente, natural, sem soar como IA. "
+    "Organize em 2-3 parágrafos separados por linha em branco. "
+    "Retorne APENAS os parágrafos, sem títulos ou comentários."
+)
 
 
 def translate_to_pt_br(text: str, client: anthropic.Anthropic, delay: float = 0.5) -> str | None:
@@ -50,12 +37,12 @@ def translate_to_pt_br(text: str, client: anthropic.Anthropic, delay: float = 0.
     try:
         message = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
+            max_tokens=600,
             system=_SYSTEM_PROMPT,
             messages=[
                 {
                     "role": "user",
-                    "content": text,
+                    "content": text[:_MAX_INPUT_CHARS],
                 }
             ],
         )
