@@ -187,8 +187,12 @@ def _clean_wiki(html: str) -> str:
         html,
         flags=re.IGNORECASE | re.DOTALL,
     )
+    # Convert block-level tags to paragraph markers before stripping HTML
+    text = re.sub(r"</?(p|br|div|h[1-6])[^>]*>", "\n\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", "", text)
-    text = re.sub(r"\s+", " ", text)
+    # Collapse non-newline whitespace, then normalise paragraph breaks
+    text = re.sub(r"[^\S\n]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     # Strip disambiguation preamble — Last.fm marks current album with "(seen here)"
     text = re.sub(r"^.*?\(seen here\)\s*", "", text, flags=re.IGNORECASE)
     # Strip legal footer added by Last.fm to all wiki entries
