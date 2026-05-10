@@ -21,12 +21,20 @@ MIN_LISTENERS = 0
 
 _MAX_INPUT_CHARS = 1500
 
-_SYSTEM_PROMPT = (
-    "Traduza o texto abaixo do inglês para português brasileiro para o site Garimpa Vinil "
-    "(rastreador de preços de vinil). Escreva como jornalista musical: fluente, natural, sem soar como IA. "
-    "Organize em 2-3 parágrafos separados por linha em branco. "
-    "Retorne APENAS os parágrafos, sem títulos ou comentários."
-)
+_SYSTEM_PROMPT = """\
+Você escreve textos sobre álbuns para o Garimpa Vinil, site brasileiro de rastreamento \
+de preços de vinil. Usuários são colecionadores que querem contexto antes de comprar.
+
+Traduza o texto do inglês para português brasileiro e organize em 2-3 parágrafos:
+1. Lançamento e contexto histórico
+2. Características musicais e produção
+3. Recepção e legado (omita se o texto original não tiver informação suficiente)
+
+Regras:
+- Português brasileiro fluente, tom de jornalista musical, sem soar como IA
+- Não invente informações ausentes no original
+- Retorne APENAS os parágrafos separados por linha em branco, sem títulos\
+"""
 
 
 def translate_to_pt_br(text: str, client: anthropic.Anthropic, delay: float = 0.5) -> str | None:
