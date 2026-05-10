@@ -3139,7 +3139,6 @@ def main():
             t0 = time.monotonic()
             _translated = _translate_wikis(
                 conn,
-                email=os.environ.get("MYMEMORY_EMAIL"),
                 deadline=deadline,
             )
             log.info("Phase 6 wiki translation: %.0fs — %d wikis translated",
