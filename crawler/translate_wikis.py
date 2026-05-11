@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 MIN_LISTENERS = 0
 
-_MAX_INPUT_CHARS = 1500
+_MAX_INPUT_CHARS = 1000
 
 _SYSTEM_PROMPT = """\
 Você escreve textos sobre álbuns para o Garimpa Vinil, site brasileiro de rastreamento \
