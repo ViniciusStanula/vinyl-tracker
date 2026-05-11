@@ -33,7 +33,8 @@ Traduza o texto do inglês para português brasileiro e organize em 2-3 parágra
 Regras:
 - Português brasileiro fluente, tom de jornalista musical, sem soar como IA
 - Não invente informações ausentes no original
-- Retorne APENAS os parágrafos separados por linha em branco, sem títulos\
+- Retorne APENAS texto puro, sem markdown, sem asteriscos, sem negrito, sem títulos
+- Parágrafos separados por linha em branco\
 """
 
 
