@@ -1,4 +1,5 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
+import { prisma } from "@/lib/prisma";
 import { formatDiscoCount } from "@/lib/formatters";
 import { queryCarouselDiscosWithCache } from "@/lib/carousel";
 import SortBar from "@/components/SortBar";
@@ -10,25 +11,33 @@ import { Suspense } from "react";
 
 export const revalidate = 1800;
 
-export const metadata = {
-  title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
-  description:
-    "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços atualizado 2× ao dia.",
-  alternates: { canonical: "/" },
-  openGraph: {
+export async function generateMetadata() {
+  let count = 0;
+  try {
+    const result = await prisma.disco.count({ where: { disponivel: true } });
+    count = result;
+  } catch {
+    // DB unavailable — fall back to generic description
+  }
+  const countStr = count > 0 ? `+${count.toLocaleString("pt-BR")} discos rastreados. ` : "";
+  const description = `${countStr}Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços atualizado a cada 2 horas.`;
+  return {
     title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
-    description:
-      "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços atualizado 2× ao dia.",
-    url: "/",
-    type: "website",
-  },
-  twitter: {
-    card: "summary",
-    title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
-    description:
-      "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços atualizado 2× ao dia.",
-  },
-};
+    description,
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+      description,
+      url: "/",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+      description,
+    },
+  };
+}
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
 
