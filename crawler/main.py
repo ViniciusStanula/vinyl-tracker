@@ -435,7 +435,17 @@ _CD_RE = re.compile(
 # Does NOT include "no vinyl keyword" — many vinyl titles omit the word entirely.
 _CONFIRMED_NON_VINYL_RE = re.compile(
     r"\bcd\b|\[cd\]|\(cd\)|compact disc|\bcd\s*\d"
-    r"|\bcassete\b|\bcassette\b|\bfita\s+cassete\b",
+    r"|\bcassete\b|\bcassette\b|\bfita\s+cassete\b"
+    r"|\bblu-?ray\b|\bdvd\b|\b4k\s+ultra\b"
+    r"|\bkaraoke\b"
+    r"|\bjigsaw\b|\bpuzzle\b"
+    r"|\bpaperback\b|\bhardcover\b|\bmagazine\b|\brevista\b"
+    r"|\bfunko\s+pop\b|\bpop!\b"
+    r"|\bsmartphone\b|\bcelular\b|\bsamsung\s+galaxy\b"
+    r"|\bcamiseta\b|\bmoletom\b|\bshort\b|\bcamisa\b"
+    r"|\btapete\b|\bfrigideira\b|\bdispenser\b|\bchaveiro\b"
+    r"|\bvela\s+de\b|\bcristal\s+multifacetado\b"
+    r"|\bazulejo\s+decorativo\b|\bquadro\b",
     re.IGNORECASE,
 )
 _VINYL_TITLE_RE = re.compile(
@@ -587,13 +597,23 @@ _ARTIST_REJECT_PHRASES = (
     "other format",           # same in English
     "músicas mp3",            # Amazon digital-music label leaked by fallback selectors
     "musicas mp3",            # ASCII variant
+    "entrega grátis",         # Amazon delivery-date noise e.g. "13 de Mai. Entrega Grátis:qua."
+    "chega antes",            # same family "5 de Mai.chega Antes do Dia Das Mães"
 )
 _UNKNOWN_ARTIST = "Artista não identificado"
+
+
+_DATE_ARTIST_RE = re.compile(
+    r"^\d{1,2}\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\b",
+    re.IGNORECASE,
+)
 
 
 def is_fake_artist(artist: str) -> bool:
     if not artist:
         return False
+    if _DATE_ARTIST_RE.match(artist):
+        return True
     low = artist.lower()
     return any(phrase in low for phrase in _ARTIST_REJECT_PHRASES)
 
