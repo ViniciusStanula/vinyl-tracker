@@ -14,7 +14,7 @@ export const revalidate = 1800;
 export async function generateMetadata() {
   let count = 0;
   try {
-    const result = await prisma.disco.count({ where: { disponivel: true, price_count: { gte: 5 } } });
+    const result = await prisma.disco.count({ where: { disponivel: true, priceCount: { gte: 5 } } });
     count = result;
   } catch {
     // DB unavailable — fall back to generic description
