@@ -7,17 +7,17 @@ export interface LastfmAlbumInfo {
 }
 
 const VINYL_WORDS =
-  /\b(vinyl|vinil|lp|gram|colored|coloured|remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition)\b/i;
+  /\b(vinyl|vinil|lp|gram|colou?red|remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition|import|analog(?:ue)?|region|disc|disk|rpm|pressing|limited|special|expanded|extended|collector|numbered|bonus|box\s*set|explicit|blu.?ray|dvd)\b/i;
 
 export function cleanAlbumTitle(title: string, artist: string): string {
   let t = title;
+  // Strip bare "explicit_lyrics" suffix Amazon appends without brackets
+  t = t.replace(/\s*explicit_lyrics\s*/gi, " ").trim();
   // Strip "Artist - " prefix (self-titled Amazon listings)
-  const prefix = new RegExp(
-    `^${artist.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*-\\s*`,
-    "i"
-  );
+  const escapedArtist = artist.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const prefix = new RegExp(`^${escapedArtist}\\s*-\\s*`, "i");
   t = t.replace(prefix, "");
-  // Remove square bracket content e.g. [Disco de Vinil]
+  // Remove square bracket content e.g. [Disco de Vinil], [Vinyl], [Explicit]
   t = t.replace(/\s*\[[^\]]*\]/g, "");
   // Remove parenthetical vinyl/format descriptors
   t = t.replace(/\s*\([^)]*\)/g, (match) =>
@@ -28,6 +28,9 @@ export function cleanAlbumTitle(title: string, artist: string): string {
   if (dash > 0 && VINYL_WORDS.test(t.slice(dash + 3))) {
     t = t.slice(0, dash);
   }
+  // Strip trailing artist name e.g. "De Stijl [Vinyl] The White Stripes" → "De Stijl"
+  const trailingArtist = new RegExp(`\\s+${escapedArtist}$`, "i");
+  t = t.replace(trailingArtist, "");
   return t.trim();
 }
 
