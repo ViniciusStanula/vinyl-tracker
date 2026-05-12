@@ -9,7 +9,7 @@ export interface LastfmAlbumInfo {
 const VINYL_WORDS =
   /\b(vinyl|vinil|lp|gram|colored|coloured|remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition)\b/i;
 
-function cleanAlbumTitle(title: string, artist: string): string {
+export function cleanAlbumTitle(title: string, artist: string): string {
   let t = title;
   // Strip "Artist - " prefix (self-titled Amazon listings)
   const prefix = new RegExp(

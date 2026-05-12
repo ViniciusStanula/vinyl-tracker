@@ -16,6 +16,7 @@ import WikiExpander from "@/components/WikiExpander";
 import { slugifyArtist } from "@/lib/slugify";
 import { parseStyleTags } from "@/lib/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
+import { cleanAlbumTitle } from "@/lib/lastfmAlbum";
 
 export const revalidate = 7200;
 
@@ -563,13 +564,7 @@ export default async function DiscoPage({
         }
         sobreContent={
           albumInfo ? (() => {
-            const cleanTitle = disco.titulo
-              .replace(/\s*\[[^\]]*\]/g, "")
-              .replace(/\s*\([^)]*\)/g, (m) =>
-                /\b(vinyl|vinil|lp|gram|colored|colou?red|remaster|reissue|gatefold|splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition)\b/i.test(m) ? "" : m
-              )
-              .replace(new RegExp(`^${disco.artista.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*-\\s*`, "i"), "")
-              .trim();
+            const cleanTitle = cleanAlbumTitle(disco.titulo, disco.artista);
             const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
             return (
               <section className="space-y-4">
