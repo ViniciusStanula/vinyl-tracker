@@ -9,10 +9,10 @@ import PriceHistoryTable from "@/components/PriceHistoryTable";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import TabNav from "@/components/TabNav";
 import WikiExpander from "@/components/WikiExpander";
-import { slugifyArtist } from "@/lib/slugify";
-import { parseStyleTags } from "@/lib/styleUtils";
-import { truncateTitle, truncateDesc } from "@/lib/seo";
-import { cleanAlbumTitle } from "@/lib/lastfmAlbum";
+import { slugifyArtist } from "@/lib/utils/slugify";
+import { parseStyleTags } from "@/lib/utils/styleUtils";
+import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
+import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, type RelatedDeal } from "@/lib/db/disco";
 
 export const revalidate = 7200;

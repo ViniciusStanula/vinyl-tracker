@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { slugifyArtist } from "@/lib/slugify";
+import { slugifyArtist } from "@/lib/utils/slugify";
 import type { SearchSuggestion } from "@/lib/db/search";
 
 type Props = {

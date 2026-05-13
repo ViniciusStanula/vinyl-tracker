@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
-import { slugifyStyle } from "@/lib/styleUtils";
+import { slugifyStyle } from "@/lib/utils/styleUtils";
 
 // Same accent-normalization constants as the artist page SQL slug matching
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";

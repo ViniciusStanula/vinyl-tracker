@@ -5,8 +5,8 @@ import BackToTop from "@/components/BackToTop";
 import StyleTags from "@/components/StyleTags";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { truncateTitle, truncateDesc } from "@/lib/seo";
-import { formatDiscoCount } from "@/lib/formatters";
+import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
+import { formatDiscoCount } from "@/lib/utils/formatters";
 import { Suspense } from "react";
 import { getArtistaPageData, type ArtistaPageData } from "@/lib/db/artista";
 

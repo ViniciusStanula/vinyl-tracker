@@ -1,5 +1,5 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
-import { formatDiscoCount } from "@/lib/formatters";
+import { formatDiscoCount } from "@/lib/utils/formatters";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
 import BackToTop from "@/components/BackToTop";

@@ -1,7 +1,7 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
-import { formatDiscoCount } from "@/lib/formatters";
+import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getDiscoCount } from "@/lib/db/home";
-import { queryCarouselDiscosWithCache } from "@/lib/carousel";
+import { queryCarouselDiscosWithCache } from "@/lib/db/carousel";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
 import ArtistasCarousel from "@/components/ArtistasCarousel";

@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import type { ProcessedDisco } from "./queryDiscos";
+import type { ProcessedDisco } from "@/lib/queryDiscos";
 import { unstable_cache } from "next/cache";
 
 type PromoRow = {

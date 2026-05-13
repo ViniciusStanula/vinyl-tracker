@@ -1,4 +1,4 @@
-import { queryPriceUnder200WithCache } from "@/lib/promos";
+import { queryPriceUnder200WithCache } from "@/lib/db/promos";
 import DiscoCard from "@/components/DiscoCard";
 import Pagination from "@/components/Pagination";
 import Link from "next/link";

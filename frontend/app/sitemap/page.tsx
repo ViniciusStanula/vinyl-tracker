@@ -1,14 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
-import { slugifyArtist } from "@/lib/slugify";
-import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import type { Metadata } from "next";
-
-// Must match ACCENT_FROM/ACCENT_TO in estilo/[slug]/page.tsx and artista/[slug]/page.tsx
-// so that SQL-generated style slugs resolve correctly in the estilo page.
-const ACCENT_FROM = Prisma.raw(`'áàâãäåéèêëíìîïóòôõöúùûüçñý'`);
-const ACCENT_TO   = Prisma.raw(`'aaaaaaeeeeiiiioooouuuucny'`);
+import { getSitemapData } from "@/lib/db/sitemap";
 
 export const metadata: Metadata = {
   title: "Mapa do Site — Garimpa Vinil",
@@ -34,68 +26,6 @@ const STATIC_PAGES = [
   { nome: "Política de Privacidade", href: "/politica-de-privacidade" },
   { nome: "Termos de Uso",           href: "/termos-de-uso" },
 ];
-
-const getSitemapData = unstable_cache(
-  async () => {
-    const [artistaRows, styleRows] = await Promise.all([
-      prisma.$queryRaw<{ artista: string }[]>`
-        SELECT DISTINCT artista
-        FROM   "Disco"
-        WHERE  disponivel = TRUE
-          AND  price_count >= 5
-        ORDER  BY artista
-      `,
-      // Generate slugs in SQL using the exact same translate() expression the
-      // estilo page uses for its canonical lookup — guarantees every link resolves.
-      // Deduplicate by slug, keeping one display name per slug (min tag).
-      prisma.$queryRaw<{ slug: string; nome: string }[]>`
-        WITH tags AS (
-          SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
-          FROM   "Disco"
-          WHERE  lastfm_tags IS NOT NULL
-            AND  lastfm_tags != ''
-            AND  disponivel = TRUE
-            AND  price_count >= 5
-        ),
-        slugged AS (
-          SELECT
-            tag,
-            regexp_replace(
-              regexp_replace(
-                translate(lower(tag), ${ACCENT_FROM}, ${ACCENT_TO}),
-                '[^a-z0-9]+', '-', 'g'
-              ),
-              '^-+|-+$', '', 'g'
-            ) AS slug
-          FROM tags
-        )
-        SELECT slug, min(tag) AS nome
-        FROM   slugged
-        WHERE  slug != ''
-        GROUP  BY slug
-        ORDER  BY slug
-      `,
-    ]);
-
-    // Deduplicate artists by slug (multiple name variants → same slug).
-    // Must use JS slugifyArtist() because the artist page's JS safety net
-    // (slugifyArtist(a) === slug) must also pass — SQL translate alone isn't enough.
-    const seenSlug = new Set<string>();
-    const artists: { nome: string; slug: string }[] = [];
-    for (const { artista } of artistaRows) {
-      const slug = slugifyArtist(artista);
-      if (!slug || seenSlug.has(slug)) continue;
-      seenSlug.add(slug);
-      artists.push({ nome: artista, slug });
-    }
-
-    const styles = styleRows.map(({ slug, nome }) => ({ slug, nome }));
-
-    return { artists, styles };
-  },
-  ["sitemap-page"],
-  { tags: ["prices"], revalidate: 3600 },
-);
 
 // Group artists alphabetically by first letter
 function groupByLetter(artists: { nome: string; slug: string }[]) {

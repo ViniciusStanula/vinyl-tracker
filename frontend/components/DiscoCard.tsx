@@ -1,7 +1,7 @@
 import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { slugifyArtist } from "@/lib/slugify";
+import { slugifyArtist } from "@/lib/utils/slugify";
 
 export interface DiscoCardProps {
   id: string;

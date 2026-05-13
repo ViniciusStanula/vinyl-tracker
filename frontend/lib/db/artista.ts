@@ -2,8 +2,8 @@ import { prisma } from "@/lib/db/prisma";
 import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
-import { slugifyArtist } from "@/lib/slugify";
-import { getTopStyles } from "@/lib/styleUtils";
+import { slugifyArtist } from "@/lib/utils/slugify";
+import { getTopStyles } from "@/lib/utils/styleUtils";
 import { buildOrderBy, PAGE_SIZE, type ProcessedDisco } from "@/lib/queryDiscos";
 
 // translate() constant strings — same character table as slugifyArtist() NFD normalization

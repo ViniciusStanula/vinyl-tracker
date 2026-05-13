@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { slugifyStyle } from "@/lib/styleUtils";
+import { slugifyStyle } from "@/lib/utils/styleUtils";
 
 export default function StyleTags({ tags }: { tags: string[] }) {
   if (tags.length === 0) return null;

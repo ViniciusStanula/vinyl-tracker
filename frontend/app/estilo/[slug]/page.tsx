@@ -4,8 +4,8 @@ import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { truncateTitle, truncateDesc } from "@/lib/seo";
-import { formatDiscoCount } from "@/lib/formatters";
+import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
+import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getEstiloPageData, getRelatedEstilos, type SerializedEstiloData, type RelatedEstilo } from "@/lib/db/estilo";
 
 export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first

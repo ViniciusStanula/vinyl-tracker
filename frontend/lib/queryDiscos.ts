@@ -1,4 +1,4 @@
-import { prisma } from "./prisma";
+import { prisma } from "./db/prisma";
 import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 

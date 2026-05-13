@@ -1,8 +1,8 @@
 import { prisma } from "./prisma";
 import { Prisma } from "@prisma/client";
-import { slugifyArtist } from "./slugify";
-import { fetchTopArtists } from "./lastfm";
-import type { ProcessedDisco } from "./queryDiscos";
+import { slugifyArtist } from "@/lib/utils/slugify";
+import { fetchTopArtists } from "@/lib/external/lastfm";
+import type { ProcessedDisco } from "@/lib/queryDiscos";
 import { unstable_cache } from "next/cache";
 
 function buildOrderBy(sort: string): Prisma.Sql {
@@ -222,8 +222,8 @@ async function queryTopArtistAllDeals(
     const matchedArtistas = await getMatchedTopArtistNamesWithCache();
     if (matchedArtistas.length === 0) return { items: [], total: 0 };
 
-    const offset   = (page - 1) * PER_PAGE;
-    const orderBy  = buildOrderBy(sort);
+    const offset      = (page - 1) * PER_PAGE;
+    const orderBy     = buildOrderBy(sort);
     const precoFilter = precoMax !== null
       ? Prisma.sql`AND hp_latest."precoBrl"::float <= ${precoMax}`
       : Prisma.empty;

@@ -1,4 +1,4 @@
-import { queryTopArtistAllDealsWithCache } from "@/lib/carousel";
+import { queryTopArtistAllDealsWithCache } from "@/lib/db/carousel";
 import DiscoCard from "@/components/DiscoCard";
 import Pagination from "@/components/Pagination";
 import SortBar from "@/components/SortBar";
