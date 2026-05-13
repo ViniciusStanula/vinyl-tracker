@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { slugifyArtist } from "@/lib/slugify";
-import type { SearchSuggestion } from "@/app/api/search/route";
+import type { SearchSuggestion } from "@/lib/db/search";
 
 type Props = {
   query: string;

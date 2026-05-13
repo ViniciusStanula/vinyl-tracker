@@ -1,10 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache } from "react";
-import { unstable_cache } from "next/cache";
 import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
@@ -17,23 +13,9 @@ import { slugifyArtist } from "@/lib/slugify";
 import { parseStyleTags } from "@/lib/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/seo";
 import { cleanAlbumTitle } from "@/lib/lastfmAlbum";
+import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, type RelatedDeal } from "@/lib/db/disco";
 
 export const revalidate = 7200;
-
-// Shared between generateMetadata and DiscoPage so both callers within the same
-// render pass hit the DB only once (React cache() deduplicates by argument).
-const getDiscoWithPrecos = cache(async (slug: string) => {
-  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-  return prisma.disco.findUnique({
-    where: { slug },
-    include: {
-      precos: {
-        where: { capturadoEm: { gte: oneYearAgo } },
-        orderBy: { capturadoEm: "asc" },
-      },
-    },
-  });
-});
 
 export async function generateMetadata({
   params,
@@ -69,87 +51,6 @@ export async function generateMetadata({
   }
 }
 
-type RelatedDeal = {
-  id: string;
-  titulo: string;
-  artista: string;
-  slug: string;
-  imgUrl: string | null;
-  url: string;
-  estilo: string | null;
-  rating: string | null;
-  precoAtual: number;
-  mediaPreco: number;
-  desconto: number;
-  sparkline: unknown;
-  dealScore: number | null;
-  confidenceLevel: string | null;
-};
-
-const getRelatedDeals = unstable_cache(
-  async (discoId: string, tags: string[]): Promise<RelatedDeal[]> => {
-    const tagFilter = tags.length > 0
-      ? Prisma.sql`AND string_to_array(lastfm_tags, ', ') && ARRAY[${Prisma.join(tags)}]::text[]`
-      : Prisma.empty;
-    return prisma.$queryRaw<RelatedDeal[]>`
-      WITH candidates AS (
-        SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
-               deal_score, confidence_level, avg_30d
-        FROM "Disco"
-        WHERE id != ${discoId}
-          AND deal_score IS NOT NULL
-          AND disponivel = TRUE
-          AND price_count >= 5
-          ${tagFilter}
-        ORDER BY deal_score DESC, RANDOM()
-        LIMIT 4
-      ),
-      latest AS (
-        SELECT DISTINCT ON ("discoId")
-          "discoId", "precoBrl"::float AS preco
-        FROM "HistoricoPreco"
-        WHERE "discoId" IN (SELECT id FROM candidates)
-        ORDER BY "discoId", "capturadoEm" DESC
-      )
-      SELECT
-        c.id,
-        c.titulo,
-        c.artista,
-        c.slug,
-        c."imgUrl",
-        c.url,
-        c.estilo,
-        c.rating,
-        c.deal_score                                         AS "dealScore",
-        c.confidence_level                                   AS "confidenceLevel",
-        l.preco                                              AS "precoAtual",
-        COALESCE(c.avg_30d::float, l.preco)                  AS "mediaPreco",
-        CASE
-          WHEN COALESCE(c.avg_30d::float, 0) > 0
-          THEN (COALESCE(c.avg_30d::float, l.preco) - l.preco) / COALESCE(c.avg_30d::float, l.preco)
-          ELSE 0
-        END                                                  AS desconto,
-        (
-          SELECT COALESCE(
-            json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"),
-            '[]'::json
-          )
-          FROM (
-            SELECT "precoBrl", "capturadoEm"
-            FROM   "HistoricoPreco"
-            WHERE  "discoId" = c.id
-              AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
-            ORDER  BY "capturadoEm" ASC
-            LIMIT  10
-          ) sp
-        ) AS sparkline
-      FROM candidates c
-      INNER JOIN latest l ON l."discoId" = c.id
-    `;
-  },
-  ["disco-related-deals"],
-  { tags: ["prices"], revalidate: 1800 }
-);
 
 export default async function DiscoPage({
   params,
@@ -161,25 +62,8 @@ export default async function DiscoPage({
   const disco = await getDiscoWithPrecos(slug);
   if (!disco) notFound();
 
-  // Fetch meta first — needed to extract style tags for the related deals query.
   // lastfm_* columns are crawler-enriched and read directly from DB — no runtime API calls.
-  const metaRow = await prisma.$queryRaw<[{
-    disponivel: boolean;
-    lastfmTags: string | null;
-    lastfmListeners: number | null;
-    lastfmPlaycount: number | null;
-    lastfmWikiPt: string | null;
-  }]>`
-    SELECT
-      disponivel,
-      lastfm_tags      AS "lastfmTags",
-      lastfm_listeners AS "lastfmListeners",
-      lastfm_playcount AS "lastfmPlaycount",
-      lastfm_wiki_pt   AS "lastfmWikiPt"
-    FROM "Disco" WHERE slug = ${slug}
-  `;
-
-  const meta = metaRow[0];
+  const meta = await getDiscoMeta(slug);
   const albumInfo = meta?.lastfmListeners != null
     ? {
         listeners:   meta.lastfmListeners,

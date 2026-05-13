@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 
 export const PAGE_SIZE = 24;
 
-type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az" | "deals";
+export type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az" | "deals";
 
 /** Escape LIKE meta-characters in user-supplied text. */
 function likePct(term: string): string {
@@ -40,7 +40,7 @@ function buildSearchWhere(term: string): Prisma.Sql {
   return Prisma.sql`AND (d.titulo ILIKE ${likePct(term)} OR d.artista ILIKE ${likePct(term)})`;
 }
 
-function buildOrderBy(sort: string): Prisma.Sql {
+export function buildOrderBy(sort: string): Prisma.Sql {
   switch (sort as Sort) {
     case "menor-preco": return Prisma.sql`"precoAtual" ASC`;
     case "maior-preco": return Prisma.sql`"precoAtual" DESC`;

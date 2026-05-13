@@ -423,13 +423,16 @@ _RATING_TEXT_RE = re.compile(
     r"|estrelas?$",
     re.IGNORECASE,
 )
-_PRICE_START_RE = re.compile(r"^R\$|^\$|^\d+[.,]")
+from domain import (
+    is_vinyl,
+    normalize_artist,
+    _is_plausible_artist,
+    parse_price_br,
+    UNKNOWN_ARTIST as _UNKNOWN_ARTIST,
+)
+
 _VINYL_LABEL_RE = re.compile(r"vinil|vinyl", re.IGNORECASE)
 
-_CD_RE = re.compile(
-    r"\bcd\b|\[cd\]|\(cd\)|compact disc|\bcd\s*\d",
-    re.IGNORECASE,
-)
 # Positive signal that a product-page title names a confirmed non-vinyl format.
 # Only formats where the title leaves no ambiguity (CD, cassette/fita cassete).
 # Does NOT include "no vinyl keyword" — many vinyl titles omit the word entirely.
@@ -454,23 +457,6 @@ _CONFIRMED_NON_VINYL_RE = re.compile(
     r"|\bbota[s]?\s+infantil\b|\bbotinha[s]?\b|\bgalocha[s]?\b|\bcowboy\b|\bcountry\s+cowboy\b",
     re.IGNORECASE,
 )
-_VINYL_TITLE_RE = re.compile(
-    r"vinil|vinyl|\blp\b"
-    r'|\b7["\']\b'
-    r'|\b10["\']?\b\s*(?:inch|polegadas)'
-    r'|\b12["\']?\b\s*(?:inch|polegadas)'
-    r"|33\s?rpm|45\s?rpm"
-    r"|180\s?g(?:r(?:am)?)?"
-    r"|picture\s+(?:disc|vinyl)|gatefold"
-    r"|disco\s+(?:de\s+)?vinil|single\s+de\s+vinil"
-    r"|\b7\s*polegadas\b|\b12\s*polegadas\b",
-    re.IGNORECASE,
-)
-_VINYL_CARD_RE = re.compile(
-    r"vinil|vinyl|\blp\b|180\s?g(?:r(?:am)?)?|gatefold|picture\s+disc"
-    r"|disco\s+(?:de\s+)?vinil|formato:\s*vinil|format:\s*vinyl|33\s+rpm|45\s+rpm",
-    re.IGNORECASE,
-)
 _BOT_SIGNAL_RE = re.compile(
     r"Robot Check"
     r"|Verificação de robô"
@@ -483,8 +469,6 @@ _BOT_SIGNAL_RE = re.compile(
     r"|Prove you.re not a robot",
     re.IGNORECASE,
 )
-_PRICE_CLEAN_RE = re.compile(r"R\$\s*|\xa0|\s")
-_PRICE_NUM_RE   = re.compile(r"\d+\.?\d*")
 _ASIN_PATH_RE   = re.compile(r"/dp/([A-Z0-9]{10})", re.IGNORECASE)
 
 # ─────────────────────────────────────────────────────────────
@@ -512,135 +496,6 @@ def affiliate_link(asin: str) -> str:
     return f"https://www.amazon.com.br/dp/{asin}?tag={ASSOCIATE_TAG}"
 
 
-def parse_price_br(text: str) -> float | None:
-    if not text:
-        return None
-    cleaned = _PRICE_CLEAN_RE.sub("", text)
-    cleaned = cleaned.replace(".", "").replace(",", ".")
-    m = _PRICE_NUM_RE.search(cleaned)
-    if m is None:
-        log.debug("parse_price_br: no numeric value found in %r (cleaned: %r)", text, cleaned)
-        return None
-    return float(m.group())
-
-
-def is_vinyl(title: str, card=None) -> bool:
-    if _CD_RE.search(title):
-        return False
-
-    if _VINYL_TITLE_RE.search(title):
-        return True
-
-    if card is not None:
-        card_text = card.get_text(" ", strip=True)
-        if _VINYL_CARD_RE.search(card_text):
-            if not (_CD_RE.search(card_text) and not _VINYL_TITLE_RE.search(title)):
-                return True
-
-    return True
-
-
-def _to_title_case(name: str) -> str:
-    """Title-cases a name, keeping small connector words lowercase."""
-    SMALL = {"of", "the", "and", "or", "in", "on", "at", "to", "a", "an",
-             "de", "da", "do", "e", "y", "los", "las", "el", "la"}
-    words = name.split()
-    result = []
-    for i, word in enumerate(words):
-        lower = word.lower()
-        result.append(lower if (i > 0 and lower in SMALL) else word.capitalize())
-    return " ".join(result)
-
-
-def normalize_artist(name: str) -> str:
-    """
-    Normalizes an artist name coming from Amazon to a clean human-readable form.
-
-    Handles two common formats:
-      1. Inverted "LAST,FIRST" or "LAST, FIRST" → "First Last"
-         e.g. "SWIFT,TAYLOR" → "Taylor Swift"
-      2. ALL CAPS names (more than 4 alpha chars) → Title Case
-         e.g. "LED ZEPPELIN" → "Led Zeppelin"
-         (Short all-caps like "ABBA" or "AC/DC" are left alone.)
-    """
-    if not name or name == _UNKNOWN_ARTIST:
-        return name
-
-    # Case 1: inverted "LAST,FIRST" format
-    if "," in name:
-        parts = [p.strip() for p in name.split(",", 1)]
-        if len(parts) == 2 and all(parts):
-            candidate = f"{parts[1]} {parts[0]}"
-            return _to_title_case(candidate)
-
-    # Case 2: ALL CAPS (more than 4 alpha chars — preserves ABBA, AC/DC etc.)
-    letters = [c for c in name if c.isalpha()]
-    if len(letters) > 4 and all(c.isupper() for c in letters):
-        return _to_title_case(name)
-
-    return name
-
-
-_ARTIST_REJECT_PHRASES = (
-    "ouça com amazon music", "ouça com music unlimited", "listen with amazon music",
-    "adicionar ao carrinho", "add to cart", "comprar agora", "buy now",
-    "prime", "frete grátis", "em estoque", "disponível",
-    "vendido por", "sold by", "patrocinado", "sponsored",
-    "em até", "in up to", "x de r$", "x r$", "sem juros",
-    # Amazon social proof badges
-    "compras no mês", "compras nos últimos", "bought in past", "bought last month",
-    # Amazon promotional noise picked up by fallback selectors
-    "amazon music",           # "90 dias de Amazon Music grátis incluso"
-    "oferta",                 # "30(6 Ofertas de Novos) Mais Opções de Comprar$ 278"
-    "mais opções de comprar", # same
-    "opções de comprar",      # same
-    "dias de",                # "90 dias de ..."
-    # Page-chrome and price labels leaked by broad CSS selectors
-    "página",                 # "Página do Produtor$ 0,00r$0,00 Preço"
-    "preço",                  # same
-    "r$",                     # embedded Brazilian real sign e.g. "r$0,00"
-    "outro formato",          # "Outro formato:" — Amazon format-switcher label
-    "other format",           # same in English
-    "músicas mp3",            # Amazon digital-music label leaked by fallback selectors
-    "musicas mp3",            # ASCII variant
-    "entrega grátis",         # Amazon delivery-date noise e.g. "13 de Mai. Entrega Grátis:qua."
-    "chega antes",            # same family "5 de Mai.chega Antes do Dia Das Mães"
-)
-_UNKNOWN_ARTIST = "Artista não identificado"
-
-
-_DATE_ARTIST_RE = re.compile(
-    r"^\d{1,2}\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\b",
-    re.IGNORECASE,
-)
-
-
-def is_fake_artist(artist: str) -> bool:
-    if not artist:
-        return False
-    if _DATE_ARTIST_RE.match(artist):
-        return True
-    low = artist.lower()
-    return any(phrase in low for phrase in _ARTIST_REJECT_PHRASES)
-
-
-_EMBEDDED_PRICE_RE = re.compile(r"\d+[,\.]\d{2}")  # catches "0,00", "29.90" etc.
-
-
-def _is_plausible_artist(text: str) -> bool:
-    if not text or len(text) > 120:
-        return False
-    if not re.search(r"[a-zA-ZÀ-ÿ]", text):  # must contain at least one letter
-        return False
-    if _PRICE_START_RE.match(text):
-        return False
-    if is_fake_artist(text):
-        return False
-    if re.fullmatch(r"[\d.,\s/\\-]+", text):
-        return False
-    if _EMBEDDED_PRICE_RE.search(text):
-        return False
-    return True
 
 
 def build_page_url(page: int) -> str:

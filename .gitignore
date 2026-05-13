@@ -8,13 +8,15 @@ __pycache__/
 # Environment variables
 .env
 .env.*
-!.env.example
+.env*.local
+!*.env.example
 
 # Logs
 *.log
 
-# Crawler
-crawler/vinyl_crawler.log
+# Untracked data files
+compact_list.txt
+disco_records.json
 
 .vercel
 

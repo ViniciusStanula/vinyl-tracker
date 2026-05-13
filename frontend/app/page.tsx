@@ -1,6 +1,6 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
-import { prisma } from "@/lib/prisma";
 import { formatDiscoCount } from "@/lib/formatters";
+import { getDiscoCount } from "@/lib/db/home";
 import { queryCarouselDiscosWithCache } from "@/lib/carousel";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
@@ -14,8 +14,7 @@ export const revalidate = 1800;
 export async function generateMetadata() {
   let count = 0;
   try {
-    const result = await prisma.disco.count({ where: { disponivel: true, priceCount: { gte: 5 } } });
-    count = result;
+    count = await getDiscoCount();
   } catch {
     // DB unavailable — fall back to generic description
   }
