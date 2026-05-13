@@ -437,7 +437,7 @@ _CONFIRMED_NON_VINYL_RE = re.compile(
     r"\bcd\b|\[cd\]|\(cd\)|compact disc|\bcd\s*\d"
     r"|\bcassete\b|\bcassette\b|\bfita\s+cassete\b"
     r"|\bblu-?ray\b|\bdvd\b|\b4k\s+ultra\b"
-    r"|\bkaraoke\b"
+    r"|\bkaraoke\b|\bkaraok[eê]\b"
     r"|\bjigsaw\b|\bpuzzle\b"
     r"|\bpaperback\b|\bhardcover\b|\bmagazine\b|\brevista\b"
     r"|\bfunko\s+pop\b|\bpop!\b"
@@ -445,7 +445,13 @@ _CONFIRMED_NON_VINYL_RE = re.compile(
     r"|\bcamiseta\b|\bmoletom\b|\bshort\b|\bcamisa\b"
     r"|\btapete\b|\bfrigideira\b|\bdispenser\b|\bchaveiro\b"
     r"|\bvela\s+de\b|\bcristal\s+multifacetado\b"
-    r"|\bazulejo\s+decorativo\b|\bquadro\b",
+    r"|\bazulejo\s+decorativo\b|\bquadro\b"
+    r"|\bfones?\s+de\s+ouvido\b|\bheadphone[s]?\b|\bearphone[s]?\b|\bauricular\b"
+    r"|\btoca-?discos\b|\bgiradiscos\b|\bturntable[s]?\b"
+    r"|\binterface\s+de\s+[aá]udio\b|\baudio\s+interface\b"
+    r"|\baparador\b|\bmesa\s+aparador\b"
+    r"|\bmicrofone[s]?\s+sem\s+fio\b|\bspeaker\s+de\b"
+    r"|\bbota[s]?\s+infantil\b|\bbotinha[s]?\b|\bgalocha[s]?\b|\bcowboy\b|\bcountry\s+cowboy\b",
     re.IGNORECASE,
 )
 _VINYL_TITLE_RE = re.compile(

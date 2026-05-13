@@ -7,7 +7,7 @@ export interface LastfmAlbumInfo {
 }
 
 const VINYL_WORDS =
-  /\b(vinyl|vinil|lp|gram|colou?red|remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition|import|analog(?:ue)?|region|disc|disk|rpm|pressing|limited|special|expanded|extended|collector|numbered|bonus|box\s*set|explicit|blu.?ray|dvd)\b/i;
+  /\b(vinyl|vinil|lp|gram|colou?red|remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|white|orange|tangerine|purple|pink|yellow|repress|anniversary|deluxe|edition|import|analog(?:ue)?|region|disc|disk|rpm|pressing|limited|special|expanded|extended|collector|numbered|bonus|box\s*set|explicit|blu.?ray|dvd)\b/i;
 
 export function cleanAlbumTitle(title: string, artist: string): string {
   let t = title;
@@ -28,6 +28,11 @@ export function cleanAlbumTitle(title: string, artist: string): string {
   if (dash > 0 && VINYL_WORDS.test(t.slice(dash + 3))) {
     t = t.slice(0, dash);
   }
+  // Strip trailing bare vinyl color/format words e.g. "1989 (Taylor's Version) Tangerine Vinyl" → "1989 (Taylor's Version)"
+  t = t.replace(/(\s+\w+)?\s+(vinyl|vinil|lp)\s*$/i, (m, prefix) => {
+    if (!prefix) return "";
+    return VINYL_WORDS.test(prefix.trim()) ? "" : m;
+  });
   // Strip trailing artist name e.g. "De Stijl [Vinyl] The White Stripes" → "De Stijl"
   const trailingArtist = new RegExp(`\\s+${escapedArtist}$`, "i");
   t = t.replace(trailingArtist, "");
