@@ -71,7 +71,7 @@ export default function SearchBar() {
     <div ref={containerRef} className="relative flex w-full">
       <form
         role="search"
-        className="flex flex-1"
+        className="flex flex-1 min-w-0"
         onSubmit={(e) => { e.preventDefault(); handleBuscar(); }}
       >
         {/* Search icon / pending spinner */}
@@ -101,7 +101,7 @@ export default function SearchBar() {
           defaultValue={searchParams.get("q") ?? ""}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          className={`flex-1 min-w-0 bg-sleeve border border-groove rounded-l-full pl-10 pr-4 py-2 text-sm text-cream placeholder-dust focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all ${
+          className={`flex-1 min-w-0 appearance-none bg-sleeve border border-groove rounded-l-full pl-10 pr-4 py-2 text-sm text-cream placeholder-dust focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all ${
             isPending ? "opacity-60" : ""
           }`}
         />

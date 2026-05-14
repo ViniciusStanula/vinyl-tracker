@@ -90,7 +90,7 @@ export default function Navbar() {
 
           {/* ── Mobile hamburger ── */}
           <button
-            className="sm:hidden w-11 h-11 flex items-center justify-center rounded-lg text-dust hover:text-cream hover:bg-groove/40 transition-colors active:scale-95 shrink-0"
+            className="sm:hidden w-11 h-11 flex items-center justify-center rounded-lg text-parchment hover:text-cream hover:bg-groove/40 transition-colors active:scale-95 shrink-0"
             onClick={() => setOpen(v => !v)}
             aria-label={open ? "Fechar menu" : "Abrir menu"}
             aria-expanded={open}
