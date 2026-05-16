@@ -108,14 +108,65 @@ def _slugify_artist(name: str) -> str:
     return slug[:60]
 
 
-def fetch_top_artist_slugs() -> set:
-    """Fetches Last.fm chart.getTopArtists top-1000 and returns slugified names."""
+LASTFM_CACHE_DAYS = 30
+
+
+def _load_cached_slugs(conn) -> set | None:
+    """Returns cached slug set if younger than LASTFM_CACHE_DAYS, else None."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT value FROM bot_state WHERE key = 'lastfm_slugs_fetched_at'"
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    fetched_at = datetime.fromisoformat(row[0])
+    if fetched_at.tzinfo is None:
+        fetched_at = fetched_at.replace(tzinfo=timezone.utc)
+    age_days = (datetime.now(timezone.utc) - fetched_at).days
+    if age_days >= LASTFM_CACHE_DAYS:
+        return None
+
+    with conn.cursor() as cur:
+        cur.execute("SELECT value FROM bot_state WHERE key = 'lastfm_slugs'")
+        row = cur.fetchone()
+    if not row:
+        return None
+
+    import json
+    slugs = set(json.loads(row[0]))
+    log.info("Loaded %d Last.fm slugs from cache (age: %d days)", len(slugs), age_days)
+    return slugs
+
+
+def _save_cached_slugs(conn, slugs: set) -> None:
+    import json
+    now_iso = datetime.now(timezone.utc).isoformat()
+    with conn.cursor() as cur:
+        cur.execute("""
+            INSERT INTO bot_state (key, value) VALUES ('lastfm_slugs', %s)
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+        """, (json.dumps(list(slugs)),))
+        cur.execute("""
+            INSERT INTO bot_state (key, value) VALUES ('lastfm_slugs_fetched_at', %s)
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+        """, (now_iso,))
+    conn.commit()
+    log.info("Cached %d Last.fm slugs (TTL: %d days)", len(slugs), LASTFM_CACHE_DAYS)
+
+
+def fetch_top_artist_slugs(conn) -> set:
+    """Returns top-5000 Last.fm artist slugs, using a 30-day DB cache."""
+    cached = _load_cached_slugs(conn)
+    if cached is not None:
+        return cached
+
     if not LASTFM_API_KEY:
         log.warning("LASTFM_API_KEY not set — is_top_artist will be FALSE for all deals")
         return set()
 
     slugs: set[str] = set()
-    for page in (1, 2):
+    for page in range(1, 11):  # 10 pages × 500 = top 5000
         try:
             resp = requests.get(
                 "https://ws.audioscrobbler.com/2.0/",
@@ -137,7 +188,9 @@ def fetch_top_artist_slugs() -> set:
         except Exception as exc:
             log.warning("Last.fm page %d fetch failed: %s", page, exc)
 
-    log.info("Fetched %d Last.fm top-artist slugs", len(slugs))
+    log.info("Fetched %d Last.fm top-5000 artist slugs from API", len(slugs))
+    if slugs:
+        _save_cached_slugs(conn, slugs)
     return slugs
 
 
@@ -191,42 +244,43 @@ def sync_pending(conn, active: dict, top_slugs: set) -> None:
     now = datetime.now(timezone.utc)
 
     with conn.cursor() as cur:
-        # 1. Upsert every active deal.
-        #    Preserve first_seen_at and status ('pending'/'sent'); only reopen 'discarded'.
+        # 1. Batch upsert all active deals in one round trip.
+        rows = []
         for asin, d in active.items():
             avg   = float(d["avg_30d"])
             price = float(d["preco_brl"])
-            priority     = round((avg - price) / avg * 100, 2)
+            priority      = round((avg - price) / avg * 100, 2)
             is_top_artist = _slugify_artist(d["artista"]) in top_slugs
-
-            cur.execute("""
-                INSERT INTO bot_pending
-                    (asin, titulo, artista, estilo, img_url, affiliate_url,
-                     preco_brl, avg_30d, low_all_time, deal_score, priority_score,
-                     is_top_artist, first_seen_at, status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending')
-                ON CONFLICT (asin) DO UPDATE SET
-                    titulo         = EXCLUDED.titulo,
-                    artista        = EXCLUDED.artista,
-                    estilo         = EXCLUDED.estilo,
-                    img_url        = EXCLUDED.img_url,
-                    affiliate_url  = EXCLUDED.affiliate_url,
-                    preco_brl      = EXCLUDED.preco_brl,
-                    avg_30d        = EXCLUDED.avg_30d,
-                    low_all_time   = EXCLUDED.low_all_time,
-                    deal_score     = EXCLUDED.deal_score,
-                    priority_score = EXCLUDED.priority_score,
-                    is_top_artist  = EXCLUDED.is_top_artist,
-                    status = CASE
-                        WHEN bot_pending.status = 'discarded' THEN 'pending'
-                        ELSE bot_pending.status
-                    END
-            """, (
+            rows.append((
                 asin, d["titulo"], d["artista"], d.get("estilo"),
                 d.get("img_url"), d["affiliate_url"],
                 price, avg, d.get("low_all_time"),
                 int(d["deal_score"]), priority, is_top_artist, now,
             ))
+
+        psycopg2.extras.execute_values(cur, """
+            INSERT INTO bot_pending
+                (asin, titulo, artista, estilo, img_url, affiliate_url,
+                 preco_brl, avg_30d, low_all_time, deal_score, priority_score,
+                 is_top_artist, first_seen_at, status)
+            VALUES %s
+            ON CONFLICT (asin) DO UPDATE SET
+                titulo         = EXCLUDED.titulo,
+                artista        = EXCLUDED.artista,
+                estilo         = EXCLUDED.estilo,
+                img_url        = EXCLUDED.img_url,
+                affiliate_url  = EXCLUDED.affiliate_url,
+                preco_brl      = EXCLUDED.preco_brl,
+                avg_30d        = EXCLUDED.avg_30d,
+                low_all_time   = EXCLUDED.low_all_time,
+                deal_score     = EXCLUDED.deal_score,
+                priority_score = EXCLUDED.priority_score,
+                is_top_artist  = EXCLUDED.is_top_artist,
+                status = CASE
+                    WHEN bot_pending.status = 'discarded' THEN 'pending'
+                    ELSE bot_pending.status
+                END
+        """, rows, template="(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending')", page_size=500)
 
         # 2. Immediately discard pending deals no longer active in Supabase.
         active_asins = list(active.keys())
@@ -279,7 +333,7 @@ def main() -> None:
     conn = connect()
     try:
         ensure_schema(conn)
-        top_slugs = fetch_top_artist_slugs()
+        top_slugs = fetch_top_artist_slugs(conn)
         active    = fetch_active_deals(conn)
         log.info("Active deals in Supabase: %d", len(active))
         sync_pending(conn, active, top_slugs)

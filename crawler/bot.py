@@ -34,6 +34,7 @@ SEND_HOUR_START   = 8
 SEND_HOUR_END     = 22
 DRIP_MINUTES      = 20
 EDIT_THRESHOLD    = 0.95   # edit if current price < ref * 0.95 (≥5% drop)
+EDIT_BATCH_LIMIT  = 30     # max edits per run to stay within GHA timeout
 RESEND_THRESHOLD  = 0.90   # bridge re-opens at this level; bot just sends normally
 
 TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
@@ -293,13 +294,17 @@ def run_edit_pass(conn) -> None:
                     id                                       AS sent_row_id,
                     asin,
                     telegram_message_id,
+                    sent_at,
                     COALESCE(last_edit_price, preco_brl)    AS ref_price
                 FROM bot_sent
                 ORDER BY asin, sent_at DESC
             ) ls ON ls.asin = bp.asin
             WHERE bp.status IN ('sent', 'pending')
               AND bp.preco_brl < ls.ref_price * %s
-        """, (EDIT_THRESHOLD,))
+              AND ls.sent_at > NOW() - INTERVAL '7 days'
+            ORDER BY (ls.ref_price - bp.preco_brl) DESC
+            LIMIT %s
+        """, (EDIT_THRESHOLD, EDIT_BATCH_LIMIT))
         candidates = cur.fetchall()
 
     for row in candidates:
@@ -411,9 +416,9 @@ def run_send_pass(conn, batch_size: int = 5) -> None:
                     SELECT *
                     FROM bot_pending
                     WHERE status = 'pending'
+                      AND is_top_artist = TRUE
                       AND asin <> ALL(%s)
-                    ORDER BY is_top_artist DESC NULLS LAST,
-                             priority_score  DESC NULLS LAST
+                    ORDER BY priority_score DESC NULLS LAST
                     LIMIT 1
                 """, (skip_asins,))
             else:
@@ -421,8 +426,8 @@ def run_send_pass(conn, batch_size: int = 5) -> None:
                     SELECT *
                     FROM bot_pending
                     WHERE status = 'pending'
-                    ORDER BY is_top_artist DESC NULLS LAST,
-                             priority_score  DESC NULLS LAST
+                      AND is_top_artist = TRUE
+                    ORDER BY priority_score DESC NULLS LAST
                     LIMIT 1
                 """)
             deal = cur.fetchone()
