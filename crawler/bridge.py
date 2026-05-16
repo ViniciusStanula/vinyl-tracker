@@ -4,11 +4,12 @@ bridge.py — Syncs active deals from Supabase into the bot_pending queue.
 
 Reads Disco rows where deal_score >= 1 and disponivel = TRUE, upserts them
 into bot_pending, and discards deals that have disappeared from Supabase.
-Marks deals whose artist appears in the Last.fm top-1000 chart as is_top_artist
+Marks deals whose artist appears in the Last.fm top-5000 chart as is_top_artist
 so bot.py can prioritize them in the send queue.
 Exits non-zero on connection failure so the downstream bot.py step is skipped.
 """
 
+import json
 import logging
 import os
 import re
@@ -64,9 +65,9 @@ CREATE TABLE IF NOT EXISTS bot_state (
 );
 """
 
-# Adds is_top_artist to tables created before this column existed.
 _SCHEMA_EXTRAS = """
 ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS is_top_artist BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS bot_sent_asin_idx ON bot_sent (asin, sent_at DESC);
 """
 
 
@@ -133,14 +134,12 @@ def _load_cached_slugs(conn) -> set | None:
     if not row:
         return None
 
-    import json
     slugs = set(json.loads(row[0]))
     log.info("Loaded %d Last.fm slugs from cache (age: %d days)", len(slugs), age_days)
     return slugs
 
 
 def _save_cached_slugs(conn, slugs: set) -> None:
-    import json
     now_iso = datetime.now(timezone.utc).isoformat()
     with conn.cursor() as cur:
         cur.execute("""
@@ -296,15 +295,7 @@ def sync_pending(conn, active: dict, top_slugs: set) -> None:
                 "UPDATE bot_pending SET status = 'discarded' WHERE status = 'pending'"
             )
 
-        # 3. TTL: discard pending deals first seen more than 6 hours ago.
-        cur.execute("""
-            UPDATE bot_pending
-            SET status = 'discarded'
-            WHERE status = 'pending'
-              AND first_seen_at < NOW() - INTERVAL '6 hours'
-        """)
-
-        # 4. Re-open 'sent' deals where price dropped >10% vs last send/edit,
+        # 3. Re-open 'sent' deals where price dropped >10% vs last send/edit,
         #    but only if at least 6 hours have passed since the last action.
         cur.execute("""
             UPDATE bot_pending bp

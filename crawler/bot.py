@@ -35,6 +35,7 @@ SEND_HOUR_END     = 22
 DRIP_MINUTES      = 20
 EDIT_THRESHOLD    = 0.95   # edit if current price < ref * 0.95 (≥5% drop)
 EDIT_BATCH_LIMIT  = 30     # max edits per run to stay within GHA timeout
+SOLDOUT_BATCH_LIMIT = 20  # max sold-out edits per run
 RESEND_THRESHOLD  = 0.90   # bridge re-opens at this level; bot just sends normally
 
 TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
@@ -113,7 +114,7 @@ def send_photo(photo_url: str, caption: str) -> int | None:
     try:
         resp = requests.post(
             f"{TG_API}/sendPhoto",
-            data={"chat_id": CHANNEL_ID, "caption": caption, "parse_mode": "MarkdownV2"},
+            data={"chat_id": CHANNEL_ID, "caption": caption, "parse_mode": "HTML"},
             files={"photo": ("cover.jpg", img.content, "image/jpeg")},
             timeout=60,
         )
@@ -155,6 +156,9 @@ def _clean_titulo(titulo: str) -> str:
 def _esc_html(value) -> str:
     return str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+def _esc_url(url: str) -> str:
+    return url.replace("&", "&amp;")
+
 
 def _brl(value: float) -> str:
     """Format as Brazilian Real string: 1234.56 → '1.234,56'"""
@@ -165,11 +169,12 @@ def build_soldout_caption(titulo: str, artista: str,
                           preco_brl: float, affiliate_url: str) -> str:
     album  = _esc_html(_clean_titulo(titulo))
     artist = _esc_html(artista)
+    url = _esc_url(affiliate_url)
     return (
         f"❌ <b>INDISPONÍVEL</b>\n"
         f"{artist} — {album}\n"
         f"\n<s>Último preço: R$ {_brl(preco_brl)}</s>\n"
-        f"\n🛒 <a href='{affiliate_url}'>Ver na Amazon</a>"
+        f"\n🛒 <a href='{url}'>Ver na Amazon</a>"
     )
 
 
@@ -193,12 +198,13 @@ def build_caption(titulo: str, artista: str, estilo: str | None,
             f"Economia: R$ {_brl(savings)}\n"
         )
 
+    url = _esc_url(affiliate_url)
     return (
         f"🔥 <b>OFERTA</b>\n"
         f"{artist} — {album}\n"
         f"{atl_line}"
         f"\n{price_block}"
-        f"\n🛒 <a href='{affiliate_url}'>Comprar na Amazon</a> 👉"
+        f"\n🛒 <a href='{url}'>Comprar na Amazon</a> 👉"
     )
 
 
@@ -247,7 +253,8 @@ def run_soldout_pass(conn) -> None:
             JOIN "Disco" d ON d.asin = bp.asin
             WHERE bp.status = 'sent'
               AND d.disponivel = FALSE
-        """)
+            LIMIT %s
+        """, (SOLDOUT_BATCH_LIMIT,))
         rows = cur.fetchall()
 
     for row in rows:
