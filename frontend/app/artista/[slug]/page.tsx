@@ -79,7 +79,7 @@ export default async function ArtistaPage({
   }
   if (!data) notFound();
 
-  const { canonical: artista, items, total, totalPages, topStyles } = data;
+  const { canonical: artista, items, total, totalPages, topStyles, sameAs } = data;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
 
@@ -113,10 +113,11 @@ export default async function ArtistaPage({
 
   const musicArtistJsonLd = JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "MusicArtist",
+    "@type": "MusicGroup",
     name: artista,
     url: `${siteUrl}/artista/${slug}`,
     ...(topStyles.length > 0 ? { genre: topStyles } : {}),
+    ...(sameAs.length > 0 ? { sameAs } : {}),
   });
 
   return (

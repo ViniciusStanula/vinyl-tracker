@@ -38,6 +38,7 @@ export type ArtistaPageData = {
   total: number;
   totalPages: number;
   topStyles: string[];
+  sameAs: string[];
 };
 
 const _getArtistaPageData = unstable_cache(
@@ -192,16 +193,24 @@ const _getArtistaPageData = unstable_cache(
       OFFSET ${offset}
     `;
 
-    const [countResult, rows, tagsRows] = await Promise.all([
+    const metaQuery = prisma.artistMeta.findFirst({
+      where: { artista: { in: variants } },
+      select: { wikidataUrl: true, wikipediaUrl: true, spotifyUrl: true },
+    });
+
+    const [countResult, rows, tagsRows, meta] = await Promise.all([
       countQuery,
       mainQuery,
       tagsQuery,
+      metaQuery,
     ]);
 
     const total = Number(countResult[0].total);
     if (total === 0) return null;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const topStyles = getTopStyles(tagsRows.map((r) => r.lastfmTags), 5, canonical);
+    const sameAs = [meta?.wikidataUrl, meta?.wikipediaUrl, meta?.spotifyUrl]
+      .filter((u): u is string => Boolean(u));
 
     const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
 
@@ -257,7 +266,7 @@ const _getArtistaPageData = unstable_cache(
       }];
     });
 
-    return { canonical, items, total, totalPages, topStyles };
+    return { canonical, items, total, totalPages, topStyles, sameAs };
   },
   ["artista-page"],
   { tags: ["prices"] }

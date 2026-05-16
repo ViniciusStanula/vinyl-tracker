@@ -1,0 +1,30 @@
+# Garimpa Vinil
+
+> Rastreador de preços de discos de vinil no Amazon Brasil. Atualizado a cada 2 horas. Mais de 11.000 títulos monitorados.
+
+## Sobre
+
+- [Sobre o Garimpa Vinil](https://www.garimpavinil.com.br/sobre): Metodologia completa de detecção de ofertas e histórico de preços.
+
+## Catálogos
+
+- [Todos os Discos](https://www.garimpavinil.com.br/disco): Catálogo completo com mais de 11.000 vinis, ordenados por desconto.
+- [Artistas Mais Ouvidos](https://www.garimpavinil.com.br/artistas-mais-ouvidos): Top artistas com maior presença no catálogo.
+- [Discos Abaixo de R$200](https://www.garimpavinil.com.br/discos-abaixo-de-200): Vinis com preço atual abaixo de R$200.
+
+## Estilos Musicais
+
+- Padrão de URL: /estilo/[slug] — exemplos: /estilo/rock, /estilo/jazz, /estilo/mpb, /estilo/samba, /estilo/classical
+
+## Artistas
+
+- Padrão de URL: /artista/[slug] — exemplos: /artista/abba, /artista/the-rolling-stones
+
+## Políticas
+
+- [Política de Privacidade](https://www.garimpavinil.com.br/politica-de-privacidade)
+- [Termos de Uso](https://www.garimpavinil.com.br/termos-de-uso)
+
+## Afiliados
+
+Este site participa do Programa de Associados da Amazon Brasil. Os preços são monitorados a cada 2 horas e podem variar. Links para a Amazon são links de afiliados.

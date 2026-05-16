@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 MIN_LISTENERS = 0
 
-_MAX_INPUT_CHARS = 1000
+_MAX_INPUT_CHARS = 4000
 
 _SYSTEM_PROMPT = """\
 Você escreve textos sobre álbuns para o Garimpa Vinil, site brasileiro de rastreamento \
@@ -46,7 +46,7 @@ def translate_to_pt_br(text: str, client: anthropic.Anthropic, delay: float = 0.
     try:
         message = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=800,
+            max_tokens=1500,
             system=_SYSTEM_PROMPT,
             messages=[
                 {

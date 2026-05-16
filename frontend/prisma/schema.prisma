@@ -31,6 +31,17 @@ model Disco {
   @@index([slug])
 }
 
+model ArtistMeta {
+  artista      String   @id
+  mbid         String?
+  wikidataUrl  String?  @map("wikidata_url")
+  wikipediaUrl String?  @map("wikipedia_url")
+  spotifyUrl   String?  @map("spotify_url")
+  enrichedAt   DateTime @default(now()) @map("enriched_at")
+
+  @@map("ArtistMeta")
+}
+
 model HistoricoPreco {
   id          String   @id @default(uuid())
   discoId     String

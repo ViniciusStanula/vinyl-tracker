@@ -1,0 +1,44 @@
+name: Artist Meta Enrichment
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # weekly, Sunday 03:00 UTC
+  workflow_dispatch:       # manual trigger from the GitHub Actions UI
+
+concurrency:
+  group: artist-meta-enrichment
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: crawler/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r crawler/requirements.txt
+
+      - name: Enrich new artists via MusicBrainz
+        # Fetches Wikidata/Wikipedia/Spotify links for artists not yet enriched
+        # or enriched more than 30 days ago. Validates each URL before storing.
+        # Rate-limited to 1 req/sec per MusicBrainz policy (~200 artists/run).
+        run: python crawler/enrich_artist_meta.py --limit 200 --min-discos 3
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Revalidate existing URLs
+        # Checks stored URLs and nulls any that now return 4xx/5xx.
+        # No MusicBrainz requests — safe to run with higher limit.
+        run: python crawler/enrich_artist_meta.py --revalidate --revalidate-limit 1000
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

@@ -55,7 +55,14 @@ const organizationJsonLd = JSON.stringify({
   "@type": "Organization",
   name: "Garimpa Vinil",
   url: SITE_URL,
-  description: "Rastreador de preços de discos de vinil na Amazon Brasil.",
+  description: "Rastreador de preços de discos de vinil na Amazon Brasil. Monitora mais de 11.000 títulos com alertas de promoções e histórico de preços.",
+  inLanguage: "pt-BR",
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    url: "https://t.me/garimpavinil",
+  },
+  sameAs: ["https://t.me/garimpavinil"],
 });
 
 export default function RootLayout({

@@ -9,6 +9,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
     },
     sitemap: [
+      `${base}/sitemap.xml`,
       `${base}/sitemap/estatico.xml`,
       `${base}/sitemap/artistas.xml`,
       `${base}/sitemap/discos.xml`,
