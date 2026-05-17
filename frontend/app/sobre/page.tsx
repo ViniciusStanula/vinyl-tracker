@@ -4,6 +4,14 @@ import Link from "next/link";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
 
+const personJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Vinicius Stanula",
+  url: SITE_URL,
+  sameAs: ["https://linkedin.com/in/vinicius-stanula"],
+});
+
 const breadcrumbJsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -128,6 +136,8 @@ export default function SobrePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: personJsonLd }} />
 
       {/* ── Breadcrumbs ─────────────────────────────────────────── */}
       <nav className="mb-6 text-sm text-dust flex gap-2">
@@ -256,6 +266,25 @@ export default function SobrePage() {
         </div>
         <p className="mt-2 text-center text-dust text-xs">
           Exemplo: variação de preço de um disco nos últimos 30 dias
+        </p>
+      </section>
+
+      {/* ── Créditos ────────────────────────────────────────────── */}
+      <section className="mb-6 bg-sleeve border border-groove rounded-xl p-6">
+        <h2 className="font-display text-xl font-bold text-cream mb-3">Quem fez isso</h2>
+        <p className="text-parchment text-sm leading-relaxed">
+          O Garimpa Vinil foi criado por{" "}
+          <a
+            href="https://linkedin.com/in/vinicius-stanula"
+            target="_blank"
+            rel="noopener noreferrer me"
+            className="text-gold hover:text-cream transition-colors underline underline-offset-2"
+          >
+            Vinicius Stanula
+          </a>
+          {" "}— especialista em SEO com mais de 13 anos de experiência e entusiasta de Python. Vinilista há 3 anos e apaixonado
+          por música há mais de 20, o projeto nasceu da combinação das três coisas:
+          automatizar com Python, otimizar com SEO e garimpar bons discos.
         </p>
       </section>
 
