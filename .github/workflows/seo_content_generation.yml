@@ -1,0 +1,47 @@
+name: SEO Content Generation
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # daily, 04:00 UTC (after crawler runs)
+  workflow_dispatch:       # manual trigger from the GitHub Actions UI
+
+concurrency:
+  group: seo-content-generation
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: crawler/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r crawler/requirements.txt
+
+      - name: Generate artist bios
+        # Processes top artists by Last.fm listeners not yet enriched.
+        # Idempotent: skips artists with bio_generated_at IS NOT NULL.
+        # Once backlog clears this step becomes a no-op.
+        run: python crawler/generate_seo_content.py --mode artists --limit 30
+        env:
+          DATABASE_URL:      ${{ secrets.DATABASE_URL }}
+          LASTFM_API_KEY:    ${{ secrets.LASTFM_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Generate style bios
+        # Processes most common genre tags not yet in EstiloMeta.
+        run: python crawler/generate_seo_content.py --mode styles --limit 20
+        env:
+          DATABASE_URL:      ${{ secrets.DATABASE_URL }}
+          LASTFM_API_KEY:    ${{ secrets.LASTFM_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

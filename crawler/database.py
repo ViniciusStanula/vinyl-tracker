@@ -779,6 +779,147 @@ def bulk_update_wiki_pt(conn, updates: list[dict]) -> int:
     return len(updates)
 
 
+def ensure_seo_content_schema(conn) -> None:
+    """
+    Idempotently adds bio columns to ArtistMeta and creates EstiloMeta table.
+
+    ArtistMeta new columns:
+      bio_short_pt        TEXT  — 2-3 sentence intro for above-the-fold block
+      bio_pt              TEXT  — 2-3 paragraph full bio for below-the-fold block
+      bio_generated_at    TIMESTAMPTZ — set on success; NULL = not yet generated
+
+    EstiloMeta table:
+      tag                 TEXT PRIMARY KEY — matches Disco.lastfm_tags values
+      bio_short_pt        TEXT
+      bio_pt              TEXT
+      lastfm_summary      TEXT — raw Last.fm tag.wiki.content used as source
+      bio_generated_at    TIMESTAMPTZ
+    """
+    with _cursor(conn) as cur:
+        cur.execute("SET LOCAL lock_timeout = '10s'")
+        cur.execute(
+            """
+            ALTER TABLE "ArtistMeta"
+                ADD COLUMN IF NOT EXISTS bio_short_pt     TEXT,
+                ADD COLUMN IF NOT EXISTS bio_pt           TEXT,
+                ADD COLUMN IF NOT EXISTS bio_generated_at TIMESTAMPTZ
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS "EstiloMeta" (
+                tag              TEXT        PRIMARY KEY,
+                bio_short_pt     TEXT,
+                bio_pt           TEXT,
+                lastfm_summary   TEXT,
+                bio_generated_at TIMESTAMPTZ
+            )
+            """
+        )
+    conn.commit()
+    log.debug("ensure_seo_content_schema: schema ready.")
+
+
+def fetch_artists_needing_bio(conn, limit: int = 20) -> list[dict]:
+    """
+    Returns artists ordered by max Last.fm listeners DESC where bio not yet generated.
+    Joins ArtistMeta (must exist) with Disco listener counts.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT am.artista, MAX(d.lastfm_listeners) AS listeners
+            FROM "ArtistMeta" am
+            JOIN "Disco" d ON d.artista = am.artista
+            WHERE am.bio_generated_at IS NULL
+              AND d.lastfm_listeners IS NOT NULL
+            GROUP BY am.artista
+            ORDER BY listeners DESC NULLS LAST
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [{"artista": r[0], "listeners": r[1]} for r in cur.fetchall()]
+
+
+def fetch_styles_needing_bio(conn, limit: int = 20) -> list[str]:
+    """
+    Returns distinct genre tags from Disco.lastfm_tags not yet in EstiloMeta,
+    ordered by how many discos carry that tag (most common first).
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT tag, COUNT(*) AS cnt
+            FROM (
+                SELECT TRIM(LOWER(unnest(string_to_array(lastfm_tags, ',')))) AS tag
+                FROM "Disco"
+                WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
+            ) tags
+            WHERE tag NOT IN (SELECT tag FROM "EstiloMeta" WHERE bio_generated_at IS NOT NULL)
+              AND tag != ''
+            GROUP BY tag
+            ORDER BY cnt DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [r[0] for r in cur.fetchall()]
+
+
+def save_artist_bio(conn, artista: str, intro: str, bio: str) -> bool:
+    """
+    Upserts bio_short_pt, bio_pt, bio_generated_at into ArtistMeta.
+    ArtistMeta row must already exist (created by enrich_artist_meta.py).
+    Returns True on success.
+    """
+    try:
+        with _cursor(conn) as cur:
+            cur.execute(
+                """
+                UPDATE "ArtistMeta"
+                SET bio_short_pt     = %s,
+                    bio_pt           = %s,
+                    bio_generated_at = NOW()
+                WHERE artista = %s
+                """,
+                (intro, bio, artista),
+            )
+        conn.commit()
+        return True
+    except Exception as exc:
+        conn.rollback()
+        log.warning("save_artist_bio failed for %s: %s", artista, exc)
+        return False
+
+
+def save_estilo_bio(conn, tag: str, intro: str, bio: str, lastfm_summary: str | None) -> bool:
+    """
+    Upserts EstiloMeta row for the given tag.
+    Returns True on success.
+    """
+    try:
+        with _cursor(conn) as cur:
+            cur.execute(
+                """
+                INSERT INTO "EstiloMeta" (tag, bio_short_pt, bio_pt, lastfm_summary, bio_generated_at)
+                VALUES (%s, %s, %s, %s, NOW())
+                ON CONFLICT (tag) DO UPDATE SET
+                    bio_short_pt     = EXCLUDED.bio_short_pt,
+                    bio_pt           = EXCLUDED.bio_pt,
+                    lastfm_summary   = EXCLUDED.lastfm_summary,
+                    bio_generated_at = NOW()
+                """,
+                (tag, intro, bio, lastfm_summary),
+            )
+        conn.commit()
+        return True
+    except Exception as exc:
+        conn.rollback()
+        log.warning("save_estilo_bio failed for %s: %s", tag, exc)
+        return False
+
+
 def limpar_historico_antigo(conn, days: int = 365) -> int:
     """
     Deletes HistoricoPreco records older than `days` days.
