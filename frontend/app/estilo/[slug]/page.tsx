@@ -79,7 +79,7 @@ export default async function EstiloPage({
   }
   if (!data) notFound();
 
-  const { canonical, discos } = data;
+  const { canonical, discos, bioShortPt, bioPt } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
 
   let relatedEstilos: RelatedEstilo[] = [];
@@ -187,6 +187,12 @@ export default async function EstiloPage({
         </p>
       </header>
 
+      {bioShortPt && (
+        <div className="mb-5 bg-sleeve border border-groove rounded-xl px-5 py-4">
+          <p className="text-parchment text-sm leading-relaxed">{bioShortPt}</p>
+        </div>
+      )}
+
       <div className="mb-4">
         <Suspense>
           <SortBar />
@@ -216,6 +222,15 @@ export default async function EstiloPage({
         </div>
       )}
 
+
+      {bioPt && (
+        <section className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
+          <h2 className="font-display text-xl font-bold text-cream mb-3">Sobre o estilo {displayName}</h2>
+          {bioPt.split("\n\n").map((p, i) => (
+            <p key={i} className="text-parchment text-sm leading-relaxed mb-3 last:mb-0">{p}</p>
+          ))}
+        </section>
+      )}
 
       {relatedEstilos.length > 0 && (
         <section className="mt-12 pt-8 border-t border-groove">

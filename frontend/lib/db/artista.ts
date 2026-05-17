@@ -39,6 +39,8 @@ export type ArtistaPageData = {
   totalPages: number;
   topStyles: string[];
   sameAs: string[];
+  bioShortPt: string | null;
+  bioPt: string | null;
 };
 
 const _getArtistaPageData = unstable_cache(
@@ -193,17 +195,30 @@ const _getArtistaPageData = unstable_cache(
       OFFSET ${offset}
     `;
 
-    const metaQuery = prisma.artistMeta.findFirst({
-      where: { artista: { in: variants } },
-      select: { wikidataUrl: true, wikipediaUrl: true, spotifyUrl: true },
-    });
+    const metaQuery = prisma.$queryRaw<{
+      wikidataUrl: string | null;
+      wikipediaUrl: string | null;
+      spotifyUrl: string | null;
+      bioShortPt: string | null;
+      bioPt: string | null;
+    }[]>`
+      SELECT wikidata_url  AS "wikidataUrl",
+             wikipedia_url AS "wikipediaUrl",
+             spotify_url   AS "spotifyUrl",
+             bio_short_pt  AS "bioShortPt",
+             bio_pt        AS "bioPt"
+      FROM "ArtistMeta"
+      WHERE artista = ANY(${variants})
+      LIMIT 1
+    `;
 
-    const [countResult, rows, tagsRows, meta] = await Promise.all([
+    const [countResult, rows, tagsRows, metaRows] = await Promise.all([
       countQuery,
       mainQuery,
       tagsQuery,
       metaQuery,
     ]);
+    const meta = metaRows[0] ?? null;
 
     const total = Number(countResult[0].total);
     if (total === 0) return null;
@@ -211,6 +226,8 @@ const _getArtistaPageData = unstable_cache(
     const topStyles = getTopStyles(tagsRows.map((r) => r.lastfmTags), 5, canonical);
     const sameAs = [meta?.wikidataUrl, meta?.wikipediaUrl, meta?.spotifyUrl]
       .filter((u): u is string => Boolean(u));
+    const bioShortPt = meta?.bioShortPt ?? null;
+    const bioPt      = meta?.bioPt ?? null;
 
     const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
 
@@ -266,7 +283,7 @@ const _getArtistaPageData = unstable_cache(
       }];
     });
 
-    return { canonical, items, total, totalPages, topStyles, sameAs };
+    return { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt };
   },
   ["artista-page"],
   { tags: ["prices"] }

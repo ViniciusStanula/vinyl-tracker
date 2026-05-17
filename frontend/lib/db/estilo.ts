@@ -9,6 +9,8 @@ const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";
 
 export type SerializedEstiloData = {
   canonical: string;
+  bioShortPt: string | null;
+  bioPt: string | null;
   discos: {
     id: string;
     titulo: string;
@@ -52,7 +54,14 @@ const _getEstiloPageData = unstable_cache(
     if (canonicalRow.length === 0) return null;
     const canonical = canonicalRow[0].tag;
 
-    const rows = await prisma.$queryRaw<{
+    const bioQuery = prisma.$queryRaw<{ bioShortPt: string | null; bioPt: string | null }[]>`
+      SELECT bio_short_pt AS "bioShortPt", bio_pt AS "bioPt"
+      FROM "EstiloMeta"
+      WHERE tag = LOWER(${canonical})
+      LIMIT 1
+    `;
+
+    const [rows, bioRows] = await Promise.all([prisma.$queryRaw<{
       id: string;
       titulo: string;
       artista: string;
@@ -121,10 +130,14 @@ const _getEstiloPageData = unstable_cache(
       ) hp_latest ON true
       ORDER BY c.deal_score DESC NULLS LAST, desconto DESC NULLS LAST
       LIMIT 96
-    `;
+    `, bioQuery]);
+
+    const bio = bioRows[0] ?? null;
 
     return {
       canonical,
+      bioShortPt: bio?.bioShortPt ?? null,
+      bioPt:      bio?.bioPt ?? null,
       discos: rows.map((row) => {
         let sparkline: number[] = [];
         if (Array.isArray(row.sparkline)) {

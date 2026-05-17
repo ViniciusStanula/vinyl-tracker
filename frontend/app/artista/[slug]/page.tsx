@@ -79,7 +79,7 @@ export default async function ArtistaPage({
   }
   if (!data) notFound();
 
-  const { canonical: artista, items, total, totalPages, topStyles, sameAs } = data;
+  const { canonical: artista, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt } = data;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
 
@@ -149,6 +149,12 @@ export default async function ArtistaPage({
         <StyleTags tags={topStyles} />
       </header>
 
+      {bioShortPt && (
+        <div className="mb-5 bg-sleeve border border-groove rounded-xl px-5 py-4">
+          <p className="text-parchment text-sm leading-relaxed">{bioShortPt}</p>
+        </div>
+      )}
+
       <div className="mb-4">
         <Suspense>
           <SortBar />
@@ -194,6 +200,15 @@ export default async function ArtistaPage({
             </Link>
           )}
         </div>
+      )}
+
+      {bioPt && (
+        <section className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
+          <h2 className="font-display text-xl font-bold text-cream mb-3">Sobre {artista}</h2>
+          {bioPt.split("\n\n").map((p, i) => (
+            <p key={i} className="text-parchment text-sm leading-relaxed mb-3 last:mb-0">{p}</p>
+          ))}
+        </section>
       )}
 
       <BackToTop />
