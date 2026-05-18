@@ -226,7 +226,7 @@ export default async function DiscoPage({
           },
         }
       : {}),
-  });
+  }).replace(/<\//g, "<\\/");
 
   const musicAlbumJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -239,7 +239,7 @@ export default async function DiscoPage({
       name: disco.artista,
       url: `${siteUrl}/artista/${slugifyArtist(disco.artista)}`,
     },
-  });
+  }).replace(/<\//g, "<\\/");
 
   const breadcrumbJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -254,7 +254,7 @@ export default async function DiscoPage({
       },
       { "@type": "ListItem", position: 3, name: disco.titulo },
     ],
-  });
+  }).replace(/<\//g, "<\\/");
 
   return (
     <main id="main-content" className="max-w-3xl mx-auto px-4 py-8">

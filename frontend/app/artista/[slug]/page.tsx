@@ -95,7 +95,7 @@ export default async function ArtistaPage({
         item: `${siteUrl}/artista/${slug}`,
       },
     ],
-  });
+  }).replace(/<\//g, "<\\/");
 
   const itemListJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -109,7 +109,7 @@ export default async function ArtistaPage({
       url: `${siteUrl}/disco/${disco.slug}`,
       name: disco.titulo,
     })),
-  });
+  }).replace(/<\//g, "<\\/");
 
   const musicArtistJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -118,7 +118,7 @@ export default async function ArtistaPage({
     url: `${siteUrl}/artista/${slug}`,
     ...(topStyles.length > 0 ? { genre: topStyles } : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
-  });
+  }).replace(/<\//g, "<\\/");
 
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">

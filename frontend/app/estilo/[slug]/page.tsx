@@ -145,7 +145,7 @@ export default async function EstiloPage({
         item: `${siteUrl}/estilo/${slug}`,
       },
     ],
-  });
+  }).replace(/<\//g, "<\\/");
 
   const itemListJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -159,7 +159,7 @@ export default async function EstiloPage({
       url: `${siteUrl}/disco/${disco.slug}`,
       name: disco.titulo,
     })),
-  });
+  }).replace(/<\//g, "<\\/");
 
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
