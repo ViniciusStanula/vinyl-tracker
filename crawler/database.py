@@ -759,6 +759,44 @@ def fetch_albums_needing_lastfm_enrichment(conn, limit: int = 500) -> list[dict]
         return [{"id": r[0], "titulo": r[1], "artista": r[2]} for r in cur.fetchall()]
 
 
+def fetch_albums_needing_img_backfill(conn, limit: int = 500) -> list[dict]:
+    """Albums where lastfm_img_url IS NULL — already enriched but missing image."""
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT id, titulo, artista FROM "Disco"
+            WHERE lastfm_img_url IS NULL
+              AND disponivel = TRUE
+            ORDER BY price_count DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [{"id": r[0], "titulo": r[1], "artista": r[2]} for r in cur.fetchall()]
+
+
+def bulk_update_lastfm_img(conn, updates: list[dict]) -> int:
+    """
+    Writes only lastfm_img_url for album IDs. Does not touch listeners/wiki.
+    Each item: {"id": str, "lastfm_img": str|None}
+    None values are skipped via COALESCE so confirmed images are never cleared.
+    """
+    if not updates:
+        return 0
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            """UPDATE "Disco"
+               SET lastfm_img_url = COALESCE(%(lastfm_img)s, lastfm_img_url)
+               WHERE id = %(id)s""",
+            updates,
+            page_size=200,
+        )
+    conn.commit()
+    log.debug("bulk_update_lastfm_img: updated %d records.", len(updates))
+    return len(updates)
+
+
 def bulk_update_lastfm_album_info(conn, updates: list[dict]) -> int:
     """
     Writes lastfm_listeners, lastfm_playcount, lastfm_wiki_en, lastfm_img_url for album IDs.

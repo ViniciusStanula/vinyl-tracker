@@ -21,11 +21,18 @@ from database import (
     bulk_update_tags,
     fetch_albums_needing_lastfm_enrichment,
     bulk_update_lastfm_album_info,
+    fetch_albums_needing_img_backfill,
+    bulk_update_lastfm_img,
 )
 
 log = logging.getLogger(__name__)
 
 LASTFM_BASE = "https://ws.audioscrobbler.com/2.0/"
+
+# Minimum _match_score to trust a Last.fm image for a record.
+# Token-set equality scores 1.0; pure SequenceMatcher must clear 0.90 to
+# keep "Led Zeppelin IV" → "Led Zeppelin" (0.889) in fallback territory.
+_IMG_CONFIDENCE_THRESHOLD = 0.90
 
 # Tags that carry no genre information — personal labels, nationality markers,
 # subjective adjectives, era labels, and instrument mentions.
@@ -323,11 +330,6 @@ def enrich_album_infos(
     img_lastfm   = 0
     img_fallback = 0
 
-    # Minimum match score to trust Last.fm's image for a record.
-    # 0.90 catches cases where token superset fails but strings are near-identical.
-    # Keeps "Led Zeppelin IV" → "Led Zeppelin" (0.889) in fallback territory.
-    _IMG_CONFIDENCE_THRESHOLD = 0.90
-
     for i, album in enumerate(albums, 1):
         if deadline is not None and time.monotonic() >= deadline:
             log.info("Album enrichment: deadline reached — processed %d/%d.", i - 1, len(albums))
@@ -376,3 +378,70 @@ def enrich_album_infos(
         img_lastfm, img_fallback, len(updates),
     )
     return bulk_update_lastfm_album_info(conn, updates)
+
+
+def backfill_album_images(
+    conn,
+    api_key: str | None,
+    delay: float = 0.5,
+    deadline: float | None = None,
+    limit: int = 500,
+) -> int:
+    """
+    Fetches and stores lastfm_img_url for albums that already have listener
+    data but are missing a confirmed image (lastfm_img_url IS NULL).
+
+    Only writes lastfm_img_url — does not touch listeners/playcount/wiki.
+    Returns the number of albums processed.
+    """
+    if not api_key:
+        log.debug("LASTFM_API_KEY not set — skipping image backfill.")
+        return 0
+
+    albums = fetch_albums_needing_img_backfill(conn, limit=limit)
+    if not albums:
+        log.info("Image backfill: no albums need images.")
+        return 0
+
+    log.info("Image backfill: fetching images for %d albums.", len(albums))
+    updates: list[dict] = []
+    img_confirmed = 0
+    img_fallback  = 0
+
+    for i, album in enumerate(albums, 1):
+        if deadline is not None and time.monotonic() >= deadline:
+            log.info("Image backfill: deadline reached — processed %d/%d.", i - 1, len(albums))
+            break
+
+        cleaned = clean_album_title(album["titulo"], album["artista"])
+        info = fetch_album_info(album["artista"], cleaned, api_key)
+
+        confirmed_img: str | None = None
+        if info and info.get("img_url") and info.get("lastfm_name"):
+            score = _match_score(cleaned, info["lastfm_name"])
+            if score >= _IMG_CONFIDENCE_THRESHOLD:
+                confirmed_img = info["img_url"]
+                img_confirmed += 1
+                log.debug(
+                    "[%d/%d] img=lastfm  score=%.2f  %r / %r",
+                    i, len(albums), score, album["artista"], cleaned,
+                )
+            else:
+                img_fallback += 1
+                log.info(
+                    "[%d/%d] img=fallback score=%.2f  query=%r  result=%r",
+                    i, len(albums), score, cleaned, info["lastfm_name"],
+                )
+        else:
+            img_fallback += 1
+
+        updates.append({"id": album["id"], "lastfm_img": confirmed_img})
+
+        if i < len(albums):
+            time.sleep(delay)
+
+    log.info(
+        "Image backfill complete: confirmed=%d  fallback=%d  total=%d",
+        img_confirmed, img_fallback, len(updates),
+    )
+    return bulk_update_lastfm_img(conn, updates)

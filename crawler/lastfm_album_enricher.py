@@ -12,12 +12,27 @@ import os
 import logging
 
 from database import get_connection
-from lastfm import enrich_album_infos
+from lastfm import enrich_album_infos, backfill_album_images
 
 log = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--backfill-images",
+        action="store_true",
+        help="Fetch lastfm_img_url for albums that already have listener data but no image.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=500,
+        help="Max albums to process per run (default 500).",
+    )
+    args = parser.parse_args()
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     _api_key = os.environ.get("LASTFM_API_KEY")
     if not _api_key:
@@ -25,7 +40,11 @@ if __name__ == "__main__":
     else:
         _conn = get_connection()
         try:
-            _updated = enrich_album_infos(_conn, api_key=_api_key)
-            print(f"Enriched {_updated} albums with Last.fm data.")
+            if args.backfill_images:
+                _updated = backfill_album_images(_conn, api_key=_api_key, limit=args.limit)
+                print(f"Image backfill: processed {_updated} albums.")
+            else:
+                _updated = enrich_album_infos(_conn, api_key=_api_key, limit=args.limit)
+                print(f"Enriched {_updated} albums with Last.fm data.")
         finally:
             _conn.close()
