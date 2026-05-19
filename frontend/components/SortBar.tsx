@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useTransition, useState, useEffect } from "react";
+import { useTransition } from "react";
 
 const SORT_OPTIONS = [
   { label: "Maior Desconto",    value: "desconto"     },
@@ -11,7 +11,13 @@ const SORT_OPTIONS = [
   { label: "A–Z",               value: "az"           },
 ];
 
-const PRECO_MAX = 1000;
+const PRICE_CHIPS = [
+  { label: "R$50",   value: 50   },
+  { label: "R$100",  value: 100  },
+  { label: "R$200",  value: 200  },
+  { label: "R$500",  value: 500  },
+  { label: "Todos",  value: null },
+];
 
 export default function SortBar() {
   const router       = useRouter();
@@ -20,15 +26,7 @@ export default function SortBar() {
   const [isPending, startTransition] = useTransition();
   const current      = searchParams.get("sort") ?? "desconto";
   const precoMaxParam = searchParams.get("precoMax");
-
-  const [sliderValue, setSliderValue] = useState(
-    precoMaxParam ? Math.min(Number(precoMaxParam), PRECO_MAX) : PRECO_MAX
-  );
-
-  useEffect(() => {
-    const v = searchParams.get("precoMax");
-    setSliderValue(v ? Math.min(Number(v), PRECO_MAX) : PRECO_MAX);
-  }, [searchParams]);
+  const activePrice  = precoMaxParam ? Number(precoMaxParam) : null;
 
   function handleSort(value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -37,9 +35,9 @@ export default function SortBar() {
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
   }
 
-  function commitPreco(value: number) {
+  function handlePrice(value: number | null) {
     const params = new URLSearchParams(searchParams.toString());
-    if (value < PRECO_MAX) {
+    if (value !== null) {
       params.set("precoMax", String(value));
     } else {
       params.delete("precoMax");
@@ -54,40 +52,30 @@ export default function SortBar() {
         isPending ? "opacity-55" : ""
       }`}
     >
-      <div className="flex items-center gap-5 flex-wrap">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5 sm:flex-wrap">
 
-        {/* ── Price range ── */}
-        <div className="flex items-center gap-3">
-          <label
-            htmlFor="preco-range"
-            className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0 cursor-pointer"
-          >
+        {/* ── Price chips ── */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0">
             Preço
-          </label>
-          <input
-            id="preco-range"
-            type="range"
-            min={0}
-            max={PRECO_MAX}
-            step={50}
-            value={sliderValue}
-            aria-label="Preço máximo"
-            aria-valuetext={
-              sliderValue >= PRECO_MAX
-                ? "Até R$ 1.000"
-                : `Até R$ ${sliderValue.toLocaleString("pt-BR")}`
-            }
-            onChange={(e) => setSliderValue(Number(e.target.value))}
-            onPointerUp={(e) =>
-              commitPreco(Number((e.target as HTMLInputElement).value))
-            }
-            className="w-24 sm:w-44 accent-gold cursor-pointer"
-          />
-          <span className="text-xs sm:text-sm text-cream font-semibold w-[5rem] sm:w-[6.5rem] shrink-0 tabular-nums" aria-hidden="true">
-            {sliderValue >= PRECO_MAX
-              ? "Até R$ 1.000"
-              : `Até R$ ${sliderValue.toLocaleString("pt-BR")}`}
           </span>
+          {PRICE_CHIPS.map((chip) => {
+            const isActive = chip.value === activePrice;
+            return (
+              <button
+                key={chip.label}
+                onClick={() => handlePrice(chip.value)}
+                aria-pressed={isActive}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20 ${
+                  isActive
+                    ? "bg-gold text-record border-gold font-bold"
+                    : "bg-groove text-parchment border-wax/60 hover:border-wax hover:text-cream"
+                }`}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Divider */}

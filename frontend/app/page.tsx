@@ -78,10 +78,12 @@ export default async function HomePage({
   // Fetch main grid and carousel in parallel
   let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
   let total = 0, totalPages = 0, carouselItems: Awaited<ReturnType<typeof queryCarouselDiscosWithCache>> = [];
+  let count = 0;
   try {
-    ([{ items, total, totalPages }, carouselItems] = await Promise.all([
+    ([{ items, total, totalPages }, carouselItems, count] = await Promise.all([
       queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }),
       searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscosWithCache(),
+      getDiscoCount(),
     ]));
   } catch {
     // DB unavailable — render empty state
@@ -104,17 +106,31 @@ export default async function HomePage({
         <p className="mt-3 text-parchment text-sm max-w-md leading-relaxed">
           Histórico de preços completo. Descubra o melhor momento para comprar.
         </p>
+        {count > 0 && (
+          <p className="mt-2 text-dust text-xs font-medium tabular-nums">
+            +{count.toLocaleString("pt-BR")} discos rastreados · atualizado a cada 2h
+          </p>
+        )}
       </header>
 
       {/* ── Artistas mais Ouvidos carousel ──────────────────────── */}
       <ArtistasCarousel items={carouselItems} />
 
       {/* ── Sort bar ────────────────────────────────────────────── */}
-      <div className="mb-5">
+      <div className="mb-3">
         <Suspense>
           <SortBar />
         </Suspense>
       </div>
+
+      {/* ── Deal badge legend ────────────────────────────────────── */}
+      <p className="text-[11px] text-dust mb-4 leading-relaxed">
+        <span className="text-gold font-semibold">✦ Melhor Preço</span> = menor preço registrado
+        {" · "}
+        <span className="text-deallit font-semibold">✓ Ótima Oferta</span> = abaixo da média histórica
+        {" · "}
+        Boa Oferta = com desconto ativo
+      </p>
 
       {/* ── Result count + active artist badge ──────────────────── */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">

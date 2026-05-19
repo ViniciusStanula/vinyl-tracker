@@ -22,10 +22,9 @@ function VinylLogo() {
 }
 
 const NAV_LINKS = [
-  { href: "/disco",                 label: "Discos"    },
-  { href: "/discos-abaixo-de-200",  label: "< R$200"   },
+  { href: "/disco",                 label: "Discos"       },
   { href: "/artistas-mais-ouvidos", label: "Mais Ouvidos" },
-  { href: "/sobre",                 label: "Sobre"     },
+  { href: "/sobre",                 label: "Sobre"        },
 ];
 
 export default function Navbar() {

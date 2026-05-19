@@ -158,12 +158,9 @@ export default memo(function DiscoCard({
       {/* ── Info ──────────────────────────────────────────────────── */}
       <div className="p-3 flex flex-col flex-1">
         {/* Artist */}
-        <Link
-          href={`/artista/${artistaSlug}`}
-          className="relative z-20 block text-parchment hover:text-gold text-xs truncate transition-colors font-medium"
-        >
+        <span className="block text-parchment text-xs truncate font-medium">
           {disco.artista}
-        </Link>
+        </span>
 
         {/* Title — Fraunces for editorial character */}
         <h2

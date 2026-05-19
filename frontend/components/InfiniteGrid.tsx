@@ -29,7 +29,7 @@ export default function InfiniteGrid({
   animationKey,
   basePath = "/disco",
 }: InfiniteGridProps) {
-  const [mode, setMode] = useState<"paginate" | "infinite">("paginate");
+  const [mode, setMode] = useState<"paginate" | "infinite">("infinite");
   const [items, setItems] = useState<ProcessedDisco[]>(initialItems);
   const [nextPage, setNextPage] = useState(currentPage + 1);
   const [hasMore, setHasMore] = useState(currentPage < totalPages);
@@ -117,18 +117,14 @@ export default function InfiniteGrid({
       <div className="flex justify-end mb-3">
         <button
           onClick={toggleMode}
-          className="text-xs text-dust hover:text-parchment border border-groove hover:border-wax rounded-lg px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20"
+          className="text-[11px] text-dust hover:text-parchment border border-groove hover:border-wax rounded-lg px-2.5 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20"
           aria-label={
             mode === "paginate"
               ? "Alternar para scroll infinito"
               : "Alternar para paginação"
           }
         >
-          {mode === "paginate" ? (
-            <span>Paginação <span className="text-ash">· alternar para scroll ↓</span></span>
-          ) : (
-            <span>Scroll infinito <span className="text-ash">· alternar para paginação →</span></span>
-          )}
+          {mode === "paginate" ? "Paginação" : "Scroll infinito"}
         </button>
       </div>
 
