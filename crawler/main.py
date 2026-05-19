@@ -2909,100 +2909,100 @@ def main():
                         delete_discovered_vinyls(conn, processed)
                     log.info("Phase 2.8 done: %.0fs", time.monotonic() - t0)
 
-            # ── Phase 3: Stale-records check ───────────────────────────────
-            if args.skip_stale:
-                log.info("Stale-records check skipped (--skip-stale).")
-            else:
-                _PHASE3_BATCH_SIZE = 500
-                _PHASE3_COOLDOWN_S = 180  # 3 min cooldown after circuit-breaker fire
+        # ── Phase 3: Stale-records check ───────────────────────────────
+        if args.skip_stale:
+            log.info("Stale-records check skipped (--skip-stale).")
+        else:
+            _PHASE3_BATCH_SIZE = 500
+            _PHASE3_COOLDOWN_S = 180  # 3 min cooldown after circuit-breaker fire
 
-                # Reserve 10 min before hard deadline for Phase 3.5 scoring and
-                # Phase 4 cleanup so they aren't starved when Phase 3 runs long.
-                phase3_deadline = (deadline - 10 * 60) if deadline is not None else None
+            # Reserve 10 min before hard deadline for Phase 3.5 scoring and
+            # Phase 4 cleanup so they aren't starved when Phase 3 runs long.
+            phase3_deadline = (deadline - 10 * 60) if deadline is not None else None
 
-                # Seed the seen set from Phase 0/1 so we never re-fetch pages
-                # already visited this run.
-                seen_asins: set[str] = {item["asin"] for item in all_items} | phase0_asins
+            # Seed the seen set from Phase 0/1 so we never re-fetch pages
+            # already visited this run.
+            seen_asins: set[str] = {item["asin"] for item in all_items} | phase0_asins
 
-                log.info("═" * 60)
-                log.info("Phase 3 stale-records — batch loop (batch=%d, cooldown=%ds).",
-                         _PHASE3_BATCH_SIZE, _PHASE3_COOLDOWN_S)
+            log.info("═" * 60)
+            log.info("Phase 3 stale-records — batch loop (batch=%d, cooldown=%ds).",
+                     _PHASE3_BATCH_SIZE, _PHASE3_COOLDOWN_S)
 
-                phase3_total = 0
-                phase3_round = 0
-                t0_phase3 = time.monotonic()
-                _snap_pre3 = _bot_stats.snapshot()
+            phase3_total = 0
+            phase3_round = 0
+            t0_phase3 = time.monotonic()
+            _snap_pre3 = _bot_stats.snapshot()
 
-                while True:
-                    if phase3_deadline is not None and time.monotonic() >= phase3_deadline:
-                        log.info("Phase 3: deadline reached after %d records.", phase3_total)
-                        break
+            while True:
+                if phase3_deadline is not None and time.monotonic() >= phase3_deadline:
+                    log.info("Phase 3: deadline reached after %d records.", phase3_total)
+                    break
 
-                    # Reconnect before each batch — long Phase 3 runs outlast
-                    # Supabase's SSL session timeout on the transaction pooler.
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
-                    conn = get_connection()
+                # Reconnect before each batch — long Phase 3 runs outlast
+                # Supabase's SSL session timeout on the transaction pooler.
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                conn = get_connection()
 
-                    batch = fetch_stale_records(conn, seen_asins, limit=_PHASE3_BATCH_SIZE, claim=args.stale_only)
-                    if not batch:
-                        log.info("Phase 3: no more stale records after %d records.", phase3_total)
-                        break
+                batch = fetch_stale_records(conn, seen_asins, limit=_PHASE3_BATCH_SIZE, claim=args.stale_only)
+                if not batch:
+                    log.info("Phase 3: no more stale records after %d records.", phase3_total)
+                    break
 
-                    phase3_round += 1
-                    _stale_abort.clear()
-                    log.info("Phase 3 round %d — %d records.", phase3_round, len(batch))
+                phase3_round += 1
+                _stale_abort.clear()
+                log.info("Phase 3 round %d — %d records.", phase3_round, len(batch))
 
-                    crawl_stale_records(
-                        batch, args.delay, conn,
-                        dry_run=False, max_workers=args.stale_workers,
-                        deadline=phase3_deadline,
-                    )
+                crawl_stale_records(
+                    batch, args.delay, conn,
+                    dry_run=False, max_workers=args.stale_workers,
+                    deadline=phase3_deadline,
+                )
 
-                    phase3_total += len(batch)
-                    seen_asins.update(r["asin"] for r in batch)
+                phase3_total += len(batch)
+                seen_asins.update(r["asin"] for r in batch)
 
-                    if _stale_abort.is_set():
-                        remaining = (phase3_deadline - time.monotonic()) if phase3_deadline is not None else None
-                        if remaining is not None and remaining > _PHASE3_COOLDOWN_S:
-                            log.info(
-                                "Phase 3: circuit-breaker fired — cooling down %ds "
-                                "(%.0fs remaining).",
-                                _PHASE3_COOLDOWN_S, remaining,
-                            )
-                            time.sleep(_PHASE3_COOLDOWN_S)
-                        else:
-                            log.info("Phase 3: circuit-breaker fired, not enough time to continue.")
-                            break
-
-                log.info("Phase 3 stale: %.0fs — %d records across %d rounds.",
-                         time.monotonic() - t0_phase3, phase3_total, phase3_round)
-                log.info("Phase 3 bot-detection: %s", _bot_phase_summary(_snap_pre3, _bot_stats.snapshot()))
-
-                if phase3_total > 0:
-                    # Re-score after Phase 3: stale-records can change prices and
-                    # availability, so deal scores may have changed.  Without this,
-                    # products that came back in-stock (or dropped in price) during
-                    # Phase 3 won't receive deal badges until the next full run.
-                    if deadline is not None and time.monotonic() >= deadline:
-                        log.warning("Time limit reached — skipping Phase 3.5 re-scoring.")
-                    else:
-                        log.info("═" * 60)
-                        t0 = time.monotonic()
-                        scoring_summary = score_deals(conn)
+                if _stale_abort.is_set():
+                    remaining = (phase3_deadline - time.monotonic()) if phase3_deadline is not None else None
+                    if remaining is not None and remaining > _PHASE3_COOLDOWN_S:
                         log.info(
-                            "Phase 3.5 scoring: %.0fs — flagged=%d | maintained=%d"
-                            " | cleared=%d | cooldown_skipped=%d",
-                            time.monotonic() - t0,
-                            scoring_summary["flagged"],
-                            scoring_summary["scored"],
-                            scoring_summary["cleared"],
-                            scoring_summary["skipped"],
+                            "Phase 3: circuit-breaker fired — cooling down %ds "
+                            "(%.0fs remaining).",
+                            _PHASE3_COOLDOWN_S, remaining,
                         )
+                        time.sleep(_PHASE3_COOLDOWN_S)
+                    else:
+                        log.info("Phase 3: circuit-breaker fired, not enough time to continue.")
+                        break
+
+            log.info("Phase 3 stale: %.0fs — %d records across %d rounds.",
+                     time.monotonic() - t0_phase3, phase3_total, phase3_round)
+            log.info("Phase 3 bot-detection: %s", _bot_phase_summary(_snap_pre3, _bot_stats.snapshot()))
+
+            if phase3_total > 0:
+                # Re-score after Phase 3: stale-records can change prices and
+                # availability, so deal scores may have changed.  Without this,
+                # products that came back in-stock (or dropped in price) during
+                # Phase 3 won't receive deal badges until the next full run.
+                if deadline is not None and time.monotonic() >= deadline:
+                    log.warning("Time limit reached — skipping Phase 3.5 re-scoring.")
                 else:
-                    log.info("No stale records — all known records appeared in this crawl.")
+                    log.info("═" * 60)
+                    t0 = time.monotonic()
+                    scoring_summary = score_deals(conn)
+                    log.info(
+                        "Phase 3.5 scoring: %.0fs — flagged=%d | maintained=%d"
+                        " | cleared=%d | cooldown_skipped=%d",
+                        time.monotonic() - t0,
+                        scoring_summary["flagged"],
+                        scoring_summary["scored"],
+                        scoring_summary["cleared"],
+                        scoring_summary["skipped"],
+                    )
+            else:
+                log.info("No stale records — all known records appeared in this crawl.")
 
         # ── Phase 4: History cleanup ───────────────────────────────────────
         if deadline is not None and time.monotonic() >= deadline:
