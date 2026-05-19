@@ -778,51 +778,10 @@ def reset_failed_lastfm_enrichments(conn) -> int:
     return reset
 
 
-def fetch_albums_needing_img_backfill(conn, limit: int = 500) -> list[dict]:
-    """Albums where lastfm_img_url IS NULL — already enriched but missing image."""
-    with _cursor(conn) as cur:
-        cur.execute(
-            """
-            SELECT id, titulo, artista FROM "Disco"
-            WHERE lastfm_img_url IS NULL
-              AND disponivel = TRUE
-            ORDER BY price_count DESC
-            LIMIT %s
-            """,
-            (limit,),
-        )
-        return [{"id": r[0], "titulo": r[1], "artista": r[2]} for r in cur.fetchall()]
-
-
-def bulk_update_lastfm_img(conn, updates: list[dict]) -> int:
-    """
-    Writes only lastfm_img_url for album IDs. Does not touch listeners/wiki.
-    Each item: {"id": str, "lastfm_img": str|None}
-    None values are skipped via COALESCE so confirmed images are never cleared.
-    """
-    if not updates:
-        return 0
-    with _cursor(conn) as cur:
-        psycopg2.extras.execute_batch(
-            cur,
-            """UPDATE "Disco"
-               SET lastfm_img_url = COALESCE(%(lastfm_img)s, lastfm_img_url)
-               WHERE id = %(id)s""",
-            updates,
-            page_size=200,
-        )
-    conn.commit()
-    log.debug("bulk_update_lastfm_img: updated %d records.", len(updates))
-    return len(updates)
-
-
 def bulk_update_lastfm_album_info(conn, updates: list[dict]) -> int:
     """
-    Writes lastfm_listeners, lastfm_playcount, lastfm_wiki_en, lastfm_img_url for album IDs.
-    Each item: {"id": str, "listeners": int, "playcount": int, "wiki_en": str|None,
-                "lastfm_img": str|None}
-    lastfm_img_url is only written when the enricher confirmed a confident match;
-    a None value leaves any previously stored image intact via COALESCE.
+    Writes lastfm_listeners, lastfm_playcount, lastfm_wiki_en for album IDs.
+    Each item: {"id": str, "listeners": int, "playcount": int, "wiki_en": str|None}
     """
     if not updates:
         return 0
@@ -832,8 +791,7 @@ def bulk_update_lastfm_album_info(conn, updates: list[dict]) -> int:
             """UPDATE "Disco"
                SET lastfm_listeners = %(listeners)s,
                    lastfm_playcount = %(playcount)s,
-                   lastfm_wiki_en   = %(wiki_en)s,
-                   lastfm_img_url   = COALESCE(%(lastfm_img)s, lastfm_img_url)
+                   lastfm_wiki_en   = %(wiki_en)s
                WHERE id = %(id)s""",
             updates,
             page_size=200,
