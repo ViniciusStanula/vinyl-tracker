@@ -13,8 +13,8 @@ interface Props {
 }
 
 const W = 500;
-const H = 160;
-const PAD = { top: 12, right: 16, bottom: 32, left: 70 };
+const H = 95;
+const PAD = { top: 8, right: 16, bottom: 24, left: 70 };
 const cW = W - PAD.left - PAD.right;
 const cH = H - PAD.top - PAD.bottom;
 
@@ -108,7 +108,7 @@ export default function GraficoPreco({ precos }: Props) {
               y={tick.y + 3.5}
               textAnchor="end"
               className="fill-dust"
-              fontSize="8.5"
+              fontSize="7"
             >
               {tick.label}
             </text>
@@ -123,7 +123,7 @@ export default function GraficoPreco({ precos }: Props) {
             y={H - PAD.bottom + 14}
             textAnchor="middle"
             className="fill-patina"
-            fontSize="8"
+            fontSize="7"
           >
             {tick.label}
           </text>
@@ -157,7 +157,7 @@ export default function GraficoPreco({ precos }: Props) {
               y={ty(vMin) + 15}
               textAnchor="middle"
               className="fill-deallit"
-              fontSize="8"
+              fontSize="7"
               fontWeight="600"
             >
               Mín.
@@ -180,7 +180,7 @@ export default function GraficoPreco({ precos }: Props) {
               y={ty(vMax) + 3.5}
               textAnchor="start"
               className="fill-cut"
-              fontSize="8"
+              fontSize="7"
               fontWeight="600"
             >
               Máx.

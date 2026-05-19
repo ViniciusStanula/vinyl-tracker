@@ -38,9 +38,12 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
     <section className="mb-10">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-baseline gap-3">
-          <h2 className="font-display text-xl font-bold text-cream">
-            Artistas mais Ouvidos
-          </h2>
+          <div>
+            <h2 className="font-display text-xl font-bold text-cream">
+              Discos em Destaque
+            </h2>
+            <div className="mt-1 h-0.5 w-10 bg-gold rounded-full" aria-hidden="true" />
+          </div>
           <Link
             href="/artistas-mais-ouvidos"
             className="text-parchment hover:text-gold text-xs transition-colors"

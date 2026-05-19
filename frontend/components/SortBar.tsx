@@ -57,7 +57,7 @@ export default function SortBar() {
         {/* ── Price chips ── */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <span className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0">
-            Preço
+            Filtrar por Preço
           </span>
           {PRICE_CHIPS.map((chip) => {
             const isActive = chip.value === activePrice;

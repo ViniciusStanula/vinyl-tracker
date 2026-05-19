@@ -29,7 +29,7 @@ export default function InfiniteGrid({
   animationKey,
   basePath = "/disco",
 }: InfiniteGridProps) {
-  const [mode, setMode] = useState<"paginate" | "infinite">("infinite");
+  const [mode, setMode] = useState<"paginate" | "infinite">("paginate");
   const [items, setItems] = useState<ProcessedDisco[]>(initialItems);
   const [nextPage, setNextPage] = useState(currentPage + 1);
   const [hasMore, setHasMore] = useState(currentPage < totalPages);
@@ -131,7 +131,7 @@ export default function InfiniteGrid({
       {/* Card grid — 4 cols desktop, 3 tablet, 2 mobile */}
       <div
         ref={gridRef}
-        className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4"
       >
         {items.map((disco, index) => (
           <DiscoCard key={disco.id} disco={disco} priority={index < 4} />

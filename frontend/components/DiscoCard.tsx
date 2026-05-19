@@ -77,7 +77,6 @@ export default memo(function DiscoCard({
   const descontoPercent   = Math.round(disco.desconto * 100);
   const showOriginalPrice = descontoPercent > 0;
   const dealScore         = disco.dealScore ?? null;
-  const confidenceLevel   = disco.confidenceLevel ?? null;
   const artistaSlug       = slugifyArtist(disco.artista);
   const sparkline         = disco.sparkline ?? [];
 
@@ -100,7 +99,7 @@ export default memo(function DiscoCard({
             src={disco.imgUrl}
             alt={`${disco.titulo} por ${disco.artista} — capa do álbum`}
             fill
-            sizes="(max-width: 767px) 50vw, (max-width: 1199px) 33vw, 25vw"
+            sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, (max-width: 1279px) 25vw, (max-width: 1535px) 20vw, 17vw"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
             unoptimized
             priority={priority}
@@ -119,6 +118,21 @@ export default memo(function DiscoCard({
         {/* Subtle gradient overlay — bottom fade for legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-record/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
+        {/* Deal tier badge — subtle pill, bottom-left */}
+        {dealScore !== null && (
+          <div className={`absolute bottom-2 left-2 z-20 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+            dealScore === 3
+              ? "bg-gold/90 text-record"
+              : dealScore === 2
+              ? "bg-deal/90 text-cream"
+              : "bg-record/70 text-parchment backdrop-blur-sm"
+          }`}>
+            {dealScore === 3 && <span aria-hidden="true">✦</span>}
+            {dealScore === 2 && <span aria-hidden="true">✓</span>}
+            {dealScore === 3 ? "Melhor Preço" : dealScore === 2 ? "Ótima Oferta" : "Boa Oferta"}
+          </div>
+        )}
+
         {/* Discount badge — pill, top-left */}
         {descontoPercent > 0 && (
           <div className="absolute top-2 left-2 z-20 bg-cut text-cream text-xs font-black px-2.5 py-1 rounded-md shadow-lg shadow-cut/30 tabular-nums">
@@ -126,22 +140,6 @@ export default memo(function DiscoCard({
           </div>
         )}
 
-        {/* Deal tier badges — bottom-left, clear of the discount badge */}
-        {dealScore === 3 && (
-          <div className="absolute bottom-2 left-2 z-20 bg-gold text-record text-xs font-black px-2 py-0.5 rounded-md shadow-md flex items-center gap-1">
-            ✦ Melhor Preço
-          </div>
-        )}
-        {dealScore === 2 && (
-          <div className="absolute bottom-2 left-2 z-20 bg-deal text-cream text-xs font-bold px-2 py-0.5 rounded-md shadow-md">
-            ✓ Ótima Oferta
-          </div>
-        )}
-        {dealScore === 1 && (
-          <div className="absolute bottom-2 left-2 z-20 bg-record/70 text-parchment text-xs font-medium px-2 py-0.5 rounded-md border border-wax/60 backdrop-blur-sm">
-            Boa Oferta
-          </div>
-        )}
 
         {/* Amazon quick-link — hover only */}
         <a
@@ -156,9 +154,10 @@ export default memo(function DiscoCard({
       </div>
 
       {/* ── Info ──────────────────────────────────────────────────── */}
-      <div className="p-3 flex flex-col flex-1">
+      <div className="p-4 flex flex-col flex-1">
+
         {/* Artist */}
-        <span className="block text-parchment text-xs truncate font-medium">
+        <span className="block text-parchment text-[10px] truncate font-bold uppercase tracking-widest">
           {disco.artista}
         </span>
 

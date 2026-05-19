@@ -53,10 +53,10 @@ export default function Navbar() {
           >
             <VinylLogo />
             <div className="flex flex-col leading-none">
-              <span className="font-display text-base md:text-[21px] font-black text-cream tracking-tight">
+              <span className="font-display text-base md:text-[21px] font-black text-gold tracking-tight">
                 Garimpa
               </span>
-              <span className="hidden md:block text-gold text-[9px] tracking-[0.38em] uppercase font-semibold mt-px">
+              <span className="hidden md:block text-parchment text-[9px] tracking-[0.38em] uppercase font-semibold mt-px">
                 vinil
               </span>
             </div>
@@ -76,9 +76,9 @@ export default function Navbar() {
                 key={href}
                 href={href}
                 aria-current={pathname === href ? "page" : undefined}
-                className={`px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${
+                className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors ${
                   pathname === href
-                    ? "text-cream font-semibold"
+                    ? "text-cream"
                     : "text-dust hover:text-gold hover:bg-groove/40"
                 }`}
               >
