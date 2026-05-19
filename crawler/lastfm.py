@@ -402,21 +402,25 @@ def enrich_album_infos(
             if score >= _IMG_CONFIDENCE_THRESHOLD:
                 confirmed_img = info["img_url"]
                 img_lastfm += 1
-                log.debug(
-                    "[%d/%d] img=lastfm  score=%.2f  query=%r  result=%r",
-                    i, len(albums), score, cleaned, info["lastfm_name"],
-                )
+                img_tag = f"img=YES (score={score:.2f})"
             else:
                 img_fallback += 1
-                log.info(
-                    "[%d/%d] img=fallback score=%.2f  query=%r  result=%r",
-                    i, len(albums), score, cleaned, info["lastfm_name"],
-                )
-        elif info and info.get("img_url"):
+                img_tag = f"img=NO  (score={score:.2f}, result={info['lastfm_name']!r})"
+        elif info:
             img_fallback += 1
-            log.debug("[%d/%d] img=fallback  no lastfm_name to validate", i, len(albums))
+            img_tag = "img=NO  (no name to validate)"
         else:
             img_fallback += 1
+            img_tag = "img=NO  (not found on Last.fm)"
+
+        listeners = info["listeners"] if info else 0
+        log.info(
+            "[%d/%d] %-30s / %-35s → listeners=%-7s  %s",
+            i, len(albums),
+            album["artista"][:30], cleaned[:35],
+            listeners,
+            img_tag,
+        )
 
         updates.append({
             "id":          album["id"],
@@ -425,14 +429,11 @@ def enrich_album_infos(
             "wiki_en":     info["wiki_en"]    if info else None,
             "lastfm_img":  confirmed_img,
         })
-        log.debug("[%d/%d] %r / %r → listeners=%s",
-                  i, len(albums), album["artista"], cleaned,
-                  info["listeners"] if info else "N/A")
         if i < len(albums):
             time.sleep(delay)
 
     log.info(
-        "Album enrichment image audit: lastfm_img=%d  fallback=%d  total=%d",
+        "Album enrichment done: img_confirmed=%d  img_fallback=%d  total=%d",
         img_lastfm, img_fallback, len(updates),
     )
     return bulk_update_lastfm_album_info(conn, updates)
@@ -482,18 +483,23 @@ def backfill_album_images(
             if score >= _IMG_CONFIDENCE_THRESHOLD:
                 confirmed_img = info["img_url"]
                 img_confirmed += 1
-                log.debug(
-                    "[%d/%d] img=lastfm  score=%.2f  %r / %r",
-                    i, len(albums), score, album["artista"], cleaned,
-                )
+                img_tag = f"img=YES (score={score:.2f})"
             else:
                 img_fallback += 1
-                log.info(
-                    "[%d/%d] img=fallback score=%.2f  query=%r  result=%r",
-                    i, len(albums), score, cleaned, info["lastfm_name"],
-                )
+                img_tag = f"img=NO  (score={score:.2f}, result={info['lastfm_name']!r})"
+        elif info:
+            img_fallback += 1
+            img_tag = "img=NO  (no name to validate)"
         else:
             img_fallback += 1
+            img_tag = "img=NO  (not found on Last.fm)"
+
+        log.info(
+            "[%d/%d] %-30s / %-35s → %s",
+            i, len(albums),
+            album["artista"][:30], cleaned[:35],
+            img_tag,
+        )
 
         updates.append({"id": album["id"], "lastfm_img": confirmed_img})
 
@@ -501,7 +507,7 @@ def backfill_album_images(
             time.sleep(delay)
 
     log.info(
-        "Image backfill complete: confirmed=%d  fallback=%d  total=%d",
+        "Image backfill done: confirmed=%d  fallback=%d  total=%d",
         img_confirmed, img_fallback, len(updates),
     )
     return bulk_update_lastfm_img(conn, updates)
