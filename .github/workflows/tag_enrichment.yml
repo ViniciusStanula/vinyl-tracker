@@ -36,3 +36,13 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+
+      - name: Backfill Last.fm album images
+        # Fetches lastfm_img_url for albums where it is still NULL.
+        # Confidence-gated: only stores image when Last.fm name matches cleaned title.
+        # Safe to re-run: COALESCE in DB update never overwrites a confirmed image.
+        # 500 albums × 0.5s ≈ 4 min per run; runs again next schedule until all done.
+        run: python crawler/lastfm_album_enricher.py --backfill-images --limit 500
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
