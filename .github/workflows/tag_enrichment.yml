@@ -37,6 +37,23 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
 
+      - name: Reset failed Last.fm enrichments
+        # Resets lastfm_listeners=0 → NULL so the enrichment step retries them
+        # with the album.search fallback. Safe to run every time: only touches
+        # records that previously got no result from Last.fm.
+        run: python crawler/lastfm_album_enricher.py --reset-failed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Enrich albums missing Last.fm data
+        # Retries records reset above + picks up any new albums.
+        # Falls back to album.search when album.getInfo finds nothing.
+        # 500 albums × 0.5s ≈ 4 min per run.
+        run: python crawler/lastfm_album_enricher.py --limit 500
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+
       - name: Backfill Last.fm album images
         # Fetches lastfm_img_url for albums where it is still NULL.
         # Confidence-gated: only stores image when Last.fm name matches cleaned title.
