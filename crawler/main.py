@@ -2563,6 +2563,12 @@ def parse_args():
         help="Skip the pre-crawl deal re-validation phase",
     )
     parser.add_argument(
+        "--stale-only", action="store_true",
+        help="Skip discovery phases (0/1/2/2.5/2.7/2.8) and run only the stale-records check (Phase 3). "
+             "Intended for a dedicated price-refresh run offset from the main crawl. "
+             "Implies --skip-deal-revalidation. Uses claim-based locking so concurrent runs don't duplicate work.",
+    )
+    parser.add_argument(
         "--time-limit", type=int, default=50, metavar="MIN",
         help="Wall-clock budget in minutes; stale submission stops when exceeded (default: 50)",
     )
@@ -2675,7 +2681,9 @@ def main():
         # immediately so that the DB reflects the freshest prices before we
         # spend time discovering new ones.
         phase0_asins: set[str] = set()  # tracked so Phase 3 doesn't re-fetch them
-        if args.skip_deal_revalidation:
+        if args.stale_only:
+            log.info("--stale-only: skipping Phase 0 (deal re-validation).")
+        elif args.skip_deal_revalidation:
             log.info("Deal re-validation skipped (--skip-deal-revalidation).")
         else:
             log.info("═" * 60)
@@ -2705,15 +2713,22 @@ def main():
                 log.info("No active deals found — skipping re-validation.")
 
         # ── Phase 1: Regular crawl ─────────────────────────────────────────
-        log.info("═" * 60)
-        t0 = time.monotonic()
-        _snap_pre1 = _bot_stats.snapshot()
-        all_items, asin_categories, browse_asins = crawl(args.max_pages, args.delay, deadline=deadline)
-        log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
-        log.info("Phase 1 bot-detection: %s", _bot_phase_summary(_snap_pre1, _bot_stats.snapshot()))
+        if args.stale_only:
+            log.info("--stale-only: skipping Phase 1 (category crawl).")
+            all_items = []
+            asin_categories = {}
+            browse_asins = set()
+        else:
+            log.info("═" * 60)
+            t0 = time.monotonic()
+            _snap_pre1 = _bot_stats.snapshot()
+            all_items, asin_categories, browse_asins = crawl(args.max_pages, args.delay, deadline=deadline)
+            log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
+            log.info("Phase 1 bot-detection: %s", _bot_phase_summary(_snap_pre1, _bot_stats.snapshot()))
 
         if not all_items:
-            log.warning("No products found. Nothing to write.")
+            if not args.stale_only:
+                log.warning("No products found. Nothing to write.")
         else:
             # ── Phase 2: Upsert crawl results ──────────────────────────────
             # The crawl can take 15+ minutes; the DB connection may have been
@@ -2931,7 +2946,7 @@ def main():
                         pass
                     conn = get_connection()
 
-                    batch = fetch_stale_records(conn, seen_asins, limit=_PHASE3_BATCH_SIZE)
+                    batch = fetch_stale_records(conn, seen_asins, limit=_PHASE3_BATCH_SIZE, claim=args.stale_only)
                     if not batch:
                         log.info("Phase 3: no more stale records after %d records.", phase3_total)
                         break

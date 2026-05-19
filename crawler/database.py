@@ -334,6 +334,7 @@ def fetch_stale_records(
     conn,
     seen_asins: set[str],
     limit: int = 500,
+    claim: bool = False,
 ) -> list[dict]:
     """
     Returns Disco rows whose ASINs were NOT encountered during this crawl run.
@@ -345,29 +346,62 @@ def fetch_stale_records(
          records are re-checked even after dropping from search results.
       3. All others by last_crawled_at ASC NULLS FIRST — most neglected first.
 
+    When claim=True, atomically stamps last_crawled_at = NOW() on the selected
+    rows before returning them. This prevents concurrent crawler processes (e.g.
+    a stale-only run overlapping a full run) from picking the same batch.
+
     Each returned dict has: asin, id, titulo.
     """
     with _cursor(conn) as cur:
-        cur.execute(
-            """
-            SELECT asin, id, COALESCE(titulo, '') AS titulo
-            FROM "Disco"
-            WHERE asin != ALL(%s)
-            ORDER BY
-                CASE
-                    WHEN deal_score IS NOT NULL                        THEN 0
-                    WHEN last_flagged_at > NOW() - INTERVAL '14 days' THEN 1
-                    ELSE                                                    2
-                END,
-                last_crawled_at ASC NULLS FIRST
-            LIMIT %s
-            """,
-            (list(seen_asins) if seen_asins else ["__none__"], limit),
-        )
-        return [
-            {"asin": row[0], "id": row[1], "titulo": row[2]}
-            for row in cur.fetchall()
-        ]
+        if claim:
+            cur.execute(
+                """
+                WITH selected AS (
+                    SELECT id
+                    FROM "Disco"
+                    WHERE asin != ALL(%s)
+                    ORDER BY
+                        CASE
+                            WHEN deal_score IS NOT NULL                        THEN 0
+                            WHEN last_flagged_at > NOW() - INTERVAL '14 days' THEN 1
+                            ELSE                                                    2
+                        END,
+                        last_crawled_at ASC NULLS FIRST
+                    LIMIT %s
+                    FOR UPDATE SKIP LOCKED
+                )
+                UPDATE "Disco"
+                SET last_crawled_at = NOW()
+                WHERE id IN (SELECT id FROM selected)
+                RETURNING asin, id, COALESCE(titulo, '') AS titulo
+                """,
+                (list(seen_asins) if seen_asins else ["__none__"], limit),
+            )
+            rows = cur.fetchall()
+        else:
+            cur.execute(
+                """
+                SELECT asin, id, COALESCE(titulo, '') AS titulo
+                FROM "Disco"
+                WHERE asin != ALL(%s)
+                ORDER BY
+                    CASE
+                        WHEN deal_score IS NOT NULL                        THEN 0
+                        WHEN last_flagged_at > NOW() - INTERVAL '14 days' THEN 1
+                        ELSE                                                    2
+                    END,
+                    last_crawled_at ASC NULLS FIRST
+                LIMIT %s
+                """,
+                (list(seen_asins) if seen_asins else ["__none__"], limit),
+            )
+            rows = cur.fetchall()
+    if claim:
+        conn.commit()
+    return [
+        {"asin": row[0], "id": row[1], "titulo": row[2]}
+        for row in rows
+    ]
 
 
 def mark_stale_price(
