@@ -52,11 +52,11 @@ export default function Navbar() {
             aria-label="Garimpa Vinil — página inicial"
           >
             <VinylLogo />
-            <div className="hidden md:flex flex-col leading-none">
-              <span className="font-display text-[21px] font-black text-cream tracking-tight">
+            <div className="flex flex-col leading-none">
+              <span className="font-display text-base md:text-[21px] font-black text-cream tracking-tight">
                 Garimpa
               </span>
-              <span className="text-gold text-[9px] tracking-[0.38em] uppercase font-semibold mt-px">
+              <span className="hidden md:block text-gold text-[9px] tracking-[0.38em] uppercase font-semibold mt-px">
                 vinil
               </span>
             </div>

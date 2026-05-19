@@ -117,14 +117,14 @@ export default async function HomePage({
       <ArtistasCarousel items={carouselItems} />
 
       {/* ── Sort bar ────────────────────────────────────────────── */}
-      <div className="mb-3">
+      <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
         <Suspense>
           <SortBar />
         </Suspense>
       </div>
 
       {/* ── Deal badge legend ────────────────────────────────────── */}
-      <p className="text-[11px] text-dust mb-4 leading-relaxed">
+      <p className="text-xs text-dust mb-4 leading-relaxed">
         <span className="text-gold font-semibold">✦ Melhor Preço</span> = menor preço registrado
         {" · "}
         <span className="text-deallit font-semibold">✓ Ótima Oferta</span> = abaixo da média histórica

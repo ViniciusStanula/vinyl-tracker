@@ -148,7 +148,7 @@ export default memo(function DiscoCard({
           href={disco.url}
           target="_blank"
           rel="nofollow noopener noreferrer"
-          className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity bg-record/80 text-cream text-[10px] font-medium px-2 py-1 rounded-md backdrop-blur-sm"
+          className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity bg-record/80 text-cream text-xs font-medium px-2.5 py-1.5 rounded-md backdrop-blur-sm"
           aria-label={`Ver ${disco.titulo} na Amazon`}
         >
           Amazon ↗

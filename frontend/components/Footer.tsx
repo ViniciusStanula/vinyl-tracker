@@ -16,11 +16,10 @@ function TelegramIcon({ className }: { className?: string }) {
 const TELEGRAM_URL = "https://t.me/garimpavinil";
 
 const NAV_LINKS = [
-  { label: "Início",               href: "/" },
-  { label: "Todos os Discos",      href: "/disco" },
-  { label: "Discos até R$ 200",    href: "/discos-abaixo-de-200" },
+  { label: "Início",                href: "/" },
+  { label: "Todos os Discos",       href: "/disco" },
   { label: "Artistas mais Ouvidos", href: "/artistas-mais-ouvidos" },
-  { label: "Sobre o Site",         href: "/sobre" },
+  { label: "Sobre o Site",          href: "/sobre" },
 ];
 
 const LEGAL_LINKS = [

@@ -22,7 +22,7 @@
   /* ── Text ────────────────────────────────────────────────────── */
   --color-cream:     #f0e6d0;   /* primary text */
   --color-parchment: #b8936a;   /* secondary text */
-  --color-dust:      #6e4e38;   /* muted/placeholder */
+  --color-dust:      #957060;   /* muted/placeholder — passes 4.5:1 on record bg */
   --color-ash:       #3d2a20;   /* very muted */
 
   /* ── Typography ──────────────────────────────────────────────── */
@@ -68,6 +68,10 @@ body {
   background-size: 100% 100%;
   background-repeat: no-repeat;
 }
+
+/* ── No-scrollbar utility ─────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ── Utilities ────────────────────────────────────────────────────── */
 @keyframes vinyl-pulse {

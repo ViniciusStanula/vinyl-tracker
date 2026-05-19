@@ -131,7 +131,7 @@ export default function InfiniteGrid({
       {/* Card grid — 4 cols desktop, 3 tablet, 2 mobile */}
       <div
         ref={gridRef}
-        className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3"
+        className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"
       >
         {items.map((disco, index) => (
           <DiscoCard key={disco.id} disco={disco} priority={index < 4} />

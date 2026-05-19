@@ -55,7 +55,7 @@ export default function SortBar() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5 sm:flex-wrap">
 
         {/* ── Price chips ── */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <span className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0">
             Preço
           </span>
@@ -66,7 +66,7 @@ export default function SortBar() {
                 key={chip.label}
                 onClick={() => handlePrice(chip.value)}
                 aria-pressed={isActive}
-                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20 ${
+                className={`text-xs px-3 py-2.5 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20 shrink-0 ${
                   isActive
                     ? "bg-gold text-record border-gold font-bold"
                     : "bg-groove text-parchment border-wax/60 hover:border-wax hover:text-cream"
