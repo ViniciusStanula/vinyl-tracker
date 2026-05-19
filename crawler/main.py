@@ -1251,7 +1251,7 @@ def parse_product_page_discovery(soup, asin: str) -> dict | None:
         if img_el:
             src = img_el.get("src", "").strip() or img_el.get("data-old-hires", "").strip()
             if src and not src.startswith("data:"):
-                img_url = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", src)
+                img_url = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SL1500_.", src)
                 break
 
     rating = None
@@ -1349,7 +1349,7 @@ def fetch_catalog_discovery(
                         )
                         if src and not src.startswith("data:"):
                             record["imgUrl"] = re.sub(
-                                r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", src
+                                r"\._[A-Z0-9_,]+_\.", "._AC_SL1500_.", src
                             )
                             break
                 record["asin"] = vinyl_asin
@@ -1761,7 +1761,7 @@ def extract_image(card) -> str:
                 else:
                     log.debug("extract_image: srcset present but no valid 2-part entries found")
         if url and not url.startswith("data:"):
-            url = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", url)
+            url = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SL1500_.", url)
             return url
     return ""
 
@@ -2262,7 +2262,7 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
                                 or img_el.get("data-old-hires", "").strip()
                             )
                             if src and not src.startswith("data:"):
-                                v_img = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", src)
+                                v_img = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SL1500_.", src)
                                 break
                     result["vinyl_metadata"] = {
                         "asin":   vinyl_asin,
@@ -2363,7 +2363,7 @@ def _fetch_one_discovery(asin: str, delay: float, worker_idx: int,
                             )
                             if src and not src.startswith("data:"):
                                 record["imgUrl"] = re.sub(
-                                    r"\._[A-Z0-9_,]+_\.", "._AC_SX300_.", src
+                                    r"\._[A-Z0-9_,]+_\.", "._AC_SL1500_.", src
                                 )
                                 break
                     record["asin"]  = vinyl_asin
