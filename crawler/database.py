@@ -759,6 +759,25 @@ def fetch_albums_needing_lastfm_enrichment(conn, limit: int = 500) -> list[dict]
         return [{"id": r[0], "titulo": r[1], "artista": r[2]} for r in cur.fetchall()]
 
 
+def reset_failed_lastfm_enrichments(conn) -> int:
+    """
+    Resets lastfm_listeners back to NULL for albums that returned 0 listeners,
+    so the enricher retries them (with the album.search fallback) on the next run.
+
+    Albums with genuine 0-listener counts are rare; treating 0 as "retry"
+    is safer than leaving failed lookups permanently skipped.
+    Returns the number of rows reset.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            'UPDATE "Disco" SET lastfm_listeners = NULL WHERE lastfm_listeners = 0'
+        )
+        reset = cur.rowcount
+    conn.commit()
+    log.info("reset_failed_lastfm_enrichments: reset %d records to NULL.", reset)
+    return reset
+
+
 def fetch_albums_needing_img_backfill(conn, limit: int = 500) -> list[dict]:
     """Albums where lastfm_img_url IS NULL — already enriched but missing image."""
     with _cursor(conn) as cur:

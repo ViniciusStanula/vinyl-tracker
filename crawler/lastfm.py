@@ -268,6 +268,63 @@ def _clean_wiki(html: str) -> str:
     return text
 
 
+def _album_search_fallback(artist: str, cleaned: str, api_key: str) -> dict | None:
+    """
+    Falls back to album.search when album.getInfo finds nothing.
+
+    Searches Last.fm by title + artist, scores each candidate with _match_score,
+    and re-fetches via album.getInfo only if the best match clears
+    _IMG_CONFIDENCE_THRESHOLD.  This handles non-exact titles, regional
+    variants, and albums whose canonical name differs slightly from the
+    cleaned Amazon title.
+    """
+    params = urllib.parse.urlencode({
+        "method":  "album.search",
+        "album":   cleaned,
+        "artist":  _uninvert(artist),
+        "api_key": api_key,
+        "format":  "json",
+        "limit":   5,
+    })
+    try:
+        with urllib.request.urlopen(f"{LASTFM_BASE}?{params}", timeout=10) as resp:
+            data = json.loads(resp.read())
+    except Exception as exc:
+        log.debug("album.search failed for %r / %r: %s", artist, cleaned, exc)
+        return None
+
+    candidates = (
+        data.get("results", {})
+            .get("albummatches", {})
+            .get("album", [])
+    )
+    if not candidates:
+        log.debug("album.search: no candidates for %r / %r", artist, cleaned)
+        return None
+
+    best_name:  str   = ""
+    best_score: float = 0.0
+    for c in candidates:
+        name  = c.get("name", "")
+        score = _match_score(cleaned, name)
+        if score > best_score:
+            best_score = score
+            best_name  = name
+
+    if best_score < _IMG_CONFIDENCE_THRESHOLD or not best_name:
+        log.debug(
+            "album.search fallback: no confident match for %r / %r (best=%.2f %r)",
+            artist, cleaned, best_score, best_name,
+        )
+        return None
+
+    log.debug(
+        "album.search fallback: matched %r (score=%.2f) for %r / %r",
+        best_name, best_score, artist, cleaned,
+    )
+    return fetch_album_info(artist, best_name, api_key)
+
+
 def fetch_album_info(artist: str, album: str, api_key: str) -> dict | None:
     """
     Fetches listeners, playcount, and wiki text from Last.fm album.getInfo.
@@ -336,6 +393,8 @@ def enrich_album_infos(
             break
         cleaned = clean_album_title(album["titulo"], album["artista"])
         info = fetch_album_info(album["artista"], cleaned, api_key)
+        if info is None:
+            info = _album_search_fallback(album["artista"], cleaned, api_key)
 
         confirmed_img: str | None = None
         if info and info.get("img_url") and info.get("lastfm_name"):
@@ -354,7 +413,6 @@ def enrich_album_infos(
                     i, len(albums), score, cleaned, info["lastfm_name"],
                 )
         elif info and info.get("img_url"):
-            # No name to validate against — skip the image.
             img_fallback += 1
             log.debug("[%d/%d] img=fallback  no lastfm_name to validate", i, len(albums))
         else:
@@ -415,6 +473,8 @@ def backfill_album_images(
 
         cleaned = clean_album_title(album["titulo"], album["artista"])
         info = fetch_album_info(album["artista"], cleaned, api_key)
+        if info is None:
+            info = _album_search_fallback(album["artista"], cleaned, api_key)
 
         confirmed_img: str | None = None
         if info and info.get("img_url") and info.get("lastfm_name"):
