@@ -10,10 +10,6 @@ export default function robots(): MetadataRoute.Robots {
     },
     sitemap: [
       `${base}/sitemap.xml`,
-      `${base}/sitemap/estatico.xml`,
-      `${base}/sitemap/artistas.xml`,
-      `${base}/sitemap/discos.xml`,
-      `${base}/sitemap/estilos.xml`,
     ],
   };
 }

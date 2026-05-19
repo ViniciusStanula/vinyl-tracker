@@ -1,5 +1,12 @@
 import type { MetadataRoute } from "next";
-import { SITEMAP_BASE, getSitemapArtists, getSitemapDiscos, getSitemapEstilos } from "@/lib/db/sitemap";
+import {
+  SITEMAP_BASE,
+  getSitemapArtists,
+  getSitemapDiscosForShard,
+  getSitemapEstilos,
+  DISCO_SHARDS,
+  type DiscoShard,
+} from "@/lib/db/sitemap";
 
 export const revalidate = 86400;
 
@@ -12,7 +19,8 @@ function shuffle<T>(arr: T[]): T[] {
 } // regenerate every 24 hours — sitemap staleness is fine for SEO
 
 export async function generateSitemaps() {
-  return [{ id: "estatico" }, { id: "artistas" }, { id: "discos" }, { id: "estilos" }];
+  const discoShards = DISCO_SHARDS.map((shard) => ({ id: `discos-${shard}` }));
+  return [{ id: "estatico" }, { id: "artistas" }, ...discoShards, { id: "estilos" }];
 }
 
 export default async function sitemap(props: {
@@ -38,9 +46,11 @@ export default async function sitemap(props: {
     }
   }
 
-  if (id === "discos") {
+  if (id.startsWith("discos-")) {
+    const shard = id.slice("discos-".length) as DiscoShard;
+    if (!DISCO_SHARDS.includes(shard)) return [];
     try {
-      return shuffle(await getSitemapDiscos());
+      return shuffle(await getSitemapDiscosForShard(shard));
     } catch {
       return [];
     }

@@ -74,6 +74,29 @@ export const getSitemapData = unstable_cache(
   { tags: ["prices"], revalidate: 3600 },
 );
 
+// Months in Portuguese and English for date-slug detection
+const DATE_SLUG_RE =
+  /^\d{1,2}-(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez|feb|apr|may|aug|sep|oct)-\d{4}$/;
+
+// Publisher/label/legal-entity keywords that appear in catalog metadata noise
+const JUNK_TOKENS = new Set([
+  "publishing", "publisher", "publications",
+  "records", "recordings", "record",
+  "label", "labels",
+  "music", "musica", "musicas",
+  "inc", "llc", "ltd", "ltda", "corp", "company",
+  "distribution", "distribuidora",
+  "entertainment",
+  "management",
+  "editora", "edicoes", "edicao",
+]);
+
+function isJunkArtistSlug(slug: string): boolean {
+  if (DATE_SLUG_RE.test(slug)) return true;
+  const tokens = slug.split("-");
+  return tokens.some((t) => JUNK_TOKENS.has(t));
+}
+
 export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
   const artistRows = await prisma.disco.findMany({
     select: { artista: true },
@@ -82,21 +105,55 @@ export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
 
   const seenSlugs = new Set<string>();
   const routes: MetadataRoute.Sitemap = [];
+  let excluded = 0;
 
   for (const { artista } of artistRows) {
     const slug = slugifyArtist(artista);
     if (!slug || seenSlugs.has(slug)) continue;
+    if (isJunkArtistSlug(slug)) {
+      excluded++;
+      continue;
+    }
     seenSlugs.add(slug);
     routes.push({ url: `${SITEMAP_BASE}/artista/${slug}`, changeFrequency: "weekly", priority: 0.6 });
+  }
+
+  if (excluded > 0) {
+    // eslint-disable-next-line no-console
+    console.info("[sitemap/artistas] excluded %d junk artist slugs", excluded);
   }
 
   return routes;
 }
 
-export async function getSitemapDiscos(): Promise<MetadataRoute.Sitemap> {
-  const discos = await prisma.disco.findMany({
-    select: { slug: true, updatedAt: true },
-  });
+// Disco sitemap shards: a–z, "09" for digits, "other" for everything else.
+// Each shard covers slugs whose first character matches the group.
+export const DISCO_SHARD_LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
+export const DISCO_SHARDS = [...DISCO_SHARD_LETTERS, "09", "other"] as const;
+export type DiscoShard = (typeof DISCO_SHARDS)[number];
+
+export async function getSitemapDiscosForShard(shard: DiscoShard): Promise<MetadataRoute.Sitemap> {
+  let discos: { slug: string; updatedAt: Date }[];
+
+  if (shard === "other") {
+    discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
+      SELECT slug, "updatedAt"
+      FROM "Disco"
+      WHERE LEFT(slug, 1) !~ '[a-z0-9]'
+    `;
+  } else if (shard === "09") {
+    discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
+      SELECT slug, "updatedAt"
+      FROM "Disco"
+      WHERE LEFT(slug, 1) ~ '[0-9]'
+    `;
+  } else {
+    discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
+      SELECT slug, "updatedAt"
+      FROM "Disco"
+      WHERE LEFT(slug, 1) = ${shard}
+    `;
+  }
 
   return discos.map((d) => ({
     url:             `${SITEMAP_BASE}/disco/${d.slug}`,

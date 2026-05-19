@@ -6,6 +6,7 @@ import StyleTags from "@/components/StyleTags";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
+import { toTitleCase } from "@/lib/utils/titleCase";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { Suspense } from "react";
 import { getArtistaPageData, type ArtistaPageData } from "@/lib/db/artista";
@@ -26,8 +27,9 @@ export async function generateMetadata({
   }
   if (!data) return {};
   const { canonical } = data;
-  const title = truncateTitle(`${canonical} — Discos em Promoção | Garimpa Vinil`);
-  const description = truncateDesc(`Melhores ofertas de ${canonical} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`);
+  const displayName = toTitleCase(canonical);
+  const title = truncateTitle(`${displayName} — Discos em Promoção | Garimpa Vinil`);
+  const description = truncateDesc(`Melhores ofertas de ${displayName} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`);
   const firstImage = data.items.find((d) => d.imgUrl)?.imgUrl ?? null;
   return {
     title,
@@ -38,7 +40,7 @@ export async function generateMetadata({
       description,
       url: `/artista/${slug}`,
       type: "website",
-      ...(firstImage ? { images: [{ url: firstImage, alt: canonical }] } : {}),
+      ...(firstImage ? { images: [{ url: firstImage, alt: displayName }] } : {}),
     },
     twitter: {
       card: firstImage ? "summary_large_image" : "summary",
@@ -79,7 +81,8 @@ export default async function ArtistaPage({
   }
   if (!data) notFound();
 
-  const { canonical: artista, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt } = data;
+  const { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt } = data;
+  const artista = toTitleCase(canonical);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
 

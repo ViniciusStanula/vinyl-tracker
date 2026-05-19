@@ -81,8 +81,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${fraunces.variable} ${dmSans.variable}`}>
       <head>
-        <link rel="preconnect" href="https://m.media-amazon.com" />
-        <link rel="preconnect" href="https://images-na.ssl-images-amazon.com" />
+        <link rel="preconnect" href="https://m.media-amazon.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://images-na.ssl-images-amazon.com" crossOrigin="anonymous" />
         <Script
           id="gtm-script"
           strategy="afterInteractive"
