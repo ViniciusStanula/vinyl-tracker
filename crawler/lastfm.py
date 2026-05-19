@@ -14,6 +14,7 @@ import time
 import logging
 import urllib.parse
 import urllib.request
+from difflib import SequenceMatcher
 
 from database import (
     fetch_untagged_artists,
@@ -179,6 +180,58 @@ def clean_album_title(title: str, artist: str) -> str:
     return t.strip()
 
 
+_PUNCT_RE = re.compile(r"[^\w\s]")
+
+
+def _normalize(s: str) -> str:
+    """Lowercase, strip punctuation, collapse whitespace."""
+    return _PUNCT_RE.sub("", s.lower()).split()
+
+
+def _match_score(query: str, result: str) -> float:
+    """
+    Confidence that Last.fm result matches the cleaned query we sent.
+
+    Returns 0.0–1.0.  High score = safe to use Last.fm image.
+
+    Strategy:
+      - Normalize both to token sets (lowercase, no punctuation).
+      - Score 1.0 if all query tokens are present in result tokens.
+        Handles "Rumours" ↔ "Rumours Super Deluxe Edition" without
+        false-matching "Led Zeppelin IV" ↔ "Led Zeppelin" (different albums).
+      - Otherwise fall back to SequenceMatcher ratio — only near-exact
+        strings (≥0.90) pass the image confidence gate.
+    """
+    qt = _normalize(query)
+    rt = _normalize(result)
+    if not qt or not rt:
+        return 0.0
+
+    # Same token sets (order/duplicates ignored) → confident match.
+    # clean_album_title already strips edition words, so Last.fm normally
+    # returns the same base title; set equality handles "The X" ↔ "X" too.
+    if set(qt) == set(rt):
+        return 1.0
+
+    return SequenceMatcher(None, " ".join(qt), " ".join(rt)).ratio()
+
+
+def _best_image(images: list) -> str | None:
+    """
+    Extract the largest non-empty image URL from Last.fm's image array.
+
+    Last.fm orders images small → mega; we prefer the largest available.
+    """
+    preferred = ["mega", "extralarge", "large", "medium", "small"]
+    by_size = {img.get("size", ""): img.get("#text", "") for img in images}
+    for size in preferred:
+        url = by_size.get(size, "")
+        if url and not url.endswith("2a96cbd8b46e442fc41c2b86b821562f.png"):
+            # Last.fm returns a placeholder hash URL when no image exists.
+            return url
+    return None
+
+
 def _clean_wiki(html: str) -> str:
     """Strip Last.fm self-links, HTML tags, disambiguation preamble, and legal footer."""
     text = re.sub(
@@ -234,9 +287,11 @@ def fetch_album_info(artist: str, album: str, api_key: str) -> dict | None:
     info = data["album"]
     raw_wiki = (info.get("wiki") or {}).get("content") or (info.get("wiki") or {}).get("summary") or ""
     return {
-        "listeners": int(info.get("listeners") or 0),
-        "playcount": int(info.get("playcount") or 0),
-        "wiki_en":   _clean_wiki(raw_wiki) or None,
+        "listeners":    int(info.get("listeners") or 0),
+        "playcount":    int(info.get("playcount") or 0),
+        "wiki_en":      _clean_wiki(raw_wiki) or None,
+        "lastfm_name":  info.get("name", ""),
+        "img_url":      _best_image(info.get("image") or []),
     }
 
 
@@ -264,17 +319,51 @@ def enrich_album_infos(
     log.info("Album enrichment: fetching Last.fm data for %d albums.", len(albums))
     updates: list[dict] = []
 
+    # Audit counters for image sourcing.
+    img_lastfm   = 0
+    img_fallback = 0
+
+    # Minimum match score to trust Last.fm's image for a record.
+    # 0.90 catches cases where token superset fails but strings are near-identical.
+    # Keeps "Led Zeppelin IV" → "Led Zeppelin" (0.889) in fallback territory.
+    _IMG_CONFIDENCE_THRESHOLD = 0.90
+
     for i, album in enumerate(albums, 1):
         if deadline is not None and time.monotonic() >= deadline:
             log.info("Album enrichment: deadline reached — processed %d/%d.", i - 1, len(albums))
             break
         cleaned = clean_album_title(album["titulo"], album["artista"])
         info = fetch_album_info(album["artista"], cleaned, api_key)
+
+        confirmed_img: str | None = None
+        if info and info.get("img_url") and info.get("lastfm_name"):
+            score = _match_score(cleaned, info["lastfm_name"])
+            if score >= _IMG_CONFIDENCE_THRESHOLD:
+                confirmed_img = info["img_url"]
+                img_lastfm += 1
+                log.debug(
+                    "[%d/%d] img=lastfm  score=%.2f  query=%r  result=%r",
+                    i, len(albums), score, cleaned, info["lastfm_name"],
+                )
+            else:
+                img_fallback += 1
+                log.info(
+                    "[%d/%d] img=fallback score=%.2f  query=%r  result=%r",
+                    i, len(albums), score, cleaned, info["lastfm_name"],
+                )
+        elif info and info.get("img_url"):
+            # No name to validate against — skip the image.
+            img_fallback += 1
+            log.debug("[%d/%d] img=fallback  no lastfm_name to validate", i, len(albums))
+        else:
+            img_fallback += 1
+
         updates.append({
-            "id":        album["id"],
-            "listeners": info["listeners"] if info else 0,
-            "playcount": info["playcount"] if info else 0,
-            "wiki_en":   info["wiki_en"]   if info else None,
+            "id":          album["id"],
+            "listeners":   info["listeners"]  if info else 0,
+            "playcount":   info["playcount"]  if info else 0,
+            "wiki_en":     info["wiki_en"]    if info else None,
+            "lastfm_img":  confirmed_img,
         })
         log.debug("[%d/%d] %r / %r → listeners=%s",
                   i, len(albums), album["artista"], cleaned,
@@ -282,4 +371,8 @@ def enrich_album_infos(
         if i < len(albums):
             time.sleep(delay)
 
+    log.info(
+        "Album enrichment image audit: lastfm_img=%d  fallback=%d  total=%d",
+        img_lastfm, img_fallback, len(updates),
+    )
     return bulk_update_lastfm_album_info(conn, updates)

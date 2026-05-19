@@ -250,12 +250,13 @@ def ensure_schema_extras(conn) -> None:
                 'disponivel','deal_score','last_flagged_at','last_flagged_price',
                 'avg_30d','avg_90d','low_30d','low_all_time','confidence_level',
                 'history_days','last_crawled_at','lastfm_tags','price_count',
-                'lastfm_listeners','lastfm_playcount','lastfm_wiki_en','lastfm_wiki_pt'
+                'lastfm_listeners','lastfm_playcount','lastfm_wiki_en','lastfm_wiki_pt',
+                'lastfm_img_url'
               )
             """
         )
         existing = cur.fetchone()[0]
-        if existing == 17:
+        if existing == 18:
             log.debug("ensure_schema_extras: schema already complete, skipping DDL.")
             return
 
@@ -282,7 +283,8 @@ def ensure_schema_extras(conn) -> None:
                 ADD COLUMN IF NOT EXISTS lastfm_listeners  INTEGER,
                 ADD COLUMN IF NOT EXISTS lastfm_playcount  INTEGER,
                 ADD COLUMN IF NOT EXISTS lastfm_wiki_en    TEXT,
-                ADD COLUMN IF NOT EXISTS lastfm_wiki_pt    TEXT
+                ADD COLUMN IF NOT EXISTS lastfm_wiki_pt    TEXT,
+                ADD COLUMN IF NOT EXISTS lastfm_img_url    TEXT
             """
         )
         # Partial index for fast active-deal lookups (Phase 0 re-validation)
@@ -759,8 +761,11 @@ def fetch_albums_needing_lastfm_enrichment(conn, limit: int = 500) -> list[dict]
 
 def bulk_update_lastfm_album_info(conn, updates: list[dict]) -> int:
     """
-    Writes lastfm_listeners, lastfm_playcount, lastfm_wiki_en for album IDs.
-    Each item: {"id": str, "listeners": int, "playcount": int, "wiki_en": str|None}
+    Writes lastfm_listeners, lastfm_playcount, lastfm_wiki_en, lastfm_img_url for album IDs.
+    Each item: {"id": str, "listeners": int, "playcount": int, "wiki_en": str|None,
+                "lastfm_img": str|None}
+    lastfm_img_url is only written when the enricher confirmed a confident match;
+    a None value leaves any previously stored image intact via COALESCE.
     """
     if not updates:
         return 0
@@ -770,7 +775,8 @@ def bulk_update_lastfm_album_info(conn, updates: list[dict]) -> int:
             """UPDATE "Disco"
                SET lastfm_listeners = %(listeners)s,
                    lastfm_playcount = %(playcount)s,
-                   lastfm_wiki_en   = %(wiki_en)s
+                   lastfm_wiki_en   = %(wiki_en)s,
+                   lastfm_img_url   = COALESCE(%(lastfm_img)s, lastfm_img_url)
                WHERE id = %(id)s""",
             updates,
             page_size=200,

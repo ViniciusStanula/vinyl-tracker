@@ -62,6 +62,7 @@ Regras obrigatórias:
 - Nunca especule sobre movimentos de preço ou tendências de mercado
 - Nunca use travessão (—)
 - Evite padrões de IA: "é conhecido por", "ao longo dos anos", "ao longo de sua carreira", "sem dúvida"
+- Evite adjetivos exagerados: "bombástica", "épico", "lendário", "impactante" — prefira termos precisos como "poderosa", "marcante", "intensa"
 - Baseie o conteúdo apenas no texto fornecido, não invente fatos
 - Sem markdown, sem asteriscos, sem negrito, sem títulos
 - Parágrafos separados por linha em branco
