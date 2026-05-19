@@ -201,9 +201,6 @@ export default async function DiscoPage({
     image: disco.imgUrl ?? undefined,
     brand: { "@type": "Brand", name: disco.artista },
     url: `${siteUrl}/disco/${slug}`,
-    ...(disco.precos.length > 0
-      ? { dateModified: disco.precos.at(-1)!.capturadoEm.toISOString() }
-      : {}),
     offers: {
       "@type": "Offer",
       url: disco.url,
@@ -234,7 +231,7 @@ export default async function DiscoPage({
     url: `${siteUrl}/disco/${slug}`,
     ...(disco.imgUrl ? { image: disco.imgUrl } : {}),
     byArtist: {
-      "@type": "MusicArtist",
+      "@type": "MusicGroup",
       name: disco.artista,
       url: `${siteUrl}/artista/${slugifyArtist(disco.artista)}`,
     },

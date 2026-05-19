@@ -56,13 +56,21 @@ const organizationJsonLd = JSON.stringify({
   name: "Garimpa Vinil",
   url: SITE_URL,
   description: "Rastreador de preços de discos de vinil na Amazon Brasil. Monitora mais de 11.000 títulos com alertas de promoções e histórico de preços.",
-  inLanguage: "pt-BR",
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
     url: "https://t.me/garimpavinil",
   },
   sameAs: ["https://t.me/garimpavinil"],
+});
+
+const webSiteJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Garimpa Vinil",
+  url: SITE_URL,
+  inLanguage: "pt-BR",
+  description: DEFAULT_DESC,
 });
 
 export default function RootLayout({
@@ -98,6 +106,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         </noscript>
         {/* eslint-disable-next-line react/no-danger */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJsonLd }} />
+        {/* eslint-disable-next-line react/no-danger */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: webSiteJsonLd }} />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-gold focus:text-record focus:px-4 focus:py-2 focus:rounded-lg focus:font-bold focus:text-sm"
