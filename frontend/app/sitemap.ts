@@ -30,11 +30,11 @@ export default async function sitemap(props: {
 
   if (id === "estatico") {
     return [
-      { url: SITEMAP_BASE,                                    changeFrequency: "daily",   priority: 1.0 },
-      { url: `${SITEMAP_BASE}/disco`,                         changeFrequency: "daily",   priority: 0.9 },
-      { url: `${SITEMAP_BASE}/discos-abaixo-de-200`,          changeFrequency: "daily",   priority: 0.8 },
-      { url: `${SITEMAP_BASE}/artistas-mais-ouvidos`,         changeFrequency: "daily",   priority: 0.7 },
-      { url: `${SITEMAP_BASE}/sobre`,                         changeFrequency: "monthly", priority: 0.3 },
+      { url: SITEMAP_BASE },
+      { url: `${SITEMAP_BASE}/disco` },
+      { url: `${SITEMAP_BASE}/discos-abaixo-de-200` },
+      { url: `${SITEMAP_BASE}/artistas-mais-ouvidos` },
+      { url: `${SITEMAP_BASE}/sobre` },
     ];
   }
 

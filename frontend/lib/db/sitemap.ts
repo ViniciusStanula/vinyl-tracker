@@ -101,6 +101,7 @@ export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
   const artistRows = await prisma.disco.findMany({
     select: { artista: true },
     distinct: ["artista"],
+    where: { disponivel: true },
   });
 
   const seenSlugs = new Set<string>();
@@ -115,7 +116,7 @@ export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
       continue;
     }
     seenSlugs.add(slug);
-    routes.push({ url: `${SITEMAP_BASE}/artista/${slug}`, changeFrequency: "weekly", priority: 0.6 });
+    routes.push({ url: `${SITEMAP_BASE}/artista/${slug}` });
   }
 
   if (excluded > 0) {
@@ -139,27 +140,25 @@ export async function getSitemapDiscosForShard(shard: DiscoShard): Promise<Metad
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE LEFT(slug, 1) !~ '[a-z0-9]'
+      WHERE disponivel = TRUE AND LEFT(slug, 1) !~ '[a-z0-9]'
     `;
   } else if (shard === "09") {
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE LEFT(slug, 1) ~ '[0-9]'
+      WHERE disponivel = TRUE AND LEFT(slug, 1) ~ '[0-9]'
     `;
   } else {
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE LEFT(slug, 1) = ${shard}
+      WHERE disponivel = TRUE AND LEFT(slug, 1) = ${shard}
     `;
   }
 
   return discos.map((d) => ({
-    url:             `${SITEMAP_BASE}/disco/${d.slug}`,
-    lastModified:    d.updatedAt,
-    changeFrequency: "daily" as const,
-    priority:        0.8,
+    url:          `${SITEMAP_BASE}/disco/${d.slug}`,
+    lastModified: d.updatedAt,
   }));
 }
 
@@ -177,7 +176,7 @@ export async function getSitemapEstilos(): Promise<MetadataRoute.Sitemap> {
     const slug = slugifyStyle(tag);
     if (!slug || seenSlugs.has(slug)) continue;
     seenSlugs.add(slug);
-    routes.push({ url: `${SITEMAP_BASE}/estilo/${slug}`, changeFrequency: "weekly", priority: 0.5 });
+    routes.push({ url: `${SITEMAP_BASE}/estilo/${slug}` });
   }
 
   return routes;
