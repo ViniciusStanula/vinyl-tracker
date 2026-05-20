@@ -25,6 +25,10 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
+  // Ensure data/top_artists.json is bundled in the serverless function for /top-artistas-spotify
+  outputFileTracingIncludes: {
+    "/top-artistas-spotify": ["./data/top_artists.json"],
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "m.media-amazon.com" },
