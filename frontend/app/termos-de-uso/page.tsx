@@ -68,21 +68,19 @@ export default function TermosDeUsoPage() {
         <section className="bg-sleeve border border-groove rounded-xl p-6">
           <h2 className="font-display text-lg font-bold text-cream mb-3">Alterações nos Termos</h2>
           <p>
-            Podemos atualizar estes termos a qualquer momento. Alterações significativas serão comunicadas por meio do canal do Telegram. O uso contínuo do site após as alterações implica aceitação dos novos termos.
+            Podemos atualizar estes termos a qualquer momento. O uso contínuo do site após as alterações implica aceitação dos novos termos.
           </p>
         </section>
 
         <section className="bg-sleeve border border-groove rounded-xl p-6">
           <h2 className="font-display text-lg font-bold text-cream mb-3">Contato</h2>
           <p>
-            Dúvidas sobre estes termos? Fale conosco pelo Telegram:{" "}
+            Dúvidas sobre estes termos? Entre em contato pelo e-mail{" "}
             <a
-              href="https://t.me/garimpavinil"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="mailto:contato@garimpavinil.com.br"
               className="text-gold hover:underline"
             >
-              t.me/garimpavinil
+              contato@garimpavinil.com.br
             </a>
           </p>
         </section>

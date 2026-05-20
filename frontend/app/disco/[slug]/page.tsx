@@ -8,6 +8,9 @@ import PriceHistoryTable from "@/components/PriceHistoryTable";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import TabNav from "@/components/TabNav";
 import WikiExpander from "@/components/WikiExpander";
+
+// Matches the flag in DiscoCard.tsx — see that file for full rationale.
+const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
 import { slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
@@ -360,10 +363,10 @@ export default async function DiscoPage({
               {fmt(precoAtual)}
             </span>
 
-            {/* Avg + badge on same line */}
+            {/* Avg reference + delta — shown on product page regardless of HIDE_PRICE_HISTORY */}
             {media > 0 && (
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-dust text-sm line-through tabular-nums">
+                <span className="text-dust text-sm tabular-nums">
                   Média: {fmt(media)}
                 </span>
                 {Math.abs(desconto) >= 1 && (
@@ -384,7 +387,7 @@ export default async function DiscoPage({
                 <a
                   href={disco.url}
                   target="_blank"
-                  rel="nofollow noopener noreferrer"
+                  rel="sponsored noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full bg-gold hover:bg-goldlit text-record font-bold text-sm py-4 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-record"
                 >
                   Ver na Amazon
@@ -393,7 +396,7 @@ export default async function DiscoPage({
                   </svg>
                 </a>
                 <div className="flex items-center justify-between mt-2 px-1">
-                  <p className="text-ash text-xs">Preços podem variar</p>
+                  <p className="text-ash text-xs">Preços podem variar · <span className="text-dust/60">#anúncio</span></p>
                   <CopyLinkButton />
                 </div>
               </>
@@ -411,108 +414,119 @@ export default async function DiscoPage({
               </div>
             )}
 
-            {/* Stats bar — inside right column */}
-            <dl className="flex items-stretch bg-sleeve rounded-xl border border-groove mt-3 overflow-hidden">
-              <div className="flex-1 px-3 py-3 min-w-0">
-                <dt className="text-[9px] text-dust uppercase tracking-wide mb-1">Atual</dt>
-                <dd className="font-bold text-gold tabular-nums text-xs sm:text-sm">{fmt(precoAtual)}</dd>
-                <dd className="text-[9px] text-dust mt-0.5 truncate">{dataAtualLabel}</dd>
-              </div>
-              <div className="w-px bg-groove self-stretch" aria-hidden="true" />
-              <div className="flex-1 px-3 py-3 min-w-0">
-                <dt className="text-[9px] text-dust uppercase tracking-wide mb-1 flex items-center gap-0.5">
-                  Mín. <span className="text-deallit">↓</span>
-                </dt>
-                <dd className="font-bold text-deallit tabular-nums text-xs sm:text-sm">{fmt(precoMin)}</dd>
-                {minRecord && <dd className="text-[9px] text-dust mt-0.5">{fmtDate(minRecord.capturadoEm)}</dd>}
-              </div>
-              <div className="w-px bg-groove self-stretch" aria-hidden="true" />
-              <div className="flex-1 px-3 py-3 min-w-0">
-                <dt className="text-[9px] text-dust uppercase tracking-wide mb-1 flex items-center gap-0.5">
-                  Máx. <span className="text-cut">↑</span>
-                </dt>
-                <dd className="font-bold text-cut tabular-nums text-xs sm:text-sm">{fmt(precoMax)}</dd>
-                {maxRecord && <dd className="text-[9px] text-dust mt-0.5">{fmtDate(maxRecord.capturadoEm)}</dd>}
-              </div>
-            </dl>
+            {/* Stats bar — suppressed when HIDE_PRICE_HISTORY */}
+            {!HIDE_PRICE_HISTORY && (
+              <dl className="flex items-stretch bg-sleeve rounded-xl border border-groove mt-3 overflow-hidden">
+                <div className="flex-1 px-3 py-3 min-w-0">
+                  <dt className="text-[9px] text-dust uppercase tracking-wide mb-1">Atual</dt>
+                  <dd className="font-bold text-gold tabular-nums text-xs sm:text-sm">{fmt(precoAtual)}</dd>
+                  <dd className="text-[9px] text-dust mt-0.5 truncate">{dataAtualLabel}</dd>
+                </div>
+                <div className="w-px bg-groove self-stretch" aria-hidden="true" />
+                <div className="flex-1 px-3 py-3 min-w-0">
+                  <dt className="text-[9px] text-dust uppercase tracking-wide mb-1 flex items-center gap-0.5">
+                    Mín. <span className="text-deallit">↓</span>
+                  </dt>
+                  <dd className="font-bold text-deallit tabular-nums text-xs sm:text-sm">{fmt(precoMin)}</dd>
+                  {minRecord && <dd className="text-[9px] text-dust mt-0.5">{fmtDate(minRecord.capturadoEm)}</dd>}
+                </div>
+                <div className="w-px bg-groove self-stretch" aria-hidden="true" />
+                <div className="flex-1 px-3 py-3 min-w-0">
+                  <dt className="text-[9px] text-dust uppercase tracking-wide mb-1 flex items-center gap-0.5">
+                    Máx. <span className="text-cut">↑</span>
+                  </dt>
+                  <dd className="font-bold text-cut tabular-nums text-xs sm:text-sm">{fmt(precoMax)}</dd>
+                  {maxRecord && <dd className="text-[9px] text-dust mt-0.5">{fmtDate(maxRecord.capturadoEm)}</dd>}
+                </div>
+              </dl>
+            )}
           </div>
         </div>
       </div>
 
-      <TabNav
-        precosContent={
-          <section className="bg-sleeve rounded-xl border border-groove p-4 space-y-3">
-            <GraficoPreco precos={chartPrecos} />
-            {valores.length > 1 && <PriceHistoryTable rows={priceTableRows} />}
-          </section>
-        }
-        sobreContent={
-          albumInfo ? (() => {
-            const cleanTitle = cleanAlbumTitle(disco.titulo, disco.artista);
-            const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
-            return (
-              <section className="space-y-4">
-                {/* Last.fm stats + attribution header */}
-                <div className="flex items-center justify-between">
-                  <h2 className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
-                  <a
-                    href={lastfmUrl}
-                    target="_blank"
-                    rel="nofollow noopener noreferrer"
-                    className="text-xs text-dust hover:text-parchment transition-colors flex items-center gap-1"
-                    aria-label={`Ver ${disco.titulo} no Last.fm`}
-                  >
-                    Dados: Last.fm ↗
-                  </a>
+      {(() => {
+        const sobreSection = albumInfo ? (() => {
+          const cleanTitle = cleanAlbumTitle(disco.titulo, disco.artista);
+          const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
+          return (
+            <section className="space-y-4">
+              {/* Last.fm stats + attribution header */}
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
+                <a
+                  href={lastfmUrl}
+                  target="_blank"
+                  rel="nofollow noopener noreferrer"
+                  className="text-xs text-dust hover:text-parchment transition-colors flex items-center gap-1"
+                  aria-label={`Ver ${disco.titulo} no Last.fm`}
+                >
+                  Dados: Last.fm ↗
+                </a>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-sleeve rounded-xl border border-groove p-4">
+                  <p className="text-xs text-dust mb-1">Ouvintes</p>
+                  <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.listeners)}</p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-sleeve rounded-xl border border-groove p-4">
-                    <p className="text-xs text-dust mb-1">Ouvintes</p>
-                    <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.listeners)}</p>
-                  </div>
-                  <div className="bg-sleeve rounded-xl border border-groove p-4">
-                    <p className="text-xs text-dust mb-1">Reproduções</p>
-                    <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.playcount)}</p>
-                  </div>
+                <div className="bg-sleeve rounded-xl border border-groove p-4">
+                  <p className="text-xs text-dust mb-1">Reproduções</p>
+                  <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.playcount)}</p>
                 </div>
+              </div>
 
-                {albumInfo.wikiSummary && (
-                  <div className="bg-sleeve rounded-xl border border-groove p-4">
-                    <WikiExpander text={albumInfo.wikiSummary} />
-                  </div>
-                )}
+              {albumInfo.wikiSummary && (
+                <div className="bg-sleeve rounded-xl border border-groove p-4">
+                  <WikiExpander text={albumInfo.wikiSummary} />
+                </div>
+              )}
 
-                {rating && disco.reviewCount && disco.reviewCount > 0 && (
-                  <div className="bg-sleeve rounded-xl border border-groove p-4">
-                    <h3 className="text-xs font-semibold text-dust uppercase tracking-wide mb-3">Avaliação na Amazon</h3>
-                    <div className="flex items-center gap-3">
-                      <span className="font-display font-black text-gold text-3xl">{rating.toFixed(1)}</span>
-                      <div>
-                        <div className="flex items-center gap-0.5 mb-0.5">
-                          {Array.from({ length: 5 }, (_, i) => (
-                            <svg
-                              key={i}
-                              className={`w-3.5 h-3.5 ${i < stars ? "fill-gold text-gold" : "fill-none text-groove"}`}
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              aria-hidden="true"
-                            >
-                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                            </svg>
-                          ))}
-                        </div>
-                        <p className="text-xs text-dust">{disco.reviewCount.toLocaleString("pt-BR")} avaliações</p>
+              {rating && disco.reviewCount && disco.reviewCount > 0 && (
+                <div className="bg-sleeve rounded-xl border border-groove p-4">
+                  <h3 className="text-xs font-semibold text-dust uppercase tracking-wide mb-3">Avaliação na Amazon</h3>
+                  <div className="flex items-center gap-3">
+                    <span className="font-display font-black text-gold text-3xl">{rating.toFixed(1)}</span>
+                    <div>
+                      <div className="flex items-center gap-0.5 mb-0.5">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <svg
+                            key={i}
+                            className={`w-3.5 h-3.5 ${i < stars ? "fill-gold text-gold" : "fill-none text-groove"}`}
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            aria-hidden="true"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        ))}
                       </div>
+                      <p className="text-xs text-dust">{disco.reviewCount.toLocaleString("pt-BR")} avaliações</p>
                     </div>
                   </div>
-                )}
-              </section>
-            );
-          })() : undefined
+                </div>
+              )}
+            </section>
+          );
+        })() : undefined;
+
+        if (HIDE_PRICE_HISTORY) {
+          // Price history hidden — render Sobre content directly, no tabs, no empty Preços tab.
+          return sobreSection ?? null;
         }
-      />
+
+        return (
+          <TabNav
+            precosContent={
+              <section className="bg-sleeve rounded-xl border border-groove p-4 space-y-3">
+                <GraficoPreco precos={chartPrecos} />
+                {valores.length > 1 && <PriceHistoryTable rows={priceTableRows} />}
+              </section>
+            }
+            sobreContent={sobreSection}
+          />
+        );
+      })()}
 
       {/* Related deals */}
       {processedDeals.length > 0 && (

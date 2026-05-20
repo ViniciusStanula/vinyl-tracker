@@ -3,6 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { slugifyArtist } from "@/lib/utils/slugify";
 
+// NEXT_PUBLIC_HIDE_PRICE_HISTORY gates sparklines, deal badges, discount badges, and
+// struck-through avg prices on cards. Defaults to hidden (true) — fail-safe while
+// Amazon is the only price source (Associates Operating Agreement prohibits displaying
+// monitored price history). Set to "false" in env to re-enable, e.g. when Mercado
+// Livre is added and per-retailer gating replaces this global flag.
+const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
+
 export interface DiscoCardProps {
   id: string;
   slug: string;
@@ -80,8 +87,8 @@ export default memo(function DiscoCard({
   const artistaSlug       = slugifyArtist(disco.artista);
   const sparkline         = disco.sparkline ?? [];
 
-  // Score-3 gets a subtle gold ring
-  const cardRing = dealScore === 3 ? " ring-1 ring-gold/40" : "";
+  // Score-3 gets a subtle gold ring — suppressed when price history is hidden
+  const cardRing = (!HIDE_PRICE_HISTORY && dealScore === 3) ? " ring-1 ring-gold/40" : "";
 
   return (
     <div className={`relative group bg-sleeve rounded-xl overflow-hidden flex flex-col border border-groove hover:border-wax transition-colors duration-200${cardRing}`}>
@@ -118,8 +125,8 @@ export default memo(function DiscoCard({
         {/* Subtle gradient overlay — bottom fade for legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-record/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-        {/* Deal tier badge — subtle pill, bottom-left */}
-        {dealScore !== null && (
+        {/* Deal tier badge — suppressed when HIDE_PRICE_HISTORY */}
+        {!HIDE_PRICE_HISTORY && dealScore !== null && (
           <div className={`absolute bottom-2 left-2 z-20 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
             dealScore === 3
               ? "bg-gold/90 text-record"
@@ -133,8 +140,8 @@ export default memo(function DiscoCard({
           </div>
         )}
 
-        {/* Discount badge — pill, top-left */}
-        {descontoPercent > 0 && (
+        {/* Discount badge — suppressed alongside deal badge (% has no reference without avg) */}
+        {!HIDE_PRICE_HISTORY && descontoPercent > 0 && (
           <div className="absolute top-2 left-2 z-20 bg-cut text-cream text-xs font-black px-2.5 py-1 rounded-md shadow-lg shadow-cut/30 tabular-nums">
             -{descontoPercent}%
           </div>
@@ -145,11 +152,12 @@ export default memo(function DiscoCard({
         <a
           href={disco.url}
           target="_blank"
-          rel="nofollow noopener noreferrer"
+          rel="sponsored noopener noreferrer"
           className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity bg-record/80 text-cream text-xs font-medium px-2.5 py-1.5 rounded-md backdrop-blur-sm"
           aria-label={`Ver ${disco.titulo} na Amazon`}
         >
           Amazon ↗
+          <span className="block text-[9px] text-dust/70 leading-none mt-0.5">#anúncio</span>
         </a>
       </div>
 
@@ -171,7 +179,7 @@ export default memo(function DiscoCard({
 
         {/* ── Price section ──────────────────────────────────────── */}
         <div className="mt-auto pt-2">
-          {(sparkline.length >= 2 || showOriginalPrice) && (
+          {!HIDE_PRICE_HISTORY && (sparkline.length >= 2 || showOriginalPrice) && (
             <div className="flex items-center gap-2 mb-1">
               {sparkline.length >= 2 && <Sparkline values={sparkline} avg={disco.mediaPreco} />}
               {showOriginalPrice && (
