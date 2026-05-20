@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import createMDX from "@next/mdx";
+import remarkGfm from "remark-gfm";
 
 const SECURITY_HEADERS = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -23,11 +25,12 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  pageExtensions: ["ts", "tsx", "js", "jsx", "md", "mdx"],
   compress: true,
   poweredByHeader: false,
-  // Ensure data/top_artists.json is bundled in the serverless function for /top-artistas-spotify
+  // Ensure data/top_artists.json is bundled in the serverless function for /guias/top-artistas-spotify
   outputFileTracingIncludes: {
-    "/top-artistas-spotify": ["./data/top_artists.json"],
+    "/guias/top-artistas-spotify": ["./data/top_artists.json"],
   },
   images: {
     remotePatterns: [
@@ -36,8 +39,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images-fe.ssl-images-amazon.com" },
       { protocol: "https", hostname: "*.media-amazon.com" },
     ],
-    // Allow moderate compression quality — album art is already CDN-optimized
-    // unoptimized is set per-image in DiscoCard to avoid Vercel quota consumption
   },
   async headers() {
     return [
@@ -49,4 +50,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const withMDX = createMDX({
+  options: {
+    remarkPlugins: [remarkGfm],
+    rehypePlugins: [],
+  },
+});
+
+export default withMDX(nextConfig);

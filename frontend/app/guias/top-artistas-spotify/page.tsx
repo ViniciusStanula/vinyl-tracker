@@ -15,12 +15,12 @@ const PAGE_DESC =
 export const metadata: Metadata = {
   title: `${PAGE_TITLE} | Garimpa Vinil`,
   description: PAGE_DESC,
-  alternates: { canonical: "/top-artistas-spotify" },
+  alternates: { canonical: "/guias/top-artistas-spotify" },
   openGraph: {
     type: "article",
     title: PAGE_TITLE,
     description: PAGE_DESC,
-    url: "/top-artistas-spotify",
+    url: "/guias/top-artistas-spotify",
   },
   twitter: {
     card: "summary",
@@ -55,7 +55,7 @@ function buildJsonLd(data: ChartsData | null) {
     publisher: { "@type": "Organization", name: "Garimpa Vinil" },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `${SITE_URL}/top-artistas-spotify`,
+      "@id": `${SITE_URL}/guias/top-artistas-spotify`,
     },
   };
 }
@@ -68,11 +68,12 @@ export default function TopArtistasSptPage() {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Início", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
       {
         "@type": "ListItem",
-        position: 2,
+        position: 3,
         name: "Top Artistas Spotify",
-        item: `${SITE_URL}/top-artistas-spotify`,
+        item: `${SITE_URL}/guias/top-artistas-spotify`,
       },
     ],
   });
@@ -85,9 +86,13 @@ export default function TopArtistasSptPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumb }} />
 
       {/* ── Breadcrumb ──────────────────────────────────────────── */}
-      <nav className="mb-6 text-sm text-dust flex gap-2">
+      <nav className="mb-6 text-sm text-dust flex gap-2 flex-wrap">
         <Link href="/" className="hover:text-gold transition-colors">
           Início
+        </Link>
+        <span>›</span>
+        <Link href="/guias" className="hover:text-gold transition-colors">
+          Guias
         </Link>
         <span>›</span>
         <span className="text-parchment">Top Artistas Spotify</span>
