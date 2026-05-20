@@ -11,6 +11,7 @@ import WikiExpander from "@/components/WikiExpander";
 
 // Matches the flag in DiscoCard.tsx — see that file for full rationale.
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
+import { affiliateUrl } from "@/lib/affiliateUrl";
 import { slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
@@ -385,7 +386,7 @@ export default async function DiscoPage({
             {disponivel ? (
               <>
                 <a
-                  href={disco.url}
+                  href={affiliateUrl(disco.url)}
                   target="_blank"
                   rel="sponsored noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full bg-gold hover:bg-goldlit text-record font-bold text-sm py-4 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-record"

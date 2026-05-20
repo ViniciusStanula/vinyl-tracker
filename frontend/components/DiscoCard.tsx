@@ -2,6 +2,7 @@ import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { slugifyArtist } from "@/lib/utils/slugify";
+import { affiliateUrl } from "@/lib/affiliateUrl";
 
 // NEXT_PUBLIC_HIDE_PRICE_HISTORY gates sparklines, deal badges, discount badges, and
 // struck-through avg prices on cards. Defaults to hidden (true) — fail-safe while
@@ -150,7 +151,7 @@ export default memo(function DiscoCard({
 
         {/* Amazon quick-link — hover only */}
         <a
-          href={disco.url}
+          href={affiliateUrl(disco.url)}
           target="_blank"
           rel="sponsored noopener noreferrer"
           className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity bg-record/80 text-cream text-xs font-medium px-2.5 py-1.5 rounded-md backdrop-blur-sm"
