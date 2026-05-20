@@ -52,5 +52,10 @@ jobs:
         # Only redeploy when data actually changed.
         # Set VERCEL_DEPLOY_HOOK in repo Settings → Secrets → Actions.
         # Create the hook at: vercel.com → project → Settings → Git → Deploy Hooks
-        if: steps.commit.outputs.changed == 'true' && secrets.VERCEL_DEPLOY_HOOK != ''
-        run: curl -s -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$HOOK" ]; then
+            curl -s -X POST "$HOOK"
+          fi
