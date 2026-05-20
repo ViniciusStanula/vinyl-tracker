@@ -114,9 +114,9 @@ export default function TopArtistasSptPage() {
           , atualizado todos os dias às 8h&nbsp;UTC.
         </p>
         {data?.last_updated && (
-          <p className="mt-4 text-xs text-dust">
+          <p className="mt-4 text-xs text-parchment opacity-80">
             Última atualização:{" "}
-            <span className="text-gold font-medium">
+            <span className="text-gold font-medium opacity-100">
               {new Date(data.last_updated).toLocaleDateString("pt-BR", {
                 day: "2-digit",
                 month: "long",
@@ -173,52 +173,43 @@ export default function TopArtistasSptPage() {
       {/* ── Charts interativos ───────────────────────────────────── */}
       <ChartsContent data={data} />
 
-      {/* ── Seção explicativa extra ──────────────────────────────── */}
-      <section className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
-        <h2 className="font-display text-lg font-bold text-cream mb-3">
-          Sobre os dados
-        </h2>
-        <div className="space-y-3 text-parchment text-sm leading-relaxed">
-          <p>
-            Os dados vêm do{" "}
-            <a
-              href="https://kworb.net/spotify/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gold hover:text-goldlit underline underline-offset-2 transition-colors"
-            >
-              kworb.net
-            </a>
-            , um site independente que agrega e organiza os charts públicos do Spotify. O kworb.net
-            não é afiliado ao Spotify — ele consolida informações que o Spotify publica nos seus
-            próprios charts regionais.
-          </p>
-          <p>
-            As fotos dos artistas e a confirmação dos nomes vêm da API pública do Spotify (oEmbed),
-            sem necessidade de autenticação. Os números de ouvintes mensais também são do kworb.net,
-            que os coleta da página de perfil pública de cada artista no Spotify.
-          </p>
-          <p>
-            Este ranking é atualizado automaticamente uma vez por dia, logo após os charts do Spotify
-            serem atualizados. Não representa dados em tempo real — há uma defasagem de algumas horas.
-          </p>
-        </div>
-      </section>
+      {/* ── Seções explicativas — abaixo do ranking ──────────────── */}
+      <div className="mt-10 grid sm:grid-cols-2 gap-4">
+        <section className="bg-sleeve border border-groove rounded-xl p-6">
+          <h2 className="font-display text-base font-bold text-cream mb-3">
+            Sobre os dados
+          </h2>
+          <div className="space-y-3 text-parchment text-sm leading-relaxed">
+            <p>
+              Dados do{" "}
+              <a
+                href="https://kworb.net/spotify/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gold hover:text-goldlit underline underline-offset-2 transition-colors"
+              >
+                kworb.net
+              </a>
+              {" "}— site independente que agrega os charts públicos do Spotify. Fotos e
+              nomes via API pública do Spotify (oEmbed). Atualização diária, com defasagem
+              de algumas horas após os charts oficiais.
+            </p>
+          </div>
+        </section>
 
-      {/* ── Por que artistas globais dominam vários países? ──────── */}
-      <section className="mt-6 bg-sleeve border border-groove rounded-xl p-6">
-        <h2 className="font-display text-lg font-bold text-cream mb-3">
-          Por que alguns artistas aparecem em tantos países?
-        </h2>
-        <p className="text-parchment text-sm leading-relaxed">
-          Artistas com apelo global — como pop internacional e K-pop — costumam dominar charts em
-          múltiplos países ao mesmo tempo. Já artistas regionais (funk brasileiro, corrido mexicano,
-          J-pop) tendem a aparecer apenas no chart do seu país de origem. A seção{" "}
-          <span className="text-gold font-medium">&ldquo;Artistas mais globais&rdquo;</span> abaixo
-          mostra quem tem mais presença simultânea no dia de hoje — uma boa medida de quem está
-          dominando o Spotify no mundo.
-        </p>
-      </section>
+        <section className="bg-sleeve border border-groove rounded-xl p-6">
+          <h2 className="font-display text-base font-bold text-cream mb-3">
+            Por que alguns artistas aparecem em vários países?
+          </h2>
+          <p className="text-parchment text-sm leading-relaxed">
+            Artistas com apelo global (pop internacional, K-pop) dominam múltiplos
+            países ao mesmo tempo. Artistas regionais (funk, corrido, J-pop) tendem
+            a aparecer só no chart do seu país. A tabela{" "}
+            <span className="text-gold font-medium">&ldquo;Artistas mais globais&rdquo;</span>{" "}
+            acima mostra essa presença simultânea.
+          </p>
+        </section>
+      </div>
     </main>
   );
 }

@@ -34,9 +34,9 @@ function ArtistCard({ artist }: { artist: Artist }) {
       href={artist.spotify_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-3 bg-label border border-groove rounded-xl p-3 hover:border-wax transition-colors"
+      className="group flex items-center gap-3 bg-label border border-groove rounded-xl p-3 hover:border-patina active:border-gold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-record"
     >
-      <span className="text-dust text-xs font-bold w-5 text-right shrink-0">
+      <span className="text-parchment text-xs font-bold w-5 text-right shrink-0 tabular-nums">
         #{artist.rank}
       </span>
 
@@ -46,28 +46,31 @@ function ArtistCard({ artist }: { artist: Artist }) {
           src={artist.image_url}
           alt={artist.name}
           loading="lazy"
+          decoding="async"
+          width={48}
+          height={48}
           className="w-12 h-12 rounded-full object-cover shrink-0"
         />
       ) : (
-        <div className="w-12 h-12 rounded-full bg-groove shrink-0" />
+        <div className="w-12 h-12 rounded-full bg-groove shrink-0" aria-hidden="true" />
       )}
 
       <div className="min-w-0 flex-1">
         <p className="text-cream text-sm font-semibold truncate group-hover:text-gold transition-colors">
           {artist.name}
         </p>
-        <p className="text-dust text-xs truncate">
+        <p className="text-parchment text-xs truncate opacity-80">
           {fmtNum(artist.chart_streams)} streams/dia
         </p>
         {artist.monthly_listeners > 0 && (
-          <p className="text-dust text-xs truncate">
+          <p className="text-parchment text-xs truncate opacity-70">
             {fmtNum(artist.monthly_listeners)} ouvintes/mês
           </p>
         )}
       </div>
 
       <svg
-        className="w-4 h-4 text-[#1db954] shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
+        className="w-4 h-4 text-[#1db954] shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
         viewBox="0 0 24 24"
         fill="currentColor"
         aria-hidden="true"
@@ -128,7 +131,7 @@ function GlobalTable({
                 key={a.url}
                 className="border-b border-groove last:border-0 hover:bg-sleeve transition-colors"
               >
-                <td className="px-4 py-3 text-dust">{i + 1}</td>
+                <td className="px-4 py-3 text-parchment opacity-70 tabular-nums">{i + 1}</td>
                 <td className="px-3 py-3">
                   {a.image ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -136,10 +139,13 @@ function GlobalTable({
                       src={a.image}
                       alt={a.name}
                       loading="lazy"
+                      decoding="async"
+                      width={32}
+                      height={32}
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-groove" />
+                    <div className="w-8 h-8 rounded-full bg-groove" aria-hidden="true" />
                   )}
                 </td>
                 <td className="px-3 py-3">
@@ -177,8 +183,8 @@ export default function ChartsContent({ data }: { data: ChartsData | null }) {
     return (
       <div className="bg-sleeve border border-groove rounded-xl p-8 text-center">
         <p className="text-parchment text-sm">
-          Dados ainda não disponíveis. Execute o workflow no GitHub Actions para
-          gerar o ranking pela primeira vez.
+          Ranking ainda não disponível — os dados são atualizados uma vez por dia.
+          Volte em breve.
         </p>
       </div>
     );
@@ -200,11 +206,12 @@ export default function ChartsContent({ data }: { data: ChartsData | null }) {
           id="country-select"
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
-          className="appearance-none bg-sleeve border border-groove text-cream rounded-lg px-4 py-2.5 pr-10 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:ring-offset-record"
+          className="appearance-none bg-sleeve border border-groove text-cream rounded-lg px-4 py-3 pr-10 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:ring-offset-record"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23d98f0e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
             backgroundRepeat: "no-repeat",
             backgroundPosition: "right 0.75rem center",
+            touchAction: "manipulation",
           }}
         >
           {countryEntries.map(([code, cd]) => (
