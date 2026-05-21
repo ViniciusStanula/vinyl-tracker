@@ -49,14 +49,6 @@ const GUIDES: Guide[] = [
     tag: "ranking",
     updated: true,
   },
-  {
-    slug: "como-cuidar-do-seu-disco-de-vinil",
-    title: "Como cuidar do seu disco de vinil",
-    description:
-      "Guia completo de limpeza, armazenamento e manuseio para manter seus discos em perfeito estado por décadas.",
-    date: "2026-05-20",
-    tag: "guia",
-  },
 ];
 
 function GuideCard({ guide }: { guide: Guide }) {
