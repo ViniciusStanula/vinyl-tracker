@@ -165,12 +165,12 @@ export default function TopArtistasSptPage() {
             Como usar para garimpar vinil?
           </h2>
           <p className="text-parchment text-sm leading-relaxed">
-            Artistas no topo do chart tendem a ter discos em alta demanda — e às vezes em promoção.
-            Use o ranking para descobrir artistas que você ainda não conhece e pesquise no{" "}
+            Artistas em alta costumam ter discos com demanda crescente — e preços que sobem rápido.
+            Viu um nome novo no ranking? Pesquise no{" "}
             <Link href="/" className="text-gold hover:text-goldlit underline underline-offset-2 transition-colors">
               Garimpa Vinil
             </Link>{" "}
-            se há vinil deles disponível na Amazon Brasil.
+            se há vinil disponível na Amazon Brasil antes que o preço suba.
           </p>
         </div>
       </section>

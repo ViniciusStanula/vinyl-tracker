@@ -83,6 +83,8 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://m.media-amazon.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://images-na.ssl-images-amazon.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://image-cdn-ak.spotifycdn.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://image-cdn-fa.spotifycdn.com" crossOrigin="anonymous" />
         <Script
           id="gtm-script"
           strategy="afterInteractive"
@@ -94,8 +96,12 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','GTM-KHJQ7PHC');`,
           }}
         />
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2737529660111962" crossOrigin="anonymous" />
+        <Script
+          id="adsbygoogle"
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2737529660111962"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="min-h-screen bg-record text-cream antialiased">
         <noscript>

@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+import type { JSX } from "react";
 
 export interface Artist {
   rank: number;
@@ -28,7 +26,7 @@ function fmtNum(n: number): string {
   return n.toString();
 }
 
-function ArtistCard({ artist }: { artist: Artist }) {
+function ArtistCard({ artist, isPriority = false }: { artist: Artist; isPriority?: boolean }): JSX.Element {
   return (
     <a
       href={artist.spotify_url}
@@ -41,12 +39,13 @@ function ArtistCard({ artist }: { artist: Artist }) {
       </span>
 
       {artist.image_url ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={artist.image_url}
           alt={artist.name}
-          loading="lazy"
-          decoding="async"
+          loading={isPriority ? "eager" : "lazy"}
+          fetchPriority={isPriority ? "high" : "auto"}
+          decoding={isPriority ? "sync" : "async"}
           width={48}
           height={48}
           className="w-12 h-12 rounded-full object-cover shrink-0"
@@ -62,11 +61,6 @@ function ArtistCard({ artist }: { artist: Artist }) {
         <p className="text-parchment text-xs truncate opacity-80">
           {fmtNum(artist.chart_streams)} streams/dia
         </p>
-        {artist.monthly_listeners > 0 && (
-          <p className="text-parchment text-xs truncate opacity-70">
-            {fmtNum(artist.monthly_listeners)} ouvintes/mês
-          </p>
-        )}
       </div>
 
       <svg
@@ -85,7 +79,7 @@ function GlobalTable({
   countries,
 }: {
   countries: Record<string, CountryData>;
-}) {
+}): JSX.Element | null {
   const counts: Record<
     string,
     { name: string; image: string; url: string; n: number }
@@ -106,8 +100,8 @@ function GlobalTable({
   if (ranked.length === 0) return null;
 
   return (
-    <>
-      <h2 className="font-display text-xl font-bold text-cream mt-10 mb-1">
+    <section className="mb-10" aria-labelledby="global-table-heading">
+      <h2 id="global-table-heading" className="font-display text-xl font-bold text-cream mb-1">
         Artistas mais globais
       </h2>
       <p className="text-dust text-sm mb-4">
@@ -134,7 +128,7 @@ function GlobalTable({
                 <td className="px-4 py-3 text-parchment opacity-70 tabular-nums">{i + 1}</td>
                 <td className="px-3 py-3">
                   {a.image ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={a.image}
                       alt={a.name}
@@ -169,15 +163,41 @@ function GlobalTable({
           </tbody>
         </table>
       </div>
-    </>
+    </section>
+  );
+}
+
+function CountryJumpNav({
+  entries,
+}: {
+  entries: [string, CountryData][];
+}): JSX.Element {
+  return (
+    <nav
+      id="country-nav"
+      aria-label="Navegar para o ranking de um país"
+      className="mb-8 scroll-mt-4"
+    >
+      <p className="text-dust text-xs font-semibold uppercase tracking-wide mb-3">
+        Ir para o país
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {entries.map(([code, cd]) => (
+          <a
+            key={code}
+            href={`#pais-${code}`}
+            className="text-xs bg-sleeve border border-groove text-parchment hover:text-gold hover:border-patina rounded-full px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+          >
+            {cd.country_name}
+          </a>
+        ))}
+      </div>
+    </nav>
   );
 }
 
 export default function ChartsContent({ data }: { data: ChartsData | null }) {
   const countryEntries = Object.entries(data?.countries ?? {});
-  const [selected, setSelected] = useState<string>(
-    countryEntries[0]?.[0] ?? ""
-  );
 
   if (countryEntries.length === 0) {
     return (
@@ -190,54 +210,45 @@ export default function ChartsContent({ data }: { data: ChartsData | null }) {
     );
   }
 
-  const currentCountry = data?.countries[selected];
-
   return (
     <>
-      {/* ── Seletor de país ───────────────────────────────────── */}
-      <div className="mb-6">
-        <label
-          htmlFor="country-select"
-          className="block text-dust text-sm mb-2 font-medium"
-        >
-          Selecione o país
-        </label>
-        <select
-          id="country-select"
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          className="appearance-none bg-sleeve border border-groove text-cream rounded-lg px-4 py-3 pr-10 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-1 focus:ring-offset-record"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23d98f0e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "right 0.75rem center",
-            touchAction: "manipulation",
-          }}
-        >
-          {countryEntries.map(([code, cd]) => (
-            <option key={code} value={code}>
-              {cd.country_name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <GlobalTable countries={data?.countries ?? {}} />
 
-      {/* ── Cards do país selecionado ─────────────────────────── */}
-      {currentCountry && (
-        <section aria-label={`Top 10 — ${currentCountry.country_name}`}>
-          <h2 className="font-display text-xl font-bold text-gold mb-4">
-            {currentCountry.country_name}
-          </h2>
+      <CountryJumpNav entries={countryEntries} />
+
+      {countryEntries.map(([code, cd], sectionIndex) => (
+        <section
+          key={code}
+          id={`pais-${code}`}
+          aria-labelledby={`heading-pais-${code}`}
+          className="mb-12 scroll-mt-4"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2
+              id={`heading-pais-${code}`}
+              className="font-display text-xl font-bold text-gold"
+            >
+              {cd.country_name}
+            </h2>
+            <a
+              href="#country-nav"
+              className="text-xs text-dust hover:text-gold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+              aria-label="Voltar para lista de países"
+            >
+              ↑ ver todos os países
+            </a>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {currentCountry.artists.map((artist) => (
-              <ArtistCard key={artist.spotify_id} artist={artist} />
+            {cd.artists.map((artist) => (
+              <ArtistCard
+                key={artist.spotify_id}
+                artist={artist}
+                isPriority={sectionIndex === 0 && artist.rank === 1}
+              />
             ))}
           </div>
         </section>
-      )}
-
-      {/* ── Tabela global ─────────────────────────────────────── */}
-      <GlobalTable countries={data?.countries ?? {}} />
+      ))}
     </>
   );
 }
