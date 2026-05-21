@@ -2543,10 +2543,6 @@ def parse_args():
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument(
-        "--stale-max", type=int, default=200, metavar="N",
-        help="Max stale records to re-fetch per run (0 = unlimited, default: 200)",
-    )
-    parser.add_argument(
         "--stale-workers", type=int, default=2, metavar="N",
         help="Parallel workers for stale-records fetching (default: 2)",
     )
