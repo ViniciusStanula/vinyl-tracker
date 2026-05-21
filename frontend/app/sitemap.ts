@@ -35,6 +35,8 @@ export default async function sitemap(props: {
       { url: `${SITEMAP_BASE}/discos-abaixo-de-200` },
       { url: `${SITEMAP_BASE}/artistas-mais-ouvidos` },
       { url: `${SITEMAP_BASE}/sobre` },
+      { url: `${SITEMAP_BASE}/guias` },
+      { url: `${SITEMAP_BASE}/guias/top-artistas-spotify` },
     ];
   }
 

@@ -27,6 +27,11 @@ const STATIC_PAGES = [
   { nome: "Termos de Uso",           href: "/termos-de-uso" },
 ];
 
+const GUIAS_PAGES = [
+  { nome: "Guias de Vinil",                   href: "/guias" },
+  { nome: "Top Artistas do Spotify por País", href: "/guias/top-artistas-spotify" },
+];
+
 // Group artists alphabetically by first letter
 function groupByLetter(artists: { nome: string; slug: string }[]) {
   const map = new Map<string, { nome: string; slug: string }[]>();
@@ -79,6 +84,20 @@ export default async function SitemapPage() {
         <h2 className="font-display text-xl font-bold text-cream mb-4">Páginas</h2>
         <ul className="flex flex-wrap gap-x-6 gap-y-2">
           {STATIC_PAGES.map(({ nome, href }) => (
+            <li key={href}>
+              <Link href={href} className="text-parchment hover:text-gold transition-colors text-sm">
+                {nome}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ── Guias ───────────────────────────────────────────────── */}
+      <section className="mb-8 bg-sleeve border border-groove rounded-xl p-6">
+        <h2 className="font-display text-xl font-bold text-cream mb-4">Guias</h2>
+        <ul className="flex flex-wrap gap-x-6 gap-y-2">
+          {GUIAS_PAGES.map(({ nome, href }) => (
             <li key={href}>
               <Link href={href} className="text-parchment hover:text-gold transition-colors text-sm">
                 {nome}
