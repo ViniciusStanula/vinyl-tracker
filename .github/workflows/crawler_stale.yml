@@ -36,9 +36,7 @@ jobs:
         #                   re-checking prices on existing records (Phase 3).
         # --stale-workers 4 parallel Amazon fetches.
         # --time-limit 100  fits within the 2-hour schedule window with 20 min to spare.
-        # claim locking in fetch_stale_records ensures no duplicate work if this run
-        # overlaps with the main crawler.
-        run: python crawler/main.py --stale-only --stale-workers 4 --stale-max 0 --time-limit 100
+        run: python crawler/main.py --stale-only --stale-workers 4 --time-limit 100
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}

@@ -42,13 +42,11 @@ jobs:
           restore-keys: crawl-state-
 
       - name: Run crawler
-        # --stale-max 0     unlimited stale records; Phase 3 crawls until the time budget
-        #                   runs out, not until an arbitrary count is hit.
         # --stale-workers 4 runs Phase 0 (deal re-validation) and Phase 3 in parallel;
         #                   cuts Phase 0 time from ~27 min to ~14 min, freeing budget for Phase 3.
         # --time-limit 160  leaves a 20-min buffer before the GHA 180-min ceiling.
         # --max-pages omitted → uses MAX_PAGES_DEFAULT (400 × CATEGORY_SLICE_FRACTION = 80 pages = 20%).
-        run: python crawler/main.py --stale-max 0 --stale-workers 4 --time-limit 160
+        run: python crawler/main.py --stale-workers 4 --time-limit 160
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
