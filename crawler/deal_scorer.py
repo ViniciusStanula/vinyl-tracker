@@ -220,6 +220,10 @@ def score_deals(conn) -> dict:
     now = datetime.now(timezone.utc)
 
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        # PgBouncer (transaction mode) resets session-level settings between
+        # transactions, so statement_timeout=0 in get_connection()'s options= string
+        # does not survive.  SET LOCAL is the only reliable override.
+        cur.execute("SET LOCAL statement_timeout = 0")
         # Single query: compute all rolling benchmarks and fetch current deal state.
         # avg_30d is adaptive — falls back to all-time average when < 30 days of data.
         #
@@ -410,6 +414,7 @@ def score_deals(conn) -> dict:
 
     # Batch write 1: update benchmark stats + deal_score for all products
     with conn.cursor() as cur:
+        cur.execute("SET LOCAL statement_timeout = 0")
         psycopg2.extras.execute_batch(
             cur,
             """
