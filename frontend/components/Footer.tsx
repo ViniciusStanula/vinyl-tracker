@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { label: "Início",                href: "/" },
   { label: "Todos os Discos",       href: "/disco" },
   { label: "Artistas mais Ouvidos", href: "/artistas-mais-ouvidos" },
+  { label: "Guias de Vinil",        href: "/guias" },
   { label: "Sobre o Site",          href: "/sobre" },
 ];
 

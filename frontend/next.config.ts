@@ -27,9 +27,11 @@ const nextConfig: NextConfig = {
   pageExtensions: ["ts", "tsx", "js", "jsx", "md", "mdx"],
   compress: true,
   poweredByHeader: false,
-  // Ensure data/top_artists.json is bundled in the serverless function for /guias/top-artistas-spotify
+  // Ensure JSON data files are bundled in the serverless functions that need them
   outputFileTracingIncludes: {
     "/guias/top-artistas-spotify": ["./data/top_artists.json"],
+    "/guias/rock": ["../enriched_data.json"],
+    "/guias/rock/[slug]": ["../enriched_data.json"],
   },
   images: {
     remotePatterns: [

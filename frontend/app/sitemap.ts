@@ -7,6 +7,7 @@ import {
   DISCO_SHARDS,
   type DiscoShard,
 } from "@/lib/db/sitemap";
+import { getRockSubgenres } from "@/lib/guias/rock-data";
 
 export const revalidate = 86400;
 
@@ -29,14 +30,22 @@ export default async function sitemap(props: {
   const id = await props.id;
 
   if (id === "estatico") {
+    const rockSubgenres = getRockSubgenres();
+    const now = new Date();
     return [
-      { url: SITEMAP_BASE },
-      { url: `${SITEMAP_BASE}/disco` },
-      { url: `${SITEMAP_BASE}/discos-abaixo-de-200` },
-      { url: `${SITEMAP_BASE}/artistas-mais-ouvidos` },
-      { url: `${SITEMAP_BASE}/sobre` },
-      { url: `${SITEMAP_BASE}/guias` },
-      { url: `${SITEMAP_BASE}/guias/top-artistas-spotify` },
+      { url: SITEMAP_BASE, lastModified: now, changeFrequency: "daily", priority: 1.0 },
+      { url: `${SITEMAP_BASE}/disco`, changeFrequency: "daily", priority: 0.8 },
+      { url: `${SITEMAP_BASE}/discos-abaixo-de-200`, changeFrequency: "daily", priority: 0.7 },
+      { url: `${SITEMAP_BASE}/artistas-mais-ouvidos`, changeFrequency: "weekly", priority: 0.6 },
+      { url: `${SITEMAP_BASE}/sobre`, changeFrequency: "monthly", priority: 0.4 },
+      { url: `${SITEMAP_BASE}/guias`, changeFrequency: "weekly", priority: 0.8 },
+      { url: `${SITEMAP_BASE}/guias/top-artistas-spotify`, changeFrequency: "daily", priority: 0.7 },
+      { url: `${SITEMAP_BASE}/guias/rock`, changeFrequency: "monthly", priority: 0.8 },
+      ...rockSubgenres.map((sg) => ({
+        url: `${SITEMAP_BASE}/guias/rock/${sg.slug}`,
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      })),
     ];
   }
 

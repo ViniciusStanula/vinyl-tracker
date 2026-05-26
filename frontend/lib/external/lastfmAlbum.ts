@@ -66,6 +66,43 @@ async function translateToPtBr(text: string): Promise<string | null> {
   }
 }
 
+export const fetchLastfmAlbumCover = unstable_cache(
+  async (artist: string, album: string): Promise<string | null> => {
+    const apiKey = process.env.LASTFM_API_KEY;
+    if (!apiKey) return null;
+    try {
+      // MusicBrainz titles can be wrapped in brackets e.g. "[Led Zeppelin IV]".
+      // cleanAlbumTitle strips ALL bracket content, making the title empty.
+      // Strip enclosing brackets first so cleanAlbumTitle sees the real title.
+      const unwrapped = album.replace(/^\[(.+)\]$/, "$1").trim();
+      const cleaned = cleanAlbumTitle(unwrapped, artist) || unwrapped;
+      const url = new URL("https://ws.audioscrobbler.com/2.0/");
+      url.searchParams.set("method", "album.getInfo");
+      url.searchParams.set("artist", artist);
+      url.searchParams.set("album", cleaned);
+      url.searchParams.set("api_key", apiKey);
+      url.searchParams.set("format", "json");
+      const res = await fetch(url.toString(), { cache: "no-store" });
+      if (!res.ok) return null;
+      const data = await res.json() as {
+        error?: number;
+        album?: { image?: Array<{ "#text": string; size: string }> };
+      };
+      if (data.error || !data.album) return null;
+      const images = data.album.image ?? [];
+      for (const size of ["extralarge", "mega", "large", "medium"]) {
+        const img = images.find((i) => i.size === size);
+        if (img?.["#text"]) return img["#text"];
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+  ["lastfm-album-cover-v2"],
+  { revalidate: 86400 * 30 }
+);
+
 export const fetchLastfmAlbumInfo = unstable_cache(
   async (artist: string, album: string): Promise<LastfmAlbumInfo | null> => {
     const apiKey = process.env.LASTFM_API_KEY;

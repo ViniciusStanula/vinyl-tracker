@@ -41,6 +41,14 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "rock",
+    title: "Melhores Discos de Rock por Subgênero",
+    description:
+      "Mais de 11.000 álbuns de 1.000 artistas organizados em 18 subgêneros — classic rock, grunge, indie rock, shoegaze e muito mais. Rankings baseados em avaliações do Discogs.",
+    date: "2026-05-25",
+    tag: "ranking",
+  },
+  {
     slug: "top-artistas-spotify",
     title: "Top Artistas do Spotify por País",
     description:
