@@ -41,6 +41,14 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "como-cuidar-de-discos-de-vinil",
+    title: "Como Cuidar de Discos de Vinil",
+    description:
+      "Guia completo: limpeza, armazenamento no clima do Brasil, cuidados com a agulha, os 5 erros que destroem coleções e checklist de manutenção para sua coleção durar décadas.",
+    date: "2026-05-27",
+    tag: "guia",
+  },
+  {
     slug: "rock",
     title: "Melhores Discos de Rock por Subgênero",
     description:
