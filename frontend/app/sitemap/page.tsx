@@ -28,8 +28,10 @@ const STATIC_PAGES = [
 ];
 
 const GUIAS_PAGES = [
-  { nome: "Guias de Vinil",                   href: "/guias" },
-  { nome: "Top Artistas do Spotify por País", href: "/guias/top-artistas-spotify" },
+  { nome: "Guias de Vinil",                          href: "/guias" },
+  { nome: "Como Cuidar de Discos de Vinil",          href: "/guias/como-cuidar-de-discos-de-vinil" },
+  { nome: "Melhores Discos de Rock por Subgênero",   href: "/guias/rock" },
+  { nome: "Top Artistas do Spotify por País",        href: "/guias/top-artistas-spotify" },
 ];
 
 // Group artists alphabetically by first letter
