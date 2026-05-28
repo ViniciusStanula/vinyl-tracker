@@ -265,17 +265,6 @@ def score_deals(conn) -> dict:
                 FROM "HistoricoPreco" h
                 WHERE h."precoBrl" >= %s
                 GROUP BY h."discoId"
-            ),
-            latest AS (
-                SELECT DISTINCT ON ("discoId")
-                    "discoId",
-                    "precoBrl"::float AS current_price,
-                    -- Fetched so the Python loop can detect price data that hasn't
-                    -- been refreshed in STALE_DEAL_HOURS and clear the deal badge.
-                    "capturadoEm"     AS latest_captured_at
-                FROM "HistoricoPreco"
-                WHERE "precoBrl" >= %s
-                ORDER BY "discoId", "capturadoEm" DESC
             )
             SELECT
                 d.id,
@@ -302,8 +291,20 @@ def score_deals(conn) -> dict:
                 --      than converting NULL → 0.0 and silently skipping the product.
                 COALESCE(s.avg_30d_strict, s.avg_all_time) AS avg_30d
             FROM "Disco" d
-            INNER JOIN stats  s ON s."discoId" = d.id
-            INNER JOIN latest l ON l."discoId" = d.id
+            INNER JOIN stats s ON s."discoId" = d.id
+            -- LATERAL replaces the old `latest` CTE: fetches the most-recent
+            -- qualifying price per Disco row using the FK index on "discoId"
+            -- instead of a second full sequential scan of HistoricoPreco.
+            JOIN LATERAL (
+                SELECT
+                    "precoBrl"::float AS current_price,
+                    "capturadoEm"     AS latest_captured_at
+                FROM "HistoricoPreco"
+                WHERE "discoId" = d.id
+                  AND "precoBrl" >= %s
+                ORDER BY "capturadoEm" DESC
+                LIMIT 1
+            ) l ON TRUE
             """,
             (MIN_DEAL_PRICE_BRL, MIN_DEAL_PRICE_BRL),
         )
