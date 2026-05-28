@@ -38,6 +38,16 @@ deal_score field:
 - [Top listened artists](${SITE}/artistas-mais-ouvidos)
 - [Sitemap index](${SITE}/sitemap.xml)
 
+## Guias Editoriais
+
+Long-form editorial guides about vinyl records in Brazilian Portuguese:
+
+- [Como Cuidar de Discos de Vinil](${SITE}/guias/como-cuidar-de-discos-de-vinil) — Guia completo de limpeza, armazenamento no clima do Brasil, cuidados com agulha, os 5 erros que destroem coleções e checklist de manutenção diária/mensal/anual. ~4.000 palavras. Publicado 2026-05-27.
+- [Melhores Discos de Rock por Subgênero](${SITE}/guias/rock) — Ranking Bayesiano de álbuns de rock por subgênero (18 subgêneros) baseado em avaliações Discogs de mais de 11.000 álbuns de 1.000+ artistas.
+- [Top Artistas do Spotify por País](${SITE}/guias/top-artistas-spotify) — Ranking diário dos 10 artistas mais ouvidos no Spotify em 20 países. Atualizado às 8h UTC.
+
+Full article text available at: ${SITE}/llms-full.txt
+
 ## Data Fields
 
 Each record includes: slug (URL identifier), titulo (album name), artista (artist name), generos (Last.fm genre tags array), preco_atual_brl (current price in BRL), media_30d_brl (30-day average price in BRL), desconto_pct (discount % vs 30-day average), deal_score (1–3 or null), avaliacao_amazon (Amazon star rating), url_garimpa (page on this site), url_amazon (Amazon product link).

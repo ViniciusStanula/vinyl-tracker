@@ -39,6 +39,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images-na.ssl-images-amazon.com" },
       { protocol: "https", hostname: "images-fe.ssl-images-amazon.com" },
       { protocol: "https", hostname: "*.media-amazon.com" },
+      { protocol: "https", hostname: "images.pexels.com" },
     ],
   },
   async headers() {

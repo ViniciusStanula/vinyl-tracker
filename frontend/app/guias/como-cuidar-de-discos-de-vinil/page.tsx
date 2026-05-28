@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 function IconCheck({ className = "" }: { className?: string }) {
@@ -52,11 +53,11 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.b
 const SLUG = "como-cuidar-de-discos-de-vinil";
 const PAGE_TITLE = "Como Cuidar de Discos de Vinil: Guia Completo Para Sua Coleção Durar Décadas";
 const PAGE_DESC =
-  "Guia completo sobre como cuidar de discos de vinil: limpeza, armazenamento no clima brasileiro, cuidados com a agulha, erros a evitar e checklist de manutenção. Tudo que você precisa para sua coleção durar décadas.";
+  "Guia de limpeza, armazenamento no clima do Brasil, cuidados com agulha e checklist de manutenção para sua coleção de vinil durar décadas.";
 const DATE = "2026-05-27";
 
 export const metadata: Metadata = {
-  title: `${PAGE_TITLE} | Garimpa Vinil`,
+  title: "Como Cuidar de Discos de Vinil: Guia Completo | Garimpa Vinil",
   description: PAGE_DESC,
   alternates: { canonical: `/guias/${SLUG}` },
   openGraph: {
@@ -64,8 +65,9 @@ export const metadata: Metadata = {
     title: PAGE_TITLE,
     description: PAGE_DESC,
     url: `/guias/${SLUG}`,
+    images: [{ url: `${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`, width: 6000, height: 4000, alt: "Agulha Philips sobre disco de vinil girando no prato do toca-discos" }],
   },
-  twitter: { card: "summary", title: PAGE_TITLE, description: PAGE_DESC },
+  twitter: { card: "summary_large_image", title: PAGE_TITLE, description: PAGE_DESC, images: [`${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`] },
 };
 
 const TOC = [
@@ -119,9 +121,14 @@ export default function ComoGuardarPage() {
     datePublished: DATE,
     dateModified: DATE,
     inLanguage: "pt-BR",
-    author: { "@type": "Organization", name: "Garimpa Vinil", url: SITE_URL },
+    wordCount: 4328,
+    articleSection: "Guias",
+    keywords: "cuidar de discos de vinil, limpar disco de vinil, armazenar vinil, limpeza vinil, manutenção vinil",
+    author: { "@type": "Person", name: "Equipe Garimpa Vinil", url: `${SITE_URL}/sobre` },
     publisher: { "@type": "Organization", name: "Garimpa Vinil", url: SITE_URL },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
+    image: { "@type": "ImageObject", url: `${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`, width: 6000, height: 4000 },
+    speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1"] },
   });
 
   const breadcrumbLd = JSON.stringify({
@@ -192,6 +199,18 @@ export default function ComoGuardarPage() {
         </div>
       </header>
 
+      {/* Hero image */}
+      <figure className="mb-8 rounded-2xl overflow-hidden">
+        <Image
+          src="/blog/como-cuidar-de-discos-de-vinil.jpg"
+          alt="Agulha Philips sobre disco de vinil girando no prato do toca-discos"
+          width={1200}
+          height={800}
+          className="w-full object-cover max-h-96"
+          priority
+        />
+      </figure>
+
       {/* Table of Contents */}
       <nav aria-label="Índice do artigo" className="bg-sleeve border border-groove rounded-xl p-5 mb-8">
         <p className="font-display text-sm font-bold text-cream mb-3">Neste guia</p>
@@ -215,19 +234,20 @@ export default function ComoGuardarPage() {
 
         {/* 1 */}
         <section id="por-que-cuidar">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
             Por Que Cuidar do Vinil Faz Mais Diferença do Que Você Imagina
           </h2>
-          <div className="space-y-4 text-parchment text-sm leading-relaxed">
+          <div className="space-y-4 text-parchment text-base leading-relaxed">
             <p>
-              O disco de vinil é, na prática, um pedaço de PVC com ondas sonoras desenhadas em
-              sulcos microscópicos. Quando o disco é prensado, a vibração do áudio original é
-              traduzida em pequenas ondulações nas paredes desse sulco — quanto mais grave o som,
-              mais larga a ondulação; quanto mais agudo, mais fina. Na hora de tocar, a agulha do
-              toca-discos percorre esse sulco e &quot;lê&quot; cada ondulação como vibração mecânica, que
-              vira sinal elétrico, que vira música saindo da caixa. É um processo lindo, mas
-              absurdamente delicado: estamos falando de uma agulha de diamante apoiada num sulco
-              mais fino que um fio de cabelo.
+              Um LP de 12 polegadas tem aproximadamente 500 metros de sulco gravado — meio
+              quilômetro em espiral, com largura de cerca de 0,04 mm, menor que um fio de cabelo
+              humano. Quando o disco é prensado, a vibração do áudio original é traduzida em
+              pequenas ondulações nas paredes desse sulco: quanto mais grave o som, mais larga a
+              ondulação; quanto mais agudo, mais fina. Na hora de tocar, a agulha de diamante
+              percorre esses 500 metros a 33⅓ rpm e &quot;lê&quot; cada ondulação como vibração mecânica,
+              que vira sinal elétrico, que vira música. É um processo absurdamente delicado — e é
+              exatamente por isso que qualquer descuido no manuseio, na limpeza ou no armazenamento
+              deixa marca permanente.
             </p>
             <p>
               E muitos desses discos carregam um valor emocional por cima do som. Foram herdados
@@ -240,14 +260,24 @@ export default function ComoGuardarPage() {
 
         {/* 2 */}
         <section id="5-erros">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
             Os 5 Erros Que Mais Destroem Discos de Vinil
           </h2>
-          <p className="text-parchment text-sm leading-relaxed mb-6">
+          <p className="text-parchment text-base leading-relaxed mb-6">
             Antes de partir pro guia completo, vale listar o que está provavelmente matando seus
             discos agora. Se você faz qualquer uma das coisas a seguir, precisa parar antes de
             qualquer outra coisa.
           </p>
+          <figure className="my-4 rounded-xl overflow-hidden">
+            <Image
+              src="https://images.pexels.com/photos/4433316/pexels-photo-4433316.jpeg?auto=compress&cs=tinysrgb&w=800"
+              alt="Discos de vinil empilhados na horizontal sobre uma superfície, mostrando armazenamento incorreto"
+              width={800}
+              height={1067}
+              className="w-full object-cover max-h-72"
+            />
+            <figcaption className="text-xs text-dust mt-2 px-1">Armazenamento horizontal — o peso comprime os discos inferiores e causa empenamento permanente.</figcaption>
+          </figure>
           <div className="space-y-4">
             {[
               {
@@ -272,11 +302,11 @@ export default function ComoGuardarPage() {
               },
             ].map(({ title, text }, i) => (
               <div key={i} className="bg-sleeve border border-groove rounded-xl p-5">
-                <h3 className="font-display text-base font-bold text-cream mb-2">
+                <h3 className="font-display text-base font-bold text-cream mb-3">
                   <span className="text-gold mr-2">{i + 1}.</span>
                   {title}
                 </h3>
-                <p className="text-parchment text-sm leading-relaxed">{text}</p>
+                <p className="text-parchment text-base leading-relaxed">{text}</p>
               </div>
             ))}
           </div>
@@ -284,17 +314,17 @@ export default function ComoGuardarPage() {
 
         {/* 3 */}
         <section id="manuseio">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
             Como Manusear um Disco de Vinil Sem Danificar os Sulcos
           </h2>
-          <div className="space-y-6 text-parchment text-sm leading-relaxed">
+          <div className="space-y-6 text-parchment text-base leading-relaxed">
             <p>
               Essa é provavelmente a parte mais simples do cuidado com vinil, e também a mais
               negligenciada. A regra que vale pra vida toda é simples: as mãos ficam sempre nas
               bordas.
             </p>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 A regra das bordas e do selo central
               </h3>
               <p>
@@ -308,9 +338,19 @@ export default function ComoGuardarPage() {
                 há áudio gravado. Toda a música está naqueles sulcos microscópicos da parte preta,
                 e é exatamente ali que a gordura do dedo vira ruído permanente.
               </p>
+              <figure className="mt-4 rounded-xl overflow-hidden">
+                <Image
+                  src="https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  alt="Mãos segurando disco de vinil pelas bordas, com os dedos na borda e o polegar no verso, sem tocar a área gravada"
+                  width={800}
+                  height={1067}
+                  className="w-full object-cover max-h-72"
+                />
+                <figcaption className="text-xs text-dust mt-2 px-1">Forma correta: polegar e dedos apenas nas bordas, sem encostar na parte preta gravada.</figcaption>
+              </figure>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Como tirar e guardar o disco da capa sem forçar
               </h3>
               <p>
@@ -320,9 +360,19 @@ export default function ComoGuardarPage() {
                 selo, estressa o vinil no ponto mais frágil e ainda força o plástico interno a
                 dobrar.
               </p>
+              <figure className="mt-4 rounded-xl overflow-hidden">
+                <Image
+                  src="https://images.pexels.com/photos/6827183/pexels-photo-6827183.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  alt="Pessoa retirando um disco de vinil da capa em uma loja de discos, com a mão segurando pela borda"
+                  width={800}
+                  height={600}
+                  className="w-full object-cover max-h-72"
+                />
+                <figcaption className="text-xs text-dust mt-2 px-1">Retire o disco inclinando a capa — nunca enfilando o dedo no buraco central.</figcaption>
+              </figure>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Por que a gordura do dedo é pior do que poeira
               </h3>
               <p>
@@ -339,19 +389,35 @@ export default function ComoGuardarPage() {
 
         {/* 4 */}
         <section id="limpeza">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
-            Limpeza de Vinil Passo a Passo: do Diário ao Banho Profundo
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+            Como Limpar Discos de Vinil em Casa?
           </h2>
-          <p className="text-parchment text-sm leading-relaxed mb-6">
+          <p className="text-parchment text-sm leading-relaxed mb-3 bg-sleeve border border-groove rounded-xl px-4 py-3">
+            Use escova de fibra de carbono antes de cada audição para remover poeira e estática.
+            Para limpeza profunda, misture água destilada com uma gota de sabão neutro em 500 ml;
+            aplique com microfibra em movimentos circulares seguindo o sulco; seque por 20–30
+            minutos em pé. Nunca álcool puro, pano de cozinha ou produto com fragrância.
+          </p>
+          <figure className="my-4 rounded-xl overflow-hidden">
+            <Image
+              src="https://images.pexels.com/photos/6863085/pexels-photo-6863085.jpeg?auto=compress&cs=tinysrgb&w=800"
+              alt="Disco de vinil no prato do toca-discos com poeira iridescente visível sobre a superfície preta"
+              width={800}
+              height={1200}
+              className="w-full object-cover max-h-72"
+            />
+            <figcaption className="text-xs text-dust mt-2 px-1">Poeira e partículas estáticas acumuladas — visíveis como brilho iridescente. Uma escovada antes de tocar resolve isso em segundos.</figcaption>
+          </figure>
+          <p className="text-parchment text-base leading-relaxed mb-6">
             Existem três níveis diferentes de limpeza de disco. A regra simples é casar o nível de
             limpeza com o estado do disco. Do mais leve pro mais pesado:
           </p>
           <div className="space-y-6">
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Limpeza rápida antes de cada audição
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   Coloca o LP no prato, liga a rotação, segura uma escova de fibra de carbono
                   apoiada de leve na superfície e deixa o disco girar duas ou três voltas completas
@@ -366,10 +432,20 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Limpeza profunda com água destilada e sabão neutro
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <figure className="mb-4 rounded-xl overflow-hidden">
+                <Image
+                  src="https://images.pexels.com/photos/6873716/pexels-photo-6873716.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  alt="Mão limpando disco de vinil com pano de microfibra azul em movimentos circulares acompanhando o sulco"
+                  width={800}
+                  height={1067}
+                  className="w-full object-cover max-h-72"
+                />
+                <figcaption className="text-xs text-dust mt-2 px-1">Movimentos circulares acompanhando o sulco, pano de microfibra — nunca atravessando de uma borda à outra.</figcaption>
+              </figure>
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>Esse nível é obrigatório em três situações:</p>
                 <ul className="list-disc list-inside space-y-1 text-parchment ml-2">
                   <li>Disco novo de sebo ou usado, antes da primeira audição na sua casa</li>
@@ -387,7 +463,7 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Quando vale a pena investir em máquina de limpeza
               </h3>
               <div className="grid sm:grid-cols-3 gap-3 text-parchment text-sm">
@@ -404,10 +480,10 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 O método da cola de madeira: funciona mesmo ou estraga o disco?
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   A cola líquida penetra no sulco, seca como um molde negativo, e quando você puxa
                   ela traz a sujeira impregnada junto. Em discos completamente perdidos, com sujeira
@@ -423,10 +499,10 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Por que limpar até disco lacrado novo antes da primeira audição
               </h3>
-              <p className="text-parchment text-sm leading-relaxed">
+              <p className="text-parchment text-base leading-relaxed">
                 No processo de prensagem, sobra resíduo de compostos de desmolde, micropartículas do
                 próprio PVC e às vezes pelos do material que reveste as matrizes. Isso fica na
                 superfície do disco mesmo dentro da capa lacrada. Some a isso a estática gerada na
@@ -440,10 +516,26 @@ export default function ComoGuardarPage() {
 
         {/* 5 */}
         <section id="agulha">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
-            Cuidados Com a Agulha: Sua Coleção Inteira Depende Disso
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+            Como Cuidar da Agulha do Toca-Discos?
           </h2>
-          <p className="text-parchment text-sm leading-relaxed mb-6">
+          <p className="text-parchment text-sm leading-relaxed mb-3 bg-sleeve border border-groove rounded-xl px-4 py-3">
+            Limpe o stylus com escova seca em movimento de trás para frente a cada 2–3 audições.
+            Acompanhe as horas de uso: agulhas cônicas duram 150–300 horas; elípticas, 500–800
+            horas; microline/Shibata, até 2.000 horas. Com 40 minutos de audição diária, troque a
+            agulha elíptica a cada 1–2 anos.
+          </p>
+          <figure className="my-4 rounded-xl overflow-hidden">
+            <Image
+              src="https://images.pexels.com/photos/5764288/pexels-photo-5764288.jpeg?auto=compress&cs=tinysrgb&w=800"
+              alt="Cápsula e agulha de toca-discos em close, posicionada sobre disco de vinil em rotação"
+              width={800}
+              height={450}
+              className="w-full object-cover"
+            />
+            <figcaption className="text-xs text-dust mt-2 px-1">A agulha de diamante percorre 500 metros de sulco — uma ponta gasta corta em vez de ler.</figcaption>
+          </figure>
+          <p className="text-parchment text-base leading-relaxed mb-6">
             A agulha é o único ponto de contato entre todo o investimento que você fez em discos e
             a música que sai das caixas. Uma agulha gasta ou suja não estraga um disco, estraga
             todos. Cada audição com stylus mal cuidado é um arranhão microscópico distribuído pela
@@ -451,10 +543,10 @@ export default function ComoGuardarPage() {
           </p>
           <div className="space-y-6">
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Como limpar o stylus corretamente
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   A limpeza padrão é com escova de stylus seca. O movimento é sempre de trás pra
                   frente, no mesmo sentido em que o disco gira sob a agulha. Nunca movimento
@@ -478,10 +570,10 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Quanto tempo dura uma agulha e como saber que ela já era
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <div className="grid sm:grid-cols-3 gap-3">
                   {[
                     { label: "Cônica / safira", horas: "150–300 h", desc: "Mais barata. Padrão de entrada." },
@@ -499,6 +591,18 @@ export default function ComoGuardarPage() {
                   Conversão prática: se você ouve um disco por dia (uns 40 min), uma agulha elíptica
                   mediana vai durar entre 1 e 2 anos.
                 </p>
+                <p className="text-xs text-dust">
+                  Estimativas de vida útil baseadas nas faixas estabelecidas pela indústria e no{" "}
+                  <a
+                    href="https://ortofon.com/blogs/news/when-to-replace-the-stylus-of-your-phono-cartridge"
+                    rel="nofollow noopener noreferrer"
+                    target="_blank"
+                    className="underline hover:text-gold transition-colors"
+                  >
+                    guia oficial da Ortofon sobre substituição de agulhas
+                  </a>
+                  .
+                </p>
                 <div>
                   <p className="font-semibold text-cream text-xs mb-2">Sinais de que a agulha já era:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs text-parchment">
@@ -515,10 +619,10 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Peso de rastreio e antiskating: o ajuste que ninguém faz e todo mundo deveria
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   <strong className="text-cream">Peso de rastreio</strong> é a pressão que a agulha
                   exerce sobre o sulco. Cada cápsula tem uma faixa ideal especificada pelo
@@ -544,10 +648,16 @@ export default function ComoGuardarPage() {
 
         {/* 6 */}
         <section id="armazenamento">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
             Como Armazenar Vinil no Clima do Brasil
           </h2>
-          <p className="text-parchment text-sm leading-relaxed mb-6">
+          <p className="text-parchment text-sm leading-relaxed mb-3 bg-sleeve border border-groove rounded-xl px-4 py-3">
+            Guarde discos na vertical, em ambiente abaixo de 30°C e umidade entre 35–65%. No
+            Brasil, evite paredes que pegam sol da tarde, porões e áreas úmidas. Um higrômetro
+            digital perto da estante é mais importante do que qualquer acessório de limpeza — sem
+            medir a umidade, você não consegue gerenciar o que está acontecendo com a coleção.
+          </p>
+          <p className="text-parchment text-base leading-relaxed mb-6">
             Boa parte da literatura sobre conservação de vinil que circula online foi escrita
             pensando em apartamento europeu com 18°C estáveis e umidade controlada. No Brasil real
             — Manaus a 90% de umidade, Rio em fevereiro, São Paulo com sol da tarde rachando a
@@ -555,21 +665,30 @@ export default function ComoGuardarPage() {
           </p>
           <div className="space-y-6">
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Temperatura e umidade ideais
               </h3>
-              <p className="text-parchment text-sm leading-relaxed">
+              <p className="text-parchment text-base leading-relaxed">
                 A faixa técnica recomendada por arquivistas é de 15 a 20°C e 35 a 45% de umidade
-                relativa. No Brasil, o objetivo realista é outro: evitar os extremos. Acima de 30°C
+                relativa — padrão próximo ao definido pelas{" "}
+                <a
+                  href="https://www.loc.gov/preservation/care/record.html"
+                  rel="nofollow noopener noreferrer"
+                  target="_blank"
+                  className="underline hover:text-gold transition-colors"
+                >
+                  diretrizes de preservação da Biblioteca do Congresso dos EUA
+                </a>
+                . No Brasil, o objetivo realista é outro: evitar os extremos. Acima de 30°C
                 constante o vinil começa a amolecer e a empenar com o próprio peso. Acima de 65% de
                 umidade constante o mofo começa a aparecer nas capas e migra pros discos.
               </p>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Sol, parede quente e janela
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   Sol direto é o assassino mais rápido. Capa colorida desbota em meses, e em casos
                   extremos o vinil pode amolecer em semanas. Não exponha. Nunca.
@@ -583,7 +702,7 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Situações brasileiras que pedem cuidado redobrado
               </h3>
               <div className="grid sm:grid-cols-3 gap-3 text-parchment text-sm">
@@ -600,14 +719,24 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Desumidificador, sílica gel e ar-condicionado valem a pena?
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   <strong className="text-cream">Desumidificador elétrico:</strong> em região úmida
                   vale cada centavo, principalmente no verão. Modelos pequenos pra cômodo único têm
-                  preço acessível no mercado brasileiro.
+                  preço acessível no mercado brasileiro. Para verificar a umidade média histórica da
+                  sua cidade, consulte as{" "}
+                  <a
+                    href="https://portal.inmet.gov.br/normais"
+                    rel="nofollow noopener noreferrer"
+                    target="_blank"
+                    className="underline hover:text-gold transition-colors"
+                  >
+                    Normais Climatológicas do INMET
+                  </a>
+                  .
                 </p>
                 <p>
                   <strong className="text-cream">Sílica gel:</strong> saquinhos espalhados pela
@@ -632,12 +761,12 @@ export default function ComoGuardarPage() {
 
         {/* 7 */}
         <section id="plasticos-estantes">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
             Plásticos, Capas e Estantes: Montando o Lar Certo Para Sua Coleção
           </h2>
           <div className="space-y-6">
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Plástico interno: papel, poly ou paper com lining?
               </h3>
               <div className="grid sm:grid-cols-3 gap-3 text-parchment text-sm">
@@ -657,10 +786,10 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Plástico externo: precisa mesmo?
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   O plástico externo não protege o disco. Protege a capa. Sua função é defender o
                   papelão de poeira, atrito entre capas vizinhas na estante, manchas e umidade
@@ -674,10 +803,10 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Estantes e caixas
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   A regra básica: vertical, encostados mas sem comprimir, em móvel que aguente o
                   peso. Um disco de vinil pesa entre 150 e 200 gramas — quinhentos discos chegam a
@@ -695,25 +824,52 @@ export default function ComoGuardarPage() {
 
         {/* 8 */}
         <section id="herdados-sebo">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
-            O Que Fazer Com Discos Herdados, de Sebo ou Mofados
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+            Como Tratar Discos Herdados ou Comprados em Sebo?
           </h2>
+          <p className="text-parchment text-base leading-relaxed mb-6 bg-sleeve border border-groove rounded-xl px-4 py-3">
+            Inspecione cada disco em ângulo oblíquo contra a luz antes de tocar. Faça limpeza
+            profunda com água destilada e sabão neutro em todos — mesmo os que parecem limpos. Só
+            descarte após limpar: muitos discos aparentemente perdidos voltam a tocar bem após uma
+            boa lavagem. Discos com mofo ativo não devem tocar no seu equipamento sem limpeza
+            prévia — o fungo contamina agulha e toca-discos.
+          </p>
+          <figure className="my-4 rounded-xl overflow-hidden">
+            <Image
+              src="https://images.pexels.com/photos/2956143/pexels-photo-2956143.jpeg?auto=compress&cs=tinysrgb&w=800"
+              alt="Bancas de discos de vinil em feira ao ar livre com etiquetas ROCK, Paul McCartney e Beatles visíveis"
+              width={800}
+              height={533}
+              className="w-full object-cover"
+            />
+            <figcaption className="text-xs text-dust mt-2 px-1">Feira e sebo — todo disco comprado aqui precisa de triagem visual e limpeza profunda antes de tocar.</figcaption>
+          </figure>
           <div className="space-y-6">
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Triagem antes da limpeza
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   Pegue cada disco individualmente, leve até uma janela ou luminária forte, e gire
                   o disco em ângulo oblíquo em relação à luz. Isso revela arranhões, marcas, riscos
                   profundos e empenamentos que não são visíveis em luz frontal.
                 </p>
+                <figure className="rounded-xl overflow-hidden">
+                  <Image
+                    src="https://images.pexels.com/photos/31805824/pexels-photo-31805824.jpeg?auto=compress&cs=tinysrgb&w=800"
+                    alt="Disco de vinil visto de lado em ângulo oblíquo, mostrando o perfil da borda para verificar empenamento"
+                    width={800}
+                    height={800}
+                    className="w-full object-cover max-h-56"
+                  />
+                  <figcaption className="text-xs text-dust mt-2 px-1">Olhe de lado: bordas que levantam em qualquer ponto indicam empenamento.</figcaption>
+                </figure>
                 <div className="grid sm:grid-cols-3 gap-3">
                   {[
-                    { label: "Salvar", color: "text-green-400", desc: "Estado visual razoável, sem empenamento, sem mofo entranhado. Vão pra limpeza profunda direto." },
-                    { label: "Talvez", color: "text-gold", desc: "Mofo superficial, arranhões duvidosos. Vão pra limpeza, mas com expectativa controlada." },
-                    { label: "Descartar (depois)", color: "text-red-400", desc: "Empenamento severo, arranhão que engata a unha em vários pontos. Mas espere antes de jogar fora." },
+                    { label: "Salvar", color: "text-green-400", desc: "Sem empenamento visível de lado. Arranhões que não engatam a unha. Superfície reflete de forma uniforme sem pontos opacos irregulares. Limpeza profunda e pode tocar." },
+                    { label: "Talvez", color: "text-gold", desc: "Empenamento leve (bordas levantam menos de 2 mm). Arranhões que engatam levemente a unha em 1–2 pontos isolados. Mofo superficial branco ou cinza, não entranhado no sulco. Limpeza profunda com expectativa controlada." },
+                    { label: "Descartar (depois)", color: "text-red-400", desc: "Empenamento visível com bordas levantando mais de 3 mm em múltiplos pontos. Arranhões que engatam a unha ao longo de uma faixa inteira. Mas sempre tente limpar antes de jogar fora." },
                   ].map(({ label, color, desc }) => (
                     <div key={label} className="bg-sleeve border border-groove rounded-xl p-4">
                       <p className={`font-semibold text-xs mb-1 ${color}`}>{label}</p>
@@ -729,10 +885,10 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Como tratar disco com mofo, fungo ou cheiro de bolor
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   Disco com mofo pede limpeza profunda obrigatória antes de qualquer audição. Mofo
                   não é só estético — é fungo vivo que vai contaminar sua agulha, seu toca-discos e
@@ -758,10 +914,10 @@ export default function ComoGuardarPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Discos empenados têm conserto?
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   <strong className="text-cream">Empenamento leve:</strong> aquele que você só nota
                   olhando em ângulo, mas que toca normal no prato. O próprio peso do disco
@@ -786,10 +942,10 @@ export default function ComoGuardarPage() {
 
         {/* 9 */}
         <section id="diagnostico">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
             Chiado, Estalo e Pulo: Como Diagnosticar o Que Está Errado
           </h2>
-          <p className="text-parchment text-sm leading-relaxed mb-6">
+          <p className="text-parchment text-base leading-relaxed mb-6">
             Existe um mito antigo que diz que chiado faz parte do &quot;charme do vinil&quot;. Não faz.
             Vinil bem cuidado, em equipamento bem ajustado, toca com silêncio entre as faixas que
             surpreende muita gente que só ouviu vinil ruim a vida toda. Se está chiando, alguma
@@ -797,10 +953,10 @@ export default function ComoGuardarPage() {
           </p>
           <div className="space-y-6">
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Chiado constante: sujeira ou estática?
               </h3>
-              <p className="text-parchment text-sm leading-relaxed">
+              <p className="text-parchment text-base leading-relaxed">
                 Faça o teste de eliminação. Escove o disco com fibra de carbono e ouça de novo. Se
                 o chiado some ou diminui muito, era poeira somada à estática. Se permanece igual, vá
                 pro próximo nível: limpeza profunda com água destilada. Se ainda assim persiste, você
@@ -809,20 +965,20 @@ export default function ComoGuardarPage() {
               </p>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Estalo pontual e repetido
               </h3>
-              <ul className="space-y-2 text-parchment text-sm leading-relaxed">
+              <ul className="space-y-2 text-parchment text-base leading-relaxed">
                 <li><strong className="text-cream">Na mesma posição a cada rotação:</strong> arranhão pontual ou sujeira específica nesse ponto. Tente limpeza localizada com pano de microfibra úmido em água destilada.</li>
                 <li><strong className="text-cream">Aleatório, espalhado pela faixa toda:</strong> geralmente é agulha suja ou agulha gasta. Limpe o stylus primeiro.</li>
                 <li><strong className="text-cream">Aumenta de intensidade conforme o disco toca:</strong> poeira sendo arrastada pela agulha. Pare a reprodução, limpe o stylus, limpe o disco, recomece.</li>
               </ul>
             </div>
             <div>
-              <h3 className="font-display text-base font-bold text-cream mb-2">
+              <h3 className="font-display text-base font-bold text-cream mb-3">
                 Quando o problema é o disco, e quando é o toca-discos
               </h3>
-              <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   Quando o mesmo sintoma aparece em vários discos diferentes, o problema não é nos
                   discos, é no equipamento. Possíveis culpados: agulha gasta, agulha mal ajustada,
@@ -844,10 +1000,10 @@ export default function ComoGuardarPage() {
 
         {/* 10 */}
         <section id="checklist">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
             Checklist de Manutenção: Diária, Mensal e Anual
           </h2>
-          <p className="text-parchment text-sm leading-relaxed mb-6">
+          <p className="text-parchment text-base leading-relaxed mb-6">
             Cuidar de vinil não precisa virar trabalho. Funciona como rotina simples distribuída no
             tempo: cinco segundos por audição, dez minutos por mês, uma tarde por ano.
           </p>
@@ -888,7 +1044,7 @@ export default function ComoGuardarPage() {
                 <h3 className="font-display text-sm font-bold text-cream mb-3">{label}</h3>
                 <ul className="space-y-2">
                   {items.map((item, i) => (
-                    <li key={i} className="flex gap-2 text-xs text-parchment leading-relaxed">
+                    <li key={i} className="flex gap-2 text-sm text-parchment leading-relaxed">
                       <IconCheck className="text-gold mt-0.5 shrink-0" />
                       {item}
                     </li>
@@ -901,10 +1057,10 @@ export default function ComoGuardarPage() {
 
         {/* 11 */}
         <section id="onde-comprar">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
             Onde Comprar Acessórios Para Vinil no Brasil
           </h2>
-          <p className="text-parchment text-sm leading-relaxed mb-4">
+          <p className="text-parchment text-base leading-relaxed mb-4">
             Parte da dificuldade de cuidar de vinil no Brasil é prática: muita orientação online
             aponta pra produto importado que chega aqui com o dobro do preço. Vale separar o que
             faz sentido importar do que tem alternativa nacional decente.
@@ -934,7 +1090,7 @@ export default function ComoGuardarPage() {
 
         {/* 12 — FAQ */}
         <section id="faq">
-          <h2 className="font-display text-xl font-bold text-cream mb-4">
+          <h2 className="font-display text-2xl font-bold text-cream mb-5">
             Perguntas Frequentes Sobre Cuidados Com Disco de Vinil
           </h2>
           <div className="space-y-4">
@@ -947,7 +1103,7 @@ export default function ComoGuardarPage() {
                   <span className="font-display text-sm font-bold text-cream">{q}</span>
                   <IconChevronDown className="text-gold shrink-0 transition-transform duration-200 group-open:rotate-180" />
                 </summary>
-                <p className="px-5 pb-4 text-parchment text-sm leading-relaxed">{a}</p>
+                <p className="px-5 pb-4 text-parchment text-base leading-relaxed">{a}</p>
               </details>
             ))}
           </div>
@@ -959,7 +1115,7 @@ export default function ComoGuardarPage() {
             <h2 className="font-display text-lg font-bold text-cream mb-3">
               Sua Coleção Merece o Cuidado Que Você Investiu Nela
             </h2>
-            <div className="space-y-3 text-parchment text-sm leading-relaxed">
+            <div className="space-y-3 text-parchment text-base leading-relaxed">
               <p>
                 Vinil é, no fundo, uma tecnologia que tinha tudo pra ter morrido nos anos 90 e
                 voltou justamente porque oferece algo que streaming não dá. Não é só som, é objeto
