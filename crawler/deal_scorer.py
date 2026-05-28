@@ -217,13 +217,30 @@ def score_deals(conn) -> dict:
 
     Returns a summary dict: {total, scored, flagged, cleared, skipped}
     """
+    _EMPTY = {
+        "total": 0, "scored": 0, "flagged": 0,
+        "cleared": 0, "skipped": 0, "stale_cleared": 0, "orphans_cleared": 0,
+    }
+
     now = datetime.now(timezone.utc)
 
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        # PgBouncer (transaction mode) resets session-level settings between
-        # transactions, so statement_timeout=0 in get_connection()'s options= string
-        # does not survive.  SET LOCAL is the only reliable override.
-        cur.execute("SET LOCAL statement_timeout = 0")
+        # Concurrency guard: if another score_deals call is already running
+        # (e.g. main crawler and stale-only crawler overlapping), skip this
+        # invocation rather than stacking two full HistoricoPreco scans.
+        # pg_try_advisory_xact_lock is transaction-scoped — released automatically
+        # at conn.commit() / conn.rollback(), compatible with PgBouncer transaction mode.
+        cur.execute("SELECT pg_try_advisory_xact_lock(9876543210)")
+        if not cur.fetchone()[0]:
+            log.warning("score_deals: another instance running — skipping this call")
+            conn.rollback()
+            return _EMPTY
+
+        # Cap the read at 10 minutes — enough for any realistic HistoricoPreco size.
+        # The unlimited timeout (0) that was here before caused a 32-min runaway scan
+        # when two crawler instances overlapped.  Write batch below keeps timeout=0
+        # because batch UPDATEs are safe to let run to completion.
+        cur.execute("SET LOCAL statement_timeout = '10min'")
         # Single query: compute all rolling benchmarks and fetch current deal state.
         # avg_30d is adaptive — falls back to all-time average when < 30 days of data.
         #
