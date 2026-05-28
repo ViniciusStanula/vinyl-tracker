@@ -229,14 +229,14 @@ def fetch_active_deals(conn) -> dict:
                 d.low_all_time,
                 d.deal_score
             FROM "Disco" d
-            JOIN (
-                SELECT DISTINCT ON ("discoId")
-                    "discoId",
-                    "precoBrl" AS preco_brl
+            JOIN LATERAL (
+                SELECT "precoBrl" AS preco_brl
                 FROM "HistoricoPreco"
-                WHERE "precoBrl" >= 30
-                ORDER BY "discoId", "capturadoEm" DESC
-            ) l ON l."discoId" = d.id
+                WHERE "discoId" = d.id
+                  AND "precoBrl" >= 30
+                ORDER BY "capturadoEm" DESC
+                LIMIT 1
+            ) l ON TRUE
             WHERE d.deal_score >= 1
               AND d.disponivel = TRUE
               AND d.avg_30d IS NOT NULL
