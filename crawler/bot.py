@@ -423,7 +423,6 @@ def run_send_pass(conn, batch_size: int = 5) -> None:
                     SELECT *
                     FROM bot_pending
                     WHERE status = 'pending'
-                      AND is_top_artist = TRUE
                       AND asin <> ALL(%s)
                     ORDER BY priority_score DESC NULLS LAST
                     LIMIT 1
@@ -433,7 +432,6 @@ def run_send_pass(conn, batch_size: int = 5) -> None:
                     SELECT *
                     FROM bot_pending
                     WHERE status = 'pending'
-                      AND is_top_artist = TRUE
                     ORDER BY priority_score DESC NULLS LAST
                     LIMIT 1
                 """)

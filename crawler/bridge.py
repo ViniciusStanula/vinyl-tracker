@@ -4,7 +4,7 @@ bridge.py — Syncs active deals from Supabase into the bot_pending queue.
 
 Reads Disco rows where deal_score >= 1 and disponivel = TRUE, upserts them
 into bot_pending, and discards deals that have disappeared from Supabase.
-Marks deals whose artist appears in the Last.fm top-5000 chart as is_top_artist
+Marks deals whose artist appears in the Last.fm top-10,000 chart as is_top_artist
 so bot.py can prioritize them in the send queue.
 Exits non-zero on connection failure so the downstream bot.py step is skipped.
 """
@@ -14,6 +14,7 @@ import logging
 import os
 import re
 import sys
+import time
 import unicodedata
 from datetime import datetime, timezone
 
@@ -110,6 +111,10 @@ def _slugify_artist(name: str) -> str:
 
 
 LASTFM_CACHE_DAYS = 30
+LASTFM_TOP_PAGES  = 20  # 20 pages × 500 = top 10,000 artists
+
+RESEND_THRESHOLD      = 0.90  # re-open if price drops ≥10% vs last send
+RESEND_SAMEPRICE_DAYS = 7     # re-open same-price deal after this many days
 
 
 def _load_cached_slugs(conn) -> set | None:
@@ -155,7 +160,7 @@ def _save_cached_slugs(conn, slugs: set) -> None:
 
 
 def fetch_top_artist_slugs(conn) -> set:
-    """Returns top-5000 Last.fm artist slugs, using a 30-day DB cache."""
+    """Returns top-10,000 Last.fm artist slugs, using a 30-day DB cache."""
     cached = _load_cached_slugs(conn)
     if cached is not None:
         return cached
@@ -165,7 +170,7 @@ def fetch_top_artist_slugs(conn) -> set:
         return set()
 
     slugs: set[str] = set()
-    for page in range(1, 11):  # 10 pages × 500 = top 5000
+    for page in range(1, LASTFM_TOP_PAGES + 1):
         try:
             resp = requests.get(
                 "https://ws.audioscrobbler.com/2.0/",
@@ -186,8 +191,9 @@ def fetch_top_artist_slugs(conn) -> set:
                     slugs.add(_slugify_artist(name))
         except Exception as exc:
             log.warning("Last.fm page %d fetch failed: %s", page, exc)
+        time.sleep(0.25)
 
-    log.info("Fetched %d Last.fm top-5000 artist slugs from API", len(slugs))
+    log.info("Fetched %d Last.fm top-10,000 artist slugs from API", len(slugs))
     if slugs:
         _save_cached_slugs(conn, slugs)
     return slugs
@@ -310,13 +316,32 @@ def sync_pending(conn, active: dict, top_slugs: set) -> None:
             ) ls
             WHERE bp.asin = ls.asin
               AND bp.status = 'sent'
-              AND bp.preco_brl < ls.ref_price * 0.90
+              AND bp.preco_brl < ls.ref_price * %s
               AND ls.last_action_at < NOW() - INTERVAL '6 hours'
-        """)
+        """, (RESEND_THRESHOLD,))
+
+        # 3b. Re-open 'sent' deals that are currently active again after the
+        #     same-price cooldown.  Gated on active.keys() so stale sent rows
+        #     (deals that have since disappeared) are never touched.
+        if active:
+            cur.execute(f"""
+                UPDATE bot_pending bp
+                SET status = 'pending'
+                FROM (
+                    SELECT DISTINCT ON (asin)
+                        asin,
+                        sent_at
+                    FROM bot_sent
+                    ORDER BY asin, sent_at DESC
+                ) ls
+                WHERE bp.asin = ls.asin
+                  AND bp.asin = ANY(%s)
+                  AND bp.status = 'sent'
+                  AND ls.sent_at < NOW() - INTERVAL '{RESEND_SAMEPRICE_DAYS} days'
+            """, (list(active.keys()),))
 
     conn.commit()
-    top_count = sum(1 for d in active.values() if _slugify_artist(d["artista"]) in top_slugs)
-    log.info("Sync complete — %d active deals (%d top artists)", len(active), top_count)
+    log.info("Sync complete — %d active deals (all top artists)", len(active))
 
 
 def main() -> None:
@@ -327,6 +352,15 @@ def main() -> None:
         top_slugs = fetch_top_artist_slugs(conn)
         active    = fetch_active_deals(conn)
         log.info("Active deals in Supabase: %d", len(active))
+
+        if top_slugs:
+            before = len(active)
+            active = {asin: d for asin, d in active.items()
+                      if _slugify_artist(d["artista"]) in top_slugs}
+            log.info("Top-artist filter: %d → %d deals", before, len(active))
+        else:
+            log.warning("No Last.fm slugs available — skipping top-artist filter, all deals queued")
+
         sync_pending(conn, active, top_slugs)
     except Exception as exc:
         log.error("Bridge error: %s", exc)
