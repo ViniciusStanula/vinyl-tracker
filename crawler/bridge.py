@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS bot_state (
 _SCHEMA_EXTRAS = """
 ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS is_top_artist BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS bot_sent_asin_idx ON bot_sent (asin, sent_at DESC);
+CREATE INDEX IF NOT EXISTS bot_pending_status_idx ON bot_pending (status);
 """
 
 

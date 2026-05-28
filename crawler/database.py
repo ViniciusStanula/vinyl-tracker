@@ -301,6 +301,16 @@ def ensure_schema_extras(conn) -> None:
                 ON "Disco" (price_count)
             """
         )
+        # Partial index on last_crawled_at for Phase 3 stale-records fetch.
+        # fetch_stale_records queries WHERE disponivel=TRUE ORDER BY last_crawled_at ASC
+        # in a tight loop — without this index it seq-scans all 56k Disco rows per batch.
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_disco_disponivel_last_crawled
+                ON "Disco" (last_crawled_at ASC NULLS FIRST)
+                WHERE disponivel = TRUE
+            """
+        )
     conn.commit()
     log.info("ensure_schema_extras: schema migration applied.")
 
@@ -849,6 +859,48 @@ def ensure_seo_content_schema(conn) -> None:
         )
     conn.commit()
     log.debug("ensure_seo_content_schema: schema ready.")
+
+
+def fetch_artist_vinyl_catalog(conn, artista: str) -> dict:
+    """
+    Returns vinyl catalog stats for an artist, used to ground AI bio generation
+    in site-specific data (editions tracked, price range, top albums, active deals).
+
+    Returns dict with:
+      total_albums : int
+      price_min    : float | None  — lowest avg_30d among available records
+      price_max    : float | None  — highest avg_30d among available records
+      active_deals : int           — editions with deal_score IS NOT NULL
+      top_albums   : list[dict]    — up to 5 by lastfm_listeners DESC, each has
+                                     titulo, avg_30d (float|None), listeners (int|None),
+                                     deal (bool)
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            'SELECT COUNT(*) FROM "Disco" WHERE artista = %s AND disponivel = TRUE',
+            (artista,),
+        )
+        total = int(cur.fetchone()[0] or 0)
+
+        # Order by listeners (most culturally significant first), fall back to
+        # review count. Titles are permanent — they never change after ingestion.
+        cur.execute(
+            """
+            SELECT titulo
+            FROM "Disco"
+            WHERE artista = %s AND disponivel = TRUE
+            ORDER BY lastfm_listeners DESC NULLS LAST,
+                     "reviewCount"    DESC NULLS LAST
+            LIMIT 8
+            """,
+            (artista,),
+        )
+        top_titles = [r[0] for r in cur.fetchall() if r[0]]
+
+    return {
+        "total_albums": total,
+        "top_titles": top_titles,
+    }
 
 
 def fetch_artists_needing_bio(conn, limit: int = 20) -> list[dict]:
