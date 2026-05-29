@@ -50,7 +50,21 @@ const _getDiscoWithPrecos = unstable_cache(
   ["disco-with-precos"],
   { tags: ["prices"], revalidate: 1800 },
 );
-export const getDiscoWithPrecos = cache(_getDiscoWithPrecos);
+
+// unstable_cache serializes to JSON — Prisma Date objects become strings.
+// Re-hydrate capturadoEm back to Date so page components can call .toLocaleeDateString().
+async function _getDiscoWithPrecosHydrated(slug: string) {
+  const result = await _getDiscoWithPrecos(slug);
+  if (!result) return null;
+  return {
+    ...result,
+    precos: result.precos.map((p) => ({
+      ...p,
+      capturadoEm: new Date(p.capturadoEm),
+    })),
+  };
+}
+export const getDiscoWithPrecos = cache(_getDiscoWithPrecosHydrated);
 
 export async function getDiscoMeta(slug: string): Promise<DiscoMeta | null> {
   const rows = await prisma.$queryRaw<[DiscoMeta]>`
