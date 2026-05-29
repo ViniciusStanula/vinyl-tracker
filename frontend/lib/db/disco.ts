@@ -58,8 +58,10 @@ export async function getDiscoMeta(slug: string): Promise<DiscoMeta | null> {
 
 export const getRelatedDeals = unstable_cache(
   async (discoId: string, tags: string[]): Promise<RelatedDeal[]> => {
-    const tagFilter = tags.length > 0
-      ? Prisma.sql`AND string_to_array(lastfm_tags, ', ') && ARRAY[${Prisma.join(tags)}]::text[]`
+    // Lowercase tags to match the GIN index expression: string_to_array(lower(lastfm_tags), ', ')
+    const lowerTags = tags.map((t) => t.toLowerCase());
+    const tagFilter = lowerTags.length > 0
+      ? Prisma.sql`AND string_to_array(lower(lastfm_tags), ', ') && ARRAY[${Prisma.join(lowerTags)}]::text[]`
       : Prisma.empty;
     return prisma.$queryRaw<RelatedDeal[]>`
       WITH candidates AS (
@@ -73,13 +75,6 @@ export const getRelatedDeals = unstable_cache(
           ${tagFilter}
         ORDER BY deal_score DESC, RANDOM()
         LIMIT 4
-      ),
-      latest AS (
-        SELECT DISTINCT ON ("discoId")
-          "discoId", "precoBrl"::float AS preco
-        FROM "HistoricoPreco"
-        WHERE "discoId" IN (SELECT id FROM candidates)
-        ORDER BY "discoId", "capturadoEm" DESC
       )
       SELECT
         c.id,
@@ -114,7 +109,13 @@ export const getRelatedDeals = unstable_cache(
           ) sp
         ) AS sparkline
       FROM candidates c
-      INNER JOIN latest l ON l."discoId" = c.id
+      JOIN LATERAL (
+        SELECT "precoBrl"::float AS preco
+        FROM "HistoricoPreco"
+        WHERE "discoId" = c.id
+        ORDER BY "capturadoEm" DESC
+        LIMIT 1
+      ) l ON TRUE
     `;
   },
   ["disco-related-deals"],
