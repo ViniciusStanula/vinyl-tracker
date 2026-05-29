@@ -230,8 +230,8 @@ def score_deals(conn) -> dict:
         # invocation rather than stacking two full HistoricoPreco scans.
         # pg_try_advisory_xact_lock is transaction-scoped — released automatically
         # at conn.commit() / conn.rollback(), compatible with PgBouncer transaction mode.
-        cur.execute("SELECT pg_try_advisory_xact_lock(9876543210)")
-        if not cur.fetchone()[0]:
+        cur.execute("SELECT pg_try_advisory_xact_lock(9876543210) AS got_lock")
+        if not cur.fetchone()["got_lock"]:
             log.warning("score_deals: another instance running — skipping this call")
             conn.rollback()
             return _EMPTY
