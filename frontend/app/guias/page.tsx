@@ -41,6 +41,14 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "como-avaliar-estado-disco-vinil",
+    title: "Como Avaliar o Estado de um Disco de Vinil",
+    description:
+      "Do Mint ao Poor: o que cada grau significa na prática, como inspecionar disco e capa separadamente, abreviações do Discogs e como o estado afeta o preço.",
+    date: "2026-05-31",
+    tag: "guia",
+  },
+  {
     slug: "vinil-180g-vale-a-pena",
     title: "Vinil 180g Vale a Pena? Diferença Real ou Marketing?",
     description:
