@@ -41,6 +41,14 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "vinil-180g-vale-a-pena",
+    title: "Vinil 180g Vale a Pena? Diferença Real ou Marketing?",
+    description:
+      "O peso do disco influencia o som? Separamos o que é diferença real (durabilidade, VTA, superfície) de marketing puro, com foco no bolso do comprador brasileiro.",
+    date: "2026-05-31",
+    tag: "guia",
+  },
+  {
     slug: "como-cuidar-de-discos-de-vinil",
     title: "Como Cuidar de Discos de Vinil",
     description:
