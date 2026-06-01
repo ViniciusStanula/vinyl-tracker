@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-01T00:00:00.000Z",
+  "title": "Design System: Garimpa Vinil",
+  "extensions": {
+    "colorMeta": {
+      "record":     { "role": "neutral",   "displayName": "Record Black",   "canonical": "oklch(8% 0.008 50)",   "tonalRamp": ["#050402","#0c0a08","#171210","#201614","#2b1e17","#3d2c21","#5a4232","#7a6050"] },
+      "sleeve":     { "role": "neutral",   "displayName": "Sleeve Brown",   "canonical": "oklch(12% 0.010 50)",  "tonalRamp": ["#0c0a08","#171210","#201614","#2b1e17","#3d2c21","#5a4232","#7a6050","#a08070"] },
+      "label":      { "role": "neutral",   "displayName": "Label Dark",     "canonical": "oklch(16% 0.012 50)",  "tonalRamp": ["#0c0a08","#171210","#201614","#2b1e17","#3d2c21","#5a4232","#7a6050","#a08070"] },
+      "groove":     { "role": "neutral",   "displayName": "Groove",         "canonical": "oklch(22% 0.015 50)",  "tonalRamp": ["#0c0a08","#171210","#2b1e17","#3d2c21","#5a4232","#7a6050","#a08070","#c8b0a0"] },
+      "wax":        { "role": "neutral",   "displayName": "Wax",            "canonical": "oklch(30% 0.020 50)",  "tonalRamp": ["#171210","#2b1e17","#3d2c21","#5a4232","#7a6050","#a08070","#c8b0a0","#e8d8cc"] },
+      "patina":     { "role": "neutral",   "displayName": "Patina",         "canonical": "oklch(40% 0.025 50)",  "tonalRamp": ["#201614","#3d2c21","#5a4232","#7a6050","#a08070","#c8b0a0","#e0c8b8","#f0e6d0"] },
+      "gold":       { "role": "primary",   "displayName": "Crate Gold",     "canonical": "oklch(66% 0.16 65)",   "tonalRamp": ["#1a0e00","#2d1800","#4a2800","#6b3d00","#965600","#d98f0e","#f0ab28","#f5d99a"] },
+      "goldlit":    { "role": "primary",   "displayName": "Goldlit",        "canonical": "oklch(74% 0.14 65)",   "tonalRamp": ["#2d1800","#4a2800","#6b3d00","#965600","#d98f0e","#f0ab28","#f7cc70","#fbebb8"] },
+      "goldmute":   { "role": "primary",   "displayName": "Goldmute",       "canonical": "oklch(42% 0.12 65)",   "tonalRamp": ["#1a0e00","#2d1800","#4a2800","#7a4f0e","#965600","#d98f0e","#f0ab28","#f5d99a"] },
+      "cut":        { "role": "secondary", "displayName": "Cut Red",        "canonical": "oklch(45% 0.18 25)",   "tonalRamp": ["#250008","#3d0012","#5a001e","#7a0028","#b81828","#d93040","#ef8090","#f5c8cc"] },
+      "deal":       { "role": "secondary", "displayName": "Deal Green",     "canonical": "oklch(50% 0.12 155)",  "tonalRamp": ["#001a0c","#002d18","#004525","#006035","#1e7a50","#35c47a","#8de0b0","#d0f0e2"] },
+      "deallit":    { "role": "secondary", "displayName": "Deal Bright",    "canonical": "oklch(72% 0.14 155)",  "tonalRamp": ["#002d18","#004525","#006035","#1e7a50","#35c47a","#70d8a0","#a8ecc8","#d8f8ec"] },
+      "cream":      { "role": "neutral",   "displayName": "Cream",          "canonical": "oklch(92% 0.025 80)",  "tonalRamp": ["#3d2a20","#5a4232","#7a6050","#957060","#b8936a","#d5b898","#f0e6d0","#f8f4ee"] },
+      "parchment":  { "role": "neutral",   "displayName": "Parchment",      "canonical": "oklch(72% 0.05 80)",   "tonalRamp": ["#2a1a10","#3d2a20","#5a4030","#7a6050","#b8936a","#d5b898","#f0e6d0","#f8f4ee"] },
+      "dust":       { "role": "neutral",   "displayName": "Dust",           "canonical": "oklch(62% 0.04 80)",   "tonalRamp": ["#201a14","#3d2a20","#5a4030","#957060","#b8936a","#d5b898","#ecd5bc","#f8f0e4"] },
+      "ash":        { "role": "neutral",   "displayName": "Ash",            "canonical": "oklch(28% 0.020 50)",  "tonalRamp": ["#0c0a08","#171210","#201614","#3d2a20","#5a4232","#7a6050","#a08070","#c8b0a0"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display",  "purpose": "Hero headlines and brand wordmark only. Fraunces italic for evocative phrases; upright for declarative payoffs." },
+      "price":   { "displayName": "Price",    "purpose": "Current price figure on album cards. The most-scanned data point per screen. Tabular numerals." },
+      "title":   { "displayName": "Title",    "purpose": "Album title on cards. Fraunces at small scale for warmth. Line-clamped to 2 lines." },
+      "body":    { "displayName": "Body",     "purpose": "Guide prose, descriptions, about pages. DM Sans, max 65-75ch line length for prose contexts." },
+      "label":   { "displayName": "Label",    "purpose": "Artist names, filter/sort eyebrows, footer section headers. Uppercase, tracked, ≤4 words." },
+      "caption": { "displayName": "Caption",  "purpose": "Metadata, timestamps, status text, affiliate disclaimers. Dust color minimum." }
+    },
+    "shadows": [
+      { "name": "cut-badge",    "value": "0 4px 8px rgba(184,24,40,0.3)",     "purpose": "Cut Red discount badge — separates it from dark album art." },
+      { "name": "focus-gold",   "value": "0 0 0 2px rgba(217,143,14,0.2)",    "purpose": "Focus ring on inputs, buttons, chips. Applied via box-shadow, not outline." },
+      { "name": "deal-ring",    "value": "0 0 0 1px rgba(217,143,14,0.4)",    "purpose": "Tier-3 deal card ring. Applied at rest to signal best-price status." },
+      { "name": "mobile-drawer","value": "0 25px 50px rgba(0,0,0,0.5)",       "purpose": "Mobile nav drawer depth separation." }
+    ],
+    "motion": [
+      { "name": "fade-in-up",   "value": "opacity 0 -> 1, translateY 10px -> 0, 400ms ease-out", "purpose": "Page/item entrance. Skipped under prefers-reduced-motion." },
+      { "name": "vinyl-pulse",  "value": "opacity 1 -> 0.5 -> 1, 1200ms ease-in-out infinite",  "purpose": "Loading skeleton pulse. Stopped under prefers-reduced-motion." },
+      { "name": "nav-progress", "value": "width 0 -> 92%, then 100% + fade, 1px Gold bar",       "purpose": "Router navigation progress indicator at top of viewport." },
+      { "name": "hover-scale",  "value": "transform scale(1.06), 500ms ease-out",                "purpose": "Album art scale on card hover. Signals interactivity." },
+      { "name": "state-change", "value": "background-color, border-color, color: 150ms ease",    "purpose": "Default transition for all interactive components." }
+    ],
+    "breakpoints": [
+      { "name": "sm",  "value": "640px",  "purpose": "Mobile/tablet split. Nav collapses below; search goes full-width below." },
+      { "name": "md",  "value": "768px",  "purpose": "Grid column count changes." },
+      { "name": "lg",  "value": "1024px", "purpose": "Card grid rebalances." },
+      { "name": "xl",  "value": "1280px", "purpose": "Max-width container cap (max-w-7xl)." },
+      { "name": "2xl", "value": "1536px", "purpose": "Card density increases." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main call-to-action. Gold background, confident and forward on any dark surface.",
+      "html": "<button class=\"ds-btn-primary\">Ver Ofertas de Hoje</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; background: #d98f0e; color: #0c0a08; font-family: 'DM Sans', system-ui, sans-serif; font-size: 0.875rem; font-weight: 700; padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; text-decoration: none; transition: background-color 150ms ease; } .ds-btn-primary:hover { background: #f0ab28; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(217,143,14,0.2); } .ds-btn-primary:disabled { background: #7a4f0e; color: #957060; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action. Transparent at rest, visible on hover. Never competes with primary.",
+      "html": "<button class=\"ds-btn-ghost\">Saiba Mais</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: #f0e6d0; font-family: 'DM Sans', system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; padding: 12px 24px; border-radius: 12px; border: 1px solid #3d2c21; cursor: pointer; text-decoration: none; transition: background-color 150ms ease, border-color 150ms ease; } .ds-btn-ghost:hover { background: #2b1e17; border-color: #3d2c21; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(217,143,14,0.2); }"
+    },
+    {
+      "name": "Filter Chip (Active)",
+      "kind": "chip",
+      "refersTo": "chip-active",
+      "description": "Active price or sort filter. Gold fill matches primary button to signal selection.",
+      "html": "<button class=\"ds-chip-active\" aria-pressed=\"true\">R$200</button>",
+      "css": ".ds-chip-active { font-family: 'DM Sans', system-ui, sans-serif; font-size: 0.75rem; font-weight: 700; padding: 10px 12px; border-radius: 8px; border: 1px solid #d98f0e; background: #d98f0e; color: #0c0a08; cursor: pointer; transition: all 150ms ease; flex-shrink: 0; } .ds-chip-active:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(217,143,14,0.2); }"
+    },
+    {
+      "name": "Filter Chip (Inactive)",
+      "kind": "chip",
+      "refersTo": "chip-inactive",
+      "description": "Unselected price/sort filter. Quiet until tapped.",
+      "html": "<button class=\"ds-chip-inactive\" aria-pressed=\"false\">R$100</button>",
+      "css": ".ds-chip-inactive { font-family: 'DM Sans', system-ui, sans-serif; font-size: 0.75rem; font-weight: 400; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(61,44,33,0.6); background: #2b1e17; color: #b8936a; cursor: pointer; transition: all 150ms ease; flex-shrink: 0; } .ds-chip-inactive:hover { border-color: #3d2c21; color: #f0e6d0; } .ds-chip-inactive:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(217,143,14,0.2); }"
+    },
+    {
+      "name": "Album Card",
+      "kind": "card",
+      "refersTo": "card-album",
+      "description": "Primary content unit. Full-bleed album art, artist label, title, price. The most-rendered component in the system.",
+      "html": "<div class=\"ds-album-card\"><div class=\"ds-album-art\"><div class=\"ds-album-art-placeholder\"><svg viewBox=\"0 0 48 48\" fill=\"none\" width=\"48\" height=\"48\"><path d=\"M18 34V16l18-4v18\" stroke=\"#5a4232\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"14\" cy=\"34\" r=\"4\" stroke=\"#5a4232\" stroke-width=\"2\"/><circle cx=\"32\" cy=\"30\" r=\"4\" stroke=\"#5a4232\" stroke-width=\"2\"/></svg></div><div class=\"ds-badge ds-badge-tier3\">✦ Melhor Preço</div></div><div class=\"ds-album-info\"><span class=\"ds-album-artist\">Pink Floyd</span><h2 class=\"ds-album-title\">The Dark Side of the Moon</h2><p class=\"ds-album-price\">R$ 89,90</p></div></div>",
+      "css": ".ds-album-card { position: relative; background: #171210; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #2b1e17; transition: border-color 200ms ease; } .ds-album-card:hover { border-color: #3d2c21; } .ds-album-art { position: relative; aspect-ratio: 1; background: #201614; overflow: hidden; display: flex; align-items: center; justify-content: center; } .ds-album-art-placeholder { opacity: 0.6; } .ds-badge { position: absolute; bottom: 8px; left: 8px; font-family: 'DM Sans', system-ui, sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 4px; z-index: 2; } .ds-badge-tier3 { background: rgba(217,143,14,0.9); color: #0c0a08; } .ds-badge-tier2 { background: rgba(30,122,80,0.9); color: #f0e6d0; } .ds-badge-tier1 { background: rgba(12,10,8,0.7); color: #b8936a; backdrop-filter: blur(4px); } .ds-album-info { padding: 16px; display: flex; flex-direction: column; flex: 1; } .ds-album-artist { display: block; font-family: 'DM Sans', system-ui, sans-serif; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: #b8936a; } .ds-album-title { font-family: 'Fraunces', Georgia, serif; font-size: 0.875rem; font-weight: 600; color: #f0e6d0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.5rem; margin: 2px 0 0; } .ds-album-price { font-family: 'Fraunces', Georgia, serif; font-size: 1.25rem; font-weight: 900; color: #d98f0e; line-height: 1.2; margin-top: auto; padding-top: 8px; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Pill-shaped search with inline submit. Primary input in the navbar.",
+      "html": "<div class=\"ds-search-wrap\"><form class=\"ds-search-form\" role=\"search\"><div class=\"ds-search-icon\"><svg width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z\"/></svg></div><input class=\"ds-search-input\" type=\"search\" placeholder=\"Busque por artista, álbum...\"/><button class=\"ds-search-submit\" type=\"submit\">Buscar</button></form></div>",
+      "css": ".ds-search-wrap { position: relative; width: 100%; } .ds-search-form { display: flex; width: 100%; position: relative; } .ds-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #957060; pointer-events: none; z-index: 1; } .ds-search-input { flex: 1; min-width: 0; background: #171210; border: 1px solid #2b1e17; border-right: none; border-radius: 9999px 0 0 9999px; padding: 8px 16px 8px 40px; font-family: 'DM Sans', system-ui, sans-serif; font-size: 0.875rem; color: #f0e6d0; appearance: none; outline: none; transition: border-color 150ms, box-shadow 150ms; } .ds-search-input::placeholder { color: #957060; } .ds-search-input:focus { border-color: #d98f0e; box-shadow: 0 0 0 2px rgba(217,143,14,0.2); } .ds-search-submit { background: #d98f0e; color: #0c0a08; font-family: 'DM Sans', system-ui, sans-serif; font-size: 0.875rem; font-weight: 700; padding: 8px 20px; border: none; border-radius: 0 9999px 9999px 0; cursor: pointer; transition: background 150ms; white-space: nowrap; flex-shrink: 0; } .ds-search-submit:hover { background: #f0ab28; }"
+    },
+    {
+      "name": "Navigation Bar",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Sticky top nav. Warm-dark with backdrop blur. 62px height. The single persistent element on every screen.",
+      "html": "<nav class=\"ds-navbar\"><div class=\"ds-navbar-inner\"><a class=\"ds-navbar-brand\" href=\"/\"><svg viewBox=\"0 0 40 40\" fill=\"none\" width=\"40\" height=\"40\"><circle cx=\"20\" cy=\"20\" r=\"19\" fill=\"#d98f0e\"/><circle cx=\"20\" cy=\"20\" r=\"16.5\" fill=\"none\" stroke=\"#0c0a08\" stroke-width=\"1\" opacity=\"0.35\"/><circle cx=\"20\" cy=\"20\" r=\"9\" fill=\"#0c0a08\"/><circle cx=\"20\" cy=\"20\" r=\"2.2\" fill=\"#d98f0e\" opacity=\"0.85\"/><circle cx=\"20\" cy=\"20\" r=\"0.9\" fill=\"#0c0a08\"/></svg><span class=\"ds-navbar-wordmark\">Garimpa</span></a><div class=\"ds-navbar-links\"><a class=\"ds-navbar-link\" href=\"/disco\">Discos</a><a class=\"ds-navbar-link ds-navbar-link-active\" href=\"/artistas-mais-ouvidos\">Mais Ouvidos</a></div></div></nav>",
+      "css": ".ds-navbar { position: sticky; top: 0; z-index: 50; background: rgba(12,10,8,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(43,30,23,0.6); } .ds-navbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 16px; height: 62px; display: flex; align-items: center; gap: 16px; } .ds-navbar-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; flex-shrink: 0; } .ds-navbar-wordmark { font-family: 'Fraunces', Georgia, serif; font-size: 1.25rem; font-weight: 900; color: #d98f0e; letter-spacing: -0.02em; } .ds-navbar-links { display: flex; align-items: center; gap: 2px; margin-left: auto; } .ds-navbar-link { font-family: 'DM Sans', system-ui, sans-serif; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #957060; text-decoration: none; padding: 8px 12px; border-radius: 8px; transition: color 150ms, background-color 150ms; } .ds-navbar-link:hover { color: #d98f0e; background: rgba(43,30,23,0.4); } .ds-navbar-link-active { color: #f0e6d0; }"
+    },
+    {
+      "name": "Deal Badge",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Tier-based deal signal on album cards. Three tiers communicate price quality without numbers.",
+      "html": "<div style=\"display:flex;gap:8px;flex-wrap:wrap;padding:8px;background:#0c0a08;border-radius:8px;\"><div class=\"ds-deal-badge ds-deal-tier3\">✦ Melhor Preço</div><div class=\"ds-deal-badge ds-deal-tier2\">✓ Ótima Oferta</div><div class=\"ds-deal-badge ds-deal-tier1\">Boa Oferta</div></div>",
+      "css": ".ds-deal-badge { display: inline-flex; align-items: center; gap: 4px; font-family: 'DM Sans', system-ui, sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 4px; } .ds-deal-tier3 { background: rgba(217,143,14,0.9); color: #0c0a08; } .ds-deal-tier2 { background: rgba(30,122,80,0.9); color: #f0e6d0; } .ds-deal-tier1 { background: rgba(12,10,8,0.7); color: #b8936a; backdrop-filter: blur(4px); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Crate Digger's Den",
+    "overview": "Garimpa Vinil runs on the obsessive energy of flicking through record sleeves in a warm, dim shop — the kind where the owner knows every pressing and the last time a title dipped below R$80. The design doesn't simulate a streaming service or an e-commerce storefront. It simulates that shop: warm-dark surfaces, amber light catching the edge of a sleeve, deals surfaced with the quiet confidence of someone who has been watching prices for years.\n\nThe palette is the Den itself: near-black warm backgrounds layered from deep to slightly-less-deep, with amber gold as the single voice of action and value. Text lives on a warm cream-to-amber ramp, so every level of hierarchy reads as the same material, not a different page. Status signals (discount red, deal green) enter only when data warrants — never as decoration.\n\nThis system is built mobile-first for casual discovery, but its density and precision serve the obsessive collector equally. The deal is always the hero. Fraunces carries display headings, album titles, and price figures: wherever the data is the content. DM Sans handles everything else without asking to be noticed.",
+    "keyCharacteristics": [
+      "Warm-dark tonal layering without drop shadows; depth through surface steps (Record → Sleeve → Label → Groove → Wax)",
+      "Gold accent reserved for primary action and deal signal only; its scarcity is what makes deals visible",
+      "Fraunces for display, album titles, and prices; DM Sans for all UI chrome — never mixed",
+      "Touch-native density: readable at arm's length, tappable at 44px minimum",
+      "Grain overlay at 3.5% opacity across the body; vinyl-groove radial decoration on hero surfaces",
+      "Motion is functional: state feedback and page transitions only; no orchestrated page-load choreography"
+    ],
+    "rules": [
+      { "name": "The One Voice Rule",           "body": "Gold (#d98f0e) is the only warm-bright accent in the entire system. It appears on primary buttons, active filter chips, current price figures, and the brand logo — nothing else. Its scarcity is what makes deals visible.", "section": "colors" },
+      { "name": "The Depth-Without-Shadows Rule","body": "Visual depth is created by stepping through the neutral stack (Record → Sleeve → Label → Groove → Wax), not by drop shadows. Hover states shift the border one step warmer. Active states shift the background fill one level up.", "section": "elevation" },
+      { "name": "The Dust Floor Rule",           "body": "Dust (#957060) is the lightest permissible text color on dark surfaces. It is the system's WCAG AA floor. Below it — lighter, more muted — text fails contrast and is prohibited.", "section": "colors" },
+      { "name": "The Flat-By-Default Rule",      "body": "No drop shadows on cards, modals, drawers, or containers at rest. Before reaching for box-shadow, ask whether a border-color shift or background-fill step does the job. It almost always does.", "section": "elevation" },
+      { "name": "The Fraunces Reservation Rule", "body": "Fraunces appears in exactly three contexts: display/hero headings, album titles on cards, and current price figures. It is prohibited in navigation, buttons, labels, captions, form controls, filter chips, sort selects, or any UI chrome.", "section": "typography" },
+      { "name": "The Uppercase Ceiling Rule",    "body": "Uppercase text is reserved for: artist name labels (≤4 words, tracked at 0.2em), filter/sort label eyebrows (≤4 words), and deal badge text. Never uppercase for body copy, album titles, or headings.", "section": "typography" }
+    ],
+    "dos": [
+      "Do use Gold (#d98f0e) exclusively for primary actions, active states, current prices, and the brand logo.",
+      "Do express depth through tonal surface steps (Record → Sleeve → Label → Groove → Wax). Step the border one stop warmer on hover; step the background fill one level up on active.",
+      "Do use Fraunces for hero headings, album titles, and price figures only. DM Sans handles every other text role.",
+      "Do ensure minimum text contrast: Dust (#957060) on Record Black (#0c0a08) is the WCAG AA floor at 4.5:1.",
+      "Do size all tap targets to minimum 44px height for mobile-first touch use.",
+      "Do include @media (prefers-reduced-motion: reduce) alternatives for every animation.",
+      "Do use text-wrap: balance on h1–h3 and text-wrap: pretty on prose paragraphs in guide content.",
+      "Do gate all deal badges and price-history features behind NEXT_PUBLIC_HIDE_PRICE_HISTORY."
+    ],
+    "donts": [
+      "Don't use Gold as a decorative highlight, section divider tint, or background wash. The One Voice Rule.",
+      "Don't use Fraunces in navigation, buttons, filter chips, form controls, labels, or any UI chrome.",
+      "Don't add drop shadows to cards, containers, or layout surfaces. The Flat-By-Default Rule.",
+      "Don't make this look like a SaaS product: no hero metrics, no purple/blue/teal brand colors, no feature-grid layouts.",
+      "Don't make this look like a streaming service: no Spotify green, no Apple Music pink, no playlist-card visual language.",
+      "Don't make this look like an e-commerce giant: no Amazon/Mercado Livre blue-and-orange, no Add-to-Cart language.",
+      "Don't use border-left greater than 1px as a colored accent stripe on cards or callouts.",
+      "Don't use background-clip: text with a gradient fill. Gold is always solid.",
+      "Don't use glassmorphism decoratively. Backdrop blur is reserved for the sticky navbar and mobile overlay.",
+      "Don't add orchestrated page-load motion sequences. State-change feedback and page transitions only.",
+      "Don't use text lighter than Dust (#957060) on dark surfaces. The Dust Floor Rule.",
+      "Don't show deal badges or discount percentages when NEXT_PUBLIC_HIDE_PRICE_HISTORY is true."
+    ]
+  }
+}

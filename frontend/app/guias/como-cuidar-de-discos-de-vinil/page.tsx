@@ -161,11 +161,11 @@ export default function ComoGuardarPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} />
 
       {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-dust flex gap-2 flex-wrap">
+      <nav aria-label="Navegação estrutural" className="mb-6 text-sm text-dust flex gap-2 flex-wrap">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <Link href="/guias" className="hover:text-gold transition-colors">Guias</Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <span className="text-parchment">Como Cuidar de Discos de Vinil</span>
       </nav>
 
@@ -174,7 +174,7 @@ export default function ComoGuardarPage() {
         <span className="text-xs font-semibold border rounded-full px-2.5 py-0.5 text-deallit border-deal/30 bg-deal/10 mb-4 inline-block">
           Guia
         </span>
-        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3">
+        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3 [text-wrap:balance]">
           Como Cuidar de <span className="text-gold">Discos de Vinil</span>
         </h1>
         <p className="text-parchment text-sm max-w-2xl leading-relaxed">
@@ -234,7 +234,7 @@ export default function ComoGuardarPage() {
 
         {/* 1 */}
         <section id="por-que-cuidar">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Por Que Cuidar do Vinil Faz Mais Diferença do Que Você Imagina
           </h2>
           <div className="space-y-4 text-parchment text-base leading-relaxed">
@@ -260,7 +260,7 @@ export default function ComoGuardarPage() {
 
         {/* 2 */}
         <section id="5-erros">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Os 5 Erros Que Mais Destroem Discos de Vinil
           </h2>
           <p className="text-parchment text-base leading-relaxed mb-6">
@@ -314,7 +314,7 @@ export default function ComoGuardarPage() {
 
         {/* 3 */}
         <section id="manuseio">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Como Manusear um Disco de Vinil Sem Danificar os Sulcos
           </h2>
           <div className="space-y-6 text-parchment text-base leading-relaxed">
@@ -389,7 +389,7 @@ export default function ComoGuardarPage() {
 
         {/* 4 */}
         <section id="limpeza">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Como Limpar Discos de Vinil em Casa?
           </h2>
           <p className="text-parchment text-sm leading-relaxed mb-3 bg-sleeve border border-groove rounded-xl px-4 py-3">
@@ -516,7 +516,7 @@ export default function ComoGuardarPage() {
 
         {/* 5 */}
         <section id="agulha">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Como Cuidar da Agulha do Toca-Discos?
           </h2>
           <p className="text-parchment text-sm leading-relaxed mb-3 bg-sleeve border border-groove rounded-xl px-4 py-3">
@@ -648,7 +648,7 @@ export default function ComoGuardarPage() {
 
         {/* 6 */}
         <section id="armazenamento">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Como Armazenar Vinil no Clima do Brasil
           </h2>
           <p className="text-parchment text-sm leading-relaxed mb-3 bg-sleeve border border-groove rounded-xl px-4 py-3">
@@ -761,7 +761,7 @@ export default function ComoGuardarPage() {
 
         {/* 7 */}
         <section id="plasticos-estantes">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Plásticos, Capas e Estantes: Montando o Lar Certo Para Sua Coleção
           </h2>
           <div className="space-y-6">
@@ -824,7 +824,7 @@ export default function ComoGuardarPage() {
 
         {/* 8 */}
         <section id="herdados-sebo">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Como Tratar Discos Herdados ou Comprados em Sebo?
           </h2>
           <p className="text-parchment text-base leading-relaxed mb-6 bg-sleeve border border-groove rounded-xl px-4 py-3">
@@ -942,7 +942,7 @@ export default function ComoGuardarPage() {
 
         {/* 9 */}
         <section id="diagnostico">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Chiado, Estalo e Pulo: Como Diagnosticar o Que Está Errado
           </h2>
           <p className="text-parchment text-base leading-relaxed mb-6">
@@ -1000,7 +1000,7 @@ export default function ComoGuardarPage() {
 
         {/* 10 */}
         <section id="checklist">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Checklist de Manutenção: Diária, Mensal e Anual
           </h2>
           <p className="text-parchment text-base leading-relaxed mb-6">
@@ -1057,7 +1057,7 @@ export default function ComoGuardarPage() {
 
         {/* 11 */}
         <section id="onde-comprar">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Onde Comprar Acessórios Para Vinil no Brasil
           </h2>
           <p className="text-parchment text-base leading-relaxed mb-4">
@@ -1090,7 +1090,7 @@ export default function ComoGuardarPage() {
 
         {/* 12 — FAQ */}
         <section id="faq">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Perguntas Frequentes Sobre Cuidados Com Disco de Vinil
           </h2>
           <div className="space-y-4">
@@ -1138,7 +1138,7 @@ export default function ComoGuardarPage() {
                 href="/"
                 className="inline-flex items-center gap-1.5 bg-gold/10 border border-gold/30 text-gold text-xs font-semibold px-4 py-2 rounded-full hover:bg-gold/20 transition-colors"
               >
-                Garimpor discos no Brasil
+                Garimpar discos no Brasil
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

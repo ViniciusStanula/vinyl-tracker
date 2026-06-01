@@ -265,18 +265,18 @@ export default async function DiscoPage({
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* Breadcrumbs */}
-      <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
+      <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
           Início
         </Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <Link
           href={`/artista/${slugifyArtist(disco.artista)}`}
           className="hover:text-cream transition-colors"
         >
           {disco.artista}
         </Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <span className="text-parchment truncate max-w-[200px] sm:max-w-xs">
           {disco.titulo}
         </span>
@@ -329,7 +329,7 @@ export default async function DiscoPage({
                 </>
               )}
             </p>
-            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-black text-cream leading-tight mb-3">
+            <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-black text-cream leading-tight mb-3 [text-wrap:balance]">
               {disco.titulo}
             </h1>
             {rating && (
@@ -403,9 +403,9 @@ export default async function DiscoPage({
               </>
             ) : (
               <div className="flex flex-col gap-2">
-                <span className="flex items-center justify-center bg-groove text-dust font-bold text-sm py-4 rounded-xl cursor-not-allowed border border-wax/50">
+                <div className="flex items-center justify-center bg-groove text-dust font-bold text-sm py-4 rounded-xl cursor-not-allowed border border-wax/50">
                   Indisponível na Amazon
-                </span>
+                </div>
                 {dataAtual && (
                   <p className="text-xs text-ash pl-1">Último registro em {dataAtualLabel}</p>
                 )}

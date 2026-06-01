@@ -142,11 +142,11 @@ export default function Vinil180gPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} />
 
       {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-dust flex gap-2 flex-wrap">
+      <nav aria-label="Navegação estrutural" className="mb-6 text-sm text-dust flex gap-2 flex-wrap">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <Link href="/guias" className="hover:text-gold transition-colors">Guias</Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <span className="text-parchment">Vinil 180g Vale a Pena?</span>
       </nav>
 
@@ -155,7 +155,7 @@ export default function Vinil180gPage() {
         <span className="text-xs font-semibold border rounded-full px-2.5 py-0.5 text-deallit border-deal/30 bg-deal/10 mb-4 inline-block">
           Guia
         </span>
-        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3">
+        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3 [text-wrap:balance]">
           Vinil 180g Vale a Pena?{" "}
           <span className="text-gold">Diferença Real ou Marketing?</span>
         </h1>
@@ -233,7 +233,7 @@ export default function Vinil180gPage() {
 
         {/* 1 */}
         <section id="o-que-significa">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             O que o Número Realmente Significa (e o que ele Não Diz)
           </h2>
           <div className="space-y-4 text-parchment text-base leading-relaxed">
@@ -283,7 +283,7 @@ export default function Vinil180gPage() {
 
         {/* 2 */}
         <section id="o-que-nao-faz">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             O que o Peso Não Faz, Apesar do que Dizem
           </h2>
           <p className="text-parchment text-sm leading-relaxed mb-5 bg-sleeve border border-groove rounded-xl px-4 py-3">
@@ -361,7 +361,7 @@ export default function Vinil180gPage() {
 
         {/* 3 */}
         <section id="o-que-faz">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             O que o Peso Faz de Verdade
           </h2>
           <div className="space-y-6">
@@ -452,7 +452,7 @@ export default function Vinil180gPage() {
 
         {/* 4 */}
         <section id="vta">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             O Detalhe que Quase Ninguém Menciona: o VTA
           </h2>
           <p className="text-parchment text-sm leading-relaxed mb-5 bg-sleeve border border-groove rounded-xl px-4 py-3">
@@ -520,7 +520,7 @@ export default function Vinil180gPage() {
 
         {/* 5 */}
         <section id="original-vs-reissue">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Prensagem Original dos Anos 70 ou Reissue 180g Atual: Qual Vale Mais?
           </h2>
           <figure className="mb-6 rounded-xl overflow-hidden">
@@ -605,7 +605,7 @@ export default function Vinil180gPage() {
 
         {/* 6 */}
         <section id="para-quem-faz-sentido">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Para Quem o 180g Faz Sentido e Para Quem Não Faz
           </h2>
           <div className="space-y-4 text-parchment text-base leading-relaxed mb-6">
@@ -658,7 +658,7 @@ export default function Vinil180gPage() {
 
         {/* 7 */}
         <section id="como-identificar">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Como Identificar um 180g Feito com Cuidado (e Não Só Pesado)
           </h2>
           <p className="text-parchment text-base leading-relaxed mb-6">
@@ -714,7 +714,7 @@ export default function Vinil180gPage() {
 
         {/* 8 — FAQ */}
         <section id="faq">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Perguntas Frequentes Sobre Vinil 180g
           </h2>
           <div className="space-y-4">
@@ -762,7 +762,7 @@ export default function Vinil180gPage() {
                 href="/"
                 className="inline-flex items-center gap-1.5 bg-gold/10 border border-gold/30 text-gold text-xs font-semibold px-4 py-2 rounded-full hover:bg-gold/20 transition-colors"
               >
-                Garimpor discos no Brasil
+                Garimpar discos no Brasil
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

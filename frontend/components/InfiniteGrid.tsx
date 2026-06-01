@@ -57,6 +57,7 @@ export default function InfiniteGrid({
   useEffect(() => {
     if (animationKey === prevAnimKey.current) return;
     prevAnimKey.current = animationKey;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     gridRef.current?.animate(
       [{ opacity: 0.1 }, { opacity: 1 }],
       { duration: 220, easing: "ease-out", fill: "forwards" }

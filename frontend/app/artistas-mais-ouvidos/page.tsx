@@ -45,15 +45,15 @@ export default async function ArtistasPage({
   const totalPages = Math.ceil(total / PER_PAGE);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
-      <header className="mb-6">
+    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+      <header className="mb-4">
         <Link
           href="/"
           className="text-parchment hover:text-gold text-sm transition-colors mb-4 inline-block"
         >
           ← Início
         </Link>
-        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight">
+        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight [text-wrap:balance]">
           Artistas mais Ouvidos
         </h1>
         <p className="mt-2 text-parchment text-sm max-w-md">
@@ -64,7 +64,7 @@ export default async function ArtistasPage({
         </p>
       </header>
 
-      <div className="mb-6">
+      <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
         <Suspense>
           <SortBar />
         </Suspense>

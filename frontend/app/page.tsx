@@ -119,12 +119,12 @@ export default async function HomePage({
           <span className="text-gold text-[11px] font-bold uppercase tracking-[0.2em] block mb-3">
             Curadoria Especializada
           </span>
-          <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-black leading-[0.95] mb-4">
+          <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-black leading-[0.95] mb-4 [text-wrap:balance]">
             <span className="italic text-cream">O Garimpo do Vinil</span>
             <br />
             <span className="not-italic text-gold">Começa Aqui.</span>
           </h1>
-          <p className="text-parchment text-sm sm:text-base max-w-md leading-relaxed mb-4">
+          <p className="text-cream text-sm sm:text-base max-w-md leading-relaxed mb-4">
             Catálogo de discos de vinil na Amazon Brasil com preços atualizados. Encontre bons momentos para comprar.
           </p>
           {count > 0 && (
@@ -148,7 +148,7 @@ export default async function HomePage({
               href="/sobre"
               className="inline-flex items-center gap-2 border border-wax text-cream hover:bg-groove text-sm px-6 py-3 rounded-xl transition-colors font-medium"
             >
-              Saiba Mais
+              Sobre o site
             </Link>
           </div>
         </div>

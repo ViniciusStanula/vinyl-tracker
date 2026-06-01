@@ -39,7 +39,7 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-baseline gap-3">
           <div>
-            <h2 className="font-display text-xl font-bold text-cream">
+            <h2 className="font-display text-xl font-black text-cream">
               Discos em Destaque
             </h2>
             <div className="mt-1 h-0.5 w-10 bg-gold rounded-full" aria-hidden="true" />
@@ -48,7 +48,7 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
             href="/artistas-mais-ouvidos"
             className="text-parchment hover:text-gold text-xs transition-colors"
           >
-            Ver todos →
+            Ver artistas mais ouvidos →
           </Link>
         </div>
         <div className="flex gap-1.5">
@@ -73,7 +73,7 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
 
       <div
         ref={ref}
-        className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2"
+        className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 no-scrollbar"
       >
         {items.map((disco, i) => (
           <div key={disco.id} className="snap-start shrink-0 w-44 sm:w-52">

@@ -71,7 +71,7 @@ export default async function ArtistaPage({
     console.error("[ArtistaPage] getArtistaPageData failed for slug=%s", slug);
     if (process.env.NODE_ENV === "development") console.error(err);
     return (
-      <main className="max-w-7xl mx-auto px-4 py-24 text-center">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-24 text-center">
         <p className="font-display text-parchment text-lg font-semibold mb-2">
           Erro ao carregar página do artista
         </p>
@@ -131,16 +131,16 @@ export default async function ArtistaPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: musicArtistJsonLd }} />
-      <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
+      <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
           Início
         </Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <span className="text-parchment">{artista}</span>
       </nav>
 
       <header className="mb-6">
-        <h1 className="font-display text-3xl font-bold text-cream">
+        <h1 className="font-display text-3xl font-black text-cream [text-wrap:balance]">
           {artista}
         </h1>
         <p className="mt-1 text-dust text-sm">
@@ -158,7 +158,7 @@ export default async function ArtistaPage({
         </div>
       )}
 
-      <div className="mb-4">
+      <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
         <Suspense>
           <SortBar />
         </Suspense>
@@ -181,9 +181,9 @@ export default async function ArtistaPage({
           )}
         </>
       ) : (
-        <div className="text-center py-24 text-dust">
+        <section aria-label="Sem resultados" className="text-center py-24 text-dust">
           <div className="inline-block mb-5 opacity-40">
-            <svg viewBox="0 0 64 64" fill="none" className="w-16 h-16 mx-auto">
+            <svg viewBox="0 0 64 64" fill="none" className="w-16 h-16 mx-auto" aria-hidden="true">
               <circle cx="32" cy="32" r="30" className="fill-gold" opacity="0.3" />
               <circle cx="32" cy="32" r="20" className="fill-record" opacity="0.8" />
               <circle cx="32" cy="32" r="5"  className="fill-gold" opacity="0.4" />
@@ -202,12 +202,12 @@ export default async function ArtistaPage({
               Limpar filtros
             </Link>
           )}
-        </div>
+        </section>
       )}
 
       {bioPt && (
         <section className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
-          <h2 className="font-display text-xl font-bold text-cream mb-3">Sobre {artista}</h2>
+          <h2 className="font-display text-xl font-black text-cream mb-3">Sobre {artista}</h2>
           {bioPt.split("\n\n").map((p, i) => (
             <p key={i} className="text-parchment text-sm leading-relaxed mb-3 last:mb-0">{p}</p>
           ))}

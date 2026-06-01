@@ -145,16 +145,16 @@ export default function GuiasPage() {
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumb }} />
 
-      <nav className="mb-6 text-sm text-dust flex gap-2">
+      <nav aria-label="Navegação estrutural" className="mb-6 text-sm text-dust flex gap-2">
         <Link href="/" className="hover:text-gold transition-colors">
           Início
         </Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <span className="text-parchment">Guias</span>
       </nav>
 
       <header className="mb-8">
-        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3">
+        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3 [text-wrap:balance]">
           Guias de <span className="text-gold">Vinil</span>
         </h1>
         <p className="text-parchment text-sm max-w-xl leading-relaxed">

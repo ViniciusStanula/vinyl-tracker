@@ -140,11 +140,11 @@ export default function VinilColoridoPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} />
 
       {/* Breadcrumb */}
-      <nav className="mb-6 text-sm text-dust flex gap-2 flex-wrap">
+      <nav aria-label="Navegação estrutural" className="mb-6 text-sm text-dust flex gap-2 flex-wrap">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <Link href="/guias" className="hover:text-gold transition-colors">Guias</Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
         <span className="text-parchment">Vinil Colorido e Picture Disc</span>
       </nav>
 
@@ -153,7 +153,7 @@ export default function VinilColoridoPage() {
         <span className="text-xs font-semibold border rounded-full px-2.5 py-0.5 text-deallit border-deal/30 bg-deal/10 mb-4 inline-block">
           Guia
         </span>
-        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3">
+        <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3 [text-wrap:balance]">
           Vinil Colorido e Picture Disc{" "}
           <span className="text-gold">Valem a Pena?</span>
         </h1>
@@ -228,7 +228,7 @@ export default function VinilColoridoPage() {
 
         {/* 1 */}
         <section id="reputacao">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Por que o Preto tem Vantagem Histórica e o Colorido Ganhou Má Reputação
           </h2>
           <div className="space-y-4 text-parchment text-base leading-relaxed">
@@ -290,7 +290,7 @@ export default function VinilColoridoPage() {
 
         {/* 2 */}
         <section id="tipos">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Colorido Sólido, Transparente, Splatter e Marble: Quatro Comportamentos Diferentes
           </h2>
           <p className="text-parchment text-sm leading-relaxed mb-6 bg-sleeve border border-groove rounded-xl px-4 py-3">
@@ -357,7 +357,7 @@ export default function VinilColoridoPage() {
 
         {/* 3 */}
         <section id="picture-disc">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             O Caso Separado do Picture Disc
           </h2>
           <p className="text-parchment text-sm leading-relaxed mb-5 bg-sleeve border border-groove rounded-xl px-4 py-3">
@@ -459,7 +459,7 @@ export default function VinilColoridoPage() {
 
         {/* 4 */}
         <section id="quando-colorido">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Quando Comprar Colorido Faz Sentido
           </h2>
           <div className="space-y-4 text-parchment text-base leading-relaxed">
@@ -519,7 +519,7 @@ export default function VinilColoridoPage() {
 
         {/* 5 */}
         <section id="quando-picture-disc">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Quando Picture Disc Faz Sentido e Quando Não Faz
           </h2>
           <figure className="mb-6 rounded-xl overflow-hidden">
@@ -606,7 +606,7 @@ export default function VinilColoridoPage() {
 
         {/* 6 — FAQ */}
         <section id="faq">
-          <h2 className="font-display text-2xl font-bold text-cream mb-5">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
             Perguntas Frequentes Sobre Vinil Colorido e Picture Disc
           </h2>
           <div className="space-y-4">
@@ -652,7 +652,7 @@ export default function VinilColoridoPage() {
                 href="/"
                 className="inline-flex items-center gap-1.5 bg-gold/10 border border-gold/30 text-gold text-xs font-semibold px-4 py-2 rounded-full hover:bg-gold/20 transition-colors"
               >
-                Garimpor discos no Brasil
+                Garimpar discos no Brasil
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
