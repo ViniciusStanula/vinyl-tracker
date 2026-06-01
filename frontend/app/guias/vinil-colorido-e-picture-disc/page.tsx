@@ -35,10 +35,10 @@ export const metadata: Metadata = {
     url: `/guias/${SLUG}`,
     images: [
       {
-        url: "https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=1200",
+        url: "https://images.pexels.com/photos/9789243/pexels-photo-9789243.jpeg?auto=compress&cs=tinysrgb&w=1200",
         width: 1200,
         height: 800,
-        alt: "Mãos segurando disco de vinil colorido pelas bordas",
+        alt: "Disco de vinil colorido em close, evidenciando a superfície e os sulcos de uma prensagem em cor",
       },
     ],
   },
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: PAGE_TITLE,
     description: PAGE_DESC,
-    images: ["https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=1200"],
+    images: ["https://images.pexels.com/photos/9789243/pexels-photo-9789243.jpeg?auto=compress&cs=tinysrgb&w=1200"],
   },
 };
 
@@ -103,7 +103,7 @@ export default function VinilColoridoPage() {
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
     image: {
       "@type": "ImageObject",
-      url: "https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=1200",
+      url: "https://images.pexels.com/photos/9789243/pexels-photo-9789243.jpeg?auto=compress&cs=tinysrgb&w=1200",
       width: 1200,
       height: 800,
     },
@@ -182,8 +182,8 @@ export default function VinilColoridoPage() {
       {/* Hero image */}
       <figure className="mb-8 rounded-2xl overflow-hidden">
         <Image
-          src="https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=1200"
-          alt="Mãos segurando disco de vinil pelas bordas, mostrando a superfície e os sulcos do disco"
+          src="https://images.pexels.com/photos/9789243/pexels-photo-9789243.jpeg?auto=compress&cs=tinysrgb&w=1200"
+          alt="Disco de vinil colorido em close, evidenciando a superfície e os sulcos de uma prensagem em cor"
           width={1200}
           height={800}
           className="w-full object-cover max-h-96"
@@ -404,8 +404,8 @@ export default function VinilColoridoPage() {
               </h3>
               <figure className="mb-4 rounded-xl overflow-hidden">
                 <Image
-                  src="https://images.pexels.com/photos/5764288/pexels-photo-5764288.jpeg?auto=compress&cs=tinysrgb&w=800"
-                  alt="Agulha de toca-discos sobre os sulcos de um disco de vinil em close, mostrando o contato entre stylus e superfície"
+                  src="https://images.pexels.com/photos/4393106/pexels-photo-4393106.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  alt="Disco de vinil colorido sobre superfície, mostrando a transparência e os sulcos da prensagem colorida"
                   width={800}
                   height={450}
                   className="w-full object-cover max-h-72"
@@ -524,8 +524,8 @@ export default function VinilColoridoPage() {
           </h2>
           <figure className="mb-6 rounded-xl overflow-hidden">
             <Image
-              src="https://images.pexels.com/photos/2956143/pexels-photo-2956143.jpeg?auto=compress&cs=tinysrgb&w=800"
-              alt="Discos de vinil em estante de loja, mostrando capas e formatos variados de coleção"
+              src="https://images.pexels.com/photos/4393111/pexels-photo-4393111.jpeg?auto=compress&cs=tinysrgb&w=800"
+              alt="Coleção de discos de vinil coloridos empilhados, evidenciando a diversidade de cores e formatos de edições limitadas"
               width={800}
               height={533}
               className="w-full object-cover max-h-64"
