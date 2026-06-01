@@ -91,45 +91,6 @@ const GUIDES: Guide[] = [
   },
 ];
 
-function GuideCard({ guide }: { guide: Guide }) {
-  return (
-    <Link
-      href={`/guias/${guide.slug}`}
-      className="group block bg-sleeve border border-groove rounded-xl p-5 hover:border-patina active:border-gold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-record"
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <span
-          className={`text-xs font-semibold border rounded-full px-2.5 py-0.5 ${TAG_COLOR[guide.tag]}`}
-        >
-          {TAG_LABEL[guide.tag]}
-        </span>
-        {guide.updated && (
-          <span className="text-xs text-dust">Atualizado diariamente</span>
-        )}
-        {!guide.updated && (
-          <span className="text-xs text-dust">
-            {new Date(guide.date).toLocaleDateString("pt-BR", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
-          </span>
-        )}
-      </div>
-      <h2 className="font-display text-lg font-bold text-cream group-hover:text-gold transition-colors leading-snug mb-2">
-        {guide.title}
-      </h2>
-      <p className="text-parchment text-sm leading-relaxed">{guide.description}</p>
-      <span className="inline-flex items-center gap-1 mt-4 text-gold text-xs font-medium">
-        Ler guia
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-          <path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
-    </Link>
-  );
-}
-
 export default function GuiasPage() {
   const breadcrumb = JSON.stringify({
     "@context": "https://schema.org",
@@ -146,26 +107,47 @@ export default function GuiasPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumb }} />
 
       <nav aria-label="Navegação estrutural" className="mb-6 text-sm text-dust flex gap-2">
-        <Link href="/" className="hover:text-gold transition-colors">
-          Início
-        </Link>
+        <Link href="/" className="hover:text-gold transition-colors">Início</Link>
         <span aria-hidden="true">›</span>
         <span className="text-parchment">Guias</span>
       </nav>
 
-      <header className="mb-8">
+      <header className="mb-6">
         <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3 [text-wrap:balance]">
           Guias de <span className="text-gold">Vinil</span>
         </h1>
-        <p className="text-parchment text-sm max-w-xl leading-relaxed">
-          Rankings, dicas e guias sobre discos de vinil — do cuidado com a coleção
-          ao que está tocando no mundo todo agora.
-        </p>
       </header>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        {GUIDES.map((guide) => (
-          <GuideCard key={guide.slug} guide={guide} />
+      {/* Featured: newest guide */}
+      <Link
+        href={`/guias/${GUIDES[0].slug}`}
+        className="group block mb-6 bg-sleeve border border-groove rounded-2xl p-6 sm:p-8 hover:border-patina transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-record"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <span className={`text-xs font-semibold border rounded-full px-2.5 py-0.5 ${TAG_COLOR[GUIDES[0].tag]}`}>{TAG_LABEL[GUIDES[0].tag]}</span>
+          <span className="text-xs text-dust">{new Date(GUIDES[0].date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}</span>
+        </div>
+        <h2 className="font-display text-2xl sm:text-3xl font-black text-cream group-hover:text-gold transition-colors leading-tight mb-3 [text-wrap:balance]">{GUIDES[0].title}</h2>
+        <p className="text-parchment text-sm leading-relaxed max-w-2xl mb-5">{GUIDES[0].description}</p>
+        <span className="inline-flex items-center gap-1.5 text-gold text-sm font-semibold">
+          Ler guia
+          <svg width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </span>
+      </Link>
+
+      {/* Compact list: remaining guides */}
+      <div className="divide-y divide-groove">
+        {GUIDES.slice(1).map((guide) => (
+          <Link
+            key={guide.slug}
+            href={`/guias/${guide.slug}`}
+            className="group flex items-center gap-3 sm:gap-4 py-3.5 -mx-2 px-2 rounded-lg hover:bg-groove/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/30"
+          >
+            <span className={`shrink-0 text-[10px] font-bold border rounded-full px-2 py-0.5 ${TAG_COLOR[guide.tag]}`}>{TAG_LABEL[guide.tag]}</span>
+            <span className="font-display text-sm font-black text-cream group-hover:text-gold transition-colors flex-1 leading-snug">{guide.title}</span>
+            <span className="text-xs text-dust shrink-0 hidden sm:block tabular-nums">{guide.updated ? "Diário" : new Date(guide.date).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}</span>
+            <svg className="text-groove group-hover:text-gold transition-colors shrink-0" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </Link>
         ))}
       </div>
     </main>

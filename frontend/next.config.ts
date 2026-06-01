@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
 
+const isDev = process.env.NODE_ENV === "development";
+
 const SECURITY_HEADERS = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -11,11 +13,11 @@ const SECURITY_HEADERS = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval' http://localhost:8400" : ""} https://www.googletagmanager.com https://www.google-analytics.com`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' https: data:",
       "font-src 'self'",
-      "connect-src 'self' https://*.supabase.co https://ws.audioscrobbler.com https://www.google-analytics.com https://www.googletagmanager.com",
+      `connect-src 'self'${isDev ? " http://localhost:8400" : ""} https://*.supabase.co https://ws.audioscrobbler.com https://www.google-analytics.com https://www.googletagmanager.com`,
       "frame-src https://www.googletagmanager.com",
       "object-src 'none'",
       "base-uri 'self'",
