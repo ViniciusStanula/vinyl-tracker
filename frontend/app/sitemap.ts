@@ -41,6 +41,8 @@ export default async function sitemap(props: {
       { url: `${SITEMAP_BASE}/guias`, changeFrequency: "weekly", priority: 0.8 },
       { url: `${SITEMAP_BASE}/guias/top-artistas-spotify`, changeFrequency: "daily", priority: 0.7 },
       { url: `${SITEMAP_BASE}/guias/como-cuidar-de-discos-de-vinil`, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${SITEMAP_BASE}/guias/vinil-180g-vale-a-pena`, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${SITEMAP_BASE}/guias/como-avaliar-estado-disco-vinil`, changeFrequency: "monthly", priority: 0.8 },
       { url: `${SITEMAP_BASE}/guias/rock`, changeFrequency: "monthly", priority: 0.8 },
       ...rockSubgenres.map((sg) => ({
         url: `${SITEMAP_BASE}/guias/rock/${sg.slug}`,
