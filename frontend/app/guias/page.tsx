@@ -41,6 +41,14 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "vinil-colorido-e-picture-disc",
+    title: "Vinil Colorido e Picture Disc Valem a Pena?",
+    description:
+      "Colorido soa pior que preto? E picture disc? Mito vs. realidade técnica: carbon black, polietileno, splatter e quando cada formato vale a pena comprar.",
+    date: "2026-06-01",
+    tag: "guia",
+  },
+  {
     slug: "como-avaliar-estado-disco-vinil",
     title: "Como Avaliar o Estado de um Disco de Vinil",
     description:
