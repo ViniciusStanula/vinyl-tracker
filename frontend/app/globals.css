@@ -115,3 +115,34 @@ body::after {
   50%  { width: 100%; opacity: 1; }
   100% { width: 100%; opacity: 0; }
 }
+
+/* ── Vinil Colorido guide: sidebar TOC layout on desktop ─────────── */
+@media (min-width: 860px) {
+  .vinil-sidebar-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    column-gap: 2rem;
+    max-width: 80rem;
+    align-items: start;
+  }
+  .vinil-sidebar-layout > nav[aria-label="Navegação estrutural"],
+  .vinil-sidebar-layout > header,
+  .vinil-sidebar-layout > figure {
+    grid-column: 1 / -1;
+  }
+  .vinil-sidebar-layout > nav[aria-label="Índice do artigo"] {
+    grid-column: 1 / 2;
+    position: sticky;
+    top: 80px;
+    height: fit-content;
+    margin-bottom: 0;
+  }
+  .vinil-sidebar-layout > .space-y-10 {
+    grid-column: 2 / 3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vinil-sidebar-layout > nav[aria-label="Índice do artigo"] {
+    position: static;
+  }
+}

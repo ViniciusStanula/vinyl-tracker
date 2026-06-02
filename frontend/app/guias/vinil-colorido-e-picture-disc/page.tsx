@@ -130,8 +130,8 @@ export default function VinilColoridoPage() {
     })),
   });
 
-  return (
-    <main id="main-content" className="max-w-4xl mx-auto px-4 py-8">
+  const content = (
+    <>
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: articleLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -668,6 +668,12 @@ export default function VinilColoridoPage() {
         </section>
 
       </div>
+    </>
+  );
+
+  return (
+    <main id="main-content" className="vinil-sidebar-layout mx-auto px-4 py-8">
+      {content}
     </main>
   );
 }

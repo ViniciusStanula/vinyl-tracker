@@ -229,7 +229,7 @@ export default function GradingPage() {
   });
 
   return (
-    <main id="main-content" className="max-w-4xl mx-auto px-4 py-8">
+    <main id="main-content" className="vinil-sidebar-layout mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: articleLd }} />
       {/* eslint-disable-next-line react/no-danger */}
