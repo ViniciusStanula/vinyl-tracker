@@ -1,0 +1,61 @@
+# ============================================================
+# robots.txt — garimpavinil.com.br
+# ============================================================
+
+# --- All crawlers (wildcard) --------------------------------
+User-agent: *
+Allow: /
+
+Sitemap: https://www.garimpavinil.com.br/sitemap.xml
+
+# --- AI crawlers — declared explicitly with usage signals ---
+# Content-Signal spec: https://contentsignals.org
+
+# OpenAI
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+# Anthropic
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+# Google
+User-agent: Google-Extended
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+# Common Crawl
+User-agent: CCBot
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+# ByteDance
+User-agent: Bytespider
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+# Amazon
+User-agent: Amazonbot
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+# Apple
+User-agent: Applebot-Extended
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+# Meta
+User-agent: meta-externalagent
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no

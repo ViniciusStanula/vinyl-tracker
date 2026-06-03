@@ -50,6 +50,12 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: SECURITY_HEADERS,
       },
+      {
+        source: "/",
+        headers: [
+          { key: "Link", value: '</llms.txt>; rel="llms-txt"' },
+        ],
+      },
     ];
   },
 };
