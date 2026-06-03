@@ -53,7 +53,7 @@ const nextConfig: NextConfig = {
       {
         source: "/",
         headers: [
-          { key: "Link", value: '</llms.txt>; rel="llms-txt"' },
+          { key: "Link", value: '</llms.txt>; rel="llms-txt", </llms.txt>; rel="service-doc"' },
         ],
       },
     ];

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "garimpa-vinil-mcp",
+  "version": "1.0.0",
+  "description": "Vinyl record price tracker for Amazon Brasil. Search 11,000+ records, get current deals, price history, and artist catalogs. All prices in BRL. No authentication required.",
+  "transport": [
+    {
+      "type": "http",
+      "url": "https://garimpavinil.com.br/api/mcp"
+    }
+  ],
+  "protocol": "2024-11-05",
+  "capabilities": {
+    "tools": {}
+  },
+  "tools": [
+    {
+      "name": "search_vinyl",
+      "description": "Search vinyl records available on Amazon Brasil by title or artist name. Returns current price in BRL, 30-day average, discount %, deal score, and direct URLs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Album title or artist name" },
+          "preco_max": { "type": "number", "description": "Maximum price in BRL" },
+          "sort": {
+            "type": "string",
+            "enum": ["desconto", "menor-preco", "maior-preco", "deals", "az"],
+            "description": "Sort order (default: desconto)"
+          },
+          "pagina": { "type": "integer", "minimum": 1, "description": "Page number (24 results per page)" }
+        }
+      }
+    },
+    {
+      "name": "get_deals",
+      "description": "Get current best vinyl deals sorted by deal tier then discount %, optionally filtered by genre or max price.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "genero": { "type": "string", "description": "Genre tag (e.g. rock, jazz, samba, mpb, classical)" },
+          "preco_max": { "type": "number", "description": "Maximum price in BRL" },
+          "limite": { "type": "integer", "minimum": 1, "maximum": 24, "description": "Number of results (default: 10)" }
+        }
+      }
+    },
+    {
+      "name": "get_price_history",
+      "description": "Get full price history for a specific vinyl record: current price, 30-day average, all-time low/high, and timestamped price points.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "slug": { "type": "string", "description": "Album slug from search results (e.g. the-beatles-abbey-road-vinyl)" }
+        },
+        "required": ["slug"]
+      }
+    },
+    {
+      "name": "get_artist_albums",
+      "description": "Get all vinyl albums by a specific artist with current prices, discounts, and deal scores.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "artista_slug": { "type": "string", "description": "Artist URL slug (e.g. the-beatles, taylor-swift, rita-lee)" },
+          "preco_max": { "type": "number", "description": "Maximum price in BRL" },
+          "sort": { "type": "string", "enum": ["desconto", "menor-preco", "maior-preco", "deals"] }
+        },
+        "required": ["artista_slug"]
+      }
+    }
+  ]
+}
