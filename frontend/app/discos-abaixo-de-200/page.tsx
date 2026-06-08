@@ -1,4 +1,5 @@
 import { queryPriceUnder200WithCache } from "@/lib/db/promos";
+import { PEER_ORIGIN } from "@/lib/hreflang";
 import DiscoCard from "@/components/DiscoCard";
 import Pagination from "@/components/Pagination";
 import Link from "next/link";
@@ -10,7 +11,14 @@ export const metadata: Metadata = {
   title: "Discos de Vinil abaixo de R$ 200 — Garimpa Vinil",
   description:
     "Todos os discos de vinil disponíveis por menos de R$ 200 na Amazon Brasil, ordenados pelas melhores ofertas.",
-  alternates: { canonical: "/discos-abaixo-de-200" },
+  alternates: {
+    canonical: "/discos-abaixo-de-200",
+    languages: {
+      "pt-BR": "/discos-abaixo-de-200",
+      "en-US": `${PEER_ORIGIN}/records-under-200`,
+      "x-default": `${PEER_ORIGIN}/records-under-200`,
+    },
+  },
   openGraph: {
     title: "Discos de Vinil abaixo de R$ 200 — Garimpa Vinil",
     description:

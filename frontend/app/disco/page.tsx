@@ -1,4 +1,5 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
+import { PEER_ORIGIN } from "@/lib/hreflang";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
@@ -14,7 +15,14 @@ export const metadata = {
   title: "Todos os Discos — Garimpa Vinil",
   description:
     "Todos os discos de vinil em promoção na Amazon Brasil. Filtre por preço, artista e ordenação.",
-  alternates: { canonical: "/disco" },
+  alternates: {
+    canonical: "/disco",
+    languages: {
+      "pt-BR": "/disco",
+      "en-US": `${PEER_ORIGIN}/records`,
+      "x-default": `${PEER_ORIGIN}/records`,
+    },
+  },
   openGraph: {
     title: "Todos os Discos — Garimpa Vinil",
     description:

@@ -17,6 +17,8 @@ import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, type RelatedDeal } from "@/lib/db/disco";
+import { getHreflangRecord } from "@/lib/db/hreflang";
+import { PEER_ORIGIN } from "@/lib/hreflang";
 
 export const revalidate = 7200;
 
@@ -29,12 +31,22 @@ export async function generateMetadata({
   try {
     const disco = await getDiscoWithPrecos(slug);
     if (!disco) return {};
+    const peerSlug = await getHreflangRecord(disco.asin).catch(() => null);
     const title = truncateTitle(`${disco.titulo} — ${disco.artista} em Vinil | Histórico de Preços`);
     const description = truncateDesc(`Compre ${disco.titulo} de ${disco.artista} pelo melhor preço. Veja o histórico de preços e as melhores ofertas disponíveis agora.`);
     return {
       title,
       description,
-      alternates: { canonical: `/disco/${slug}` },
+      alternates: {
+        canonical: `/disco/${slug}`,
+        ...(peerSlug ? {
+          languages: {
+            "pt-BR": `/disco/${slug}`,
+            "en-US": `${PEER_ORIGIN}/record/${peerSlug}`,
+            "x-default": `${PEER_ORIGIN}/record/${peerSlug}`,
+          },
+        } : {}),
+      },
       openGraph: {
         title,
         description,

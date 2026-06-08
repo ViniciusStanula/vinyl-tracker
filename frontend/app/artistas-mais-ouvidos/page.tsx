@@ -1,4 +1,5 @@
 import { queryTopArtistAllDealsWithCache } from "@/lib/db/carousel";
+import { PEER_ORIGIN } from "@/lib/hreflang";
 import DiscoCard from "@/components/DiscoCard";
 import Pagination from "@/components/Pagination";
 import SortBar from "@/components/SortBar";
@@ -12,7 +13,14 @@ export const metadata: Metadata = {
   title: "Artistas mais Ouvidos — Garimpa Vinil",
   description:
     "Os artistas mais ouvidos do mundo com as melhores ofertas em discos de vinil na Amazon Brasil.",
-  alternates: { canonical: "/artistas-mais-ouvidos" },
+  alternates: {
+    canonical: "/artistas-mais-ouvidos",
+    languages: {
+      "pt-BR": "/artistas-mais-ouvidos",
+      "en-US": `${PEER_ORIGIN}/top-artists`,
+      "x-default": `${PEER_ORIGIN}/top-artists`,
+    },
+  },
   openGraph: {
     title: "Artistas mais Ouvidos — Garimpa Vinil",
     description:

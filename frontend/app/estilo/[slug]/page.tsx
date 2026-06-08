@@ -7,6 +7,8 @@ import { Suspense } from "react";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getEstiloPageData, getRelatedEstilos, type SerializedEstiloData, type RelatedEstilo } from "@/lib/db/estilo";
+import { getHreflangSlug } from "@/lib/db/hreflang";
+import { PEER_ORIGIN } from "@/lib/hreflang";
 
 export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
@@ -18,12 +20,10 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  let data;
-  try {
-    data = await getEstiloPageData(slug);
-  } catch {
-    return {};
-  }
+  const [data, hasPeer] = await Promise.all([
+    getEstiloPageData(slug).catch(() => null),
+    getHreflangSlug("genre", slug).catch(() => false),
+  ]);
   if (!data) return {};
   const { canonical } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -33,7 +33,16 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `/estilo/${slug}` },
+    alternates: {
+      canonical: `/estilo/${slug}`,
+      ...(hasPeer ? {
+        languages: {
+          "pt-BR": `/estilo/${slug}`,
+          "en-US": `${PEER_ORIGIN}/genre/${slug}`,
+          "x-default": `${PEER_ORIGIN}/genre/${slug}`,
+        },
+      } : {}),
+    },
     openGraph: {
       title,
       description,

@@ -52,3 +52,19 @@ model HistoricoPreco {
   @@index([discoId, capturadoEm(sort: Desc)])
   @@index([capturadoEm(sort: Desc)])
 }
+
+model HreflangSlug {
+  type String
+  slug String
+
+  @@id([type, slug])
+  @@map("HreflangSlug")
+}
+
+model HreflangRecord {
+  asin      String   @id
+  peerSlug  String   @map("peer_slug")
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@map("HreflangRecord")
+}

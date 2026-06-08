@@ -1,4 +1,5 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
+import { PEER_ORIGIN } from "@/lib/hreflang";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getDiscoCount } from "@/lib/db/home";
 import { queryCarouselDiscosWithCache } from "@/lib/db/carousel";
@@ -26,7 +27,14 @@ export async function generateMetadata() {
   return {
     title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
     description,
-    alternates: { canonical: "/" },
+    alternates: {
+      canonical: "/",
+      languages: {
+        "pt-BR": "/",
+        "en-US": `${PEER_ORIGIN}/`,
+        "x-default": `${PEER_ORIGIN}/`,
+      },
+    },
     openGraph: {
       title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
       description,

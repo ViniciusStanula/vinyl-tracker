@@ -10,6 +10,8 @@ import { toTitleCase } from "@/lib/utils/titleCase";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { Suspense } from "react";
 import { getArtistaPageData, type ArtistaPageData } from "@/lib/db/artista";
+import { getHreflangSlug } from "@/lib/db/hreflang";
+import { PEER_ORIGIN } from "@/lib/hreflang";
 
 export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
@@ -19,12 +21,10 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  let data;
-  try {
-    data = await getArtistaPageData(slug, 1, "desconto", null);
-  } catch {
-    return {};
-  }
+  const [data, hasPeer] = await Promise.all([
+    getArtistaPageData(slug, 1, "desconto", null).catch(() => null),
+    getHreflangSlug("artist", slug).catch(() => false),
+  ]);
   if (!data) return {};
   const { canonical } = data;
   const displayName = toTitleCase(canonical);
@@ -34,7 +34,16 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `/artista/${slug}` },
+    alternates: {
+      canonical: `/artista/${slug}`,
+      ...(hasPeer ? {
+        languages: {
+          "pt-BR": `/artista/${slug}`,
+          "en-US": `${PEER_ORIGIN}/artist/${slug}`,
+          "x-default": `${PEER_ORIGIN}/artist/${slug}`,
+        },
+      } : {}),
+    },
     openGraph: {
       title,
       description,
