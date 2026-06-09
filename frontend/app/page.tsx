@@ -32,14 +32,19 @@ function CarouselSkeleton() {
           <div className="w-11 h-11 rounded-full bg-groove animate-pulse" />
         </div>
       </div>
-      <div className="flex gap-3 overflow-hidden">
+      {/* Line heights mirror DiscoCard exactly (artist 15px, title min-h-10,
+          price 25px inside p-4) so the Suspense swap causes zero layout shift. */}
+      <div className="flex gap-3 overflow-hidden pb-2">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="shrink-0 w-44 sm:w-52 bg-sleeve border border-groove rounded-xl overflow-hidden animate-pulse">
             <div className="aspect-square bg-label" />
-            <div className="p-3 space-y-2">
-              <div className="h-3 bg-groove rounded w-1/2" />
-              <div className="h-4 bg-groove rounded" />
-              <div className="h-3 bg-groove rounded w-3/4" />
+            <div className="p-4">
+              <div className="h-[15px] w-1/2 bg-groove rounded" />
+              <div className="mt-0.5 h-10 bg-groove rounded" />
+              <div className="pt-2">
+                {!HIDE_PRICE_HISTORY && <div className="mb-1 h-[18px] w-11 bg-groove rounded" />}
+                <div className="h-[25px] w-2/3 bg-groove rounded" />
+              </div>
             </div>
           </div>
         ))}
