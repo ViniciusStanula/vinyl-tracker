@@ -27,14 +27,27 @@ export async function generateMetadata({
     getHreflangSlug("artist", slug).catch(() => false),
   ]);
   if (!data) return {};
-  const { canonical } = data;
+  const { canonical, total } = data;
   const displayName = toTitleCase(canonical);
-  const title = truncateTitle(`${displayName} — Discos em Promoção | Garimpa Vinil`);
-  const description = truncateDesc(`Melhores ofertas de ${displayName} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`);
+  // Unattributed crawler rows — never surface "Artista não identificado" in
+  // metadata; neutral copy + noindex until re-attribution lands.
+  const isUnknownArtist =
+    canonical.toLowerCase() === "artista não identificado";
+  const title = isUnknownArtist
+    ? "Discos de Vinil — Vários Artistas | Garimpa Vinil"
+    : truncateTitle(`${displayName} em Vinil — Preços e Ofertas | Garimpa Vinil`);
+  const description = isUnknownArtist
+    ? truncateDesc("Discos de vinil de vários artistas na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.")
+    : truncateDesc(
+        total === 1
+          ? `1 disco de ${displayName} em vinil na Amazon, com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
+          : `${total} discos de ${displayName} em vinil na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
+      );
   const firstImage = data.items.find((d) => d.imgUrl)?.imgUrl ?? null;
   return {
     title,
     description,
+    ...(isUnknownArtist ? { robots: { index: false, follow: true } } : {}),
     alternates: {
       canonical: `/artista/${slug}`,
       ...(hasPeer ? {

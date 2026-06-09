@@ -1,4 +1,5 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
+import { getDiscoCount } from "@/lib/db/home";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import SortBar from "@/components/SortBar";
@@ -25,7 +26,21 @@ export async function generateMetadata({
       robots: { index: false, follow: true },
     };
   }
-  return metadata;
+  let count = 0;
+  try {
+    count = await getDiscoCount();
+  } catch {
+    // DB unavailable — fall back to generic description
+  }
+  const description = count > 0
+    ? `Catálogo com +${count.toLocaleString("pt-BR")} discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.`
+    : metadata.description;
+  return {
+    ...metadata,
+    description,
+    openGraph: { ...metadata.openGraph, description },
+    twitter: { ...metadata.twitter, description },
+  };
 }
 
 // Title/description target "catálogo completo" intent — the home page owns

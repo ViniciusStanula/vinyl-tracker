@@ -59,11 +59,12 @@ export async function generateMetadata({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
+  const HOME_TITLE = "Garimpa Vinil — Histórico de Preços de Discos de Vinil";
   // Internal search results must not be indexed (Google spam policy +
   // unbounded crawl space). Canonical alone is only a hint.
   if (q?.trim()) {
     return {
-      title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+      title: HOME_TITLE,
       robots: { index: false, follow: true },
     };
   }
@@ -73,10 +74,11 @@ export async function generateMetadata({
   } catch {
     // DB unavailable — fall back to generic description
   }
-  const countStr = count > 0 ? `+${count.toLocaleString("pt-BR")} discos disponíveis. ` : "";
-  const description = `${countStr}Catálogo de discos de vinil na Amazon Brasil com preços atualizados. Encontre bons momentos para comprar.`;
+  const description = count > 0
+    ? `Acompanhe o preço de +${count.toLocaleString("pt-BR")} discos de vinil na Amazon Brasil. Histórico de 12 meses, alertas de queda e o melhor momento de comprar cada disco.`
+    : "Acompanhe os preços de discos de vinil na Amazon Brasil. Histórico de 12 meses, alertas de queda e o melhor momento de comprar cada disco.";
   return {
-    title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+    title: HOME_TITLE,
     description,
     alternates: {
       canonical: "/",
@@ -87,7 +89,7 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+      title: HOME_TITLE,
       description,
       url: "/",
       type: "website",
@@ -95,7 +97,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary",
-      title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+      title: HOME_TITLE,
       description,
     },
   };

@@ -23,8 +23,8 @@ export async function generateMetadata({
   if (!sg) return {};
 
   const displayName = capitalize(sg.name);
-  const title = `Melhores Discos de ${displayName}: Ranking Discogs | Garimpa Vinil`;
-  const description = `Ranking dos melhores discos de ${displayName}: ${sg.albumCount.toLocaleString("pt-BR")} álbuns de ${sg.artistCount.toLocaleString("pt-BR")} artistas avaliados via Discogs, ordenados por pontuação bayesiana ponderada.`;
+  const title = `Melhores Discos de ${displayName} | Garimpa Vinil`;
+  const description = `Ranking dos melhores discos de ${displayName}: ${sg.albumCount.toLocaleString("pt-BR")} álbuns de ${sg.artistCount.toLocaleString("pt-BR")} artistas, com nota média ponderada pelo número de avaliações no Discogs.`;
 
   const firstAlbum = sg.topAlbums[0];
   const ogImage = firstAlbum

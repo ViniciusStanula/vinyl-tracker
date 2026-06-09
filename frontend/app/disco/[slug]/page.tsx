@@ -35,8 +35,53 @@ export async function generateMetadata({
     const disco = await getDiscoWithPrecos(slug);
     if (!disco) return {};
     const peerSlug = await getHreflangRecord(disco.asin).catch(() => null);
-    const title = truncateTitle(`${disco.titulo} — ${disco.artista} em Vinil | Histórico de Preços`);
-    const description = truncateDesc(`Compre ${disco.titulo} de ${disco.artista} pelo melhor preço. Veja o histórico de preços e as melhores ofertas disponíveis agora.`);
+
+    const tituloLimpo = cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
+    const isUnknownArtist =
+      disco.artista.toLowerCase() === "artista não identificado";
+    const includeArtist =
+      !isUnknownArtist &&
+      !tituloLimpo.toLowerCase().includes(disco.artista.toLowerCase());
+
+    // Title ladder: full → drop brand → drop artist → truncate cleaned title.
+    // Price never goes in the title — indexed titles outlive price changes.
+    const base = includeArtist
+      ? `${tituloLimpo} em Vinil — ${disco.artista}`
+      : `${tituloLimpo} em Vinil`;
+    let title = `${base} | Garimpa Vinil`;
+    if (title.length > 60) title = base;
+    if (title.length > 60 && includeArtist) title = `${tituloLimpo} em Vinil`;
+    if (title.length > 60) title = `${truncateTitle(tituloLimpo, 51)} em Vinil`;
+
+    const valores = disco.precos.map((p) => Number(p.precoBrl));
+    const atual = valores.at(-1);
+    const fmtR = (v: number) => `R$ ${Math.round(v)}`;
+    let description: string;
+    if (!atual) {
+      description = `${tituloLimpo} em vinil: acompanhe o preço na Amazon e veja o histórico de 12 meses antes de comprar.`;
+    } else if (valores.length < 2) {
+      description = `${tituloLimpo} em vinil a ${fmtR(atual)} na Amazon. Acompanhe o histórico de preços e o gráfico de 12 meses antes de comprar.`;
+    } else {
+      const min = Math.min(...valores);
+      const media = valores.reduce((a, b) => a + b, 0) / valores.length;
+      if (min < atual) {
+        const minRecord = disco.precos[valores.indexOf(min)];
+        const mes = minRecord.capturadoEm.toLocaleDateString("pt-BR", {
+          month: "long",
+          timeZone: "America/Sao_Paulo",
+        });
+        description = `${tituloLimpo} em vinil a ${fmtR(atual)} na Amazon. Menor preço já registrado: ${fmtR(min)} em ${mes}. Gráfico de 12 meses pra decidir a hora de comprar.`;
+      } else {
+        const rel =
+          atual < media * 0.98
+            ? `abaixo da média de ${fmtR(media)}`
+            : atual > media * 1.02
+            ? `acima da média de ${fmtR(media)}`
+            : `na média de ${fmtR(media)}`;
+        description = `Vinil de ${tituloLimpo} a ${fmtR(atual)} na Amazon, ${rel} dos últimos 12 meses. Veja o gráfico antes de comprar.`;
+      }
+    }
+    description = truncateDesc(description);
     return {
       title,
       description,
@@ -55,7 +100,7 @@ export async function generateMetadata({
         description,
         url: `/disco/${slug}`,
         type: "music.album",
-        images: disco.imgUrl ? [{ url: disco.imgUrl, alt: `${disco.titulo} por ${disco.artista} — capa do álbum` }] : ["/og-default.png"],
+        images: disco.imgUrl ? [{ url: disco.imgUrl, alt: `${tituloLimpo}${includeArtist ? ` por ${disco.artista}` : ""} — capa do álbum` }] : ["/og-default.png"],
       },
       twitter: {
         card: disco.imgUrl ? "summary_large_image" : "summary",

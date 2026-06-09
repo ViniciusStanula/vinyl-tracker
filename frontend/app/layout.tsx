@@ -21,9 +21,9 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
-const DEFAULT_TITLE = "Garimpa Vinil — Melhores ofertas em discos de vinil";
+const DEFAULT_TITLE = "Garimpa Vinil — Histórico de Preços de Discos de Vinil";
 const DEFAULT_DESC  =
-  "Os melhores descontos em discos de vinil na Amazon Brasil. Histórico de preços e alertas de promoção.";
+  "Acompanhe o preço de discos de vinil na Amazon Brasil. Histórico de 12 meses, alertas de queda e o melhor momento de comprar cada disco.";
 
 export const viewport: Viewport = {
   width: "device-width",

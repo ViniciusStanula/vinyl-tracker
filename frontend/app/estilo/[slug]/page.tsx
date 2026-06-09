@@ -28,8 +28,13 @@ export async function generateMetadata({
   if (!data) return {};
   const { canonical } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
-  const title = truncateTitle(`${displayName} — Discos em Promoção | Garimpa Vinil`);
-  const description = truncateDesc(`Melhores ofertas de discos de ${displayName} em vinil: acompanhe o histórico de preços e encontre o disco certo pelo menor valor.`);
+  const n = data.discos.length;
+  const title = truncateTitle(`Discos de ${displayName} em Vinil — Ofertas | Garimpa Vinil`);
+  const description = truncateDesc(
+    n >= 4
+      ? `${n} discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
+      : `Discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
+  );
   const firstImage = data.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
   return {
     title,

@@ -7,27 +7,37 @@ import type { Metadata } from "next";
 
 export const revalidate = 1800;
 
-export const metadata: Metadata = {
-  title: "Discos de Vinil abaixo de R$ 200 — Garimpa Vinil",
-  description:
-    "Todos os discos de vinil disponíveis por menos de R$ 200 na Amazon Brasil, ordenados pelas melhores ofertas.",
-  alternates: {
-    canonical: "/discos-abaixo-de-200",
-    languages: {
-      "pt-BR": "/discos-abaixo-de-200",
-      "en-US": `${PEER_ORIGIN}/records-under-200`,
-      "x-default": `${PEER_ORIGIN}/records-under-200`,
+export async function generateMetadata(): Promise<Metadata> {
+  let count = 0;
+  try {
+    count = (await queryPriceUnder200WithCache()).length;
+  } catch {
+    // DB unavailable — fall back to generic description
+  }
+  const title = "Discos de Vinil abaixo de R$ 200 — Garimpa Vinil";
+  const description = count > 0
+    ? `${count.toLocaleString("pt-BR")} discos de vinil por menos de R$ 200 na Amazon, ordenados pelo desconto sobre a média histórica de preço.`
+    : "Discos de vinil por menos de R$ 200 na Amazon, ordenados pelo desconto sobre a média histórica de preço.";
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: "/discos-abaixo-de-200",
+      languages: {
+        "pt-BR": "/discos-abaixo-de-200",
+        "en-US": `${PEER_ORIGIN}/records-under-200`,
+        "x-default": `${PEER_ORIGIN}/records-under-200`,
+      },
     },
-  },
-  openGraph: {
-    title: "Discos de Vinil abaixo de R$ 200 — Garimpa Vinil",
-    description:
-      "Todos os discos de vinil disponíveis por menos de R$ 200 na Amazon Brasil, ordenados pelas melhores ofertas.",
-    url: "/discos-abaixo-de-200",
-    type: "website",
-    images: ["/og-default.png"],
-  },
-};
+    openGraph: {
+      title,
+      description,
+      url: "/discos-abaixo-de-200",
+      type: "website",
+      images: ["/og-default.png"],
+    },
+  };
+}
 
 const PAGE_SIZE = 40;
 
