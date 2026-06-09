@@ -21,11 +21,13 @@ import { SITE_URL } from "@/lib/siteUrl";
 const SLUG = "vinil-180g-vale-a-pena";
 const PAGE_TITLE = "Vinil 180g Vale a Pena? Diferença Real ou Marketing?";
 const PAGE_DESC =
-  "Peso do disco influencia o som? Separamos o que é diferença real (durabilidade, VTA, superfície) de marketing puro, com foco no bolso do comprador brasileiro.";
+  "O peso do disco influencia o som? Separamos diferença real (durabilidade, VTA, superfície) de marketing puro, com foco no comprador brasileiro.";
 const DATE = "2026-05-31";
+const DATE_MODIFIED = "2026-06-09";
+const HERO_IMAGE = `${SITE_URL}/blog/agulha-toca-discos-vinil.jpg`;
 
 export const metadata: Metadata = {
-  title: "Vinil 180g Vale a Pena? Diferença Real ou Marketing? | Garimpa Vinil",
+  title: "Vinil 180g Vale a Pena ou É Só Marketing? | Garimpa Vinil",
   description: PAGE_DESC,
   alternates: { canonical: `/guias/${SLUG}` },
   openGraph: {
@@ -35,9 +37,9 @@ export const metadata: Metadata = {
     url: `/guias/${SLUG}`,
     images: [
       {
-        url: "https://images.pexels.com/photos/5764288/pexels-photo-5764288.jpeg?auto=compress&cs=tinysrgb&w=1200",
+        url: HERO_IMAGE,
         width: 1200,
-        height: 800,
+        height: 675,
         alt: "Cápsula e agulha de toca-discos em close sobre disco de vinil girando no prato",
       },
     ],
@@ -46,7 +48,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: PAGE_TITLE,
     description: PAGE_DESC,
-    images: ["https://images.pexels.com/photos/5764288/pexels-photo-5764288.jpeg?auto=compress&cs=tinysrgb&w=1200"],
+    images: [HERO_IMAGE],
   },
 };
 
@@ -95,22 +97,21 @@ export default function Vinil180gPage() {
     headline: PAGE_TITLE,
     description: PAGE_DESC,
     datePublished: DATE,
-    dateModified: DATE,
+    dateModified: DATE_MODIFIED,
     inLanguage: "pt-BR",
-    wordCount: 3700,
     articleSection: "Guias",
     keywords: "vinil 180g, vinil 180 gramas, disco pesado, prensagem vinil, gramatura vinil, vale a pena 180g",
-    author: { "@type": "Person", name: "Equipe Garimpa Vinil", url: `${SITE_URL}/sobre` },
+    author: { "@type": "Organization", name: "Garimpa Vinil", url: `${SITE_URL}/sobre` },
     publisher: { "@type": "Organization", name: "Garimpa Vinil", url: SITE_URL },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
     image: {
       "@type": "ImageObject",
-      url: "https://images.pexels.com/photos/5764288/pexels-photo-5764288.jpeg?auto=compress&cs=tinysrgb&w=1200",
+      url: HERO_IMAGE,
       width: 1200,
-      height: 800,
+      height: 675,
     },
     speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1"] },
-  });
+  }).replace(/<\//g, "<\\/");
 
   const breadcrumbLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -120,7 +121,7 @@ export default function Vinil180gPage() {
       { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
       { "@type": "ListItem", position: 3, name: "Vinil 180g Vale a Pena?", item: `${SITE_URL}/guias/${SLUG}` },
     ],
-  });
+  }).replace(/<\//g, "<\\/");
 
   const faqLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -130,7 +131,7 @@ export default function Vinil180gPage() {
       name: q,
       acceptedAnswer: { "@type": "Answer", text: a },
     })),
-  });
+  }).replace(/<\//g, "<\\/");
 
   return (
     <main id="main-content" className="vinil-sidebar-layout mx-auto px-4 py-8">
@@ -170,6 +171,12 @@ export default function Vinil180gPage() {
               31 de maio de 2026
             </time>
           </span>
+          <span>
+            Atualizado em{" "}
+            <time dateTime={DATE_MODIFIED} className="text-parchment">
+              9 de junho de 2026
+            </time>
+          </span>
           <span className="flex items-center gap-1">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.25" />
@@ -183,10 +190,10 @@ export default function Vinil180gPage() {
       {/* Hero image */}
       <figure className="mb-8 rounded-2xl overflow-hidden">
         <Image
-          src="https://images.pexels.com/photos/5764288/pexels-photo-5764288.jpeg?auto=compress&cs=tinysrgb&w=1200"
+          src="/blog/agulha-toca-discos-vinil.jpg"
           alt="Cápsula e agulha de toca-discos em close, posicionada sobre disco de vinil girando no prato"
           width={1200}
-          height={800}
+          height={675}
           className="w-full object-cover max-h-96"
           priority
         />
@@ -392,7 +399,7 @@ export default function Vinil180gPage() {
               </h3>
               <figure className="mb-4 rounded-xl overflow-hidden">
                 <Image
-                  src="https://images.pexels.com/photos/5764288/pexels-photo-5764288.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  src="/blog/agulha-toca-discos-vinil.jpg"
                   alt="Cápsula e agulha de toca-discos em close, posicionada sobre a superfície de um disco de vinil girando"
                   width={800}
                   height={450}
@@ -525,7 +532,7 @@ export default function Vinil180gPage() {
           </h2>
           <figure className="mb-6 rounded-xl overflow-hidden">
             <Image
-              src="https://images.pexels.com/photos/2956143/pexels-photo-2956143.jpeg?auto=compress&cs=tinysrgb&w=800"
+              src="/blog/capas-discos-vinil-sebo.jpg"
               alt="Bancadas de discos de vinil em feira, com diversas capas visíveis em ordem vertical"
               width={800}
               height={533}
@@ -547,8 +554,11 @@ export default function Vinil180gPage() {
               original ainda representa o teto sonicamente possível, mesmo sendo mais leve.
             </p>
             <p>
-              O problema está na palavra &quot;conservado&quot;. Um original em VG+ (Very Good Plus) num
-              preço razoável pode ser excelente. Um em G (Good) com marcas de dedos, arranhões e
+              O problema está na palavra &quot;conservado&quot;. Um original em{" "}
+              <Link href="/guias/como-avaliar-estado-disco-vinil" className="underline hover:text-gold transition-colors">
+                VG+ (Very Good Plus)
+              </Link>{" "}
+              num preço razoável pode ser excelente. Um em G (Good) com marcas de dedos, arranhões e
               superfície oxidada vai soar pior do que o pior reissue do mercado.
             </p>
             <p>
@@ -759,10 +769,10 @@ export default function Vinil180gPage() {
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
-                href="/"
+                href="/discos-abaixo-de-200"
                 className="inline-flex items-center gap-1.5 bg-gold/10 border border-gold/30 text-gold text-xs font-semibold px-4 py-2 rounded-full hover:bg-gold/20 transition-colors"
               >
-                Garimpar discos no Brasil
+                Ver discos abaixo de R$200
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -774,6 +784,22 @@ export default function Vinil180gPage() {
                 Ver todos os guias
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* Related guides */}
+        <section aria-label="Guias relacionados">
+          <h2 className="font-display text-lg font-bold text-cream mb-4">Leia também</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              { href: "/guias/vinil-colorido-e-picture-disc", title: "Vinil Colorido e Picture Disc Valem a Pena?", desc: "Mito vs. realidade técnica: carbon black, polietileno e quando cada formato compensa." },
+              { href: "/guias/como-avaliar-estado-disco-vinil", title: "Como Avaliar o Estado de um Disco de Vinil", desc: "Pra decidir entre original de sebo e reissue, comece sabendo graduar." },
+            ].map(({ href, title, desc }) => (
+              <Link key={href} href={href} className="block bg-sleeve border border-groove rounded-xl p-4 hover:border-patina transition-colors">
+                <p className="font-display text-sm font-bold text-cream mb-1">{title}</p>
+                <p className="text-parchment text-xs leading-relaxed">{desc}</p>
+              </Link>
+            ))}
           </div>
         </section>
 

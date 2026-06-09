@@ -23,6 +23,8 @@ const PAGE_TITLE = "Vinil Colorido e Picture Disc Valem a Pena?";
 const PAGE_DESC =
   "Colorido soa pior que preto? E picture disc? Mito vs. realidade técnica: carbon black, polietileno, splatter e quando cada formato vale a pena comprar.";
 const DATE = "2026-06-01";
+const DATE_MODIFIED = "2026-06-09";
+const HERO_IMAGE = `${SITE_URL}/blog/vinil-colorido-close.jpg`;
 
 export const metadata: Metadata = {
   title: "Vinil Colorido e Picture Disc Valem a Pena? | Garimpa Vinil",
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
     url: `/guias/${SLUG}`,
     images: [
       {
-        url: "https://images.pexels.com/photos/9789243/pexels-photo-9789243.jpeg?auto=compress&cs=tinysrgb&w=1200",
+        url: HERO_IMAGE,
         width: 1200,
         height: 800,
         alt: "Disco de vinil colorido em close, evidenciando a superfície e os sulcos de uma prensagem em cor",
@@ -46,7 +48,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: PAGE_TITLE,
     description: PAGE_DESC,
-    images: ["https://images.pexels.com/photos/9789243/pexels-photo-9789243.jpeg?auto=compress&cs=tinysrgb&w=1200"],
+    images: [HERO_IMAGE],
   },
 };
 
@@ -93,22 +95,21 @@ export default function VinilColoridoPage() {
     headline: PAGE_TITLE,
     description: PAGE_DESC,
     datePublished: DATE,
-    dateModified: DATE,
+    dateModified: DATE_MODIFIED,
     inLanguage: "pt-BR",
-    wordCount: 3900,
     articleSection: "Guias",
     keywords: "vinil colorido, picture disc, splatter vinyl, vinil colorido qualidade, picture disc som, vinil colorido vs preto",
-    author: { "@type": "Person", name: "Equipe Garimpa Vinil", url: `${SITE_URL}/sobre` },
+    author: { "@type": "Organization", name: "Garimpa Vinil", url: `${SITE_URL}/sobre` },
     publisher: { "@type": "Organization", name: "Garimpa Vinil", url: SITE_URL },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
     image: {
       "@type": "ImageObject",
-      url: "https://images.pexels.com/photos/9789243/pexels-photo-9789243.jpeg?auto=compress&cs=tinysrgb&w=1200",
+      url: HERO_IMAGE,
       width: 1200,
       height: 800,
     },
     speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1"] },
-  });
+  }).replace(/<\//g, "<\\/");
 
   const breadcrumbLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -118,7 +119,7 @@ export default function VinilColoridoPage() {
       { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
       { "@type": "ListItem", position: 3, name: "Vinil Colorido e Picture Disc Valem a Pena?", item: `${SITE_URL}/guias/${SLUG}` },
     ],
-  });
+  }).replace(/<\//g, "<\\/");
 
   const faqLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -128,7 +129,7 @@ export default function VinilColoridoPage() {
       name: q,
       acceptedAnswer: { "@type": "Answer", text: a },
     })),
-  });
+  }).replace(/<\//g, "<\\/");
 
   const content = (
     <>
@@ -169,6 +170,12 @@ export default function VinilColoridoPage() {
               1 de junho de 2026
             </time>
           </span>
+          <span>
+            Atualizado em{" "}
+            <time dateTime={DATE_MODIFIED} className="text-parchment">
+              9 de junho de 2026
+            </time>
+          </span>
           <span className="flex items-center gap-1">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.25" />
@@ -182,7 +189,7 @@ export default function VinilColoridoPage() {
       {/* Hero image */}
       <figure className="mb-8 rounded-2xl overflow-hidden">
         <Image
-          src="https://images.pexels.com/photos/9789243/pexels-photo-9789243.jpeg?auto=compress&cs=tinysrgb&w=1200"
+          src="/blog/vinil-colorido-close.jpg"
           alt="Disco de vinil colorido em close, evidenciando a superfície e os sulcos de uma prensagem em cor"
           width={1200}
           height={800}
@@ -271,7 +278,7 @@ export default function VinilColoridoPage() {
                 </p>
                 <p className="text-parchment text-xs leading-relaxed">
                   &quot;Com os avanços de hoje na manufatura de vinil, essencialmente não há diferença na
-                  qualidade de áudio entre vinil colorido e preto&quot; — desde que os padrões de
+                  qualidade de áudio entre vinil colorido e preto&quot;, desde que os padrões de
                   fabricação sejam altos. Fonte:{" "}
                   <a
                     href="https://www.dunkpressing.com/news/2023/3/18/colored-vinyl-vs-black-vinyl"
@@ -404,7 +411,7 @@ export default function VinilColoridoPage() {
               </h3>
               <figure className="mb-4 rounded-xl overflow-hidden">
                 <Image
-                  src="https://images.pexels.com/photos/4393106/pexels-photo-4393106.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  src="/blog/vinil-colorido-superficie.jpg"
                   alt="Disco de vinil colorido sobre superfície, mostrando a transparência e os sulcos da prensagem colorida"
                   width={800}
                   height={450}
@@ -467,7 +474,12 @@ export default function VinilColoridoPage() {
               Colorido sólido de boa qualidade entrega o mesmo som que o preto equivalente. Isso
               significa que a escolha entre um e outro é, na prática, estética. O único critério
               adicional que importa é verificar se ambas as versões vieram do mesmo master e da
-              mesma planta.
+              mesma planta. Pra saber como checar masterização e planta antes de comprar, veja o
+              nosso{" "}
+              <Link href="/guias/vinil-180g-vale-a-pena" className="underline hover:text-gold transition-colors">
+                guia sobre vinil 180g e qualidade de prensagem
+              </Link>
+              .
             </p>
             <p>
               Onde o colorido agrega valor concreto é como peça de coleção. Edições limitadas em
@@ -524,7 +536,7 @@ export default function VinilColoridoPage() {
           </h2>
           <figure className="mb-6 rounded-xl overflow-hidden">
             <Image
-              src="https://images.pexels.com/photos/4393111/pexels-photo-4393111.jpeg?auto=compress&cs=tinysrgb&w=800"
+              src="/blog/colecao-vinil-colorido.jpg"
               alt="Coleção de discos de vinil coloridos empilhados, evidenciando a diversidade de cores e formatos de edições limitadas"
               width={800}
               height={533}
@@ -649,10 +661,10 @@ export default function VinilColoridoPage() {
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
-                href="/"
+                href="/disco"
                 className="inline-flex items-center gap-1.5 bg-gold/10 border border-gold/30 text-gold text-xs font-semibold px-4 py-2 rounded-full hover:bg-gold/20 transition-colors"
               >
-                Garimpar discos no Brasil
+                Ver discos com preço monitorado
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -664,6 +676,22 @@ export default function VinilColoridoPage() {
                 Ver todos os guias
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* Related guides */}
+        <section aria-label="Guias relacionados">
+          <h2 className="font-display text-lg font-bold text-cream mb-4">Leia também</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              { href: "/guias/vinil-180g-vale-a-pena", title: "Vinil 180g Vale a Pena?", desc: "O que é diferença real e o que é marketing na gramatura do disco." },
+              { href: "/guias/como-cuidar-de-discos-de-vinil", title: "Como Cuidar de Discos de Vinil", desc: "Limpeza, armazenamento e os cuidados extras que picture disc exige." },
+            ].map(({ href, title, desc }) => (
+              <Link key={href} href={href} className="block bg-sleeve border border-groove rounded-xl p-4 hover:border-patina transition-colors">
+                <p className="font-display text-sm font-bold text-cream mb-1">{title}</p>
+                <p className="text-parchment text-xs leading-relaxed">{desc}</p>
+              </Link>
+            ))}
           </div>
         </section>
 

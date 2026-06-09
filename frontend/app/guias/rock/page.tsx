@@ -8,7 +8,7 @@ import { fetchLastfmAlbumCover } from "@/lib/external/lastfmAlbum";
 import { SITE_URL } from "@/lib/siteUrl";
 const PREVIEW_COUNT = 10;
 
-const META_TITLE = "Os Discos de Rock Mais Bem Avaliados por Subgênero | Garimpa Vinil";
+const META_TITLE = "Melhores Discos de Rock por Subgênero | Garimpa Vinil";
 const META_DESC = "Analisamos mais de 11.000 discos de rock via Discogs e ranqueamos os melhores por subgênero: classic rock, grunge, indie, shoegaze, blues rock e mais.";
 
 export const metadata: Metadata = {
@@ -60,10 +60,26 @@ export default async function RockPage() {
     ],
   }).replace(/<\//g, "<\\/");
 
+  const itemList = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Melhores discos de Rock por subgênero",
+    url: `${SITE_URL}/guias/rock`,
+    numberOfItems: sorted.length,
+    itemListElement: sorted.map((sg, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: capitalize(sg.name),
+      url: `${SITE_URL}/guias/rock/${sg.slug}`,
+    })),
+  }).replace(/<\//g, "<\\/");
+
   return (
     <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumb }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemList }} />
 
       <nav className="mb-6 text-sm text-dust flex gap-2 flex-wrap">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
@@ -75,8 +91,8 @@ export default async function RockPage() {
 
       <header className="mb-10">
         <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-4">
-          Os discos de <span className="text-gold">Rock</span>{" "}
-          mais bem avaliados
+          Melhores discos de <span className="text-gold">Rock</span>{" "}
+          por subgênero
         </h1>
 
         {/* Stats pills */}
@@ -142,9 +158,15 @@ export default async function RockPage() {
         })}
       </div>
 
-      <footer className="mt-16 pt-8 border-t border-groove">
+      <footer className="mt-16 pt-8 border-t border-groove flex flex-wrap gap-4">
         <Link href="/guias" className="text-sm text-dust hover:text-gold transition-colors">
           ← Todos os guias
+        </Link>
+        <Link href="/disco" className="text-sm text-dust hover:text-gold transition-colors">
+          Buscar esses discos com preço monitorado
+        </Link>
+        <Link href="/guias/como-avaliar-estado-disco-vinil" className="text-sm text-dust hover:text-gold transition-colors">
+          Como avaliar o estado antes de comprar
         </Link>
       </footer>
     </main>

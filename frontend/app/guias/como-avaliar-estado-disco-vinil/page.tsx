@@ -23,6 +23,8 @@ const PAGE_TITLE = "Como Avaliar o Estado de um Disco de Vinil";
 const PAGE_DESC =
   "Guia Goldmine de grading: o que significa Mint, NM, VG+, VG e Poor, como inspecionar disco e capa, abreviações do Discogs e como o grading afeta o preço.";
 const DATE = "2026-05-31";
+const DATE_MODIFIED = "2026-06-09";
+const HERO_IMAGE = `${SITE_URL}/blog/inspecao-estado-disco-vinil.jpg`;
 
 export const metadata: Metadata = {
   title: "Como Avaliar o Estado de um Disco de Vinil | Garimpa Vinil",
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
     url: `/guias/${SLUG}`,
     images: [
       {
-        url: "https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=1200",
+        url: HERO_IMAGE,
         width: 1200,
         height: 800,
         alt: "Mãos segurando disco de vinil pelas bordas para inspeção do estado de conservação",
@@ -46,7 +48,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: PAGE_TITLE,
     description: PAGE_DESC,
-    images: ["https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=1200"],
+    images: [HERO_IMAGE],
   },
 };
 
@@ -191,22 +193,21 @@ export default function GradingPage() {
     headline: PAGE_TITLE,
     description: PAGE_DESC,
     datePublished: DATE,
-    dateModified: DATE,
+    dateModified: DATE_MODIFIED,
     inLanguage: "pt-BR",
-    wordCount: 4100,
     articleSection: "Guias",
     keywords: "grading vinil, avaliar estado disco vinil, Mint NM VG+ VG Good Poor, Goldmine grading, Discogs grading",
-    author: { "@type": "Person", name: "Equipe Garimpa Vinil", url: `${SITE_URL}/sobre` },
+    author: { "@type": "Organization", name: "Garimpa Vinil", url: `${SITE_URL}/sobre` },
     publisher: { "@type": "Organization", name: "Garimpa Vinil", url: SITE_URL },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
     image: {
       "@type": "ImageObject",
-      url: "https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=1200",
+      url: HERO_IMAGE,
       width: 1200,
       height: 800,
     },
     speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1"] },
-  });
+  }).replace(/<\//g, "<\\/");
 
   const breadcrumbLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -216,7 +217,7 @@ export default function GradingPage() {
       { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
       { "@type": "ListItem", position: 3, name: "Como Avaliar o Estado de um Disco de Vinil", item: `${SITE_URL}/guias/${SLUG}` },
     ],
-  });
+  }).replace(/<\//g, "<\\/");
 
   const faqLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -226,7 +227,7 @@ export default function GradingPage() {
       name: q,
       acceptedAnswer: { "@type": "Answer", text: a },
     })),
-  });
+  }).replace(/<\//g, "<\\/");
 
   return (
     <main id="main-content" className="vinil-sidebar-layout mx-auto px-4 py-8">
@@ -266,6 +267,12 @@ export default function GradingPage() {
               31 de maio de 2026
             </time>
           </span>
+          <span>
+            Atualizado em{" "}
+            <time dateTime={DATE_MODIFIED} className="text-parchment">
+              9 de junho de 2026
+            </time>
+          </span>
           <span className="flex items-center gap-1">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.25" />
@@ -279,7 +286,7 @@ export default function GradingPage() {
       {/* Hero image */}
       <figure className="mb-8 rounded-2xl overflow-hidden">
         <Image
-          src="https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=1200"
+          src="/blog/inspecao-estado-disco-vinil.jpg"
           alt="Mãos segurando disco de vinil pelas bordas para inspeção do estado de conservação sob luz"
           width={1200}
           height={800}
@@ -430,7 +437,7 @@ export default function GradingPage() {
           </h2>
           <figure className="mb-6 rounded-xl overflow-hidden">
             <Image
-              src="https://images.pexels.com/photos/2956143/pexels-photo-2956143.jpeg?auto=compress&cs=tinysrgb&w=800"
+              src="/blog/capas-discos-vinil-sebo.jpg"
               alt="Capas de discos de vinil em estante de sebo ou feira, com desgaste visível nas bordas"
               width={800}
               height={533}
@@ -521,7 +528,7 @@ export default function GradingPage() {
               </h3>
               <figure className="mb-4 rounded-xl overflow-hidden">
                 <Image
-                  src="https://images.pexels.com/photos/6863085/pexels-photo-6863085.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  src="/blog/superficie-disco-vinil-poeira.jpg"
                   alt="Superfície de disco de vinil sob luz direta, mostrando partículas e marcas visíveis nos sulcos"
                   width={800}
                   height={1200}
@@ -749,7 +756,13 @@ export default function GradingPage() {
               <p>
                 Na prática: sempre peça os dois graus separados (disco e capa), sempre inspecione
                 sob luz oblíqua quando possível, e use o teste da unha para confirmar o que seus
-                olhos encontraram. Esses três hábitos resolvem 90% das surpresas desagradáveis.
+                olhos encontraram. Esses três hábitos resolvem 90% das surpresas desagradáveis. E
+                limpe antes de avaliar: sujeira mascara a condição real. O passo a passo está no
+                nosso{" "}
+                <Link href="/guias/como-cuidar-de-discos-de-vinil" className="underline hover:text-gold transition-colors">
+                  guia de limpeza e cuidados
+                </Link>
+                .
               </p>
               <p>
                 E se ainda tiver dúvida depois de inspecionar: grade para baixo. Comprador que
@@ -759,10 +772,10 @@ export default function GradingPage() {
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
-                href="/"
+                href="/disco"
                 className="inline-flex items-center gap-1.5 bg-gold/10 border border-gold/30 text-gold text-xs font-semibold px-4 py-2 rounded-full hover:bg-gold/20 transition-colors"
               >
-                Garimpar discos no Brasil
+                Ver discos com preço monitorado
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -774,6 +787,22 @@ export default function GradingPage() {
                 Ver todos os guias
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* Related guides */}
+        <section aria-label="Guias relacionados">
+          <h2 className="font-display text-lg font-bold text-cream mb-4">Leia também</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              { href: "/guias/como-cuidar-de-discos-de-vinil", title: "Como Cuidar de Discos de Vinil", desc: "Limpeza, armazenamento no clima do Brasil e os 5 erros que destroem coleções." },
+              { href: "/guias/vinil-180g-vale-a-pena", title: "Vinil 180g Vale a Pena?", desc: "Original bem conservado ou reissue pesado? O que olhar antes de pagar mais." },
+            ].map(({ href, title, desc }) => (
+              <Link key={href} href={href} className="block bg-sleeve border border-groove rounded-xl p-4 hover:border-patina transition-colors">
+                <p className="font-display text-sm font-bold text-cream mb-1">{title}</p>
+                <p className="text-parchment text-xs leading-relaxed">{desc}</p>
+              </Link>
+            ))}
           </div>
         </section>
 

@@ -55,6 +55,7 @@ const PAGE_TITLE = "Como Cuidar de Discos de Vinil: Guia Completo Para Sua Cole�
 const PAGE_DESC =
   "Guia de limpeza, armazenamento no clima do Brasil, cuidados com agulha e checklist de manutenção para sua coleção de vinil durar décadas.";
 const DATE = "2026-05-27";
+const DATE_MODIFIED = "2026-06-09";
 
 export const metadata: Metadata = {
   title: "Como Cuidar de Discos de Vinil: Guia Completo | Garimpa Vinil",
@@ -65,7 +66,7 @@ export const metadata: Metadata = {
     title: PAGE_TITLE,
     description: PAGE_DESC,
     url: `/guias/${SLUG}`,
-    images: [{ url: `${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`, width: 6000, height: 4000, alt: "Agulha Philips sobre disco de vinil girando no prato do toca-discos" }],
+    images: [{ url: `${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`, width: 1200, height: 800, alt: "Agulha Philips sobre disco de vinil girando no prato do toca-discos" }],
   },
   twitter: { card: "summary_large_image", title: PAGE_TITLE, description: PAGE_DESC, images: [`${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`] },
 };
@@ -119,17 +120,16 @@ export default function ComoGuardarPage() {
     headline: PAGE_TITLE,
     description: PAGE_DESC,
     datePublished: DATE,
-    dateModified: DATE,
+    dateModified: DATE_MODIFIED,
     inLanguage: "pt-BR",
-    wordCount: 4328,
     articleSection: "Guias",
     keywords: "cuidar de discos de vinil, limpar disco de vinil, armazenar vinil, limpeza vinil, manutenção vinil",
-    author: { "@type": "Person", name: "Equipe Garimpa Vinil", url: `${SITE_URL}/sobre` },
+    author: { "@type": "Organization", name: "Garimpa Vinil", url: `${SITE_URL}/sobre` },
     publisher: { "@type": "Organization", name: "Garimpa Vinil", url: SITE_URL },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
-    image: { "@type": "ImageObject", url: `${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`, width: 6000, height: 4000 },
+    image: { "@type": "ImageObject", url: `${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`, width: 1200, height: 800 },
     speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1"] },
-  });
+  }).replace(/<\//g, "<\\/");
 
   const breadcrumbLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -139,7 +139,7 @@ export default function ComoGuardarPage() {
       { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
       { "@type": "ListItem", position: 3, name: "Como Cuidar de Discos de Vinil", item: `${SITE_URL}/guias/${SLUG}` },
     ],
-  });
+  }).replace(/<\//g, "<\\/");
 
   const faqLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -149,7 +149,7 @@ export default function ComoGuardarPage() {
       name: q,
       acceptedAnswer: { "@type": "Answer", text: a },
     })),
-  });
+  }).replace(/<\//g, "<\\/");
 
   return (
     <main id="main-content" className="vinil-sidebar-layout mx-auto px-4 py-8">
@@ -189,6 +189,12 @@ export default function ComoGuardarPage() {
               27 de maio de 2026
             </time>
           </span>
+          <span>
+            Atualizado em{" "}
+            <time dateTime={DATE_MODIFIED} className="text-parchment">
+              9 de junho de 2026
+            </time>
+          </span>
           <span className="flex items-center gap-1">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.25" />
@@ -210,6 +216,14 @@ export default function ComoGuardarPage() {
           priority
         />
       </figure>
+
+      {/* Quick answer */}
+      <p className="text-parchment text-sm leading-relaxed mb-8 bg-sleeve border border-groove rounded-xl px-4 py-3">
+        Resposta rápida: guarde os discos na vertical, longe de sol, calor e umidade; escove com
+        fibra de carbono antes de cada audição; faça limpeza profunda com água destilada e sabão
+        neutro em todo disco usado; mantenha a agulha limpa e troque dentro da vida útil; e nunca
+        toque na parte preta gravada. O guia abaixo detalha cada um desses pontos.
+      </p>
 
       {/* Table of Contents */}
       <nav aria-label="Índice do artigo" className="bg-sleeve border border-groove rounded-xl p-5 mb-8">
@@ -239,13 +253,13 @@ export default function ComoGuardarPage() {
           </h2>
           <div className="space-y-4 text-parchment text-base leading-relaxed">
             <p>
-              Um LP de 12 polegadas tem aproximadamente 500 metros de sulco gravado — meio
+              Um LP de 12 polegadas tem aproximadamente 500 metros de sulco gravado: meio
               quilômetro em espiral, com largura de cerca de 0,04 mm, menor que um fio de cabelo
               humano. Quando o disco é prensado, a vibração do áudio original é traduzida em
               pequenas ondulações nas paredes desse sulco: quanto mais grave o som, mais larga a
               ondulação; quanto mais agudo, mais fina. Na hora de tocar, a agulha de diamante
               percorre esses 500 metros a 33⅓ rpm e &quot;lê&quot; cada ondulação como vibração mecânica,
-              que vira sinal elétrico, que vira música. É um processo absurdamente delicado — e é
+              que vira sinal elétrico, que vira música. É um processo absurdamente delicado, e é
               exatamente por isso que qualquer descuido no manuseio, na limpeza ou no armazenamento
               deixa marca permanente.
             </p>
@@ -270,13 +284,13 @@ export default function ComoGuardarPage() {
           </p>
           <figure className="my-4 rounded-xl overflow-hidden">
             <Image
-              src="https://images.pexels.com/photos/4433316/pexels-photo-4433316.jpeg?auto=compress&cs=tinysrgb&w=800"
+              src="/blog/discos-vinil-empilhados-horizontal.jpg"
               alt="Discos de vinil empilhados na horizontal sobre uma superfície, mostrando armazenamento incorreto"
               width={800}
               height={1067}
               className="w-full object-cover max-h-72"
             />
-            <figcaption className="text-xs text-dust mt-2 px-1">Armazenamento horizontal — o peso comprime os discos inferiores e causa empenamento permanente.</figcaption>
+            <figcaption className="text-xs text-dust mt-2 px-1">Armazenamento horizontal: o peso comprime os discos inferiores e causa empenamento permanente.</figcaption>
           </figure>
           <div className="space-y-4">
             {[
@@ -340,7 +354,7 @@ export default function ComoGuardarPage() {
               </p>
               <figure className="mt-4 rounded-xl overflow-hidden">
                 <Image
-                  src="https://images.pexels.com/photos/6867602/pexels-photo-6867602.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  src="/blog/inspecao-estado-disco-vinil.jpg"
                   alt="Mãos segurando disco de vinil pelas bordas, com os dedos na borda e o polegar no verso, sem tocar a área gravada"
                   width={800}
                   height={1067}
@@ -356,19 +370,19 @@ export default function ComoGuardarPage() {
               <p>
                 Incline a capa com a abertura virada um pouco pra baixo, deixe o disco deslizar
                 parcialmente pra fora junto com o plástico interno, e segure pela borda assim que
-                ele aparecer. Nunca enfile o dedo no buraco central pra puxar — esse gesto risca o
+                ele aparecer. Nunca enfie o dedo no buraco central pra puxar: esse gesto risca o
                 selo, estressa o vinil no ponto mais frágil e ainda força o plástico interno a
                 dobrar.
               </p>
               <figure className="mt-4 rounded-xl overflow-hidden">
                 <Image
-                  src="https://images.pexels.com/photos/6827183/pexels-photo-6827183.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  src="/blog/retirar-disco-vinil-da-capa.jpg"
                   alt="Pessoa retirando um disco de vinil da capa em uma loja de discos, com a mão segurando pela borda"
                   width={800}
                   height={600}
                   className="w-full object-cover max-h-72"
                 />
-                <figcaption className="text-xs text-dust mt-2 px-1">Retire o disco inclinando a capa — nunca enfilando o dedo no buraco central.</figcaption>
+                <figcaption className="text-xs text-dust mt-2 px-1">Retire o disco inclinando a capa, nunca enfiando o dedo no buraco central.</figcaption>
               </figure>
             </div>
             <div>
@@ -400,13 +414,13 @@ export default function ComoGuardarPage() {
           </p>
           <figure className="my-4 rounded-xl overflow-hidden">
             <Image
-              src="https://images.pexels.com/photos/6863085/pexels-photo-6863085.jpeg?auto=compress&cs=tinysrgb&w=800"
+              src="/blog/superficie-disco-vinil-poeira.jpg"
               alt="Disco de vinil no prato do toca-discos com poeira iridescente visível sobre a superfície preta"
               width={800}
               height={1200}
               className="w-full object-cover max-h-72"
             />
-            <figcaption className="text-xs text-dust mt-2 px-1">Poeira e partículas estáticas acumuladas — visíveis como brilho iridescente. Uma escovada antes de tocar resolve isso em segundos.</figcaption>
+            <figcaption className="text-xs text-dust mt-2 px-1">Poeira e partículas estáticas acumuladas, visíveis como brilho iridescente. Uma escovada antes de tocar resolve isso em segundos.</figcaption>
           </figure>
           <p className="text-parchment text-base leading-relaxed mb-6">
             Existem três níveis diferentes de limpeza de disco. A regra simples é casar o nível de
@@ -426,7 +440,7 @@ export default function ComoGuardarPage() {
                 <p>
                   A função é dupla: tirar a poeira acumulada e descarregar a estática que se forma
                   na superfície do vinil. Disco com estática é disco que atrai poeira do ar enquanto
-                  toca. Faça antes de cada audição, sem exceção — cinco segundos de esforço que
+                  toca. Faça antes de cada audição, sem exceção: cinco segundos de esforço que
                   poupam horas de limpeza profunda no futuro.
                 </p>
               </div>
@@ -437,13 +451,13 @@ export default function ComoGuardarPage() {
               </h3>
               <figure className="mb-4 rounded-xl overflow-hidden">
                 <Image
-                  src="https://images.pexels.com/photos/6873716/pexels-photo-6873716.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  src="/blog/limpeza-disco-vinil-microfibra.jpg"
                   alt="Mão limpando disco de vinil com pano de microfibra azul em movimentos circulares acompanhando o sulco"
                   width={800}
                   height={1067}
                   className="w-full object-cover max-h-72"
                 />
-                <figcaption className="text-xs text-dust mt-2 px-1">Movimentos circulares acompanhando o sulco, pano de microfibra — nunca atravessando de uma borda à outra.</figcaption>
+                <figcaption className="text-xs text-dust mt-2 px-1">Movimentos circulares acompanhando o sulco, pano de microfibra, nunca atravessando de uma borda à outra.</figcaption>
               </figure>
               <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>Esse nível é obrigatório em três situações:</p>
@@ -453,7 +467,7 @@ export default function ComoGuardarPage() {
                   <li>Disco que está chiando mesmo depois da escovação</li>
                 </ul>
                 <p>
-                  A receita: água destilada (jamais da torneira — o cloro deixa resíduo nos sulcos)
+                  A receita: água destilada (jamais da torneira, porque o cloro deixa resíduo nos sulcos)
                   com uma única gota de sabão neutro em meio litro de água. Aplique com pano de
                   microfibra novo em movimentos circulares acompanhando o sulco, nunca atravessando
                   de uma borda à outra. Proteja o selo central. Para secar, apoie o disco em pé num
@@ -491,7 +505,7 @@ export default function ComoGuardarPage() {
                 </p>
                 <p>
                   O problema é tudo que pode dar errado. Cola errada, cola com aditivo, cola
-                  colorida, cola que seca de jeito errado por causa da umidade do ambiente — qualquer
+                  colorida, cola que seca de jeito errado por causa da umidade do ambiente: qualquer
                   um desses fatores gruda permanentemente no sulco e o disco vira lixo. Só faz
                   sentido em disco que você já considera perdido. Em qualquer disco que você gosta ou
                   que tem valor de coleção, fica longe.
@@ -527,13 +541,13 @@ export default function ComoGuardarPage() {
           </p>
           <figure className="my-4 rounded-xl overflow-hidden">
             <Image
-              src="https://images.pexels.com/photos/5764288/pexels-photo-5764288.jpeg?auto=compress&cs=tinysrgb&w=800"
+              src="/blog/agulha-toca-discos-vinil.jpg"
               alt="Cápsula e agulha de toca-discos em close, posicionada sobre disco de vinil em rotação"
               width={800}
               height={450}
               className="w-full object-cover"
             />
-            <figcaption className="text-xs text-dust mt-2 px-1">A agulha de diamante percorre 500 metros de sulco — uma ponta gasta corta em vez de ler.</figcaption>
+            <figcaption className="text-xs text-dust mt-2 px-1">A agulha de diamante percorre 500 metros de sulco. Uma ponta gasta corta em vez de ler.</figcaption>
           </figure>
           <p className="text-parchment text-base leading-relaxed mb-6">
             A agulha é o único ponto de contato entre todo o investimento que você fez em discos e
@@ -550,7 +564,7 @@ export default function ComoGuardarPage() {
                 <p>
                   A limpeza padrão é com escova de stylus seca. O movimento é sempre de trás pra
                   frente, no mesmo sentido em que o disco gira sob a agulha. Nunca movimento
-                  lateral — a agulha é colada ao cantilever por uma cola específica, e força lateral
+                  lateral: a agulha é colada ao cantilever por uma cola específica, e força lateral
                   pode soltar a peça inteira.
                 </p>
                 <p>
@@ -562,9 +576,9 @@ export default function ComoGuardarPage() {
                 <div className="bg-sleeve border border-groove rounded-xl p-4">
                   <p className="font-semibold text-cream text-xs mb-2">O que NÃO fazer:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs text-parchment">
-                    <li>Encostar o dedo na agulha — gordura na ponta de diamante vira ruído em todos os discos</li>
-                    <li>Usar álcool puro ou qualquer líquido que não seja produto específico de stylus — pode dissolver a cola do cantilever</li>
-                    <li>Escova úmida — o líquido escorre pra dentro da cápsula e pode danificar a bobina</li>
+                    <li>Encostar o dedo na agulha: gordura na ponta de diamante vira ruído em todos os discos</li>
+                    <li>Usar álcool puro ou qualquer líquido que não seja produto específico de stylus: pode dissolver a cola do cantilever</li>
+                    <li>Escova úmida: o líquido escorre pra dentro da cápsula e pode danificar a bobina</li>
                   </ul>
                 </div>
               </div>
@@ -609,7 +623,7 @@ export default function ComoGuardarPage() {
                     <li>Chiado novo aparecendo em discos que sempre tocaram limpos</li>
                     <li>Perda de brilho nos agudos, som que parece &quot;abafado&quot;</li>
                     <li>Distorção em passagens de volume alto, principalmente em vocais femininos</li>
-                    <li>Sibilância exagerada — S e Z chiando feio em vez de soarem limpos</li>
+                    <li>Sibilância exagerada: S e Z chiando feio em vez de soarem limpos</li>
                   </ul>
                 </div>
                 <p>
@@ -638,7 +652,7 @@ export default function ComoGuardarPage() {
                 <p>
                   Para ajustar: (1) procure a especificação exata da sua cápsula no manual; (2) use
                   uma balança de agulha digital pra medir o peso real; (3) iguale o valor do
-                  antiskating ao do peso — não é exato matematicamente, mas é o ponto de partida
+                  antiskating ao do peso. Não é exato matematicamente, mas é o ponto de partida
                   correto na esmagadora maioria dos toca-discos.
                 </p>
               </div>
@@ -654,14 +668,14 @@ export default function ComoGuardarPage() {
           <p className="text-parchment text-sm leading-relaxed mb-3 bg-sleeve border border-groove rounded-xl px-4 py-3">
             Guarde discos na vertical, em ambiente abaixo de 30°C e umidade entre 35–65%. No
             Brasil, evite paredes que pegam sol da tarde, porões e áreas úmidas. Um higrômetro
-            digital perto da estante é mais importante do que qualquer acessório de limpeza — sem
+            digital perto da estante é mais importante do que qualquer acessório de limpeza: sem
             medir a umidade, você não consegue gerenciar o que está acontecendo com a coleção.
           </p>
           <p className="text-parchment text-base leading-relaxed mb-6">
             Boa parte da literatura sobre conservação de vinil que circula online foi escrita
             pensando em apartamento europeu com 18°C estáveis e umidade controlada. No Brasil real
-            — Manaus a 90% de umidade, Rio em fevereiro, São Paulo com sol da tarde rachando a
-            parede — essas regras precisam de adaptação.
+            (Manaus a 90% de umidade, Rio em fevereiro, São Paulo com sol da tarde rachando a
+            parede), essas regras precisam de adaptação.
           </p>
           <div className="space-y-6">
             <div>
@@ -670,7 +684,7 @@ export default function ComoGuardarPage() {
               </h3>
               <p className="text-parchment text-base leading-relaxed">
                 A faixa técnica recomendada por arquivistas é de 15 a 20°C e 35 a 45% de umidade
-                relativa — padrão próximo ao definido pelas{" "}
+                relativa, padrão próximo ao definido pelas{" "}
                 <a
                   href="https://www.loc.gov/preservation/care/record.html"
                   rel="nofollow noopener noreferrer"
@@ -798,7 +812,7 @@ export default function ComoGuardarPage() {
                 <p>
                   Se você se importa com valor de revenda, com edições limitadas ou capas raras,
                   sim, sempre. No clima brasileiro, com umidade alta na maior parte do ano, o
-                  plástico externo prolonga muito a vida das capas — vale mesmo pra quem é casual.
+                  plástico externo prolonga muito a vida das capas. Vale mesmo pra quem é casual.
                 </p>
               </div>
             </div>
@@ -809,7 +823,7 @@ export default function ComoGuardarPage() {
               <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   A regra básica: vertical, encostados mas sem comprimir, em móvel que aguente o
-                  peso. Um disco de vinil pesa entre 150 e 200 gramas — quinhentos discos chegam a
+                  peso. Um disco de vinil pesa entre 150 e 200 gramas: quinhentos discos chegam a
                   100 quilos. Móvel improvisado ou prateleira de MDF fina não aguenta.
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-parchment ml-2">
@@ -829,20 +843,20 @@ export default function ComoGuardarPage() {
           </h2>
           <p className="text-parchment text-base leading-relaxed mb-6 bg-sleeve border border-groove rounded-xl px-4 py-3">
             Inspecione cada disco em ângulo oblíquo contra a luz antes de tocar. Faça limpeza
-            profunda com água destilada e sabão neutro em todos — mesmo os que parecem limpos. Só
+            profunda com água destilada e sabão neutro em todos, mesmo os que parecem limpos. Só
             descarte após limpar: muitos discos aparentemente perdidos voltam a tocar bem após uma
             boa lavagem. Discos com mofo ativo não devem tocar no seu equipamento sem limpeza
-            prévia — o fungo contamina agulha e toca-discos.
+            prévia, porque o fungo contamina agulha e toca-discos.
           </p>
           <figure className="my-4 rounded-xl overflow-hidden">
             <Image
-              src="https://images.pexels.com/photos/2956143/pexels-photo-2956143.jpeg?auto=compress&cs=tinysrgb&w=800"
+              src="/blog/capas-discos-vinil-sebo.jpg"
               alt="Bancas de discos de vinil em feira ao ar livre com etiquetas ROCK, Paul McCartney e Beatles visíveis"
               width={800}
               height={533}
               className="w-full object-cover"
             />
-            <figcaption className="text-xs text-dust mt-2 px-1">Feira e sebo — todo disco comprado aqui precisa de triagem visual e limpeza profunda antes de tocar.</figcaption>
+            <figcaption className="text-xs text-dust mt-2 px-1">Feira e sebo: todo disco comprado aqui precisa de triagem visual e limpeza profunda antes de tocar.</figcaption>
           </figure>
           <div className="space-y-6">
             <div>
@@ -853,11 +867,16 @@ export default function ComoGuardarPage() {
                 <p>
                   Pegue cada disco individualmente, leve até uma janela ou luminária forte, e gire
                   o disco em ângulo oblíquo em relação à luz. Isso revela arranhões, marcas, riscos
-                  profundos e empenamentos que não são visíveis em luz frontal.
+                  profundos e empenamentos que não são visíveis em luz frontal. Pra classificar o
+                  que encontrar, use o nosso{" "}
+                  <Link href="/guias/como-avaliar-estado-disco-vinil" className="underline hover:text-gold transition-colors">
+                    guia de grading do Mint ao Poor
+                  </Link>
+                  .
                 </p>
                 <figure className="rounded-xl overflow-hidden">
                   <Image
-                    src="https://images.pexels.com/photos/31805824/pexels-photo-31805824.jpeg?auto=compress&cs=tinysrgb&w=800"
+                    src="/blog/disco-vinil-empenado-perfil.jpg"
                     alt="Disco de vinil visto de lado em ângulo oblíquo, mostrando o perfil da borda para verificar empenamento"
                     width={800}
                     height={800}
@@ -891,7 +910,7 @@ export default function ComoGuardarPage() {
               <div className="space-y-3 text-parchment text-base leading-relaxed">
                 <p>
                   Disco com mofo pede limpeza profunda obrigatória antes de qualquer audição. Mofo
-                  não é só estético — é fungo vivo que vai contaminar sua agulha, seu toca-discos e
+                  não é só estético: é fungo vivo que vai contaminar sua agulha, seu toca-discos e
                   o resto da sua coleção.
                 </p>
                 <p>
@@ -1014,7 +1033,7 @@ export default function ComoGuardarPage() {
                 items: [
                   "Escove o disco com fibra de carbono antes de baixar a agulha",
                   "Escove o stylus a cada 2–3 audições (ou sempre que ver poeira visível)",
-                  "Guarde o disco IMEDIATAMENTE depois de ouvir — disco esquecido no prato vira ímã de poeira",
+                  "Guarde o disco IMEDIATAMENTE depois de ouvir: disco esquecido no prato vira ímã de poeira",
                   "Feche a tampa do toca-discos quando não estiver em uso",
                   "Lave as mãos antes de manusear",
                 ],
@@ -1023,7 +1042,7 @@ export default function ComoGuardarPage() {
                 label: "Inspeção mensal",
                 items: [
                   "Tudo na vertical, nenhum disco tombado, nenhum encostado em fonte de calor?",
-                  "Cheque o higrômetro — umidade fora da faixa pede ação imediata",
+                  "Cheque o higrômetro: umidade fora da faixa pede ação imediata",
                   "Passe pano seco em cima das capas pra tirar poeira acumulada",
                   "Reorganize discos que ficaram fora de lugar",
                   "Olhe rapidamente pra qualquer capa que parecer estranha",
@@ -1150,6 +1169,22 @@ export default function ComoGuardarPage() {
                 Ver todos os guias
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* Related guides */}
+        <section aria-label="Guias relacionados">
+          <h2 className="font-display text-lg font-bold text-cream mb-4">Leia também</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              { href: "/guias/como-avaliar-estado-disco-vinil", title: "Como Avaliar o Estado de um Disco de Vinil", desc: "Do Mint ao Poor: o que cada grau significa e como inspecionar antes de comprar." },
+              { href: "/guias/vinil-180g-vale-a-pena", title: "Vinil 180g Vale a Pena?", desc: "O peso resiste mais ao empenamento? Diferença real ou marketing." },
+            ].map(({ href, title, desc }) => (
+              <Link key={href} href={href} className="block bg-sleeve border border-groove rounded-xl p-4 hover:border-patina transition-colors">
+                <p className="font-display text-sm font-bold text-cream mb-1">{title}</p>
+                <p className="text-parchment text-xs leading-relaxed">{desc}</p>
+              </Link>
+            ))}
           </div>
         </section>
 

@@ -203,7 +203,7 @@ export default function ChartsContent({ data }: { data: ChartsData | null }) {
     return (
       <div className="bg-sleeve border border-groove rounded-xl p-8 text-center">
         <p className="text-parchment text-sm">
-          Ranking ainda não disponível — os dados são atualizados uma vez por dia.
+          Ranking ainda não disponível. Os dados são atualizados uma vez por dia.
           Volte em breve.
         </p>
       </div>

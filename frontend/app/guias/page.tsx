@@ -4,14 +4,14 @@ import Link from "next/link";
 import { SITE_URL } from "@/lib/siteUrl";
 
 export const metadata: Metadata = {
-  title: "Guias de Vinil — Garimpa Vinil",
+  title: "Guias de Vinil | Garimpa Vinil",
   description:
-    "Guias, rankings e artigos sobre discos de vinil: como cuidar do seu vinil, top artistas do Spotify por país, e muito mais.",
+    "Guias e rankings sobre discos de vinil: limpeza, grading, prensagens 180g, vinil colorido e os melhores discos de rock por subgênero.",
   alternates: { canonical: "/guias" },
   openGraph: {
-    title: "Guias de Vinil — Garimpa Vinil",
+    title: "Guias de Vinil | Garimpa Vinil",
     description:
-      "Guias, rankings e artigos sobre discos de vinil: como cuidar do seu vinil, top artistas do Spotify por país, e muito mais.",
+      "Guias e rankings sobre discos de vinil: limpeza, grading, prensagens 180g, vinil colorido e os melhores discos de rock por subgênero.",
     url: "/guias",
     type: "website",
     images: ["/og-default.png"],
@@ -77,7 +77,7 @@ const GUIDES: Guide[] = [
     slug: "rock",
     title: "Melhores Discos de Rock por Subgênero",
     description:
-      "Mais de 11.000 álbuns de 1.000 artistas organizados em 18 subgêneros — classic rock, grunge, indie rock, shoegaze e muito mais. Rankings baseados em avaliações do Discogs.",
+      "Mais de 11.000 álbuns de 1.000 artistas organizados em 18 subgêneros: classic rock, grunge, indie rock, shoegaze e muito mais. Rankings baseados em avaliações do Discogs.",
     date: "2026-05-25",
     tag: "ranking",
   },
@@ -100,12 +100,28 @@ export default function GuiasPage() {
       { "@type": "ListItem", position: 1, name: "Início", item: `${SITE_URL}/` },
       { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
     ],
-  });
+  }).replace(/<\//g, "<\\/");
+
+  const itemList = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Guias de Vinil",
+    url: `${SITE_URL}/guias`,
+    numberOfItems: GUIDES.length,
+    itemListElement: GUIDES.map((g, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: g.title,
+      url: `${SITE_URL}/guias/${g.slug}`,
+    })),
+  }).replace(/<\//g, "<\\/");
 
   return (
     <main id="main-content" className="max-w-4xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumb }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemList }} />
 
       <nav aria-label="Navegação estrutural" className="mb-6 text-sm text-dust flex gap-2">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
@@ -117,6 +133,12 @@ export default function GuiasPage() {
         <h1 className="font-display text-3xl sm:text-4xl font-black text-cream leading-tight mb-3 [text-wrap:balance]">
           Guias de <span className="text-gold">Vinil</span>
         </h1>
+        <p className="text-parchment text-sm leading-relaxed max-w-2xl">
+          Tudo que a gente aprendeu garimpando, limpando e colecionando disco: como avaliar o
+          estado de um vinil antes de comprar, como limpar e guardar no clima do Brasil, quando
+          vale pagar por 180g ou edição colorida, e rankings dos melhores discos por subgênero
+          montados com dados do Discogs.
+        </p>
       </header>
 
       {/* Featured: newest guide */}

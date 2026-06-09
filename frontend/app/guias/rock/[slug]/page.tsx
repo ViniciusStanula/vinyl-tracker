@@ -23,7 +23,7 @@ export async function generateMetadata({
   if (!sg) return {};
 
   const displayName = capitalize(sg.name);
-  const title = `Melhores Discos de ${displayName} — Ranking Discogs | Garimpa Vinil`;
+  const title = `Melhores Discos de ${displayName}: Ranking Discogs | Garimpa Vinil`;
   const description = `Ranking dos melhores discos de ${displayName}: ${sg.albumCount.toLocaleString("pt-BR")} álbuns de ${sg.artistCount.toLocaleString("pt-BR")} artistas avaliados via Discogs, ordenados por pontuação bayesiana ponderada.`;
 
   const firstAlbum = sg.topAlbums[0];
@@ -86,11 +86,11 @@ export default async function RockSubgenrePage({
     "@type": "ItemList",
     name: `Melhores álbuns de ${displayName}`,
     url: `${SITE_URL}/guias/rock/${slug}`,
-    numberOfItems: sg.topAlbums.length,
+    numberOfItems: cardAlbums.length,
     itemListElement: cardAlbums.map((album, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      name: `${album.title} — ${album.artist}`,
+      name: `${album.title} - ${album.artist}`,
     })),
   }).replace(/<\//g, "<\\/");
 
@@ -140,7 +140,9 @@ export default async function RockSubgenrePage({
 
       {/* Top 20 grid */}
       <section aria-label={`Top ${CARD_COUNT} álbuns de ${displayName}`} className="mb-12">
-        <h2 className="font-display text-lg font-bold text-cream mb-4">Top {CARD_COUNT}</h2>
+        <h2 className="font-display text-lg font-bold text-cream mb-4">
+          Top {CARD_COUNT} discos de {displayName}
+        </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {cardAlbums.map((album, i) => (
             <AlbumCard
@@ -228,6 +230,12 @@ export default async function RockSubgenrePage({
         </Link>
         <Link href="/guias" className="text-sm text-dust hover:text-gold transition-colors">
           Todos os guias
+        </Link>
+        <Link href="/disco" className="text-sm text-dust hover:text-gold transition-colors">
+          Buscar esses discos com preço monitorado
+        </Link>
+        <Link href="/guias/como-avaliar-estado-disco-vinil" className="text-sm text-dust hover:text-gold transition-colors">
+          Como avaliar o estado antes de comprar
         </Link>
       </footer>
     </main>

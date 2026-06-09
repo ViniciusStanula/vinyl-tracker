@@ -7,12 +7,12 @@ import type { ChartsData } from "./ChartsContent";
 
 import { SITE_URL } from "@/lib/siteUrl";
 
-const PAGE_TITLE = "Top Artistas do Spotify por País — Atualizado Diariamente";
+const PAGE_TITLE = "Top Artistas do Spotify por País, Atualizado Diariamente";
 const PAGE_DESC =
-  "Ranking diário dos 10 artistas mais ouvidos no Spotify em 20 países. Dados agregados pelo kworb.net com base nos charts públicos do Spotify. Atualizado todo dia às 8h UTC.";
+  "Ranking diário dos 10 artistas mais ouvidos no Spotify em 20 países, com dados dos charts públicos via kworb.net. Atualizado todo dia às 8h UTC.";
 
 export const metadata: Metadata = {
-  title: `${PAGE_TITLE} | Garimpa Vinil`,
+  title: "Top Artistas do Spotify por País (Diário) | Garimpa Vinil",
   description: PAGE_DESC,
   alternates: { canonical: "/guias/top-artistas-spotify" },
   openGraph: {
@@ -62,7 +62,7 @@ function buildJsonLd(data: ChartsData | null) {
 
 export default function TopArtistasSptPage() {
   const data = loadData();
-  const jsonLd = JSON.stringify(buildJsonLd(data));
+  const jsonLd = JSON.stringify(buildJsonLd(data)).replace(/<\//g, "<\\/");
   const breadcrumb = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -76,7 +76,7 @@ export default function TopArtistasSptPage() {
         item: `${SITE_URL}/guias/top-artistas-spotify`,
       },
     ],
-  });
+  }).replace(/<\//g, "<\\/");
 
   return (
     <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">
@@ -145,7 +145,7 @@ export default function TopArtistasSptPage() {
           <p className="text-parchment text-sm leading-relaxed">
             É a soma dos streams diários de <em>todas</em> as músicas daquele artista que entraram no
             chart daquele país naquela data. Um artista com 3 músicas no top&nbsp;200 acumula os
-            streams das três — por isso pode superar artistas com apenas uma faixa popular.
+            streams das três, por isso pode superar artistas com apenas uma faixa popular.
           </p>
         </div>
 
@@ -155,7 +155,7 @@ export default function TopArtistasSptPage() {
           </h2>
           <p className="text-parchment text-sm leading-relaxed">
             Sim. Ouvintes mensais é o número global de pessoas distintas que ouviram o artista nos
-            últimos 28 dias — independente de país. Um artista pode ter muitos ouvintes mensais mas
+            últimos 28 dias, independente de país. Um artista pode ter muitos ouvintes mensais mas
             poucos streams diários num país específico, e vice-versa.
           </p>
         </div>
@@ -165,12 +165,16 @@ export default function TopArtistasSptPage() {
             Como usar para garimpar vinil?
           </h2>
           <p className="text-parchment text-sm leading-relaxed">
-            Artistas em alta costumam ter discos com demanda crescente — e preços que sobem rápido.
+            Artistas em alta costumam ter discos com demanda crescente, e preços que sobem rápido.
             Viu um nome novo no ranking? Pesquise no{" "}
             <Link href="/" className="text-gold hover:text-goldlit underline underline-offset-2 transition-colors">
               Garimpa Vinil
             </Link>{" "}
-            se há vinil disponível na Amazon Brasil antes que o preço suba.
+            se há vinil disponível na Amazon Brasil antes que o preço suba. Veja também os{" "}
+            <Link href="/artistas-mais-ouvidos" className="text-gold hover:text-goldlit underline underline-offset-2 transition-colors">
+              artistas mais ouvidos com vinil à venda
+            </Link>
+            .
           </p>
         </div>
       </section>
@@ -195,7 +199,7 @@ export default function TopArtistasSptPage() {
               >
                 kworb.net
               </a>
-              {" "}— site independente que agrega os charts públicos do Spotify. Fotos e
+              {" "}(site independente que agrega os charts públicos do Spotify). Fotos e
               nomes via API pública do Spotify (oEmbed). Atualização diária, com defasagem
               de algumas horas após os charts oficiais.
             </p>
