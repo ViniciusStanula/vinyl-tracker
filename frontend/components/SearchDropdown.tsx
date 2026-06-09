@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { slugifyArtist } from "@/lib/utils/slugify";
+import { resizeAmazonImage } from "@/lib/utils/amazonImage";
 import type { SearchSuggestion } from "@/lib/db/search";
 
 type Props = {
@@ -97,7 +98,7 @@ export default function SearchDropdown({ query, onClose }: Props) {
           {r.imgUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={r.imgUrl}
+              src={resizeAmazonImage(r.imgUrl, 80)}
               alt=""
               aria-hidden
               width={36}

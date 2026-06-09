@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { slugifyArtist } from "@/lib/utils/slugify";
 import { affiliateUrl } from "@/lib/affiliateUrl";
+import { resizeAmazonImage } from "@/lib/utils/amazonImage";
 
 // NEXT_PUBLIC_HIDE_PRICE_HISTORY gates sparklines, deal badges, discount badges, and
 // struck-through avg prices on cards. Defaults to hidden (true) — fail-safe while
@@ -87,6 +88,9 @@ export default memo(function DiscoCard({
   const dealScore         = disco.dealScore ?? null;
   const artistaSlug       = slugifyArtist(disco.artista);
   const sparkline         = disco.sparkline ?? [];
+  // Cards render at ~160-230px; the DB stores 1500px Amazon URLs (~200KB).
+  // SL416 covers 2x DPR at ~30KB via Amazon's on-the-fly CDN resize.
+  const imgUrl            = resizeAmazonImage(disco.imgUrl);
 
   // Score-3 gets a subtle gold ring — suppressed when price history is hidden
   const cardRing = (!HIDE_PRICE_HISTORY && dealScore === 3) ? " ring-1 ring-gold/40" : "";
@@ -102,9 +106,9 @@ export default memo(function DiscoCard({
 
       {/* ── Album art ─────────────────────────────────────────────── */}
       <div className="relative aspect-square bg-label shrink-0 overflow-hidden">
-        {disco.imgUrl ? (
+        {imgUrl ? (
           <Image
-            src={disco.imgUrl}
+            src={imgUrl}
             alt={`${disco.titulo} por ${disco.artista} — capa do álbum`}
             fill
             sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, (max-width: 1279px) 25vw, (max-width: 1535px) 20vw, 17vw"

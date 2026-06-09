@@ -4,7 +4,6 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getDiscoCount } from "@/lib/db/home";
 import { queryCarouselDiscosWithCache } from "@/lib/db/carousel";
-import { resizeAmazonImage } from "@/lib/utils/amazonImage";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
 import ArtistasCarousel from "@/components/ArtistasCarousel";
@@ -16,10 +15,7 @@ import { Suspense } from "react";
 async function CarouselLoader({ searchTerm, artista }: { searchTerm: string; artista?: string }) {
   if (searchTerm || artista) return null;
   const items = await queryCarouselDiscosWithCache();
-  // Cards render at 176-208px; the DB stores 1500px Amazon URLs. Rewriting the
-  // size suffix here (server-side, once) keeps DiscoCard's memo equality intact.
-  const resized = items.map((d) => ({ ...d, imgUrl: resizeAmazonImage(d.imgUrl) }));
-  return <ArtistasCarousel items={resized} />;
+  return <ArtistasCarousel items={items} />;
 }
 
 function CarouselSkeleton() {
