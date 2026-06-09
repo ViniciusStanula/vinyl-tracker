@@ -21,7 +21,9 @@ import { getHreflangRecord } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 
-export const revalidate = 7200;
+// Safety net only — the crawler's /api/revalidate webhook is the real trigger.
+// 1800 matches the data-layer TTL so the HTML cache never outlives its data.
+export const revalidate = 1800;
 
 export async function generateMetadata({
   params,

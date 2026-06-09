@@ -2574,6 +2574,12 @@ def parse_args():
 def _notify_revalidate(last_write_at: float | None = None) -> None:
     """POST to the Next.js on-demand revalidation endpoint after a successful crawl.
 
+    Retries up to 4 attempts with 5/15/45 s backoff. Any final failure —
+    network error or non-200 response (e.g. 401 from a rotated secret) —
+    raises RuntimeError so the run exits non-zero and the workflow's
+    "Open issue on failure" step fires (dead-man's switch for the cache
+    pipeline; the site would otherwise silently fall back to TTL staleness).
+
     last_write_at: time.time() recorded right after the final DB commit.
     Used to log the write→revalidate gap. If gap > 30 s, something is slow.
     """
@@ -2586,47 +2592,68 @@ def _notify_revalidate(last_write_at: float | None = None) -> None:
     if not url or not secret:
         log.warning("REVALIDATE_URL or REVALIDATE_SECRET not set — skipping cache purge")
         return
-    try:
-        t0 = time.time()
-        resp = _requests.post(url, json={"secret": secret}, timeout=10)
-        elapsed_ms = int((time.time() - t0) * 1000)
-        gap_s = t0 - last_write_at if last_write_at is not None else None
-        gap_label = f" | write→notify: {gap_s:.1f}s" if gap_s is not None else ""
-        log.info(
-            "Revalidation: HTTP %s in %dms%s",
-            resp.status_code, elapsed_ms, gap_label,
-        )
-        if gap_s is not None and gap_s > 30:
-            log.warning(
-                "SLOW PIPELINE: %.1fs from last DB write to revalidate POST — "
-                "users may see stale prices during this window",
-                gap_s,
-            )
-        if resp.status_code != 200:
-            log.warning("Unexpected revalidation status %s: %s", resp.status_code, resp.text[:200])
-            return
 
-        # Cache warm-up: fire a GET to the homepage so the SSR executes and
-        # fills the prices cache before any real user hits it. Runs in a
-        # background thread so a slow or failed warm-up never blocks the crawler.
-        homepage = _urljoin(url, "/")
+    backoffs = [5, 15, 45]
+    last_error = "unknown"
+    for attempt in range(1, len(backoffs) + 2):
+        try:
+            t0 = time.time()
+            resp = _requests.post(url, json={"secret": secret}, timeout=10)
+            elapsed_ms = int((time.time() - t0) * 1000)
+            if resp.status_code == 200:
+                gap_s = t0 - last_write_at if last_write_at is not None else None
+                gap_label = f" | write→notify: {gap_s:.1f}s" if gap_s is not None else ""
+                log.info(
+                    "Revalidation: HTTP 200 in %dms (attempt %d)%s",
+                    elapsed_ms, attempt, gap_label,
+                )
+                if gap_s is not None and gap_s > 30:
+                    log.warning(
+                        "SLOW PIPELINE: %.1fs from last DB write to revalidate POST — "
+                        "users may see stale prices during this window",
+                        gap_s,
+                    )
+                break
+            last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
+            log.warning("Revalidation attempt %d failed — %s", attempt, last_error)
+        except Exception as exc:
+            last_error = str(exc)
+            log.warning("Revalidation attempt %d failed — %s", attempt, last_error)
+        if attempt <= len(backoffs):
+            time.sleep(backoffs[attempt - 1])
+    else:
+        raise RuntimeError(
+            f"Cache revalidation failed after {len(backoffs) + 1} attempts — "
+            f"last error: {last_error}. Site is serving TTL-fallback prices."
+        )
+
+    try:
+        # Cache warm-up: fire GETs to the hottest pages so the SSR executes and
+        # fills the prices cache before any real user hits it. With expire:0
+        # revalidation the first request per page blocks on a fresh DB fetch —
+        # these warm-ups absorb that hit. Runs in a background thread so a slow
+        # or failed warm-up never blocks the crawler.
+        warmup_paths = ["/", "/disco"]
 
         def _warmup() -> None:
-            try:
-                t1 = time.time()
-                _requests.get(homepage, timeout=30)
-                log.info("Cache warm-up: homepage primed in %.0fms", (time.time() - t1) * 1000)
-            except Exception as exc:
-                log.warning("Cache warm-up failed (non-fatal): %s", exc)
+            for path in warmup_paths:
+                page_url = _urljoin(url, path)
+                try:
+                    t1 = time.time()
+                    _requests.get(page_url, timeout=30)
+                    log.info("Cache warm-up: %s primed in %.0fms", path, (time.time() - t1) * 1000)
+                except Exception as exc:
+                    log.warning("Cache warm-up for %s failed (non-fatal): %s", path, exc)
 
         warmup_thread = threading.Thread(target=_warmup, daemon=True)
         warmup_thread.start()
-        warmup_thread.join(timeout=30)
+        warmup_thread.join(timeout=65)
         if warmup_thread.is_alive():
-            log.warning("Cache warm-up did not finish within 30s — moving on")
+            log.warning("Cache warm-up did not finish within 65s — moving on")
 
     except Exception as exc:
-        log.warning("Revalidation request failed (non-fatal): %s", exc)
+        # Warm-up is best-effort — revalidation already succeeded above.
+        log.warning("Cache warm-up failed (non-fatal): %s", exc)
 
 
 def main():
@@ -3046,9 +3073,14 @@ def main():
                 _db_estilos = [row[0] for row in _cur.fetchall()]
             _indexnow_submit(all_items, db_estilos=_db_estilos)
     finally:
-        t_pipeline_end = time.time()
         conn.close()
-        _notify_revalidate(last_write_at=t_pipeline_end)
+
+    # Success path only — a crash above skips revalidation entirely, so the
+    # cache keeps serving the last completed crawl's pages and the workflow's
+    # failure step opens a GitHub issue. (DB writes are committed per-phase
+    # regardless; this gate is about predictable cache behavior on failure.)
+    t_pipeline_end = time.time()
+    _notify_revalidate(last_write_at=t_pipeline_end)
 
     log.info("Total runtime: %.0fs", time.monotonic() - t_start)
     _final = _bot_stats.snapshot()
