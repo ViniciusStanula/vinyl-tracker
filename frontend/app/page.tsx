@@ -11,6 +11,38 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 
+async function CarouselLoader({ searchTerm, artista }: { searchTerm: string; artista?: string }) {
+  if (searchTerm || artista) return null;
+  const items = await queryCarouselDiscosWithCache();
+  return <ArtistasCarousel items={items} />;
+}
+
+function CarouselSkeleton() {
+  return (
+    <section className="mb-10">
+      <div className="flex items-center justify-between mb-3">
+        <div className="h-7 w-48 bg-groove rounded animate-pulse" />
+        <div className="flex gap-1.5">
+          <div className="w-11 h-11 rounded-full bg-groove animate-pulse" />
+          <div className="w-11 h-11 rounded-full bg-groove animate-pulse" />
+        </div>
+      </div>
+      <div className="flex gap-3 overflow-hidden">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="shrink-0 w-44 sm:w-52 bg-sleeve border border-groove rounded-xl overflow-hidden animate-pulse">
+            <div className="aspect-square bg-label" />
+            <div className="p-3 space-y-2">
+              <div className="h-3 bg-groove rounded w-1/2" />
+              <div className="h-4 bg-groove rounded" />
+              <div className="h-3 bg-groove rounded w-3/4" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
 
 export const revalidate = 1800;
@@ -86,14 +118,13 @@ export default async function HomePage({
   const searchTerm = q?.trim() ?? "";
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
-  // Fetch main grid and carousel in parallel
+  // Fetch main grid and count in parallel — carousel streams in separately via Suspense.
   let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
-  let total = 0, totalPages = 0, carouselItems: Awaited<ReturnType<typeof queryCarouselDiscosWithCache>> = [];
+  let total = 0, totalPages = 0;
   let count = 0;
   try {
-    ([{ items, total, totalPages }, carouselItems, count] = await Promise.all([
+    ([{ items, total, totalPages }, count] = await Promise.all([
       queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }),
-      searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscosWithCache(),
       getDiscoCount(),
     ]));
   } catch {
@@ -163,7 +194,9 @@ export default async function HomePage({
       </header>
 
       {/* ── Artistas mais Ouvidos carousel ──────────────────────── */}
-      <ArtistasCarousel items={carouselItems} />
+      <Suspense fallback={<CarouselSkeleton />}>
+        <CarouselLoader searchTerm={searchTerm} artista={artista} />
+      </Suspense>
 
       {/* ── Sort bar ────────────────────────────────────────────── */}
       <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
