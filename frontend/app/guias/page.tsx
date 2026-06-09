@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.br";
+import { SITE_URL } from "@/lib/siteUrl";
 
 export const metadata: Metadata = {
   title: "Guias de Vinil — Garimpa Vinil",
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
       "Guias, rankings e artigos sobre discos de vinil: como cuidar do seu vinil, top artistas do Spotify por país, e muito mais.",
     url: "/guias",
     type: "website",
+    images: ["/og-default.png"],
   },
 };
 

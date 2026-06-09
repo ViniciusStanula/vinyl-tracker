@@ -5,8 +5,7 @@ import { join } from "path";
 import ChartsContent from "./ChartsContent";
 import type { ChartsData } from "./ChartsContent";
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.br";
+import { SITE_URL } from "@/lib/siteUrl";
 
 const PAGE_TITLE = "Top Artistas do Spotify por País — Atualizado Diariamente";
 const PAGE_DESC =
@@ -21,6 +20,7 @@ export const metadata: Metadata = {
     title: PAGE_TITLE,
     description: PAGE_DESC,
     url: "/guias/top-artistas-spotify",
+    images: ["/og-default.png"],
   },
   twitter: {
     card: "summary",

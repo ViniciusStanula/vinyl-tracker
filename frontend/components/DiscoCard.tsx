@@ -170,13 +170,14 @@ export default memo(function DiscoCard({
           {disco.artista}
         </span>
 
-        {/* Title — Fraunces for editorial character */}
-        <h2
+        {/* Title — Fraunces for editorial character. <p>, not a heading:
+            dozens of cards per page would flood the document outline. */}
+        <p
           className="font-display text-cream text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] mt-0.5"
           title={disco.titulo}
         >
           {disco.titulo}
-        </h2>
+        </p>
 
         {/* ── Price section ──────────────────────────────────────── */}
         <div className="mt-auto pt-2">

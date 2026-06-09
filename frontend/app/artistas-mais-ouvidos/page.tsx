@@ -27,6 +27,7 @@ export const metadata: Metadata = {
       "Os artistas mais ouvidos do mundo com as melhores ofertas em discos de vinil na Amazon Brasil.",
     url: "/artistas-mais-ouvidos",
     type: "website",
+    images: ["/og-default.png"],
   },
 };
 

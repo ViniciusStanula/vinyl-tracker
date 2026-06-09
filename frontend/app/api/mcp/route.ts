@@ -4,7 +4,7 @@ import { getDiscoWithPrecos } from "@/lib/db/disco";
 import { getArtistaPageData } from "@/lib/db/artista";
 import { toTitleCase } from "@/lib/utils/titleCase";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.br";
+import { SITE_URL as SITE } from "@/lib/siteUrl";
 const MCP_VERSION = "2024-11-05";
 
 // ── Rate limiter ─────────────────────────────────────────────────────────────

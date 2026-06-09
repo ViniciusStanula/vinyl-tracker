@@ -1,7 +1,7 @@
 import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
+import { SITE_URL } from "@/lib/siteUrl";
 
 const personJsonLd = JSON.stringify({
   "@context": "https://schema.org",
@@ -55,6 +55,7 @@ export const metadata = {
       "Conheça o Garimpa Vinil: catálogo de discos de vinil na Amazon Brasil com preços atualizados. Encontre o melhor momento para comprar.",
     url: "/sobre",
     type: "website",
+    images: ["/og-default.png"],
   },
   twitter: {
     card: "summary",

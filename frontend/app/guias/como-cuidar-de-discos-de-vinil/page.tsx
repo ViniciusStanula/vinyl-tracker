@@ -49,7 +49,7 @@ function IconWarning({ className = "" }: { className?: string }) {
   );
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.br";
+import { SITE_URL } from "@/lib/siteUrl";
 const SLUG = "como-cuidar-de-discos-de-vinil";
 const PAGE_TITLE = "Como Cuidar de Discos de Vinil: Guia Completo Para Sua Coleção Durar Décadas";
 const PAGE_DESC =

@@ -6,7 +6,7 @@ import { getRockSubgenres, getSubgenre } from "@/lib/guias/rock-data";
 import { SUBGENRE_FULL, capitalize } from "@/lib/guias/rock-content";
 import { fetchLastfmAlbumCover } from "@/lib/external/lastfmAlbum";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.br";
+import { SITE_URL } from "@/lib/siteUrl";
 const CARD_COUNT = 20;
 
 export function generateStaticParams() {
@@ -40,13 +40,13 @@ export async function generateMetadata({
       description,
       url: `/guias/rock/${slug}`,
       type: "website",
-      ...(ogImage ? { images: [{ url: ogImage, width: 300, height: 300, alt: `Capa de ${firstAlbum?.title}` }] } : {}),
+      images: ogImage ? [{ url: ogImage, width: 300, height: 300, alt: `Capa de ${firstAlbum?.title}` }] : ["/og-default.png"],
     },
     twitter: {
       card: ogImage ? "summary_large_image" : "summary",
       title,
       description,
-      ...(ogImage ? { images: [ogImage] } : {}),
+      images: [ogImage ?? "/og-default.png"],
     },
   };
 }

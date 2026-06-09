@@ -19,6 +19,7 @@ import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, type RelatedDeal } from "@/lib/db/disco";
 import { getHreflangRecord } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
+import { SITE_URL } from "@/lib/siteUrl";
 
 export const revalidate = 7200;
 
@@ -52,13 +53,13 @@ export async function generateMetadata({
         description,
         url: `/disco/${slug}`,
         type: "music.album",
-        ...(disco.imgUrl ? { images: [{ url: disco.imgUrl, alt: `${disco.titulo} por ${disco.artista} — capa do álbum` }] } : {}),
+        images: disco.imgUrl ? [{ url: disco.imgUrl, alt: `${disco.titulo} por ${disco.artista} — capa do álbum` }] : ["/og-default.png"],
       },
       twitter: {
         card: disco.imgUrl ? "summary_large_image" : "summary",
         title,
         description,
-        ...(disco.imgUrl ? { images: [disco.imgUrl] } : {}),
+        images: [disco.imgUrl ?? "/og-default.png"],
       },
     };
   } catch {
@@ -205,7 +206,7 @@ export default async function DiscoPage({
     };
   });
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
+  const siteUrl = SITE_URL;
 
   const productJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -310,7 +311,6 @@ export default async function DiscoPage({
                     fill
                     sizes="(max-width: 1024px) 100vw, 480px"
                     className="object-cover"
-                    unoptimized
                     priority
                   />
                 </div>

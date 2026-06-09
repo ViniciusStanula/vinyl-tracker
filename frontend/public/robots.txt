@@ -5,6 +5,9 @@
 # --- All crawlers (wildcard) --------------------------------
 User-agent: *
 Allow: /
+# Internal search results — noindex'd in metadata too
+Disallow: /*?*q=
+Disallow: /*?q=
 
 Sitemap: https://www.garimpavinil.com.br/sitemap.xml
 

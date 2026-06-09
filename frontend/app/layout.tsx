@@ -3,6 +3,7 @@ import { Fraunces, DM_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import { SITE_URL } from "@/lib/siteUrl";
 import Footer from "@/components/Footer";
 import NavigationProgress from "@/components/NavigationProgress";
 
@@ -19,8 +20,6 @@ const dmSans = DM_Sans({
   subsets: ["latin"],
   display: "swap",
 });
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
 
 const DEFAULT_TITLE = "Garimpa Vinil — Melhores ofertas em discos de vinil";
 const DEFAULT_DESC  =
@@ -42,11 +41,13 @@ export const metadata: Metadata = {
     siteName: "Garimpa Vinil",
     title: DEFAULT_TITLE,
     description: DEFAULT_DESC,
+    images: ["/og-default.png"],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: DEFAULT_TITLE,
     description: DEFAULT_DESC,
+    images: ["/og-default.png"],
   },
 };
 
@@ -95,12 +96,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-KHJQ7PHC');`,
           }}
-        />
-        <Script
-          id="adsbygoogle"
-          strategy="afterInteractive"
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2737529660111962"
-          crossOrigin="anonymous"
         />
       </head>
       <body className="min-h-screen bg-record text-cream antialiased">

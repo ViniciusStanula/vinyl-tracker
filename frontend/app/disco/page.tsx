@@ -11,10 +11,29 @@ const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false
 
 export const revalidate = 1800;
 
-export const metadata = {
-  title: "Todos os Discos — Garimpa Vinil",
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+  // Internal search results must not be indexed (Google spam policy +
+  // unbounded crawl space). Canonical alone is only a hint.
+  if (q?.trim()) {
+    return {
+      title: "Catálogo de Discos de Vinil — Garimpa Vinil",
+      robots: { index: false, follow: true },
+    };
+  }
+  return metadata;
+}
+
+// Title/description target "catálogo completo" intent — the home page owns
+// the "melhores ofertas" intent. Keeps the two pages from competing.
+const metadata = {
+  title: "Catálogo de Discos de Vinil — Garimpa Vinil",
   description:
-    "Todos os discos de vinil em promoção na Amazon Brasil. Filtre por preço, artista e ordenação.",
+    "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
   alternates: {
     canonical: "/disco",
     languages: {
@@ -24,17 +43,18 @@ export const metadata = {
     },
   },
   openGraph: {
-    title: "Todos os Discos — Garimpa Vinil",
+    title: "Catálogo de Discos de Vinil — Garimpa Vinil",
     description:
-      "Todos os discos de vinil em promoção na Amazon Brasil. Filtre por preço, artista e ordenação.",
+      "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
     url: "/disco",
     type: "website",
+    images: ["/og-default.png"],
   },
   twitter: {
     card: "summary",
-    title: "Todos os Discos — Garimpa Vinil",
+    title: "Catálogo de Discos de Vinil — Garimpa Vinil",
     description:
-      "Todos os discos de vinil em promoção na Amazon Brasil. Filtre por preço, artista e ordenação.",
+      "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
   },
 };
 
@@ -74,9 +94,19 @@ export default async function DiscosPage({
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
 
-      <h1 className="font-display text-3xl font-black text-cream mb-4 [text-wrap:balance]">
-        Todos os Discos
+      <h1 className="font-display text-3xl font-black text-cream mb-2 [text-wrap:balance]">
+        Catálogo de Discos de Vinil
       </h1>
+
+      <p className="text-dust text-sm leading-relaxed mb-4 max-w-2xl">
+        Navegue o catálogo completo de discos de vinil disponíveis na Amazon
+        Brasil, com preços acompanhados regularmente. Use a busca e os filtros
+        para encontrar artistas, estilos e faixas de preço — ou explore os{" "}
+        <Link href="/guias" className="text-parchment hover:text-gold underline underline-offset-2 transition-colors">
+          guias de vinil
+        </Link>{" "}
+        para descobrir novos álbuns.
+      </p>
 
       {/* ── Sort bar — sticky so filters stay in view while scrolling */}
       <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">

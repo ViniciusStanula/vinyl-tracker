@@ -5,8 +5,9 @@ import { slugifyStyle } from "@/lib/utils/styleUtils";
 import { unstable_cache } from "next/cache";
 import type { MetadataRoute } from "next";
 
-export const SITEMAP_BASE =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
+import { SITE_URL } from "@/lib/siteUrl";
+
+export const SITEMAP_BASE = SITE_URL;
 
 // Must match the translate() expression in estilo/[slug]/page.tsx
 const ACCENT_FROM = Prisma.raw(`'áàâãäåéèêëíìîïóòôõöúùûüçñý'`);

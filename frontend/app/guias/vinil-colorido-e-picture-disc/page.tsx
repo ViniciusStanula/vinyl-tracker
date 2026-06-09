@@ -17,7 +17,7 @@ function IconChevronDown({ className = "" }: { className?: string }) {
   );
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.br";
+import { SITE_URL } from "@/lib/siteUrl";
 const SLUG = "vinil-colorido-e-picture-disc";
 const PAGE_TITLE = "Vinil Colorido e Picture Disc Valem a Pena?";
 const PAGE_DESC =

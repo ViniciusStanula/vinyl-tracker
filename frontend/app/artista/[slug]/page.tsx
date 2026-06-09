@@ -12,6 +12,7 @@ import { Suspense } from "react";
 import { getArtistaPageData, type ArtistaPageData } from "@/lib/db/artista";
 import { getHreflangSlug } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
+import { SITE_URL } from "@/lib/siteUrl";
 
 export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
@@ -49,13 +50,13 @@ export async function generateMetadata({
       description,
       url: `/artista/${slug}`,
       type: "website",
-      ...(firstImage ? { images: [{ url: firstImage, alt: displayName }] } : {}),
+      images: firstImage ? [{ url: firstImage, alt: displayName }] : ["/og-default.png"],
     },
     twitter: {
       card: firstImage ? "summary_large_image" : "summary",
       title,
       description,
-      ...(firstImage ? { images: [firstImage] } : {}),
+      images: [firstImage ?? "/og-default.png"],
     },
   };
 }
@@ -93,7 +94,7 @@ export default async function ArtistaPage({
   const { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt } = data;
   const artista = toTitleCase(canonical);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
+  const siteUrl = SITE_URL;
 
   const breadcrumbJsonLd = JSON.stringify({
     "@context": "https://schema.org",

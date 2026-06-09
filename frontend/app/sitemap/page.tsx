@@ -13,6 +13,7 @@ export const metadata: Metadata = {
       "Todas as páginas do Garimpa Vinil: artistas, estilos musicais e seções do site.",
     url: "/sitemap",
     type: "website",
+    images: ["/og-default.png"],
   },
 };
 

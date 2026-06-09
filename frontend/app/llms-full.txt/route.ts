@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.br";
+import { SITE_URL as SITE } from "@/lib/siteUrl";
 
 function content() {
   return `# Garimpa Vinil — Full Content Index

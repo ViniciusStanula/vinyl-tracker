@@ -1,5 +1,6 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
 import { PEER_ORIGIN } from "@/lib/hreflang";
+import { SITE_URL } from "@/lib/siteUrl";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getDiscoCount } from "@/lib/db/home";
 import { queryCarouselDiscosWithCache } from "@/lib/db/carousel";
@@ -47,7 +48,20 @@ const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false
 
 export const revalidate = 1800;
 
-export async function generateMetadata() {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+  // Internal search results must not be indexed (Google spam policy +
+  // unbounded crawl space). Canonical alone is only a hint.
+  if (q?.trim()) {
+    return {
+      title: "Garimpa Vinil — Melhores ofertas em discos de vinil",
+      robots: { index: false, follow: true },
+    };
+  }
   let count = 0;
   try {
     count = await getDiscoCount();
@@ -72,6 +86,7 @@ export async function generateMetadata() {
       description,
       url: "/",
       type: "website",
+      images: ["/og-default.png"],
     },
     twitter: {
       card: "summary",
@@ -80,8 +95,6 @@ export async function generateMetadata() {
     },
   };
 }
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
 
 const websiteJsonLd = JSON.stringify({
   "@context": "https://schema.org",

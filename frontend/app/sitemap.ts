@@ -9,15 +9,7 @@ import {
 } from "@/lib/db/sitemap";
 import { getRockSubgenres } from "@/lib/guias/rock-data";
 
-export const revalidate = 86400;
-
-function shuffle<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-} // regenerate every 24 hours — sitemap staleness is fine for SEO
+export const revalidate = 86400; // regenerate every 24 hours — sitemap staleness is fine for SEO
 
 export async function generateSitemaps() {
   const discoShards = DISCO_SHARDS.map((shard) => ({ id: `discos-${shard}` }));
@@ -55,7 +47,7 @@ export default async function sitemap(props: {
 
   if (id === "artistas") {
     try {
-      return shuffle(await getSitemapArtists());
+      return await getSitemapArtists();
     } catch {
       return [];
     }
@@ -65,7 +57,7 @@ export default async function sitemap(props: {
     const shard = id.slice("discos-".length) as DiscoShard;
     if (!DISCO_SHARDS.includes(shard)) return [];
     try {
-      return shuffle(await getSitemapDiscosForShard(shard));
+      return await getSitemapDiscosForShard(shard);
     } catch {
       return [];
     }
@@ -73,7 +65,7 @@ export default async function sitemap(props: {
 
   if (id === "estilos") {
     try {
-      return shuffle(await getSitemapEstilos());
+      return await getSitemapEstilos();
     } catch {
       return [];
     }

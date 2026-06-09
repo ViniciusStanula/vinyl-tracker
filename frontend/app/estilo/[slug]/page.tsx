@@ -9,6 +9,7 @@ import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getEstiloPageData, getRelatedEstilos, type SerializedEstiloData, type RelatedEstilo } from "@/lib/db/estilo";
 import { getHreflangSlug } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
+import { SITE_URL } from "@/lib/siteUrl";
 
 export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
@@ -48,13 +49,13 @@ export async function generateMetadata({
       description,
       url: `/estilo/${slug}`,
       type: "website",
-      ...(firstImage ? { images: [{ url: firstImage, alt: displayName }] } : {}),
+      images: firstImage ? [{ url: firstImage, alt: displayName }] : ["/og-default.png"],
     },
     twitter: {
       card: firstImage ? "summary_large_image" : "summary",
       title,
       description,
-      ...(firstImage ? { images: [firstImage] } : {}),
+      images: [firstImage ?? "/og-default.png"],
     },
   };
 }
@@ -140,7 +141,12 @@ export default async function EstiloPage({
     }
   });
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://vinyl-tracker.vercel.app";
+  // Cap rendered cards — big styles (rock, pop) would otherwise ship
+  // thousands of cards in one HTML payload.
+  const GRID_CAP = 60;
+  const visiveis = sorted.slice(0, GRID_CAP);
+
+  const siteUrl = SITE_URL;
 
   const breadcrumbJsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -209,11 +215,23 @@ export default async function EstiloPage({
       </div>
 
       {sorted.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-          {sorted.map((disco, index) => (
-            <DiscoCard key={disco.id} disco={disco} priority={index < 4} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+            {visiveis.map((disco, index) => (
+              <DiscoCard key={disco.id} disco={disco} priority={index < 4} />
+            ))}
+          </div>
+          {sorted.length > GRID_CAP && (
+            <p className="text-dust text-sm text-center mt-6">
+              Exibindo os {GRID_CAP} primeiros de {sorted.length} discos.
+              Use os filtros para refinar, ou{" "}
+              <Link href="/disco" className="text-parchment hover:text-gold underline underline-offset-2 transition-colors">
+                veja o catálogo completo
+              </Link>
+              .
+            </p>
+          )}
+        </>
       ) : (
         <div className="text-center py-24 text-dust">
           <div className="inline-block mb-5 opacity-40">

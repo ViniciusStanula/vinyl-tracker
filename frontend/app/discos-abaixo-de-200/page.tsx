@@ -25,6 +25,7 @@ export const metadata: Metadata = {
       "Todos os discos de vinil disponíveis por menos de R$ 200 na Amazon Brasil, ordenados pelas melhores ofertas.",
     url: "/discos-abaixo-de-200",
     type: "website",
+    images: ["/og-default.png"],
   },
 };
 

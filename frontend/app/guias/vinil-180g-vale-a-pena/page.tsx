@@ -17,7 +17,7 @@ function IconChevronDown({ className = "" }: { className?: string }) {
   );
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.br";
+import { SITE_URL } from "@/lib/siteUrl";
 const SLUG = "vinil-180g-vale-a-pena";
 const PAGE_TITLE = "Vinil 180g Vale a Pena? Diferença Real ou Marketing?";
 const PAGE_DESC =

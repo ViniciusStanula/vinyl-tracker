@@ -5,7 +5,7 @@ import { getRockSubgenres } from "@/lib/guias/rock-data";
 import { ROCK_INTRO, SUBGENRE_ORDER, capitalize } from "@/lib/guias/rock-content";
 import { fetchLastfmAlbumCover } from "@/lib/external/lastfmAlbum";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://garimpavinil.com.br";
+import { SITE_URL } from "@/lib/siteUrl";
 const PREVIEW_COUNT = 10;
 
 const META_TITLE = "Os Discos de Rock Mais Bem Avaliados por Subgênero | Garimpa Vinil";
@@ -20,6 +20,7 @@ export const metadata: Metadata = {
     description: META_DESC,
     url: "/guias/rock",
     type: "website",
+    images: ["/og-default.png"],
   },
   twitter: {
     card: "summary",
