@@ -51,6 +51,7 @@ from database import (
 from bs4 import BeautifulSoup
 from deal_scorer import score_deals
 from utils import gerar_slug
+from metrics import collector as _metrics, ensure_metrics_table, blocked_kind
 
 LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 
@@ -769,10 +770,13 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
 
     for attempt in range(1, retries + 1):
         try:
+            t0 = time.monotonic()
             resp = session.get(url, timeout=25, headers=req_headers or None)
+            latency_ms = (time.monotonic() - t0) * 1000
             size = len(resp.content)
             # 403 is Amazon's soft-block alongside 429/503 — treat identically.
             if resp.status_code in (403, 503, 429):
+                _metrics.record_http(blocked_kind(resp.status_code), latency_ms)
                 log.warning(
                     "[safe_get] Rate-limited %s proxy=%s size=%d — backing off",
                     resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
@@ -786,6 +790,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
                 continue
             resp.raise_for_status()
         except Exception as exc:
+            _metrics.record_http("net_error")
             log.warning("[safe_get] Request error (attempt %d/%d): %s", attempt, retries, exc)
             if attempt < retries:
                 time.sleep(random.uniform(4, 8))
@@ -799,6 +804,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
         # must detect the same bot-challenge pages.
         if _BOT_SIGNAL_RE.search(resp.text):
             verdict = "captcha"
+            _metrics.record_http("captcha", latency_ms)
             log.warning(
                 "[safe_get] CAPTCHA detected proxy=%s size=%d — rotating session",
                 _mask_proxy(proxy) if proxy else "none", size,
@@ -810,6 +816,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
             _quick_warmup(session)
             return None, session, proxy
 
+        _metrics.record_http("ok", latency_ms)
         log.debug(
             "[safe_get] %s status=%d size=%d proxy=%s verdict=%s",
             url[:80], resp.status_code, size,
@@ -882,9 +889,12 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
 
     for attempt in range(1, retries + 1):
         try:
+            t0 = time.monotonic()
             resp = session.get(url, timeout=25, headers=req_headers)
+            latency_ms = (time.monotonic() - t0) * 1000
             size = len(resp.content)
             if resp.status_code == 404:
+                _metrics.record_http("ok", latency_ms)  # valid response, product gone
                 log.debug(
                     "[fetch_product] 404 %s proxy=%s",
                     url[:80], _mask_proxy(proxy) if proxy else "none",
@@ -893,6 +903,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 return None, 404, session, proxy
             # 403 is Amazon's soft-block signal — treat as rate-limit alongside 429/503.
             if resp.status_code in (403, 503, 429):
+                _metrics.record_http(blocked_kind(resp.status_code), latency_ms)
                 log.warning(
                     "[fetch_product] Rate-limited %s proxy=%s size=%d — backing off",
                     resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
@@ -906,6 +917,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 continue
             resp.raise_for_status()
         except Exception as exc:
+            _metrics.record_http("net_error")
             log.warning(
                 "[fetch_product] Request error (attempt %d/%d): %s",
                 attempt, retries, exc,
@@ -918,6 +930,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
             return None, None, session, proxy
 
         if _BOT_SIGNAL_RE.search(resp.text):
+            _metrics.record_http("captcha", latency_ms)
             log.warning(
                 "[BOT-DETECTED] CAPTCHA proxy=%s size=%d — %s (attempt %d)",
                 _mask_proxy(proxy) if proxy else "none", size, url[:80], attempt,
@@ -934,6 +947,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
         # parse_product_page() returns (None, True, None) → deal_cleared, wiping the
         # deal score even though the product is live and correctly priced.
         if not soup.select_one("#ppd"):
+            _metrics.record_http("skeleton", latency_ms)
             log.warning(
                 "[BOT-DETECTED] Skeleton page proxy=%s size=%d — %s. "
                 "Session will be rotated; deal score preserved.",
@@ -943,6 +957,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
             pool.report_block(proxy)
             return None, None, session, proxy
 
+        _metrics.record_http("ok", latency_ms)
         log.debug(
             "[fetch_product] ok status=%d size=%d proxy=%s %s",
             resp.status_code, size,
@@ -2711,6 +2726,8 @@ def main():
             conn.rollback()
         except Exception:
             pass
+    # Durable metrics table (best-effort; never blocks the crawl).
+    ensure_metrics_table(conn)
     try:
 
         # ── Phase 0: Re-validate active deals (highest priority) ──────────
@@ -2733,11 +2750,13 @@ def main():
             if active_deals:
                 phase0_asins = {d["asin"] for d in active_deals}
                 _snap_pre0 = _bot_stats.snapshot()
+                _metrics.start_phase("phase0_deal_revalidation")
                 crawl_stale_records(
                     active_deals, args.delay, conn,
                     dry_run=False, max_workers=args.stale_workers,
                     deadline=deadline,
                 )
+                _metrics.end_phase(conn)
                 # Re-score immediately after re-validation so that deals whose
                 # prices just went up (or products that became unavailable) are
                 # cleared before Phase 1 runs.  Without this, a deal that Phase 0
@@ -2759,7 +2778,9 @@ def main():
             log.info("═" * 60)
             t0 = time.monotonic()
             _snap_pre1 = _bot_stats.snapshot()
+            _metrics.start_phase("phase1_listing_crawl")
             all_items, asin_categories, browse_asins = crawl(args.max_pages, args.delay, deadline=deadline)
+            _metrics.end_phase(conn)
             log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
             log.info("Phase 1 bot-detection: %s", _bot_phase_summary(_snap_pre1, _bot_stats.snapshot()))
 
@@ -2969,6 +2990,7 @@ def main():
             phase3_round = 0
             t0_phase3 = time.monotonic()
             _snap_pre3 = _bot_stats.snapshot()
+            _metrics.start_phase("phase3_stale_records")
 
             while True:
                 if phase3_deadline is not None and time.monotonic() >= phase3_deadline:
@@ -3014,6 +3036,7 @@ def main():
                         log.info("Phase 3: circuit-breaker fired, not enough time to continue.")
                         break
 
+            _metrics.end_phase(conn)
             log.info("Phase 3 stale: %.0fs — %d records across %d rounds.",
                      time.monotonic() - t0_phase3, phase3_total, phase3_round)
             log.info("Phase 3 bot-detection: %s", _bot_phase_summary(_snap_pre3, _bot_stats.snapshot()))
