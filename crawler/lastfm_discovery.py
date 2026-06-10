@@ -31,6 +31,7 @@ import psycopg2.extras
 from bs4 import BeautifulSoup
 
 from database import get_connection
+from scrape_lock import ScrapeLock
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Configuration
@@ -509,6 +510,17 @@ def main() -> None:
 
     log.info("Got %d artists from Last.fm.", len(artists))
 
+    # Guard: don't co-scrape the storefront with the continuous main crawl's
+    # Phase 1. Held on a dedicated connection (auto-released if this run crashes).
+    _scrape_lock = ScrapeLock(label="discovery")
+    _scrape_lock.__enter__()
+    if not _scrape_lock.acquired:
+        log.warning("Discovery scrape skipped — main crawl holds the storefront lock. "
+                    "Exiting without advancing state; the next cron run retries.")
+        _scrape_lock.__exit__()
+        conn.close()
+        return
+
     # ── Warm up a fresh session ───────────────────────────────────────────────
     session = make_session()
     warm_up(session)
@@ -555,6 +567,9 @@ def main() -> None:
 
         if idx < len(artists):
             time.sleep(random.uniform(DELAY_ARTIST_MIN, DELAY_ARTIST_MAX))
+
+    # Storefront scraping done — release the lock before the DB writes below.
+    _scrape_lock.__exit__()
 
     # ── Deduplicate across artists (same ASIN may appear for multiple) ────────
     seen: set[str] = set()

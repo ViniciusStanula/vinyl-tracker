@@ -52,6 +52,7 @@ from bs4 import BeautifulSoup
 from deal_scorer import score_deals
 from utils import gerar_slug
 from metrics import collector as _metrics, ensure_metrics_table, blocked_kind
+from scrape_lock import ScrapeLock
 
 LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 
@@ -66,6 +67,13 @@ CREATORS_REFRESH_ENABLED = os.environ.get("CREATORS_REFRESH_ENABLED", "").strip(
 # Skip Phase-3 backlog records refreshed more recently than this (Step C).
 # Active deals bypass it (Rule Zero carve-out lives in fetch_stale_records). 0 = off.
 FRESHNESS_FLOOR_MINUTES = int(os.environ.get("FRESHNESS_FLOOR_MINUTES", "0") or "0")
+# Global cap on simultaneous storefront (scraper) requests across ALL threads
+# (Step D). Category workers + stale workers can otherwise burst well past this;
+# the semaphore bounds true per-host concurrency regardless of worker counts.
+AMAZON_MAX_CONCURRENCY = max(1, int(os.environ.get("AMAZON_MAX_CONCURRENCY", "4") or "4"))
+# Shared across every thread in the process; acquired only around the actual
+# network call (not the backoff sleeps) so a backing-off worker doesn't hold a slot.
+_AMAZON_SEMAPHORE = _threading.BoundedSemaphore(AMAZON_MAX_CONCURRENCY)
 # Fraction of work done per run — applies to both main URL pages and category URL slices.
 # Default 0.2 = 20% per run; 5 runs cover everything. Set 1.0 to disable slicing.
 CATEGORY_SLICE_FRACTION = float(os.environ.get("CATEGORY_SLICE_FRACTION", "0.2"))
@@ -774,7 +782,8 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
     for attempt in range(1, retries + 1):
         try:
             t0 = time.monotonic()
-            resp = session.get(url, timeout=25, headers=req_headers or None)
+            with _AMAZON_SEMAPHORE:  # bound global storefront concurrency
+                resp = session.get(url, timeout=25, headers=req_headers or None)
             latency_ms = (time.monotonic() - t0) * 1000
             size = len(resp.content)
             # 403 is Amazon's soft-block alongside 429/503 — treat identically.
@@ -893,7 +902,8 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
     for attempt in range(1, retries + 1):
         try:
             t0 = time.monotonic()
-            resp = session.get(url, timeout=25, headers=req_headers)
+            with _AMAZON_SEMAPHORE:  # bound global storefront concurrency
+                resp = session.get(url, timeout=25, headers=req_headers)
             latency_ms = (time.monotonic() - t0) * 1000
             size = len(resp.content)
             if resp.status_code == 404:
@@ -2892,11 +2902,19 @@ def main():
             log.info("═" * 60)
             t0 = time.monotonic()
             _snap_pre1 = _bot_stats.snapshot()
-            _metrics.start_phase("phase1_listing_crawl")
-            all_items, asin_categories, browse_asins = crawl(args.max_pages, args.delay, deadline=deadline)
-            _metrics.end_phase(conn)
-            log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
-            log.info("Phase 1 bot-detection: %s", _bot_phase_summary(_snap_pre1, _bot_stats.snapshot()))
+            # Advisory lock: don't co-scrape the storefront with the daily Last.fm
+            # discovery run. If another run holds it, skip the listing crawl (the
+            # refresh + non-storefront phases below still proceed).
+            with ScrapeLock(label="phase1") as _lk:
+                if _lk.acquired:
+                    _metrics.start_phase("phase1_listing_crawl")
+                    all_items, asin_categories, browse_asins = crawl(args.max_pages, args.delay, deadline=deadline)
+                    _metrics.end_phase(conn)
+                    log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
+                    log.info("Phase 1 bot-detection: %s", _bot_phase_summary(_snap_pre1, _bot_stats.snapshot()))
+                else:
+                    log.warning("Phase 1 listing crawl skipped — storefront scrape lock held by another run.")
+                    all_items, asin_categories, browse_asins = [], {}, set()
 
         if not all_items:
             if not args.stale_only:
