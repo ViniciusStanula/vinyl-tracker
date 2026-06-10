@@ -513,6 +513,25 @@ def _human_delay(base: float) -> float:
     return base + random.uniform(4.0, 9.0)
 
 
+# Backoff for storefront rate-limit/error retries (Step E). Honors Retry-After
+# when Amazon sends it; otherwise exponential backoff with decorrelated jitter,
+# capped. attempt is 1-based.
+_BACKOFF_BASE_S = 4.0
+_BACKOFF_CAP_S  = 60.0
+
+
+def _scraper_backoff_sleep(attempt: int, retry_after: str | None = None) -> None:
+    exp = min(_BACKOFF_CAP_S, _BACKOFF_BASE_S * (2 ** (attempt - 1)))
+    delay = exp / 2 + random.uniform(0, exp / 2)  # jitter decorrelates workers
+    if retry_after:
+        try:
+            # Retry-After is usually delta-seconds; honor it as a floor.
+            delay = max(delay, float(retry_after))
+        except (TypeError, ValueError):
+            pass  # HTTP-date form unsupported here; exp backoff still applies
+    time.sleep(delay)
+
+
 def affiliate_link(asin: str) -> str:
     return f"https://www.amazon.com.br/dp/{asin}?tag={ASSOCIATE_TAG}"
 
@@ -795,7 +814,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
                 )
                 _bot_stats.inc("listing_block")
                 pool.report_block(proxy)
-                time.sleep(random.uniform(6, 12))
+                _scraper_backoff_sleep(attempt, resp.headers.get("Retry-After"))
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
                 _quick_warmup(session)
@@ -805,7 +824,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
             _metrics.record_http("net_error")
             log.warning("[safe_get] Request error (attempt %d/%d): %s", attempt, retries, exc)
             if attempt < retries:
-                time.sleep(random.uniform(4, 8))
+                _scraper_backoff_sleep(attempt)
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
                 continue
@@ -923,7 +942,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 )
                 _bot_stats.inc("product_block")
                 pool.report_block(proxy)
-                time.sleep(random.uniform(6, 12))
+                _scraper_backoff_sleep(attempt, resp.headers.get("Retry-After"))
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
                 _quick_warmup(session)
@@ -936,7 +955,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 attempt, retries, exc,
             )
             if attempt < retries:
-                time.sleep(random.uniform(4, 8))
+                _scraper_backoff_sleep(attempt)
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
                 continue
