@@ -2,8 +2,9 @@ name: Vinyl Crawler
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # every 6 hours — safety net only; self-trigger handles continuous operation
-  workflow_dispatch:        # manual trigger from the GitHub Actions UI
+    - cron: '0 */3 * * *'   # every 3 hours — steady cadence; refresh is on the Creators API now,
+                            # so the old 24/7 self-trigger loop is gone (it burned the daily TPD budget)
+  workflow_dispatch:         # manual trigger from the GitHub Actions UI
 
 # Prevent concurrent runs: if a previous crawl is still going when the next
 # one is scheduled, let the in-progress run finish rather than cancelling it.
@@ -17,7 +18,6 @@ jobs:
     timeout-minutes: 180   # hard ceiling (3h); crawler --time-limit 160 stops 20 min before
     permissions:
       issues: write        # needed for the "open issue on failure" step
-      actions: write       # needed to self-trigger the next run on completion
     env:
       # Opt into Node.js 24 now before it becomes mandatory on 2026-06-02.
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -54,6 +54,16 @@ jobs:
           REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # ── Creators API refresh (Phase 0 + Phase 3) ──
+          CREATORS_REFRESH_ENABLED: "1"
+          CREATORS_CLIENT_ID: ${{ secrets.CREATORS_CLIENT_ID }}
+          CREATORS_CLIENT_SECRET: ${{ secrets.CREATORS_CLIENT_SECRET }}
+          CREATORS_PARTNER_TAG: ${{ secrets.CREATORS_PARTNER_TAG }}
+          CREATORS_CREDENTIAL_VERSION: v3.1
+          CREATORS_TPS: "1"
+          CREATORS_TPD: "8640"
+          FRESHNESS_FLOOR_MINUTES: "180"
+          AMAZON_MAX_CONCURRENCY: "4"
 
       - name: Open issue on failure
         if: failure()
@@ -66,15 +76,16 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title,
-              body: `The hourly crawler workflow failed.\n\n[View run](${runUrl})`,
+              body: `The crawler workflow failed.\n\n[View run](${runUrl})`,
               labels: ['crawler-failure'],
             });
 
-      - name: Trigger next run
-        # Runs on success or failure — skipped only if the job was manually cancelled.
-        # This keeps the crawler running 24/7 with zero gap between runs.
-        # The 6-hourly schedule above is a safety net in case this step fails.
-        if: ${{ !cancelled() }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run crawler.yml --ref ${{ github.ref_name }}
+      - name: Upload crawler log
+        # Durable copy of the run log (the Postgres crawl_run_metrics table holds
+        # the structured metrics; this artifact is the full narrative log).
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vinyl-crawler-log-${{ github.run_id }}
+          path: crawler/vinyl_crawler.log
+          if-no-files-found: ignore
