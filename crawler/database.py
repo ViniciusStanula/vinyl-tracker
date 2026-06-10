@@ -347,6 +347,7 @@ def fetch_stale_records(
     seen_asins: set[str],
     limit: int = 500,
     claim: bool = False,
+    floor_minutes: int | None = None,
 ) -> list[dict]:
     """
     Returns Disco rows whose ASINs were NOT encountered during this crawl run.
@@ -358,22 +359,39 @@ def fetch_stale_records(
          records are re-checked even after dropping from search results.
       3. All others by last_crawled_at ASC NULLS FIRST — most neglected first.
 
+    Freshness floor (Step C): when floor_minutes is set, records crawled more
+    recently than that are skipped, so the main run and the offset stale-only run
+    don't double-check the same record hours apart (last_crawled_at is the
+    cross-process coordination — both processes read/write the same column).
+
+    RULE ZERO CARVE-OUT: records with deal_score IS NOT NULL bypass the floor and
+    are always eligible. Active deals must never be skipped by the floor. (Phase 0
+    re-validates them separately via fetch_active_deals regardless; this carve-out
+    keeps them eligible in the Phase-3 backlog path too.)
+
     The `claim` parameter is retained for call-site compatibility but is no
-    longer used.  The previous behaviour (pre-stamping last_crawled_at = NOW()
-    on every selected row before crawling) caused records that were claimed but
-    never actually visited (circuit-breaker abort, deadline) to receive a fresh
-    timestamp, pushing them to the back of the queue indefinitely.
-    last_crawled_at is now written only inside mark_stale_price / mark_unavailable
-    / clear_deal_score — i.e. after a real crawl outcome is known.
+    longer used.
 
     Each returned dict has: asin, id, titulo.
     """
+    floor_clause = ""
+    params: list = [list(seen_asins) if seen_asins else ["__none__"]]
+    if floor_minutes and floor_minutes > 0:
+        # deal_score carve-out FIRST so Rule Zero can never be floored out.
+        floor_clause = (
+            " AND (deal_score IS NOT NULL"
+            " OR last_crawled_at IS NULL"
+            " OR last_crawled_at < NOW() - (%s * INTERVAL '1 minute'))"
+        )
+        params.append(floor_minutes)
+    params.append(limit)
+
     with _cursor(conn) as cur:
         cur.execute(
-            """
+            f"""
             SELECT asin, id, COALESCE(titulo, '') AS titulo
             FROM "Disco"
-            WHERE asin != ALL(%s)
+            WHERE asin != ALL(%s){floor_clause}
             ORDER BY
                 CASE
                     WHEN deal_score IS NOT NULL                        THEN 0
@@ -383,7 +401,7 @@ def fetch_stale_records(
                 last_crawled_at ASC NULLS FIRST
             LIMIT %s
             """,
-            (list(seen_asins) if seen_asins else ["__none__"], limit),
+            tuple(params),
         )
         rows = cur.fetchall()
     return [

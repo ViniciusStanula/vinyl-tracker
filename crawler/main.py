@@ -63,6 +63,9 @@ ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
 # use the stealth scraper exactly as before — so the crawler keeps working without
 # API credentials. Flipped ON only after shadow-mode parity passes (Steps B2/B3).
 CREATORS_REFRESH_ENABLED = os.environ.get("CREATORS_REFRESH_ENABLED", "").strip().lower() in ("1", "true", "yes")
+# Skip Phase-3 backlog records refreshed more recently than this (Step C).
+# Active deals bypass it (Rule Zero carve-out lives in fetch_stale_records). 0 = off.
+FRESHNESS_FLOOR_MINUTES = int(os.environ.get("FRESHNESS_FLOOR_MINUTES", "0") or "0")
 # Fraction of work done per run — applies to both main URL pages and category URL slices.
 # Default 0.2 = 20% per run; 5 runs cover everything. Set 1.0 to disable slicing.
 CATEGORY_SLICE_FRACTION = float(os.environ.get("CATEGORY_SLICE_FRACTION", "0.2"))
@@ -3116,7 +3119,10 @@ def main():
                     pass
                 conn = get_connection()
 
-                batch = fetch_stale_records(conn, seen_asins, limit=_PHASE3_BATCH_SIZE, claim=args.stale_only)
+                batch = fetch_stale_records(
+                    conn, seen_asins, limit=_PHASE3_BATCH_SIZE,
+                    claim=args.stale_only, floor_minutes=FRESHNESS_FLOOR_MINUTES,
+                )
                 if not batch:
                     log.info("Phase 3: no more stale records after %d records.", phase3_total)
                     break
