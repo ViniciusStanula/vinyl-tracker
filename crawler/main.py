@@ -27,6 +27,11 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
+# Load crawler/.env into os.environ before any module-level config is read,
+# so local runs match CI. No-op in GitHub Actions (real env vars win).
+from preflight import load_dotenv_if_present, check_env
+load_dotenv_if_present()
+
 from database import (
     upsert_batch,
     limpar_historico_antigo,
@@ -53,6 +58,10 @@ LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 #  Configuration
 # ─────────────────────────────────────────────────────────────
 ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
+# Refresh-via-Creators-API master switch. While OFF (default), Phase 0 + Phase 3
+# use the stealth scraper exactly as before — so the crawler keeps working without
+# API credentials. Flipped ON only after shadow-mode parity passes (Steps B2/B3).
+CREATORS_REFRESH_ENABLED = os.environ.get("CREATORS_REFRESH_ENABLED", "").strip().lower() in ("1", "true", "yes")
 # Fraction of work done per run — applies to both main URL pages and category URL slices.
 # Default 0.2 = 20% per run; 5 runs cover everything. Set 1.0 to disable slicing.
 CATEGORY_SLICE_FRACTION = float(os.environ.get("CATEGORY_SLICE_FRACTION", "0.2"))
@@ -2661,6 +2670,11 @@ def main():
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    # Step 0 — preflight: fail loud on missing/invalid config before any work.
+    # Credentials are only required once API refresh is switched on; until then
+    # the scraper-based refresh runs and the crawler works without them.
+    check_env(require_creators=CREATORS_REFRESH_ENABLED)
 
     log.info("═" * 60)
     log.info("Vinyl Crawler — %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
