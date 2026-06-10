@@ -87,7 +87,20 @@ MIN_PRICE_BRL      = 30.0
 # Stale-records session hygiene: rotate after a random number of product-page
 # hits in this range.  Amazon degrades sessions to skeleton pages after ~1-2
 # hits; jittering the rotation count removes the mechanical every-N pattern.
-_STALE_MAX_HITS_RANGE = (1, 4)
+#
+# Step F (discovery trim): this rotation is the main warm-up tax. Once refresh
+# moves to the Creators API (CREATORS_REFRESH_ENABLED), the scraper only fetches
+# product pages for low-volume DISCOVERY (Phase 2.7/2.8), so a wider rotation
+# interval cuts warm-up overhead. It is an env LEVER (default unchanged) because
+# widening trades fewer warm-ups for more skeleton risk — widen only while
+# watching the crawl_run_metrics skeleton/blocked rate, and revert if it climbs.
+#   STALE_ROTATE_MIN / STALE_ROTATE_MAX override the range explicitly.
+_STALE_HITS_MIN = int(os.environ.get("STALE_ROTATE_MIN", "0") or "0")
+_STALE_HITS_MAX = int(os.environ.get("STALE_ROTATE_MAX", "0") or "0")
+if _STALE_HITS_MIN > 0 and _STALE_HITS_MAX >= _STALE_HITS_MIN:
+    _STALE_MAX_HITS_RANGE = (_STALE_HITS_MIN, _STALE_HITS_MAX)
+else:
+    _STALE_MAX_HITS_RANGE = (1, 4)  # default — unchanged until deliberately widened
 
 # Category slice rotation — each run crawls only a fraction of all genre URLs,
 # advancing a persistent offset so the full list is covered across N runs.
