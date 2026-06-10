@@ -2558,6 +2558,114 @@ def crawl_stale_records(
 
 
 # ─────────────────────────────────────────────────────────────
+#  Creators API refresh path (Steps B2/B3) — replaces the scraper
+#  for Phase 0 + Phase 3 known-ASIN price/availability checks.
+#  Gated by CREATORS_REFRESH_ENABLED; the scraper path stays as fallback.
+# ─────────────────────────────────────────────────────────────
+_creators_client = None
+
+
+def _get_creators_client():
+    """Lazily build a single shared CreatorsClient and attach it to metrics."""
+    global _creators_client
+    if _creators_client is None:
+        from creators_api import CreatorsConfig, CreatorsClient
+        _creators_client = CreatorsClient(CreatorsConfig.from_env())
+        _metrics.attach_api_client(_creators_client)
+        log.info("Creators API client initialised for refresh (TPS/TPD from env).")
+    return _creators_client
+
+
+# Availability types the API reports for a definitively out-of-stock offer.
+_API_OOS_TYPES = {"OUT_OF_STOCK", "UNAVAILABLE"}
+
+
+def crawl_stale_records_api(
+    records: list[dict],
+    conn,
+    dry_run: bool,
+    deadline: float | None = None,
+) -> tuple[int, int, int]:
+    """
+    Creators API equivalent of crawl_stale_records for KNOWN ASINs.
+
+    Batches ≤10 ASINs/call (OffersV2). Maps each result:
+      - not returned by API            → error (transient; retry next run, no write)
+      - out-of-stock / OOS availability → mark_unavailable()
+      - price present + in stock        → mark_stale_price() (reviews PRESERVED:
+                                          review_count=None → COALESCE keeps stored)
+      - in stock but no purchasable price→ mark_unavailable() (deal cleared)
+
+    review_count + Prime are never written here — they stay scraper-sourced via
+    discovery. Rule Zero: callers pass the active-deal set first (Phase 0), so
+    deals are always re-validated regardless of any freshness floor.
+
+    Returns (updated, unavailable, errors).
+    """
+    client = _get_creators_client()
+    now = datetime.now(timezone.utc)
+    updated = unavailable = deals_cleared = errors = 0
+    total = len(records)
+    by_asin = {r["asin"]: r for r in records}
+    asins = list(by_asin.keys())
+
+    log.info("Stale-records (API): %d records, TPS=%s TPD=%s",
+             total, client.cfg.tps, client.cfg.tpd)
+
+    from creators_api import BudgetExhausted
+
+    for i in range(0, len(asins), 10):
+        if deadline is not None and time.monotonic() >= deadline:
+            log.warning("API refresh: time limit reached after %d/%d records.", i, total)
+            break
+        chunk = asins[i:i + 10]
+        try:
+            results = {r.asin: r for r in client.get_items(chunk)}
+        except BudgetExhausted as exc:
+            log.warning("API refresh: %s — stopping (deals were processed first).", exc)
+            break
+        except Exception as exc:
+            log.warning("API refresh: getItems failed for chunk %d: %s", i // 10, exc)
+            errors += len(chunk)
+            continue
+
+        for asin in chunk:
+            rec = by_asin[asin]
+            disco_id = rec["id"]
+            res = results.get(asin)
+            if res is None:
+                errors += 1  # transient miss — do NOT mark unavailable
+                continue
+
+            oos = (res.in_stock is False) or (
+                isinstance(res.availability_type, str)
+                and res.availability_type.upper() in _API_OOS_TYPES
+            )
+            if oos:
+                if not dry_run:
+                    mark_unavailable(conn, disco_id)
+                unavailable += 1
+            elif res.price is not None:
+                if not dry_run:
+                    # review_count omitted on purpose → COALESCE preserves stored value.
+                    mark_stale_price(conn, disco_id, res.price, now, review_count=None)
+                updated += 1
+                _metrics.record_useful(1)
+            else:
+                # In stock signal but no purchasable price → clear like the scraper.
+                if not dry_run:
+                    mark_unavailable(conn, disco_id)
+                deals_cleared += 1
+
+    log.info(
+        "Stale-records (API) done — %d updated | %d unavailable | %d deals_cleared"
+        " | %d errors | budget_remaining=%s",
+        updated, unavailable, deals_cleared, errors, client.budget_remaining(),
+    )
+    return updated, unavailable, errors
+
+
+# ─────────────────────────────────────────────────────────────
 #  CLI
 # ─────────────────────────────────────────────────────────────
 def parse_args():
@@ -2751,11 +2859,14 @@ def main():
                 phase0_asins = {d["asin"] for d in active_deals}
                 _snap_pre0 = _bot_stats.snapshot()
                 _metrics.start_phase("phase0_deal_revalidation")
-                crawl_stale_records(
-                    active_deals, args.delay, conn,
-                    dry_run=False, max_workers=args.stale_workers,
-                    deadline=deadline,
-                )
+                if CREATORS_REFRESH_ENABLED:
+                    crawl_stale_records_api(active_deals, conn, dry_run=False, deadline=deadline)
+                else:
+                    crawl_stale_records(
+                        active_deals, args.delay, conn,
+                        dry_run=False, max_workers=args.stale_workers,
+                        deadline=deadline,
+                    )
                 _metrics.end_phase(conn)
                 # Re-score immediately after re-validation so that deals whose
                 # prices just went up (or products that became unavailable) are
@@ -3014,11 +3125,14 @@ def main():
                 _stale_abort.clear()
                 log.info("Phase 3 round %d — %d records.", phase3_round, len(batch))
 
-                crawl_stale_records(
-                    batch, args.delay, conn,
-                    dry_run=False, max_workers=args.stale_workers,
-                    deadline=phase3_deadline,
-                )
+                if CREATORS_REFRESH_ENABLED:
+                    crawl_stale_records_api(batch, conn, dry_run=False, deadline=phase3_deadline)
+                else:
+                    crawl_stale_records(
+                        batch, args.delay, conn,
+                        dry_run=False, max_workers=args.stale_workers,
+                        deadline=phase3_deadline,
+                    )
 
                 phase3_total += len(batch)
                 seen_asins.update(r["asin"] for r in batch)
