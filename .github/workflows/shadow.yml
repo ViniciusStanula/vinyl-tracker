@@ -1,0 +1,53 @@
+name: Shadow Parity (Creators API vs scraper)
+
+# Manual only. Runs the Step-B1 shadow comparison on the runner (same scraping
+# conditions as production — no proxy). Writes ONLY to shadow_diffs; never to
+# Disco/HistoricoPreco. The parity verdict prints in the run log and the rows
+# persist to Postgres for review.
+on:
+  workflow_dispatch:
+    inputs:
+      records:
+        description: "How many records to compare (active deals first, topped up from stale)"
+        required: false
+        default: "300"
+
+concurrency:
+  group: shadow
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/crawler-refresh-migration   # the migration branch under test
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: crawler/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r crawler/requirements.txt
+
+      - name: Run shadow parity
+        run: python crawler/shadow_run.py --from-stale ${{ github.event.inputs.records }}
+        env:
+          # Secrets
+          DATABASE_URL:            ${{ secrets.DATABASE_URL }}
+          ASSOCIATE_TAG:           ${{ secrets.ASSOCIATE_TAG }}
+          REVALIDATE_URL:          ${{ secrets.REVALIDATE_URL }}
+          CREATORS_CLIENT_ID:      ${{ secrets.CREATORS_CLIENT_ID }}
+          CREATORS_CLIENT_SECRET:  ${{ secrets.CREATORS_CLIENT_SECRET }}
+          CREATORS_PARTNER_TAG:    ${{ secrets.CREATORS_PARTNER_TAG }}
+          # Non-secret knobs (preflight requires them)
+          CREATORS_CREDENTIAL_VERSION: v3.1
+          CREATORS_TPS:            "1"
+          CREATORS_TPD:            "8640"
+          FRESHNESS_FLOOR_MINUTES: "180"
+          AMAZON_MAX_CONCURRENCY:  "4"
