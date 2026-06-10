@@ -51,7 +51,7 @@ from database import (
 from bs4 import BeautifulSoup
 from deal_scorer import score_deals
 from utils import gerar_slug
-from metrics import collector as _metrics, ensure_metrics_table, blocked_kind
+from metrics import collector as _metrics, ensure_metrics_table, blocked_kind, log_run_summary
 from scrape_lock import ScrapeLock
 
 LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
@@ -2702,6 +2702,15 @@ def crawl_stale_records_api(
                     mark_unavailable(conn, disco_id)
                 deals_cleared += 1
 
+        # Progress every ~250 records so a long Phase-3 run shows live movement.
+        done = i + len(chunk)
+        if (i // 10) % 25 == 0 or done >= total:
+            log.info(
+                "  [API refresh] %d/%d — updated=%d unavail=%d cleared=%d err=%d | budget=%s",
+                done, total, updated, unavailable, deals_cleared, errors,
+                client.budget_remaining(),
+            )
+
     log.info(
         "Stale-records (API) done — %d updated | %d unavailable | %d deals_cleared"
         " | %d errors | budget_remaining=%s",
@@ -3279,6 +3288,9 @@ def main():
                 )
                 _db_estilos = [row[0] for row in _cur.fetchall()]
             _indexnow_submit(all_items, db_estilos=_db_estilos)
+
+        # Consolidated per-phase summary for this run (read back from Postgres).
+        log_run_summary(conn)
     finally:
         conn.close()
 

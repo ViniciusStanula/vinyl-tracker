@@ -235,4 +235,50 @@ def blocked_kind(status_code: int) -> str:
     )
 
 
-__all__ = ["collector", "ensure_metrics_table", "RUN_ID", "blocked_kind"]
+def log_run_summary(conn) -> None:
+    """Print a compact per-phase table for this run, read back from Postgres.
+    Best-effort: a failure here never affects the crawl."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT phase, requests, ok,
+                       blocked_403 + blocked_429 + blocked_503 AS blocked,
+                       captcha, skeleton, useful,
+                       round(latency_p50_ms)::int, api_calls, api_429,
+                       budget_remaining, round(wall_s)::int
+                FROM crawl_run_metrics
+                WHERE run_id = %s
+                ORDER BY id
+                """,
+                (RUN_ID,),
+            )
+            rows = cur.fetchall()
+    except Exception as exc:
+        log.warning("[metrics] run summary unavailable: %s", exc)
+        return
+    if not rows:
+        return
+
+    log.info("=" * 80)
+    log.info("RUN SUMMARY  run_id=%s", RUN_ID[:12])
+    log.info("%-26s %5s %5s %4s %4s %4s %6s %6s %8s %7s",
+             "phase", "req", "ok", "blk", "cap", "skl", "useful", "p50ms", "api/429", "wall_s")
+    log.info("-" * 80)
+    last_budget = None
+    for (phase, req, ok, blocked, captcha, skel, useful,
+         p50, apic, api429, budget, wall) in rows:
+        log.info("%-26s %5s %5s %4s %4s %4s %6s %6s %4s/%-3s %7s",
+                 phase, req, ok, blocked, captcha, skel, useful,
+                 p50 if p50 is not None else "-", apic, api429, wall)
+        if budget is not None:
+            last_budget = budget
+    if last_budget is not None:
+        log.info("-" * 80)
+        log.info("Creators API budget remaining today: %s", last_budget)
+    log.info("=" * 80)
+
+
+__all__ = [
+    "collector", "ensure_metrics_table", "RUN_ID", "blocked_kind", "log_run_summary",
+]
