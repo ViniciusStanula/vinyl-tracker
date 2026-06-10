@@ -27,6 +27,11 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
+# Load crawler/.env into os.environ before any module-level config is read,
+# so local runs match CI. No-op in GitHub Actions (real env vars win).
+from preflight import load_dotenv_if_present, check_env
+load_dotenv_if_present()
+
 from database import (
     upsert_batch,
     limpar_historico_antigo,
@@ -46,6 +51,8 @@ from database import (
 from bs4 import BeautifulSoup
 from deal_scorer import score_deals
 from utils import gerar_slug
+from metrics import collector as _metrics, ensure_metrics_table, blocked_kind
+from scrape_lock import ScrapeLock
 
 LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 
@@ -53,6 +60,20 @@ LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
 #  Configuration
 # ─────────────────────────────────────────────────────────────
 ASSOCIATE_TAG      = os.environ.get("ASSOCIATE_TAG", "")
+# Refresh-via-Creators-API master switch. While OFF (default), Phase 0 + Phase 3
+# use the stealth scraper exactly as before — so the crawler keeps working without
+# API credentials. Flipped ON only after shadow-mode parity passes (Steps B2/B3).
+CREATORS_REFRESH_ENABLED = os.environ.get("CREATORS_REFRESH_ENABLED", "").strip().lower() in ("1", "true", "yes")
+# Skip Phase-3 backlog records refreshed more recently than this (Step C).
+# Active deals bypass it (Rule Zero carve-out lives in fetch_stale_records). 0 = off.
+FRESHNESS_FLOOR_MINUTES = int(os.environ.get("FRESHNESS_FLOOR_MINUTES", "0") or "0")
+# Global cap on simultaneous storefront (scraper) requests across ALL threads
+# (Step D). Category workers + stale workers can otherwise burst well past this;
+# the semaphore bounds true per-host concurrency regardless of worker counts.
+AMAZON_MAX_CONCURRENCY = max(1, int(os.environ.get("AMAZON_MAX_CONCURRENCY", "4") or "4"))
+# Shared across every thread in the process; acquired only around the actual
+# network call (not the backoff sleeps) so a backing-off worker doesn't hold a slot.
+_AMAZON_SEMAPHORE = _threading.BoundedSemaphore(AMAZON_MAX_CONCURRENCY)
 # Fraction of work done per run — applies to both main URL pages and category URL slices.
 # Default 0.2 = 20% per run; 5 runs cover everything. Set 1.0 to disable slicing.
 CATEGORY_SLICE_FRACTION = float(os.environ.get("CATEGORY_SLICE_FRACTION", "0.2"))
@@ -66,7 +87,20 @@ MIN_PRICE_BRL      = 30.0
 # Stale-records session hygiene: rotate after a random number of product-page
 # hits in this range.  Amazon degrades sessions to skeleton pages after ~1-2
 # hits; jittering the rotation count removes the mechanical every-N pattern.
-_STALE_MAX_HITS_RANGE = (1, 4)
+#
+# Step F (discovery trim): this rotation is the main warm-up tax. Once refresh
+# moves to the Creators API (CREATORS_REFRESH_ENABLED), the scraper only fetches
+# product pages for low-volume DISCOVERY (Phase 2.7/2.8), so a wider rotation
+# interval cuts warm-up overhead. It is an env LEVER (default unchanged) because
+# widening trades fewer warm-ups for more skeleton risk — widen only while
+# watching the crawl_run_metrics skeleton/blocked rate, and revert if it climbs.
+#   STALE_ROTATE_MIN / STALE_ROTATE_MAX override the range explicitly.
+_STALE_HITS_MIN = int(os.environ.get("STALE_ROTATE_MIN", "0") or "0")
+_STALE_HITS_MAX = int(os.environ.get("STALE_ROTATE_MAX", "0") or "0")
+if _STALE_HITS_MIN > 0 and _STALE_HITS_MAX >= _STALE_HITS_MIN:
+    _STALE_MAX_HITS_RANGE = (_STALE_HITS_MIN, _STALE_HITS_MAX)
+else:
+    _STALE_MAX_HITS_RANGE = (1, 4)  # default — unchanged until deliberately widened
 
 # Category slice rotation — each run crawls only a fraction of all genre URLs,
 # advancing a persistent offset so the full list is covered across N runs.
@@ -492,6 +526,25 @@ def _human_delay(base: float) -> float:
     return base + random.uniform(4.0, 9.0)
 
 
+# Backoff for storefront rate-limit/error retries (Step E). Honors Retry-After
+# when Amazon sends it; otherwise exponential backoff with decorrelated jitter,
+# capped. attempt is 1-based.
+_BACKOFF_BASE_S = 4.0
+_BACKOFF_CAP_S  = 60.0
+
+
+def _scraper_backoff_sleep(attempt: int, retry_after: str | None = None) -> None:
+    exp = min(_BACKOFF_CAP_S, _BACKOFF_BASE_S * (2 ** (attempt - 1)))
+    delay = exp / 2 + random.uniform(0, exp / 2)  # jitter decorrelates workers
+    if retry_after:
+        try:
+            # Retry-After is usually delta-seconds; honor it as a floor.
+            delay = max(delay, float(retry_after))
+        except (TypeError, ValueError):
+            pass  # HTTP-date form unsupported here; exp backoff still applies
+    time.sleep(delay)
+
+
 def affiliate_link(asin: str) -> str:
     return f"https://www.amazon.com.br/dp/{asin}?tag={ASSOCIATE_TAG}"
 
@@ -760,26 +813,31 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
 
     for attempt in range(1, retries + 1):
         try:
-            resp = session.get(url, timeout=25, headers=req_headers or None)
+            t0 = time.monotonic()
+            with _AMAZON_SEMAPHORE:  # bound global storefront concurrency
+                resp = session.get(url, timeout=25, headers=req_headers or None)
+            latency_ms = (time.monotonic() - t0) * 1000
             size = len(resp.content)
             # 403 is Amazon's soft-block alongside 429/503 — treat identically.
             if resp.status_code in (403, 503, 429):
+                _metrics.record_http(blocked_kind(resp.status_code), latency_ms)
                 log.warning(
                     "[safe_get] Rate-limited %s proxy=%s size=%d — backing off",
                     resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
                 )
                 _bot_stats.inc("listing_block")
                 pool.report_block(proxy)
-                time.sleep(random.uniform(6, 12))
+                _scraper_backoff_sleep(attempt, resp.headers.get("Retry-After"))
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
                 _quick_warmup(session)
                 continue
             resp.raise_for_status()
         except Exception as exc:
+            _metrics.record_http("net_error")
             log.warning("[safe_get] Request error (attempt %d/%d): %s", attempt, retries, exc)
             if attempt < retries:
-                time.sleep(random.uniform(4, 8))
+                _scraper_backoff_sleep(attempt)
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
                 continue
@@ -790,6 +848,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
         # must detect the same bot-challenge pages.
         if _BOT_SIGNAL_RE.search(resp.text):
             verdict = "captcha"
+            _metrics.record_http("captcha", latency_ms)
             log.warning(
                 "[safe_get] CAPTCHA detected proxy=%s size=%d — rotating session",
                 _mask_proxy(proxy) if proxy else "none", size,
@@ -801,6 +860,7 @@ def safe_get(session, url: str, retries: int = 3, proxy: str | None = None,
             _quick_warmup(session)
             return None, session, proxy
 
+        _metrics.record_http("ok", latency_ms)
         log.debug(
             "[safe_get] %s status=%d size=%d proxy=%s verdict=%s",
             url[:80], resp.status_code, size,
@@ -873,9 +933,13 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
 
     for attempt in range(1, retries + 1):
         try:
-            resp = session.get(url, timeout=25, headers=req_headers)
+            t0 = time.monotonic()
+            with _AMAZON_SEMAPHORE:  # bound global storefront concurrency
+                resp = session.get(url, timeout=25, headers=req_headers)
+            latency_ms = (time.monotonic() - t0) * 1000
             size = len(resp.content)
             if resp.status_code == 404:
+                _metrics.record_http("ok", latency_ms)  # valid response, product gone
                 log.debug(
                     "[fetch_product] 404 %s proxy=%s",
                     url[:80], _mask_proxy(proxy) if proxy else "none",
@@ -884,31 +948,34 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 return None, 404, session, proxy
             # 403 is Amazon's soft-block signal — treat as rate-limit alongside 429/503.
             if resp.status_code in (403, 503, 429):
+                _metrics.record_http(blocked_kind(resp.status_code), latency_ms)
                 log.warning(
                     "[fetch_product] Rate-limited %s proxy=%s size=%d — backing off",
                     resp.status_code, _mask_proxy(proxy) if proxy else "none", size,
                 )
                 _bot_stats.inc("product_block")
                 pool.report_block(proxy)
-                time.sleep(random.uniform(6, 12))
+                _scraper_backoff_sleep(attempt, resp.headers.get("Retry-After"))
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
                 _quick_warmup(session)
                 continue
             resp.raise_for_status()
         except Exception as exc:
+            _metrics.record_http("net_error")
             log.warning(
                 "[fetch_product] Request error (attempt %d/%d): %s",
                 attempt, retries, exc,
             )
             if attempt < retries:
-                time.sleep(random.uniform(4, 8))
+                _scraper_backoff_sleep(attempt)
                 proxy = pool.acquire()
                 session, _ = make_session(proxy=proxy)
                 continue
             return None, None, session, proxy
 
         if _BOT_SIGNAL_RE.search(resp.text):
+            _metrics.record_http("captcha", latency_ms)
             log.warning(
                 "[BOT-DETECTED] CAPTCHA proxy=%s size=%d — %s (attempt %d)",
                 _mask_proxy(proxy) if proxy else "none", size, url[:80], attempt,
@@ -925,6 +992,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
         # parse_product_page() returns (None, True, None) → deal_cleared, wiping the
         # deal score even though the product is live and correctly priced.
         if not soup.select_one("#ppd"):
+            _metrics.record_http("skeleton", latency_ms)
             log.warning(
                 "[BOT-DETECTED] Skeleton page proxy=%s size=%d — %s. "
                 "Session will be rotated; deal score preserved.",
@@ -934,6 +1002,7 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
             pool.report_block(proxy)
             return None, None, session, proxy
 
+        _metrics.record_http("ok", latency_ms)
         log.debug(
             "[fetch_product] ok status=%d size=%d proxy=%s %s",
             resp.status_code, size,
@@ -2534,6 +2603,114 @@ def crawl_stale_records(
 
 
 # ─────────────────────────────────────────────────────────────
+#  Creators API refresh path (Steps B2/B3) — replaces the scraper
+#  for Phase 0 + Phase 3 known-ASIN price/availability checks.
+#  Gated by CREATORS_REFRESH_ENABLED; the scraper path stays as fallback.
+# ─────────────────────────────────────────────────────────────
+_creators_client = None
+
+
+def _get_creators_client():
+    """Lazily build a single shared CreatorsClient and attach it to metrics."""
+    global _creators_client
+    if _creators_client is None:
+        from creators_api import CreatorsConfig, CreatorsClient
+        _creators_client = CreatorsClient(CreatorsConfig.from_env())
+        _metrics.attach_api_client(_creators_client)
+        log.info("Creators API client initialised for refresh (TPS/TPD from env).")
+    return _creators_client
+
+
+# Availability types the API reports for a definitively out-of-stock offer.
+_API_OOS_TYPES = {"OUT_OF_STOCK", "UNAVAILABLE"}
+
+
+def crawl_stale_records_api(
+    records: list[dict],
+    conn,
+    dry_run: bool,
+    deadline: float | None = None,
+) -> tuple[int, int, int]:
+    """
+    Creators API equivalent of crawl_stale_records for KNOWN ASINs.
+
+    Batches ≤10 ASINs/call (OffersV2). Maps each result:
+      - not returned by API            → error (transient; retry next run, no write)
+      - out-of-stock / OOS availability → mark_unavailable()
+      - price present + in stock        → mark_stale_price() (reviews PRESERVED:
+                                          review_count=None → COALESCE keeps stored)
+      - in stock but no purchasable price→ mark_unavailable() (deal cleared)
+
+    review_count + Prime are never written here — they stay scraper-sourced via
+    discovery. Rule Zero: callers pass the active-deal set first (Phase 0), so
+    deals are always re-validated regardless of any freshness floor.
+
+    Returns (updated, unavailable, errors).
+    """
+    client = _get_creators_client()
+    now = datetime.now(timezone.utc)
+    updated = unavailable = deals_cleared = errors = 0
+    total = len(records)
+    by_asin = {r["asin"]: r for r in records}
+    asins = list(by_asin.keys())
+
+    log.info("Stale-records (API): %d records, TPS=%s TPD=%s",
+             total, client.cfg.tps, client.cfg.tpd)
+
+    from creators_api import BudgetExhausted
+
+    for i in range(0, len(asins), 10):
+        if deadline is not None and time.monotonic() >= deadline:
+            log.warning("API refresh: time limit reached after %d/%d records.", i, total)
+            break
+        chunk = asins[i:i + 10]
+        try:
+            results = {r.asin: r for r in client.get_items(chunk)}
+        except BudgetExhausted as exc:
+            log.warning("API refresh: %s — stopping (deals were processed first).", exc)
+            break
+        except Exception as exc:
+            log.warning("API refresh: getItems failed for chunk %d: %s", i // 10, exc)
+            errors += len(chunk)
+            continue
+
+        for asin in chunk:
+            rec = by_asin[asin]
+            disco_id = rec["id"]
+            res = results.get(asin)
+            if res is None:
+                errors += 1  # transient miss — do NOT mark unavailable
+                continue
+
+            oos = (res.in_stock is False) or (
+                isinstance(res.availability_type, str)
+                and res.availability_type.upper() in _API_OOS_TYPES
+            )
+            if oos:
+                if not dry_run:
+                    mark_unavailable(conn, disco_id)
+                unavailable += 1
+            elif res.price is not None:
+                if not dry_run:
+                    # review_count omitted on purpose → COALESCE preserves stored value.
+                    mark_stale_price(conn, disco_id, res.price, now, review_count=None)
+                updated += 1
+                _metrics.record_useful(1)
+            else:
+                # In stock signal but no purchasable price → clear like the scraper.
+                if not dry_run:
+                    mark_unavailable(conn, disco_id)
+                deals_cleared += 1
+
+    log.info(
+        "Stale-records (API) done — %d updated | %d unavailable | %d deals_cleared"
+        " | %d errors | budget_remaining=%s",
+        updated, unavailable, deals_cleared, errors, client.budget_remaining(),
+    )
+    return updated, unavailable, errors
+
+
+# ─────────────────────────────────────────────────────────────
 #  CLI
 # ─────────────────────────────────────────────────────────────
 def parse_args():
@@ -2662,6 +2839,11 @@ def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    # Step 0 — preflight: fail loud on missing/invalid config before any work.
+    # Credentials are only required once API refresh is switched on; until then
+    # the scraper-based refresh runs and the crawler works without them.
+    check_env(require_creators=CREATORS_REFRESH_ENABLED)
+
     log.info("═" * 60)
     log.info("Vinyl Crawler — %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     log.info("Max pages: %d  |  Delay: %.1fs  |  Dry run: %s",
@@ -2697,6 +2879,8 @@ def main():
             conn.rollback()
         except Exception:
             pass
+    # Durable metrics table (best-effort; never blocks the crawl).
+    ensure_metrics_table(conn)
     try:
 
         # ── Phase 0: Re-validate active deals (highest priority) ──────────
@@ -2719,11 +2903,16 @@ def main():
             if active_deals:
                 phase0_asins = {d["asin"] for d in active_deals}
                 _snap_pre0 = _bot_stats.snapshot()
-                crawl_stale_records(
-                    active_deals, args.delay, conn,
-                    dry_run=False, max_workers=args.stale_workers,
-                    deadline=deadline,
-                )
+                _metrics.start_phase("phase0_deal_revalidation")
+                if CREATORS_REFRESH_ENABLED:
+                    crawl_stale_records_api(active_deals, conn, dry_run=False, deadline=deadline)
+                else:
+                    crawl_stale_records(
+                        active_deals, args.delay, conn,
+                        dry_run=False, max_workers=args.stale_workers,
+                        deadline=deadline,
+                    )
+                _metrics.end_phase(conn)
                 # Re-score immediately after re-validation so that deals whose
                 # prices just went up (or products that became unavailable) are
                 # cleared before Phase 1 runs.  Without this, a deal that Phase 0
@@ -2745,9 +2934,19 @@ def main():
             log.info("═" * 60)
             t0 = time.monotonic()
             _snap_pre1 = _bot_stats.snapshot()
-            all_items, asin_categories, browse_asins = crawl(args.max_pages, args.delay, deadline=deadline)
-            log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
-            log.info("Phase 1 bot-detection: %s", _bot_phase_summary(_snap_pre1, _bot_stats.snapshot()))
+            # Advisory lock: don't co-scrape the storefront with the daily Last.fm
+            # discovery run. If another run holds it, skip the listing crawl (the
+            # refresh + non-storefront phases below still proceed).
+            with ScrapeLock(label="phase1") as _lk:
+                if _lk.acquired:
+                    _metrics.start_phase("phase1_listing_crawl")
+                    all_items, asin_categories, browse_asins = crawl(args.max_pages, args.delay, deadline=deadline)
+                    _metrics.end_phase(conn)
+                    log.info("Phase 1 crawl: %.0fs", time.monotonic() - t0)
+                    log.info("Phase 1 bot-detection: %s", _bot_phase_summary(_snap_pre1, _bot_stats.snapshot()))
+                else:
+                    log.warning("Phase 1 listing crawl skipped — storefront scrape lock held by another run.")
+                    all_items, asin_categories, browse_asins = [], {}, set()
 
         if not all_items:
             if not args.stale_only:
@@ -2955,6 +3154,7 @@ def main():
             phase3_round = 0
             t0_phase3 = time.monotonic()
             _snap_pre3 = _bot_stats.snapshot()
+            _metrics.start_phase("phase3_stale_records")
 
             while True:
                 if phase3_deadline is not None and time.monotonic() >= phase3_deadline:
@@ -2969,7 +3169,10 @@ def main():
                     pass
                 conn = get_connection()
 
-                batch = fetch_stale_records(conn, seen_asins, limit=_PHASE3_BATCH_SIZE, claim=args.stale_only)
+                batch = fetch_stale_records(
+                    conn, seen_asins, limit=_PHASE3_BATCH_SIZE,
+                    claim=args.stale_only, floor_minutes=FRESHNESS_FLOOR_MINUTES,
+                )
                 if not batch:
                     log.info("Phase 3: no more stale records after %d records.", phase3_total)
                     break
@@ -2978,11 +3181,14 @@ def main():
                 _stale_abort.clear()
                 log.info("Phase 3 round %d — %d records.", phase3_round, len(batch))
 
-                crawl_stale_records(
-                    batch, args.delay, conn,
-                    dry_run=False, max_workers=args.stale_workers,
-                    deadline=phase3_deadline,
-                )
+                if CREATORS_REFRESH_ENABLED:
+                    crawl_stale_records_api(batch, conn, dry_run=False, deadline=phase3_deadline)
+                else:
+                    crawl_stale_records(
+                        batch, args.delay, conn,
+                        dry_run=False, max_workers=args.stale_workers,
+                        deadline=phase3_deadline,
+                    )
 
                 phase3_total += len(batch)
                 seen_asins.update(r["asin"] for r in batch)
@@ -3000,6 +3206,7 @@ def main():
                         log.info("Phase 3: circuit-breaker fired, not enough time to continue.")
                         break
 
+            _metrics.end_phase(conn)
             log.info("Phase 3 stale: %.0fs — %d records across %d rounds.",
                      time.monotonic() - t0_phase3, phase3_total, phase3_round)
             log.info("Phase 3 bot-detection: %s", _bot_phase_summary(_snap_pre3, _bot_stats.snapshot()))

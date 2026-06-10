@@ -1,8 +1,12 @@
 name: Vinyl Crawler — Stale-Only
 
 on:
-  schedule:
-    - cron: '30 */2 * * *'  # every 2 hours at :30 — offset from main crawler safety-net cron
+  # Schedule DISABLED at Creators-API enablement. CREATORS_TPD is a per-process
+  # in-memory counter, so a second scheduled refresh process would double-spend the
+  # daily budget. Phase 3 stale refresh now runs inside the main crawler via the API.
+  # Kept as a manual-only workflow for one-off stale sweeps.
+  # schedule:
+  #   - cron: '30 */2 * * *'
   workflow_dispatch:
 
 # Separate concurrency group so this never blocks or is blocked by the main crawler.
@@ -42,6 +46,16 @@ jobs:
           ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
           REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          # ── Creators API refresh (manual stale sweeps use the API too) ──
+          CREATORS_REFRESH_ENABLED: "1"
+          CREATORS_CLIENT_ID: ${{ secrets.CREATORS_CLIENT_ID }}
+          CREATORS_CLIENT_SECRET: ${{ secrets.CREATORS_CLIENT_SECRET }}
+          CREATORS_PARTNER_TAG: ${{ secrets.CREATORS_PARTNER_TAG }}
+          CREATORS_CREDENTIAL_VERSION: v3.1
+          CREATORS_TPS: "1"
+          CREATORS_TPD: "8640"
+          FRESHNESS_FLOOR_MINUTES: "180"
+          AMAZON_MAX_CONCURRENCY: "4"
 
       - name: Open issue on failure
         if: failure()
