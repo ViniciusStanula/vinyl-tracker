@@ -6,6 +6,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 const personJsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "Person",
+  "@id": `${SITE_URL}/sobre#person`,
   name: "Vinicius Stanula",
   url: SITE_URL,
   sameAs: ["https://linkedin.com/in/vinicius-stanula"],

@@ -54,9 +54,22 @@ export const metadata: Metadata = {
 const organizationJsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": `${SITE_URL}/#organization`,
   name: "Garimpa Vinil",
   url: SITE_URL,
+  logo: {
+    "@type": "ImageObject",
+    url: `${SITE_URL}/og-default.png`,
+  },
   description: "Rastreador de preços de discos de vinil na Amazon Brasil. Monitora mais de 11.000 títulos com alertas de promoções e histórico de preços.",
+  foundingDate: "2026",
+  founder: {
+    "@type": "Person",
+    "@id": `${SITE_URL}/sobre#person`,
+    name: "Vinicius Stanula",
+    url: `${SITE_URL}/sobre`,
+    sameAs: ["https://linkedin.com/in/vinicius-stanula"],
+  },
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
@@ -68,10 +81,12 @@ const organizationJsonLd = JSON.stringify({
 const webSiteJsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "WebSite",
+  "@id": `${SITE_URL}/#website`,
   name: "Garimpa Vinil",
   url: SITE_URL,
   inLanguage: "pt-BR",
   description: DEFAULT_DESC,
+  publisher: { "@id": `${SITE_URL}/#organization` },
 }).replace(/<\//g, "<\\/");
 
 export default function RootLayout({
