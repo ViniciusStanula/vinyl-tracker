@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { SITE_URL } from "@/lib/siteUrl";
 import Footer from "@/components/Footer";
 import NavigationProgress from "@/components/NavigationProgress";
+import { toJsonLd } from "@/lib/jsonld";
 
 /* Fraunces — optical-size variable serif; editorial, distinctive */
 const fraunces = Fraunces({
@@ -51,7 +52,7 @@ export const metadata: Metadata = {
   },
 };
 
-const organizationJsonLd = JSON.stringify({
+const organizationJsonLd = toJsonLd({
   "@context": "https://schema.org",
   "@type": "Organization",
   "@id": `${SITE_URL}/#organization`,
@@ -76,9 +77,9 @@ const organizationJsonLd = JSON.stringify({
     url: "https://t.me/garimpavinil",
   },
   sameAs: ["https://t.me/garimpavinil"],
-}).replace(/<\//g, "<\\/");
+});
 
-const webSiteJsonLd = JSON.stringify({
+const webSiteJsonLd = toJsonLd({
   "@context": "https://schema.org",
   "@type": "WebSite",
   "@id": `${SITE_URL}/#website`,
@@ -87,7 +88,7 @@ const webSiteJsonLd = JSON.stringify({
   inLanguage: "pt-BR",
   description: DEFAULT_DESC,
   publisher: { "@id": `${SITE_URL}/#organization` },
-}).replace(/<\//g, "<\\/");
+});
 
 export default function RootLayout({
   children,

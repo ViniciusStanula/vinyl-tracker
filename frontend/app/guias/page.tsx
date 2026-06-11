@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Guias de Vinil | Garimpa Vinil",
@@ -93,16 +94,16 @@ const GUIDES: Guide[] = [
 ];
 
 export default function GuiasPage() {
-  const breadcrumb = JSON.stringify({
+  const breadcrumb = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Início", item: `${SITE_URL}/` },
       { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
     ],
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const itemList = JSON.stringify({
+  const itemList = toJsonLd({
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "Guias de Vinil",
@@ -114,7 +115,7 @@ export default function GuiasPage() {
       name: g.title,
       url: `${SITE_URL}/guias/${g.slug}`,
     })),
-  }).replace(/<\//g, "<\\/");
+  });
 
   return (
     <main id="main-content" className="max-w-4xl mx-auto px-4 py-8">

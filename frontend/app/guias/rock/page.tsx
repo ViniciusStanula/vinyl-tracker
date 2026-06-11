@@ -6,6 +6,7 @@ import { ROCK_INTRO, SUBGENRE_ORDER, capitalize } from "@/lib/guias/rock-content
 import { fetchLastfmAlbumCover } from "@/lib/external/lastfmAlbum";
 
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 const PREVIEW_COUNT = 10;
 
 const META_TITLE = "Melhores Discos de Rock por Subgênero | Garimpa Vinil";
@@ -50,7 +51,7 @@ export default async function RockPage() {
     })
   );
 
-  const breadcrumb = JSON.stringify({
+  const breadcrumb = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -58,9 +59,9 @@ export default async function RockPage() {
       { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
       { "@type": "ListItem", position: 3, name: "Rock", item: `${SITE_URL}/guias/rock` },
     ],
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const itemList = JSON.stringify({
+  const itemList = toJsonLd({
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "Melhores discos de Rock por subgênero",
@@ -72,7 +73,7 @@ export default async function RockPage() {
       name: capitalize(sg.name),
       url: `${SITE_URL}/guias/rock/${sg.slug}`,
     })),
-  }).replace(/<\//g, "<\\/");
+  });
 
   return (
     <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">

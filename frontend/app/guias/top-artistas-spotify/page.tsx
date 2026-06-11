@@ -6,6 +6,7 @@ import ChartsContent from "./ChartsContent";
 import type { ChartsData } from "./ChartsContent";
 
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 
 const PAGE_TITLE = "Top Artistas do Spotify por País, Atualizado Diariamente";
 const PAGE_DESC =
@@ -62,8 +63,8 @@ function buildJsonLd(data: ChartsData | null) {
 
 export default function TopArtistasSptPage() {
   const data = loadData();
-  const jsonLd = JSON.stringify(buildJsonLd(data)).replace(/<\//g, "<\\/");
-  const breadcrumb = JSON.stringify({
+  const jsonLd = toJsonLd(buildJsonLd(data));
+  const breadcrumb = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -76,7 +77,7 @@ export default function TopArtistasSptPage() {
         item: `${SITE_URL}/guias/top-artistas-spotify`,
       },
     ],
-  }).replace(/<\//g, "<\\/");
+  });
 
   return (
     <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">

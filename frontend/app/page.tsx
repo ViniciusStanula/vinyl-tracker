@@ -11,6 +11,7 @@ import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
+import { toJsonLd } from "@/lib/jsonld";
 
 async function CarouselLoader({ searchTerm, artista }: { searchTerm: string; artista?: string }) {
   if (searchTerm || artista) return null;
@@ -103,7 +104,7 @@ export async function generateMetadata({
   };
 }
 
-const websiteJsonLd = JSON.stringify({
+const websiteJsonLd = toJsonLd({
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "Garimpa Vinil",
@@ -113,7 +114,7 @@ const websiteJsonLd = JSON.stringify({
     target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/?q={search_term_string}` },
     "query-input": "required name=search_term_string",
   },
-}).replace(/<\//g, "<\\/");
+});
 
 export default async function HomePage({
   searchParams,

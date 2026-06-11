@@ -13,6 +13,7 @@ import { getArtistaPageData, type ArtistaPageData } from "@/lib/db/artista";
 import { getHreflangSlug } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 
 export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
@@ -109,7 +110,7 @@ export default async function ArtistaPage({
 
   const siteUrl = SITE_URL;
 
-  const breadcrumbJsonLd = JSON.stringify({
+  const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -121,9 +122,9 @@ export default async function ArtistaPage({
         item: `${siteUrl}/artista/${slug}`,
       },
     ],
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const itemListJsonLd = JSON.stringify({
+  const itemListJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `Discos de ${artista}`,
@@ -135,16 +136,16 @@ export default async function ArtistaPage({
       url: `${siteUrl}/disco/${disco.slug}`,
       name: disco.titulo,
     })),
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const musicArtistJsonLd = JSON.stringify({
+  const musicArtistJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "MusicGroup",
     name: artista,
     url: `${siteUrl}/artista/${slug}`,
     ...(topStyles.length > 0 ? { genre: topStyles } : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
-  }).replace(/<\//g, "<\\/");
+  });
 
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">

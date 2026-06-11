@@ -10,6 +10,7 @@ import { getEstiloPageData, getRelatedEstilos, type SerializedEstiloData, type R
 import { getHreflangSlug } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 
 export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
@@ -153,7 +154,7 @@ export default async function EstiloPage({
 
   const siteUrl = SITE_URL;
 
-  const breadcrumbJsonLd = JSON.stringify({
+  const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -165,9 +166,9 @@ export default async function EstiloPage({
         item: `${siteUrl}/estilo/${slug}`,
       },
     ],
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const itemListJsonLd = JSON.stringify({
+  const itemListJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `Discos de ${displayName}`,
@@ -179,7 +180,7 @@ export default async function EstiloPage({
       url: `${siteUrl}/disco/${disco.slug}`,
       name: disco.titulo,
     })),
-  }).replace(/<\//g, "<\\/");
+  });
 
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">

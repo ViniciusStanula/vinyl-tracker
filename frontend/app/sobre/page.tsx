@@ -2,26 +2,27 @@ import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 
-const personJsonLd = JSON.stringify({
+const personJsonLd = toJsonLd({
   "@context": "https://schema.org",
   "@type": "Person",
   "@id": `${SITE_URL}/sobre#person`,
   name: "Vinicius Stanula",
   url: SITE_URL,
   sameAs: ["https://linkedin.com/in/vinicius-stanula"],
-}).replace(/<\//g, "<\\/");
+});
 
-const breadcrumbJsonLd = JSON.stringify({
+const breadcrumbJsonLd = toJsonLd({
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Início", item: `${SITE_URL}/` },
     { "@type": "ListItem", position: 2, name: "Sobre", item: `${SITE_URL}/sobre` },
   ],
-}).replace(/<\//g, "<\\/");
+});
 
-const faqJsonLd = JSON.stringify({
+const faqJsonLd = toJsonLd({
   "@context": "https://schema.org",
   "@type": "FAQPage",
   mainEntity: [
@@ -42,7 +43,7 @@ const faqJsonLd = JSON.stringify({
       },
     },
   ],
-}).replace(/<\//g, "<\\/");
+});
 
 
 export const metadata = {

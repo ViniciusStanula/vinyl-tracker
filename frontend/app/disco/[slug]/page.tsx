@@ -20,6 +20,7 @@ import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, type RelatedDeal } f
 import { getHreflangRecord } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 
 // Safety net only — the crawler's /api/revalidate webhook is the real trigger.
 // 1800 matches the data-layer TTL so the HTML cache never outlives its data.
@@ -255,7 +256,7 @@ export default async function DiscoPage({
 
   const siteUrl = SITE_URL;
 
-  const productJsonLd = JSON.stringify({
+  const productJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${siteUrl}/disco/${slug}`,
@@ -286,9 +287,9 @@ export default async function DiscoPage({
           },
         }
       : {}),
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const musicAlbumJsonLd = JSON.stringify({
+  const musicAlbumJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "MusicAlbum",
     name: disco.titulo,
@@ -299,9 +300,9 @@ export default async function DiscoPage({
       name: disco.artista,
       url: `${siteUrl}/artista/${slugifyArtist(disco.artista)}`,
     },
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const breadcrumbJsonLd = JSON.stringify({
+  const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -314,7 +315,7 @@ export default async function DiscoPage({
       },
       { "@type": "ListItem", position: 3, name: disco.titulo },
     ],
-  }).replace(/<\//g, "<\\/");
+  });
 
   // Price FAQ — programmatic Q&A from the price history we already computed.
   // Rendered visibly below and mirrored in FAQPage JSON-LD (required by Google).
@@ -343,7 +344,7 @@ export default async function DiscoPage({
 
   const faqJsonLd =
     faqItems.length > 0
-      ? JSON.stringify({
+      ? toJsonLd({
           "@context": "https://schema.org",
           "@type": "FAQPage",
           mainEntity: faqItems.map((f) => ({
@@ -351,7 +352,7 @@ export default async function DiscoPage({
             name: f.q,
             acceptedAnswer: { "@type": "Answer", text: f.a },
           })),
-        }).replace(/<\//g, "<\\/")
+        })
       : null;
 
   return (

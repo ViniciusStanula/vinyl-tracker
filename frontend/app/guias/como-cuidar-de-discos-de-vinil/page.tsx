@@ -50,6 +50,7 @@ function IconWarning({ className = "" }: { className?: string }) {
 }
 
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 const SLUG = "como-cuidar-de-discos-de-vinil";
 const PAGE_TITLE = "Como Cuidar de Discos de Vinil: Guia Completo Para Sua Coleção Durar Décadas";
 const PAGE_DESC =
@@ -114,7 +115,7 @@ const FAQ = [
 ];
 
 export default function ComoGuardarPage() {
-  const articleLd = JSON.stringify({
+  const articleLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "Article",
     headline: PAGE_TITLE,
@@ -129,9 +130,9 @@ export default function ComoGuardarPage() {
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
     image: { "@type": "ImageObject", url: `${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`, width: 1200, height: 800 },
     speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1"] },
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const breadcrumbLd = JSON.stringify({
+  const breadcrumbLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -139,9 +140,9 @@ export default function ComoGuardarPage() {
       { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
       { "@type": "ListItem", position: 3, name: "Como Cuidar de Discos de Vinil", item: `${SITE_URL}/guias/${SLUG}` },
     ],
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const faqLd = JSON.stringify({
+  const faqLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "FAQPage",
     mainEntity: FAQ.map(({ q, a }) => ({
@@ -149,7 +150,7 @@ export default function ComoGuardarPage() {
       name: q,
       acceptedAnswer: { "@type": "Answer", text: a },
     })),
-  }).replace(/<\//g, "<\\/");
+  });
 
   return (
     <main id="main-content" className="vinil-sidebar-layout mx-auto px-4 py-8">

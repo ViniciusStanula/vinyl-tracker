@@ -18,6 +18,7 @@ function IconChevronDown({ className = "" }: { className?: string }) {
 }
 
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 const SLUG = "vinil-colorido-e-picture-disc";
 const PAGE_TITLE = "Vinil Colorido e Picture Disc Valem a Pena?";
 const PAGE_DESC =
@@ -89,7 +90,7 @@ const FAQ = [
 ];
 
 export default function VinilColoridoPage() {
-  const articleLd = JSON.stringify({
+  const articleLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "Article",
     headline: PAGE_TITLE,
@@ -109,9 +110,9 @@ export default function VinilColoridoPage() {
       height: 800,
     },
     speakable: { "@type": "SpeakableSpecification", cssSelector: ["h1"] },
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const breadcrumbLd = JSON.stringify({
+  const breadcrumbLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -119,9 +120,9 @@ export default function VinilColoridoPage() {
       { "@type": "ListItem", position: 2, name: "Guias", item: `${SITE_URL}/guias` },
       { "@type": "ListItem", position: 3, name: "Vinil Colorido e Picture Disc Valem a Pena?", item: `${SITE_URL}/guias/${SLUG}` },
     ],
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const faqLd = JSON.stringify({
+  const faqLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "FAQPage",
     mainEntity: FAQ.map(({ q, a }) => ({
@@ -129,7 +130,7 @@ export default function VinilColoridoPage() {
       name: q,
       acceptedAnswer: { "@type": "Answer", text: a },
     })),
-  }).replace(/<\//g, "<\\/");
+  });
 
   const content = (
     <>

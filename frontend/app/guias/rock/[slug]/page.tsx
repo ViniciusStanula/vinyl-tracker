@@ -7,6 +7,7 @@ import { SUBGENRE_FULL, capitalize } from "@/lib/guias/rock-content";
 import { fetchLastfmAlbumCover } from "@/lib/external/lastfmAlbum";
 
 import { SITE_URL } from "@/lib/siteUrl";
+import { toJsonLd } from "@/lib/jsonld";
 const CARD_COUNT = 20;
 
 export function generateStaticParams() {
@@ -70,7 +71,7 @@ export default async function RockSubgenrePage({
   );
 
 
-  const breadcrumb = JSON.stringify({
+  const breadcrumb = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
@@ -79,9 +80,9 @@ export default async function RockSubgenrePage({
       { "@type": "ListItem", position: 3, name: "Rock", item: `${SITE_URL}/guias/rock` },
       { "@type": "ListItem", position: 4, name: displayName, item: `${SITE_URL}/guias/rock/${slug}` },
     ],
-  }).replace(/<\//g, "<\\/");
+  });
 
-  const itemList = JSON.stringify({
+  const itemList = toJsonLd({
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `Melhores álbuns de ${displayName}`,
@@ -92,7 +93,7 @@ export default async function RockSubgenrePage({
       position: i + 1,
       name: `${album.title} - ${album.artist}`,
     })),
-  }).replace(/<\//g, "<\\/");
+  });
 
   return (
     <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">
