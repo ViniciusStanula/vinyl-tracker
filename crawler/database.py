@@ -485,11 +485,6 @@ def mark_stale_price(
             SET disponivel      = TRUE,
                 price_count     = price_count + 1,
                 "reviewCount"   = COALESCE(%s, "reviewCount"),
-                format          = CASE
-                                      WHEN EXCLUDED.format = 'vinyl'
-                                      THEN COALESCE("Disco".format, 'vinyl')
-                                      ELSE "Disco".format
-                                  END,
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
             WHERE id = %s
@@ -522,11 +517,6 @@ def update_disco_metadata(
                 "imgUrl"        = %s,
                 url             = %s,
                 slug            = %s,
-                format          = CASE
-                                      WHEN EXCLUDED.format = 'vinyl'
-                                      THEN COALESCE("Disco".format, 'vinyl')
-                                      ELSE "Disco".format
-                                  END,
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
             WHERE id = %s
@@ -548,11 +538,6 @@ def clear_deal_score(conn, disco_id: str) -> None:
             """
             UPDATE "Disco"
             SET deal_score      = NULL,
-                format          = CASE
-                                      WHEN EXCLUDED.format = 'vinyl'
-                                      THEN COALESCE("Disco".format, 'vinyl')
-                                      ELSE "Disco".format
-                                  END,
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
             WHERE id = %s
@@ -575,11 +560,6 @@ def mark_unavailable(conn, disco_id: str) -> None:
             UPDATE "Disco"
             SET disponivel      = FALSE,
                 deal_score      = NULL,
-                format          = CASE
-                                      WHEN EXCLUDED.format = 'vinyl'
-                                      THEN COALESCE("Disco".format, 'vinyl')
-                                      ELSE "Disco".format
-                                  END,
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
             WHERE id = %s
