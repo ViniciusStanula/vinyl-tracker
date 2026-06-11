@@ -19,6 +19,8 @@ model Disco {
   reviewCount Int?
   disponivel  Boolean  @default(true)
   priceCount  Int      @default(0)    @map("price_count")
+  // NULL = unverified; "vinyl" = confirmed; anything else = excluded (CD incident 2026-06-11)
+  format      String?
   avg30d      Decimal? @db.Decimal(10, 2) @map("avg_30d")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
