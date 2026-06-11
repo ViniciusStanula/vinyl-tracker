@@ -316,6 +316,44 @@ export default async function DiscoPage({
     ],
   }).replace(/<\//g, "<\\/");
 
+  // Price FAQ — programmatic Q&A from the price history we already computed.
+  // Rendered visibly below and mirrored in FAQPage JSON-LD (required by Google).
+  const faqItems =
+    valores.length >= 2
+      ? [
+          {
+            q: `Qual o menor preço já registrado de ${disco.titulo} em vinil?`,
+            a: `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. O preço atual é ${fmt(precoAtual)}.`,
+          },
+          {
+            q: `O preço de ${disco.titulo} está bom agora?`,
+            a:
+              statusPreco === "menor"
+                ? `Sim — ${fmt(precoAtual)} é o menor preço já registrado pelo nosso monitoramento para este disco.`
+                : statusPreco === "aumento"
+                ? `O preço atual (${fmt(precoAtual)}) está acima da média histórica de ${fmt(media)}. Pode valer a pena esperar uma queda.`
+                : `O preço atual (${fmt(precoAtual)}) está próximo da média histórica de ${fmt(media)}.`,
+          },
+          {
+            q: `Com que frequência o preço de ${disco.titulo} é verificado?`,
+            a: `O preço é verificado automaticamente várias vezes ao dia na Amazon Brasil. Já registramos ${valores.length} capturas de preço para este disco.`,
+          },
+        ]
+      : [];
+
+  const faqJsonLd =
+    faqItems.length > 0
+      ? JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqItems.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }).replace(/<\//g, "<\\/")
+      : null;
+
   return (
     <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
@@ -324,6 +362,10 @@ export default async function DiscoPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: musicAlbumJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
+      {faqJsonLd && (
+        // eslint-disable-next-line react/no-danger
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqJsonLd }} />
+      )}
       {/* Breadcrumbs */}
       <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
@@ -587,6 +629,23 @@ export default async function DiscoPage({
           />
         );
       })()}
+
+      {/* Price FAQ — visible counterpart of the FAQPage JSON-LD */}
+      {faqItems.length > 0 && (
+        <section className="mt-6 bg-sleeve rounded-xl border border-groove p-4">
+          <h2 className="font-display text-2xl font-black text-cream italic mb-3">
+            Perguntas frequentes sobre o preço
+          </h2>
+          <dl className="space-y-3">
+            {faqItems.map((f) => (
+              <div key={f.q}>
+                <dt className="text-cream text-sm font-bold">{f.q}</dt>
+                <dd className="text-parchment text-sm mt-0.5">{f.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       {/* Related deals */}
       {processedDeals.length > 0 && (
