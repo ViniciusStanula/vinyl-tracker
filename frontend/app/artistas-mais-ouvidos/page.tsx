@@ -6,6 +6,8 @@ import SortBar from "@/components/SortBar";
 import Link from "next/link";
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { toJsonLd } from "@/lib/jsonld";
+import { SITE_URL } from "@/lib/siteUrl";
 
 export const revalidate = 1800;
 
@@ -53,8 +55,19 @@ export default async function ArtistasPage({
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
+  const breadcrumbJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: "Artistas Mais Ouvidos", item: `${SITE_URL}/artistas-mais-ouvidos` },
+    ],
+  });
+
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       <header className="mb-4">
         <Link
           href="/"

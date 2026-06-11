@@ -4,6 +4,8 @@ import DiscoCard from "@/components/DiscoCard";
 import Pagination from "@/components/Pagination";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { toJsonLd } from "@/lib/jsonld";
+import { SITE_URL } from "@/lib/siteUrl";
 
 export const revalidate = 1800;
 
@@ -62,8 +64,35 @@ export default async function DiscosAbaixo200Page({
   const start      = (safePage - 1) * PAGE_SIZE;
   const pageItems  = items.slice(start, start + PAGE_SIZE);
 
+  const breadcrumbJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: "Discos de Vinil Abaixo de R$ 200", item: `${SITE_URL}/discos-abaixo-de-200` },
+    ],
+  });
+
+  const itemListJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Discos de Vinil Abaixo de R$ 200",
+    url: `${SITE_URL}/discos-abaixo-de-200`,
+    numberOfItems: totalItems,
+    itemListElement: items.slice(0, 10).map((disco, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${SITE_URL}/disco/${disco.slug}`,
+      name: disco.titulo,
+    })),
+  });
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
       <header className="mb-8">
         <Link
           href="/"
