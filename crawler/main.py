@@ -459,6 +459,7 @@ _RATING_TEXT_RE = re.compile(
 )
 from domain import (
     is_vinyl,
+    detect_format,
     normalize_artist,
     _is_plausible_artist,
     parse_price_br,
@@ -1292,8 +1293,12 @@ def parse_product_page_discovery(soup, asin: str) -> dict | None:
     if not title or len(title) < 3:
         return None
 
-    if not is_vinyl(title, soup):
-        log.debug("[discovery] ASIN %s: non-vinyl — skipping.", asin)
+    fmt = detect_format(title, soup)
+    if fmt != "vinyl":
+        # Allowlist: unknown is rejected too — only positive vinyl evidence
+        # (title keyword, selected format swatch, details row, breadcrumb)
+        # may enter the catalog. (CD-contamination incident, 2026-06-11.)
+        log.info("[discovery] ASIN %s: format=%s — rejected by allowlist.", asin, fmt)
         return None
 
     price, in_stock, review_count = parse_product_page(soup)
@@ -1350,6 +1355,7 @@ def parse_product_page_discovery(soup, asin: str) -> dict | None:
         "reviewCount": review_count,
         "precoBrl":    price,
         "capturadoEm": datetime.now(timezone.utc),
+        "format":      "vinyl",  # guaranteed by the allowlist gate above
     }
 
 
@@ -1856,10 +1862,22 @@ def parse_page(soup) -> list[dict]:
             skipped["no_title"] += 1
             continue
 
-        if not is_vinyl(title, card):
-            skipped["not_vinyl"] += 1
-            log.debug("Non-vinyl filtered: %s", title[:60])
-            continue
+        fmt = detect_format(title)
+        if fmt != "vinyl":
+            # No title evidence. Accept the card only when a vinyl format link
+            # points at THIS asin (multi-format cards link sibling formats by
+            # href, so a vinyl link with a different ASIN is a CD card).
+            card_is_vinyl = False
+            if fmt != "cd":
+                for link in card.select("a[href]"):
+                    t = link.get_text(" ", strip=True)
+                    if t and _VINYL_LABEL_RE.search(t) and f"/dp/{asin}" in (link.get("href") or ""):
+                        card_is_vinyl = True
+                        break
+            if not card_is_vinyl:
+                skipped["not_vinyl"] += 1
+                log.debug("Non-vinyl filtered (format=%s): %s", fmt, title[:60])
+                continue
 
         price = extract_price(card)
         if price is None:
@@ -1878,6 +1896,7 @@ def parse_page(soup) -> list[dict]:
             "reviewCount": extract_review_count(card),
             "precoBrl":    price,
             "capturadoEm": now,
+            "format":      "vinyl",  # guaranteed by the card gate above
         })
 
     log.debug(

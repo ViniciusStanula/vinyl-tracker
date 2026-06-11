@@ -374,9 +374,19 @@ def _parse_page(soup) -> list[dict]:
         price_recipe = card.select_one('div[data-cy="price-recipe"]')
         if price_recipe:
             for link in price_recipe.select("a.a-text-bold"):
-                if _VINIL_RE.search(link.get_text(strip=True)):
+                if not _VINIL_RE.search(link.get_text(strip=True)):
+                    continue
+                # The vinyl label can be a SIBLING-format link on a CD card.
+                # Trust card_asin only when the link points at the card's own
+                # ASIN (or carries no /dp/ href at all); otherwise take the
+                # ASIN from the href. (CD-contamination incident, 2026-06-11.)
+                href = link.get("href", "") or ""
+                m = _ASIN_RE.search(href)
+                if m and m.group(1).upper() != card_asin:
+                    vinyl_asin = m.group(1).upper()
+                else:
                     vinyl_asin = card_asin
-                    break
+                break
 
         # ── Case 2: "Outro formato: Disco de Vinil" — CD card with vinyl link ─
         # The vinyl ASIN is embedded in the href, not in data-asin.

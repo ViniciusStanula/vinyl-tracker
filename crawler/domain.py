@@ -18,7 +18,7 @@ _PRICE_NUM_RE   = re.compile(r"\d+\.?\d*")
 _PRICE_START_RE = re.compile(r"^R\$|^\$|^\d+[.,]")
 
 _CD_RE = re.compile(
-    r"\bcd\b|\[cd\]|\(cd\)|compact disc|\bcd\s*\d",
+    r"\bcds?\b|\[cd\]|\(cd\)|compact disc|\bcds?\s*\d|audio cd|\u00e1udio cd",
     re.IGNORECASE,
 )
 _VINYL_TITLE_RE = re.compile(
@@ -99,6 +99,71 @@ def is_vinyl(title: str, card=None) -> bool:
                 return True
 
     return True
+
+
+# ── Format allowlist (CD-contamination incident, 2026-06-11) ─────────────────
+# Positive vinyl evidence is required before a product may enter the catalog.
+# Callers must accept ONLY "vinyl" — "unknown" is rejected, never inserted.
+
+_FORMAT_VINYL_RE = re.compile(r"vinil|vinyl", re.IGNORECASE)
+_FORMAT_NONVINYL_RE = re.compile(
+    r"cds?|audio cd|áudio cd|compact disc|mp3|streaming"
+    r"|cassette|cassete|dvd|blu-?ray|digital",
+    re.IGNORECASE,
+)
+_FORMAT_LABEL_RE = re.compile(r"(?:formato|format)\s*:?\s*", re.IGNORECASE)
+
+
+def detect_format(title: str, soup=None) -> str:
+    """
+    Classify a product's physical format from the strongest available signal.
+    Returns "vinyl", "cd" (any confirmed non-vinyl), or "unknown".
+
+    soup is the full product-page BeautifulSoup; pass None for title-only
+    classification (e.g. search cards, where the page is not available).
+    """
+    if _CD_RE.search(title):
+        return "cd"
+    if _VINYL_TITLE_RE.search(title):
+        return "vinyl"
+    if soup is None:
+        return "unknown"
+
+    # Multi-format page: which variant does THIS ASIN represent?
+    selected = soup.select_one("#tmmSwatches .swatchElement.selected")
+    if selected is not None:
+        text = selected.get_text(" ", strip=True)
+        if _FORMAT_VINYL_RE.search(text):
+            return "vinyl"
+        if _FORMAT_NONVINYL_RE.search(text):
+            return "cd"
+        return "unknown"
+
+    # Single-format page: details / ficha tecnica "Formato" row.
+    for area_sel in (
+        "#detailBullets_feature_div",
+        "#productDetails_detailBullets_sections1",
+        "#productDetails_techSpec_section_1",
+        "#prodDetails",
+    ):
+        area = soup.select_one(area_sel)
+        if area is None:
+            continue
+        text = area.get_text(" ", strip=True)
+        m = _FORMAT_LABEL_RE.search(text)
+        if m:
+            segment = text[m.end():m.end() + 60]
+            if _FORMAT_VINYL_RE.search(segment):
+                return "vinyl"
+            if _FORMAT_NONVINYL_RE.search(segment):
+                return "cd"
+
+    # Breadcrumb naming the vinyl category confirms format.
+    crumb = soup.select_one("#wayfinding-breadcrumbs_feature_div")
+    if crumb is not None and _FORMAT_VINYL_RE.search(crumb.get_text(" ", strip=True)):
+        return "vinyl"
+
+    return "unknown"
 
 
 def _to_title_case(name: str) -> str:

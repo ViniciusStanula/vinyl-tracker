@@ -98,6 +98,41 @@ def upsert_batch(conn, items: list[dict]) -> int:
     if not items:
         return 0
 
+    # ── Format gate (CD-contamination incident, 2026-06-11) ──────────────
+    asins_in_batch = [item["asin"] for item in items]
+    with _cursor(conn) as cur:
+        # Do-not-recrawl: ASINs already marked non-vinyl can never come back.
+        cur.execute(
+            """SELECT asin FROM "Disco"
+               WHERE asin = ANY(%s) AND format IS NOT NULL AND format <> 'vinyl'""",
+            (asins_in_batch,),
+        )
+        blocked = {row[0] for row in cur.fetchall()}
+        cur.execute('SELECT asin FROM "Disco" WHERE asin = ANY(%s)', (asins_in_batch,))
+        known = {row[0] for row in cur.fetchall()}
+    if blocked:
+        log.warning(
+            "format-gate: %d ASIN(s) on the do-not-recrawl list skipped: %s",
+            len(blocked), ", ".join(sorted(blocked)[:10]),
+        )
+        items = [i for i in items if i["asin"] not in blocked]
+    # New rows require positive vinyl identification ("format" == "vinyl",
+    # set by the crawler's allowlist gate). Existing rows may still be
+    # price-refreshed by callers that have no format signal (Creators API).
+    gated, rejected_new = [], 0
+    for item in items:
+        if item["asin"] in known or item.get("format") == "vinyl":
+            gated.append(item)
+        else:
+            rejected_new += 1
+            log.warning(
+                "format-gate: NEW ASIN %s rejected (format=%s): %.60s",
+                item["asin"], item.get("format"), item.get("titulo", ""),
+            )
+    items = gated
+    if not items:
+        return 0
+
     with _cursor(conn) as cur:
         # ── Step 1: upsert Disco metadata ────────────────────────────────
         # ON CONFLICT (asin) → update mutable fields only.
@@ -113,6 +148,7 @@ def upsert_batch(conn, items: list[dict]) -> int:
                 item["url"],
                 item.get("rating"),        # float or None
                 item.get("reviewCount"),   # int or None
+                item.get("format"),        # "vinyl" from the gate, or None (refresh)
             )
             for item in items
         ]
@@ -122,10 +158,10 @@ def upsert_batch(conn, items: list[dict]) -> int:
             """
             INSERT INTO "Disco" (
                 id, asin, titulo, artista, slug, estilo, "imgUrl", url, rating,
-                "reviewCount", "createdAt", "updatedAt", last_crawled_at
+                "reviewCount", format, "createdAt", "updatedAt", last_crawled_at
             )
             VALUES (
-                gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 NOW(), NOW(), NOW()
             )
             ON CONFLICT (asin) DO UPDATE SET
@@ -140,6 +176,11 @@ def upsert_batch(conn, items: list[dict]) -> int:
                 url             = EXCLUDED.url,
                 rating          = EXCLUDED.rating,
                 "reviewCount"   = COALESCE(EXCLUDED."reviewCount", "Disco"."reviewCount"),
+                format          = CASE
+                                      WHEN EXCLUDED.format = 'vinyl'
+                                      THEN COALESCE("Disco".format, 'vinyl')
+                                      ELSE "Disco".format
+                                  END,
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
             """,
@@ -333,6 +374,7 @@ def fetch_active_deals(conn) -> list[dict]:
             SELECT asin, id, COALESCE(titulo, '') AS titulo
             FROM "Disco"
             WHERE deal_score IS NOT NULL
+              AND (format IS NULL OR format = 'vinyl')
             ORDER BY deal_score DESC, "updatedAt" ASC
             """,
         )
@@ -392,6 +434,7 @@ def fetch_stale_records(
             SELECT asin, id, COALESCE(titulo, '') AS titulo
             FROM "Disco"
             WHERE asin != ALL(%s){floor_clause}
+              AND (format IS NULL OR format = 'vinyl')
             ORDER BY
                 CASE
                     WHEN deal_score IS NOT NULL                        THEN 0
@@ -442,6 +485,11 @@ def mark_stale_price(
             SET disponivel      = TRUE,
                 price_count     = price_count + 1,
                 "reviewCount"   = COALESCE(%s, "reviewCount"),
+                format          = CASE
+                                      WHEN EXCLUDED.format = 'vinyl'
+                                      THEN COALESCE("Disco".format, 'vinyl')
+                                      ELSE "Disco".format
+                                  END,
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
             WHERE id = %s
@@ -474,6 +522,11 @@ def update_disco_metadata(
                 "imgUrl"        = %s,
                 url             = %s,
                 slug            = %s,
+                format          = CASE
+                                      WHEN EXCLUDED.format = 'vinyl'
+                                      THEN COALESCE("Disco".format, 'vinyl')
+                                      ELSE "Disco".format
+                                  END,
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
             WHERE id = %s
@@ -495,6 +548,11 @@ def clear_deal_score(conn, disco_id: str) -> None:
             """
             UPDATE "Disco"
             SET deal_score      = NULL,
+                format          = CASE
+                                      WHEN EXCLUDED.format = 'vinyl'
+                                      THEN COALESCE("Disco".format, 'vinyl')
+                                      ELSE "Disco".format
+                                  END,
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
             WHERE id = %s
@@ -517,6 +575,11 @@ def mark_unavailable(conn, disco_id: str) -> None:
             UPDATE "Disco"
             SET disponivel      = FALSE,
                 deal_score      = NULL,
+                format          = CASE
+                                      WHEN EXCLUDED.format = 'vinyl'
+                                      THEN COALESCE("Disco".format, 'vinyl')
+                                      ELSE "Disco".format
+                                  END,
                 "updatedAt"     = NOW(),
                 last_crawled_at = NOW()
             WHERE id = %s
