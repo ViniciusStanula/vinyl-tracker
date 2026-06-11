@@ -25,8 +25,8 @@ export async function generateMetadata(): Promise<Metadata> {
       canonical: "/discos-abaixo-de-200",
       languages: {
         "pt-BR": "/discos-abaixo-de-200",
-        "en-US": `${PEER_ORIGIN}/records-under-200`,
-        "x-default": `${PEER_ORIGIN}/records-under-200`,
+        "en-US": `${PEER_ORIGIN}/records-under-50`,
+        "x-default": `${PEER_ORIGIN}/records-under-50`,
       },
     },
     openGraph: {
