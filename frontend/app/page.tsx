@@ -11,7 +11,6 @@ import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
-import { toJsonLd } from "@/lib/jsonld";
 
 async function CarouselLoader({ searchTerm, artista }: { searchTerm: string; artista?: string }) {
   if (searchTerm || artista) return null;
@@ -104,17 +103,6 @@ export async function generateMetadata({
   };
 }
 
-const websiteJsonLd = toJsonLd({
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "Garimpa Vinil",
-  url: SITE_URL,
-  potentialAction: {
-    "@type": "SearchAction",
-    target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/?q={search_term_string}` },
-    "query-input": "required name=search_term_string",
-  },
-});
 
 export default async function HomePage({
   searchParams,
@@ -156,8 +144,6 @@ export default async function HomePage({
 
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
-      {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: websiteJsonLd }} />
 
       {/* ── Hero ────────────────────────────────────────────────── */}
       <header className="relative mb-8 overflow-hidden rounded-2xl border border-groove min-h-[300px] sm:min-h-[360px] flex items-center">

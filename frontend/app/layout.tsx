@@ -88,6 +88,11 @@ const webSiteJsonLd = toJsonLd({
   inLanguage: "pt-BR",
   description: DEFAULT_DESC,
   publisher: { "@id": `${SITE_URL}/#organization` },
+  potentialAction: {
+    "@type": "SearchAction",
+    target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/?q={search_term_string}` },
+    "query-input": "required name=search_term_string",
+  },
 });
 
 export default function RootLayout({
