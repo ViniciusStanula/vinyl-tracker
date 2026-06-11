@@ -43,6 +43,9 @@ deal_score field:
 Long-form editorial guides about vinyl records in Brazilian Portuguese:
 
 - [Como Cuidar de Discos de Vinil](${SITE}/guias/como-cuidar-de-discos-de-vinil) — Guia completo de limpeza, armazenamento no clima do Brasil, cuidados com agulha, os 5 erros que destroem coleções e checklist de manutenção diária/mensal/anual. ~4.000 palavras. Publicado 2026-05-27.
+- [Como Avaliar o Estado de um Disco de Vinil](${SITE}/guias/como-avaliar-estado-disco-vinil) — Guia de gradação (Mint a Poor) com inspeção visual, teste de audição e checklist para comprar discos usados sem erro.
+- [Vinil Colorido e Picture Disc Valem a Pena?](${SITE}/guias/vinil-colorido-e-picture-disc) — Diferenças de qualidade sonora entre vinil preto, colorido e picture disc, e quando cada um vale a compra.
+- [Vinil 180g Vale a Pena?](${SITE}/guias/vinil-180g-vale-a-pena) — O que o peso do disco realmente muda em som, durabilidade e preço — mitos e fatos sobre prensagens de 180 gramas.
 - [Melhores Discos de Rock por Subgênero](${SITE}/guias/rock) — Ranking Bayesiano de álbuns de rock por subgênero (18 subgêneros) baseado em avaliações Discogs de mais de 11.000 álbuns de 1.000+ artistas.
 - [Top Artistas do Spotify por País](${SITE}/guias/top-artistas-spotify) — Ranking diário dos 10 artistas mais ouvidos no Spotify em 20 países. Atualizado às 8h UTC.
 
