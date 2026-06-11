@@ -143,6 +143,8 @@ export default async function DiscoPage({
     .slice(0, 5);
 
   const relatedDeals = await getRelatedDeals(disco.id, styleTags);
+  // Peer-site album URL for MusicAlbum.sameAs (same pressing, other market).
+  const peerSlug = await getHreflangRecord(disco.asin).catch(() => null);
 
   const valores = disco.precos.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;
@@ -271,6 +273,9 @@ export default async function DiscoPage({
       url: disco.url,
       priceCurrency: "BRL",
       price: precoAtual.toFixed(2),
+      itemCondition: "https://schema.org/NewCondition",
+      // Crawler refreshes several times daily; +24h is a conservative horizon.
+      priceValidUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       availability: disponivel
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
@@ -292,8 +297,10 @@ export default async function DiscoPage({
   const musicAlbumJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "MusicAlbum",
+    "@id": `${siteUrl}/disco/${slug}#album`,
     name: disco.titulo,
     url: `${siteUrl}/disco/${slug}`,
+    ...(peerSlug ? { sameAs: [`${PEER_ORIGIN}/record/${peerSlug}`] } : {}),
     ...(disco.imgUrl ? { image: disco.imgUrl } : {}),
     byArtist: {
       "@type": "MusicGroup",
