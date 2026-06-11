@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
+import path from "path";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -29,6 +30,9 @@ const nextConfig: NextConfig = {
   pageExtensions: ["ts", "tsx", "js", "jsx", "md", "mdx"],
   compress: true,
   poweredByHeader: false,
+  // Tracing root = repo root so ../enriched_data.json stays inside it
+  // (Next 16.2.9 rejects include globs that escape the tracing root).
+  outputFileTracingRoot: path.join(__dirname, ".."),
   // Ensure JSON data files are bundled in the serverless functions that need them
   outputFileTracingIncludes: {
     "/guias/top-artistas-spotify": ["./data/top_artists.json"],
