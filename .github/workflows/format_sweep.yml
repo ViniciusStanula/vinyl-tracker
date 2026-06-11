@@ -1,0 +1,44 @@
+name: Format Sweep (CD incident)
+
+# Classifies the physical format of catalog rows that predate the vinyl
+# allowlist gate (format IS NULL). Runs nightly in bounded chunks until the
+# whole catalog is verified, then becomes a cheap no-op.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Max product pages to verify this run"
+        default: "1500"
+  schedule:
+    - cron: "20 4 * * *"
+
+concurrency:
+  group: format-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r crawler/requirements.txt
+
+      - name: Run format sweep
+        working-directory: crawler
+        run: python format_sweep.py --limit "${{ github.event.inputs.limit || '1500' }}"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Post-crawl data-quality check (CD incident)
+        if: always()
+        run: python crawler/post_crawl_check.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
