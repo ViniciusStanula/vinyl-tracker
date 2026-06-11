@@ -141,19 +141,19 @@ export async function getSitemapDiscosForShard(shard: DiscoShard): Promise<Metad
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE disponivel = TRUE AND LEFT(slug, 1) !~ '[a-z0-9]'
+      WHERE disponivel = TRUE AND price_count >= 5 AND LEFT(slug, 1) !~ '[a-z0-9]'
     `;
   } else if (shard === "09") {
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE disponivel = TRUE AND LEFT(slug, 1) ~ '[0-9]'
+      WHERE disponivel = TRUE AND price_count >= 5 AND LEFT(slug, 1) ~ '[0-9]'
     `;
   } else {
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE disponivel = TRUE AND LEFT(slug, 1) = ${shard}
+      WHERE disponivel = TRUE AND price_count >= 5 AND LEFT(slug, 1) = ${shard}
     `;
   }
 
