@@ -54,8 +54,8 @@ function buildJsonLd(data: ChartsData | null) {
     datePublished: "2026-05-20",
     dateModified: dateStr,
     inLanguage: "pt-BR",
-    author: { "@type": "Organization", name: "Garimpa Vinil" },
-    publisher: { "@type": "Organization", name: "Garimpa Vinil" },
+    author: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
+    publisher: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
     mainEntityOfPage: {
       "@type": "WebPage",
       "@id": `${SITE_URL}/guias/top-artistas-spotify`,

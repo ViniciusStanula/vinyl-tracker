@@ -102,8 +102,8 @@ export default function Vinil180gPage() {
     inLanguage: "pt-BR",
     articleSection: "Guias",
     keywords: "vinil 180g, vinil 180 gramas, disco pesado, prensagem vinil, gramatura vinil, vale a pena 180g",
-    author: { "@type": "Organization", name: "Garimpa Vinil", url: `${SITE_URL}/sobre` },
-    publisher: { "@type": "Organization", name: "Garimpa Vinil", url: SITE_URL },
+    author: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
+    publisher: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
     image: {
       "@type": "ImageObject",

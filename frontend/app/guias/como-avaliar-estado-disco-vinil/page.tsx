@@ -198,8 +198,8 @@ export default function GradingPage() {
     inLanguage: "pt-BR",
     articleSection: "Guias",
     keywords: "grading vinil, avaliar estado disco vinil, Mint NM VG+ VG Good Poor, Goldmine grading, Discogs grading",
-    author: { "@type": "Organization", name: "Garimpa Vinil", url: `${SITE_URL}/sobre` },
-    publisher: { "@type": "Organization", name: "Garimpa Vinil", url: SITE_URL },
+    author: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
+    publisher: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
     image: {
       "@type": "ImageObject",
