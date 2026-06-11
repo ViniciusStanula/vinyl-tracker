@@ -17,9 +17,13 @@ export async function GET(req: NextRequest) {
   const sortRaw     = sp.get("sort") ?? "desconto";
   const sort        = ALLOWED_SORTS.has(sortRaw) ? sortRaw : "desconto";
   const artista     = sp.get("artista") || undefined;
-  const page        = Math.max(1, parseInt(sp.get("page") ?? "1", 10));
+  // parseInt("abc") is NaN and Math.max(1, NaN) is NaN, which would reach the
+  // SQL OFFSET and throw — sanitize to finite, positive values or fall back.
+  const pageRaw     = parseInt(sp.get("page") ?? "1", 10);
+  const page        = Number.isFinite(pageRaw) ? Math.max(1, pageRaw) : 1;
   const precoMaxStr = sp.get("precoMax");
-  const precoMax    = precoMaxStr ? Number(precoMaxStr) : null;
+  const precoMaxRaw = precoMaxStr ? Number(precoMaxStr) : NaN;
+  const precoMax    = Number.isFinite(precoMaxRaw) && precoMaxRaw > 0 ? precoMaxRaw : null;
 
   try {
     const { items, total, totalPages } = await getCachedDiscos({
