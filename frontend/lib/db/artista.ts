@@ -116,6 +116,7 @@ const _getArtistaPageData = unstable_cache(
             ) hp_latest ON true
             WHERE  d.artista = ANY(${variants})
               AND  d.disponivel = TRUE
+              AND  (d.format IS NULL OR d.format = 'vinyl')
               AND  d.price_count >= 5
               AND  hp_latest."precoBrl" <= ${precoMax}
           `
@@ -124,6 +125,7 @@ const _getArtistaPageData = unstable_cache(
             FROM   "Disco" d
             WHERE  d.artista = ANY(${variants})
               AND  d.disponivel = TRUE
+              AND  (d.format IS NULL OR d.format = 'vinyl')
               AND  d.price_count >= 5
           `;
 
@@ -132,6 +134,7 @@ const _getArtistaPageData = unstable_cache(
       FROM   "Disco"
       WHERE  artista = ANY(${variants})
         AND  disponivel = TRUE
+        AND  (format IS NULL OR format = 'vinyl')
         AND  price_count >= 5
         AND  lastfm_tags IS NOT NULL AND lastfm_tags != ''
     `;
@@ -180,6 +183,7 @@ const _getArtistaPageData = unstable_cache(
         ) hp_latest ON true
         WHERE  d.artista = ANY(${variants})
           AND  d.disponivel = TRUE
+          AND  (d.format IS NULL OR d.format = 'vinyl')
           AND  d.price_count >= 5
           ${wherePrecoMax}
       )

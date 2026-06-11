@@ -125,6 +125,9 @@ export default async function DiscoPage({
   // getDiscoWithPrecos is React-cached — generateMetadata's prior call is free.
   const disco = await getDiscoWithPrecos(slug);
   if (!disco) notFound();
+  // Excluded non-vinyl records (CD incident, 2026-06-11) return 404 —
+  // never 200 with empty content, never a redirect.
+  if (disco.format && disco.format !== "vinyl") notFound();
 
   // lastfm_* columns are crawler-enriched and read directly from DB — no runtime API calls.
   const meta = await getDiscoMeta(slug);

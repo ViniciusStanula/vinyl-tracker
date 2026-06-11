@@ -52,6 +52,7 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
   // Fetch all distinct artist names from available deals (small payload)
   const dbArtists = await prisma.$queryRaw<{ artista: string }[]>`
     SELECT DISTINCT artista FROM "Disco" WHERE disponivel = TRUE
+ AND  (format IS NULL OR format = 'vinyl')
   `;
 
   // One representative DB artista string per unique slug — prevents duplicate
@@ -106,6 +107,7 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
         LIMIT  1
       ) hp_latest ON true
       WHERE  d.disponivel = TRUE
+      AND  (d.format IS NULL OR d.format = 'vinyl')
         AND  d.price_count >= 5
         AND  d.artista = ANY(${matchedArtistas})
       ORDER  BY d.artista,
@@ -191,6 +193,7 @@ async function fetchMatchedTopArtistNames(): Promise<string[]> {
   const lastfmSlugs = new Set(topArtists.map(slugifyArtist));
   const dbArtists = await prisma.$queryRaw<{ artista: string }[]>`
     SELECT DISTINCT artista FROM "Disco" WHERE disponivel = TRUE
+ AND  (format IS NULL OR format = 'vinyl')
   `;
 
   const slugToArtista = new Map<string, string>();
@@ -271,6 +274,7 @@ async function queryTopArtistAllDeals(
         LIMIT  1
       ) hp_latest ON true
       WHERE  d.disponivel = TRUE
+      AND  (d.format IS NULL OR d.format = 'vinyl')
         AND  d.price_count >= 5
         AND  d.artista = ANY(${matchedArtistas})
         ${precoFilter}

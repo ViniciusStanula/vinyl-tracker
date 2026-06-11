@@ -84,6 +84,7 @@ const _getEstiloPageData = unstable_cache(
         FROM "Disco"
         WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
           AND disponivel = TRUE
+          AND (format IS NULL OR format = 'vinyl')
           AND price_count >= 5
       )
       SELECT
@@ -188,6 +189,7 @@ const _getRelatedEstilos = unstable_cache(
       WITH current_discos AS (
         SELECT id FROM "Disco"
         WHERE disponivel = TRUE
+        AND  (format IS NULL OR format = 'vinyl')
           AND LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
       ),
       all_tags AS (
@@ -196,6 +198,7 @@ const _getRelatedEstilos = unstable_cache(
           SELECT id, LOWER(unnest(string_to_array(lastfm_tags, ', '))) AS tag
           FROM "Disco"
           WHERE disponivel = TRUE
+          AND  (format IS NULL OR format = 'vinyl')
         ) t
         GROUP BY tag
       ),
@@ -206,6 +209,7 @@ const _getRelatedEstilos = unstable_cache(
           FROM "Disco" d
           INNER JOIN current_discos cd ON cd.id = d.id
           WHERE d.disponivel = TRUE
+          AND  (d.format IS NULL OR d.format = 'vinyl')
         ) t
         GROUP BY tag
       ),

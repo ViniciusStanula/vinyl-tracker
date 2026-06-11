@@ -10,7 +10,7 @@ import { prisma } from "@/lib/db/prisma";
 //   the same render so the unstable_cache is hit only once per request.
 const _getDiscoCount = unstable_cache(
   async (): Promise<number> =>
-    prisma.disco.count({ where: { disponivel: true, priceCount: { gte: 5 } } }),
+    prisma.disco.count({ where: { disponivel: true, priceCount: { gte: 5 }, OR: [{ format: null }, { format: "vinyl" }] } }),
   ["home-disco-count"],
   { tags: ["prices"], revalidate: 1800 },
 );

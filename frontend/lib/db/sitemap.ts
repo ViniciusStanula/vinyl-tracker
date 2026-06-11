@@ -25,6 +25,7 @@ export const getSitemapData = unstable_cache(
         SELECT DISTINCT artista
         FROM   "Disco"
         WHERE  disponivel = TRUE
+        AND  (format IS NULL OR format = 'vinyl')
           AND  price_count >= 5
         ORDER  BY artista
       `,
@@ -35,6 +36,7 @@ export const getSitemapData = unstable_cache(
           WHERE  lastfm_tags IS NOT NULL
             AND  lastfm_tags != ''
             AND  disponivel = TRUE
+            AND  (format IS NULL OR format = 'vinyl')
             AND  price_count >= 5
         ),
         slugged AS (
@@ -102,7 +104,7 @@ export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
   const artistRows = await prisma.disco.findMany({
     select: { artista: true },
     distinct: ["artista"],
-    where: { disponivel: true },
+    where: { disponivel: true, OR: [{ format: null }, { format: "vinyl" }] },
   });
 
   const seenSlugs = new Set<string>();
@@ -141,19 +143,22 @@ export async function getSitemapDiscosForShard(shard: DiscoShard): Promise<Metad
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE disponivel = TRUE AND price_count >= 5 AND LEFT(slug, 1) !~ '[a-z0-9]'
+      WHERE disponivel = TRUE
+      AND  (format IS NULL OR format = 'vinyl') AND price_count >= 5 AND LEFT(slug, 1) !~ '[a-z0-9]'
     `;
   } else if (shard === "09") {
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE disponivel = TRUE AND price_count >= 5 AND LEFT(slug, 1) ~ '[0-9]'
+      WHERE disponivel = TRUE
+      AND  (format IS NULL OR format = 'vinyl') AND price_count >= 5 AND LEFT(slug, 1) ~ '[0-9]'
     `;
   } else {
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE disponivel = TRUE AND price_count >= 5 AND LEFT(slug, 1) = ${shard}
+      WHERE disponivel = TRUE
+      AND  (format IS NULL OR format = 'vinyl') AND price_count >= 5 AND LEFT(slug, 1) = ${shard}
     `;
   }
 

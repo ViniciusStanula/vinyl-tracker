@@ -42,6 +42,7 @@ async function fetchSuggestions(q: string): Promise<SearchSuggestion[]> {
         avg_30d::text AS preco
       FROM "Disco"
       WHERE disponivel = TRUE
+      AND  (format IS NULL OR format = 'vinyl')
         AND price_count >= 5
         AND search_vector @@ to_tsquery('simple', ${tsq})
       ORDER BY

@@ -73,6 +73,7 @@ export async function queryPriceUnder200(): Promise<ProcessedDisco[]> {
         LIMIT  1
       ) hp_latest ON true
       WHERE  d.disponivel    = TRUE
+      AND  (d.format IS NULL OR d.format = 'vinyl')
         AND  d.price_count  >= 5
         AND  hp_latest."precoBrl" >= 30
         AND  hp_latest."precoBrl" <= 200

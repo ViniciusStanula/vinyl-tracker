@@ -135,6 +135,7 @@ export async function queryDiscos(params: {
             LIMIT  1
           ) hp_latest ON true
           WHERE  d.disponivel = TRUE
+          AND  (d.format IS NULL OR d.format = 'vinyl')
             AND  d.price_count >= 5
             ${whereSearch} ${whereArtista}
             AND hp_latest."precoBrl" <= ${precoMax}
@@ -143,6 +144,7 @@ export async function queryDiscos(params: {
           SELECT COUNT(*) AS total
           FROM   "Disco" d
           WHERE  d.disponivel = TRUE
+          AND  (d.format IS NULL OR d.format = 'vinyl')
             AND  d.price_count >= 5
             ${whereSearch} ${whereArtista}
         `;
@@ -195,6 +197,7 @@ export async function queryDiscos(params: {
           LIMIT  1
         ) hp_latest ON true
         WHERE d.disponivel = TRUE
+        AND  (d.format IS NULL OR d.format = 'vinyl')
           AND d.price_count >= 5
           ${whereSearch} ${whereArtista} ${wherePrecoMax}
       )

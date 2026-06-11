@@ -94,6 +94,7 @@ export const getRelatedDeals = unstable_cache(
         WHERE id != ${discoId}
           AND deal_score IS NOT NULL
           AND disponivel = TRUE
+          AND (format IS NULL OR format = 'vinyl')
           AND price_count >= 5
           ${tagFilter}
         ORDER BY deal_score DESC, RANDOM()
