@@ -47,6 +47,37 @@ export const BOTS: BotDef[] = [
   { name: "YandexBot", pattern: "yandexbot", category: "search" },
   { name: "AhrefsBot", pattern: "ahrefsbot", category: "seo_tool" },
   { name: "SemrushBot", pattern: "semrushbot", category: "seo_tool" },
+  { name: "Baiduspider", pattern: "baiduspider", category: "search" },
+  { name: "PetalBot", pattern: "petalbot", category: "search" },
+  { name: "SeznamBot", pattern: "seznambot", category: "search" },
+  { name: "MistralAI-User", pattern: "mistralai-user", category: "ai_assistant" },
+  { name: "cohere-ai", pattern: "cohere-ai", category: "ai_training" },
+  { name: "Diffbot", pattern: "diffbot", category: "other" },
+  { name: "ImagesiftBot", pattern: "imagesift", category: "ai_training" },
+  { name: "MJ12bot", pattern: "mj12bot", category: "seo_tool" },
+  { name: "DotBot", pattern: "dotbot", category: "seo_tool" },
+
+  // --- Generic fallbacks: MUST stay last. Catch new/unknown crawlers and
+  // script traffic so they show up in the data and can be promoted to named
+  // entries above. Review with:
+  //   select user_agent, count(*) from bot_hits
+  //   where bot_name in ('unmatched', 'http-client') group by 1 order by 2 desc;
+  { name: "unmatched", pattern: "bot", category: "other" },
+  { name: "unmatched", pattern: "crawler", category: "other" },
+  { name: "unmatched", pattern: "spider", category: "other" },
+  { name: "unmatched", pattern: "scrape", category: "other" },
+  { name: "http-client", pattern: "python-requests", category: "other" },
+  { name: "http-client", pattern: "python-httpx", category: "other" },
+  { name: "http-client", pattern: "aiohttp", category: "other" },
+  { name: "http-client", pattern: "go-http-client", category: "other" },
+  { name: "http-client", pattern: "curl/", category: "other" },
+  { name: "http-client", pattern: "wget/", category: "other" },
+  { name: "http-client", pattern: "node-fetch", category: "other" },
+  { name: "http-client", pattern: "undici", category: "other" },
+  { name: "http-client", pattern: "axios/", category: "other" },
+  { name: "http-client", pattern: "okhttp", category: "other" },
+  { name: "http-client", pattern: "java/", category: "other" },
+  { name: "http-client", pattern: "libwww-perl", category: "other" },
 ];
 
 export function detectBot(userAgent: string): BotDef | null {
