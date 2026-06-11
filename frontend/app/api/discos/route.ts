@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { queryDiscos } from "@/lib/queryDiscos";
+import { createRateLimiter, clientIp } from "@/lib/rateLimit";
 
 const ALLOWED_SORTS = new Set(["desconto", "menor-preco", "maior-preco", "avaliados", "az", "deals"]);
+
+// 60 requests per IP per minute — generous for the infinite grid, stops scrapers.
+const checkRateLimit = createRateLimiter(60);
 
 const getCachedDiscos = unstable_cache(
   (params: Parameters<typeof queryDiscos>[0]) => queryDiscos(params),
@@ -11,6 +15,14 @@ const getCachedDiscos = unstable_cache(
 );
 
 export async function GET(req: NextRequest) {
+  const rl = checkRateLimit(clientIp(req));
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
   const sp = req.nextUrl.searchParams;
 
   const q           = (sp.get("q") ?? "").slice(0, 200);

@@ -5,36 +5,12 @@ import { getArtistaPageData } from "@/lib/db/artista";
 import { toTitleCase } from "@/lib/utils/titleCase";
 
 import { SITE_URL as SITE } from "@/lib/siteUrl";
+import { createRateLimiter, clientIp } from "@/lib/rateLimit";
+
 const MCP_VERSION = "2024-11-05";
 
-// ── Rate limiter ─────────────────────────────────────────────────────────────
-// Module-level sliding window — scoped to the warm Vercel instance.
-// Not cross-instance-safe, but stops naive scrapers and runaway agents.
-
-const RATE_WINDOW_MS  = 60_000; // 1 minute
-const RATE_MAX        = 30;     // requests per IP per window
-
-const rlStore = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(ip: string): { allowed: boolean; retryAfterSec: number } {
-  const now = Date.now();
-
-  // Prune stale entries when store grows large
-  if (rlStore.size > 500) {
-    for (const [k, v] of rlStore) if (now > v.resetAt) rlStore.delete(k);
-  }
-
-  const entry = rlStore.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rlStore.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return { allowed: true, retryAfterSec: 0 };
-  }
-  if (entry.count >= RATE_MAX) {
-    return { allowed: false, retryAfterSec: Math.ceil((entry.resetAt - now) / 1000) };
-  }
-  entry.count++;
-  return { allowed: true, retryAfterSec: 0 };
-}
+// 30 requests per IP per minute
+const checkRateLimit = createRateLimiter(30);
 
 // ── JSON-RPC 2.0 helpers ────────────────────────────────────────────────────
 
@@ -298,8 +274,7 @@ async function execGetArtistAlbums(args: Record<string, unknown>) {
 // ── Main handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  const rl = checkRateLimit(ip);
+  const rl = checkRateLimit(clientIp(req));
   if (!rl.allowed) {
     return NextResponse.json(
       { jsonrpc: "2.0", error: { code: -32000, message: "Rate limit exceeded. Try again later." }, id: null },
