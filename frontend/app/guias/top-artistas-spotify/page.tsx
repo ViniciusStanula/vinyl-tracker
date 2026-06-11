@@ -49,7 +49,9 @@ function buildJsonLd(data: ChartsData | null) {
     "@type": "Article",
     headline: PAGE_TITLE,
     description: PAGE_DESC,
-    datePublished: dateStr,
+    // Publication date is fixed (first deploy of this page); only
+    // dateModified tracks the daily chart refresh.
+    datePublished: "2026-05-20",
     dateModified: dateStr,
     inLanguage: "pt-BR",
     author: { "@type": "Organization", name: "Garimpa Vinil" },
