@@ -33,6 +33,12 @@ jobs:
           LASTFM_API_KEY:  ${{ secrets.LASTFM_API_KEY }}
           ASSOCIATE_TAG:   ${{ secrets.ASSOCIATE_TAG }}
 
+      - name: Post-crawl data-quality check (CD incident)
+        if: always()
+        run: python crawler/post_crawl_check.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Open issue on failure
         if: failure()
         uses: actions/github-script@v7
