@@ -25,6 +25,7 @@ disco_records.json
 
 # Debug / tooling artifacts
 .bug-hunter/
+.impeccable/
 debug/
 frontend/dbcheck.mjs
 frontend/scripts/
@@ -33,3 +34,8 @@ logo-export.html
 # Generated reports
 *-REPORT.md
 *-AUDIT-REPORT.md
+
+# Office documents
+*.docx
+*.xlsx
+*.pptx
