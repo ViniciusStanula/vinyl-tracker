@@ -68,3 +68,28 @@ model HreflangRecord {
 
   @@map("HreflangRecord")
 }
+
+// Bot/crawler hit log. Rows are inserted via the Supabase REST API from
+// proxy.ts (anon key + insert-only RLS policy), NOT via Prisma Client —
+// so every default must be a DB-level default (autoincrement/now()),
+// never a client-side one like uuid().
+// RLS, policies and grants are NOT managed by `prisma db push`; see the
+// one-time SQL in the bot-logging setup notes.
+model BotHit {
+  id          BigInt   @id @default(autoincrement())
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  path        String
+  query       String?
+  userAgent   String   @map("user_agent")
+  botName     String   @map("bot_name")
+  botCategory String   @map("bot_category")
+  method      String
+  ip          String?
+  country     String?
+  referer     String?
+
+  @@index([createdAt(sort: Desc)])
+  @@index([botName])
+  @@index([path])
+  @@map("bot_hits")
+}
