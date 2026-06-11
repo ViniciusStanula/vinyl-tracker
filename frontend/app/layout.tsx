@@ -63,7 +63,7 @@ const organizationJsonLd = JSON.stringify({
     url: "https://t.me/garimpavinil",
   },
   sameAs: ["https://t.me/garimpavinil"],
-});
+}).replace(/<\//g, "<\\/");
 
 const webSiteJsonLd = JSON.stringify({
   "@context": "https://schema.org",
@@ -72,7 +72,7 @@ const webSiteJsonLd = JSON.stringify({
   url: SITE_URL,
   inLanguage: "pt-BR",
   description: DEFAULT_DESC,
-});
+}).replace(/<\//g, "<\\/");
 
 export default function RootLayout({
   children,

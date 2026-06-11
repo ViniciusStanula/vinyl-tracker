@@ -9,7 +9,7 @@ const personJsonLd = JSON.stringify({
   name: "Vinicius Stanula",
   url: SITE_URL,
   sameAs: ["https://linkedin.com/in/vinicius-stanula"],
-});
+}).replace(/<\//g, "<\\/");
 
 const breadcrumbJsonLd = JSON.stringify({
   "@context": "https://schema.org",
@@ -18,7 +18,7 @@ const breadcrumbJsonLd = JSON.stringify({
     { "@type": "ListItem", position: 1, name: "Início", item: `${SITE_URL}/` },
     { "@type": "ListItem", position: 2, name: "Sobre", item: `${SITE_URL}/sobre` },
   ],
-});
+}).replace(/<\//g, "<\\/");
 
 const faqJsonLd = JSON.stringify({
   "@context": "https://schema.org",
@@ -41,7 +41,7 @@ const faqJsonLd = JSON.stringify({
       },
     },
   ],
-});
+}).replace(/<\//g, "<\\/");
 
 
 export const metadata = {
