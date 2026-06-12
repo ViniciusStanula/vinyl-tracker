@@ -1293,7 +1293,7 @@ def parse_product_page_discovery(soup, asin: str) -> dict | None:
     if not title or len(title) < 3:
         return None
 
-    fmt = detect_format(title, soup)
+    fmt = detect_format(title, soup, asin=asin)
     if fmt != "vinyl":
         # Allowlist: unknown is rejected too — only positive vinyl evidence
         # (title keyword, selected format swatch, details row, breadcrumb)

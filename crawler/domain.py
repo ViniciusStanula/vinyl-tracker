@@ -18,7 +18,7 @@ _PRICE_NUM_RE   = re.compile(r"\d+\.?\d*")
 _PRICE_START_RE = re.compile(r"^R\$|^\$|^\d+[.,]")
 
 _CD_RE = re.compile(
-    r"\bcds?\b|\[cd\]|\(cd\)|compact disc|\bcds?\s*\d|audio cd|\u00e1udio cd",
+    r"\bcds?\b|\[cd\]|\(cd\)|compact disc|\bcds?\s*\d|audio cd|áudio cd",
     re.IGNORECASE,
 )
 _VINYL_TITLE_RE = re.compile(
@@ -107,20 +107,24 @@ def is_vinyl(title: str, card=None) -> bool:
 
 _FORMAT_VINYL_RE = re.compile(r"vinil|vinyl", re.IGNORECASE)
 _FORMAT_NONVINYL_RE = re.compile(
-    r"cds?|audio cd|áudio cd|compact disc|mp3|streaming"
-    r"|cassette|cassete|dvd|blu-?ray|digital",
+    r"\bcds?\b|audio cd|áudio cd|compact disc|\bmp3\b|streaming"
+    r"|\bcassette\b|\bcassete\b|\bdvd\b|blu-?ray|\bdigital\b",
     re.IGNORECASE,
 )
 _FORMAT_LABEL_RE = re.compile(r"(?:formato|format)\s*:?\s*", re.IGNORECASE)
+_DP_ASIN_RE = re.compile(r"/dp/([A-Z0-9]{10})", re.IGNORECASE)
 
 
-def detect_format(title: str, soup=None) -> str:
+def detect_format(title: str, soup=None, asin: str | None = None) -> str:
     """
     Classify a product's physical format from the strongest available signal.
     Returns "vinyl", "cd" (any confirmed non-vinyl), or "unknown".
 
     soup is the full product-page BeautifulSoup; pass None for title-only
     classification (e.g. search cards, where the page is not available).
+    asin enables the sibling-variant check on multi-format pages: a vinyl
+    swatch that links a DIFFERENT ASIN means the vinyl edition is its own
+    product and this ASIN is a non-vinyl sibling (CD/MP3/...).
     """
     if _CD_RE.search(title):
         return "cd"
@@ -137,6 +141,24 @@ def detect_format(title: str, soup=None) -> str:
             return "vinyl"
         if _FORMAT_NONVINYL_RE.search(text):
             return "cd"
+
+    # Sibling-variant check: swatches for the page's own ASIN carry no /dp/
+    # link, so a vinyl swatch pointing at another ASIN confirms this one is
+    # the non-vinyl variant. (CD-leak audit, 2026-06-12.)
+    if asin:
+        for swatch in soup.select("#tmmSwatches .swatchElement"):
+            if not _FORMAT_VINYL_RE.search(swatch.get_text(" ", strip=True)):
+                continue
+            link = swatch.select_one("a[href]")
+            m = _DP_ASIN_RE.search(link.get("href") or "") if link else None
+            if m and m.group(1).upper() != asin.upper():
+                return "cd"
+            break  # vinyl swatch is this ASIN (or unlinked) — not a sibling
+
+    if selected is not None:
+        # Multi-format page with an inconclusive selected swatch: the details
+        # section describes the page's primary variant, not necessarily this
+        # ASIN — don't trust it.
         return "unknown"
 
     # Single-format page: details / ficha tecnica "Formato" row.
@@ -158,11 +180,9 @@ def detect_format(title: str, soup=None) -> str:
             if _FORMAT_NONVINYL_RE.search(segment):
                 return "cd"
 
-    # Breadcrumb naming the vinyl category confirms format.
-    crumb = soup.select_one("#wayfinding-breadcrumbs_feature_div")
-    if crumb is not None and _FORMAT_VINYL_RE.search(crumb.get_text(" ", strip=True)):
-        return "vinyl"
-
+    # Breadcrumb check removed (CD-leak audit, 2026-06-12): the root music
+    # category "CD e Vinil" appears on every BR music product — including
+    # plain CDs — so it can never be positive vinyl evidence.
     return "unknown"
 
 

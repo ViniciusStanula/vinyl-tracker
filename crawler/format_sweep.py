@@ -78,7 +78,7 @@ def fetch_format(session, asin: str) -> str | None:
     soup = BeautifulSoup(html, "lxml")
     title_el = soup.select_one("#productTitle")
     title = title_el.get_text(strip=True) if title_el else ""
-    return detect_format(title, soup)
+    return detect_format(title, soup, asin=asin)
 
 
 def main() -> None:

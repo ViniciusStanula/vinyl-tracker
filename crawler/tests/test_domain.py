@@ -1,12 +1,18 @@
 import pytest
+from bs4 import BeautifulSoup
 from domain import (
     is_vinyl,
+    detect_format,
     normalize_artist,
     parse_price_br,
     is_fake_artist,
     _is_plausible_artist,
     UNKNOWN_ARTIST,
 )
+
+
+def _soup(html: str):
+    return BeautifulSoup(html, "lxml")
 
 
 # ─── parse_price_br ──────────────────────────────────────────────────────────
@@ -55,6 +61,76 @@ class TestIsVinyl:
     def test_ambiguous_title_defaults_true(self):
         # Title with no vinyl OR CD keyword → function returns True (give benefit of doubt)
         assert is_vinyl("Billie Eilish - Happier Than Ever") is True
+
+
+# ─── detect_format (CD-leak audit, 2026-06-12) ───────────────────────────────
+
+class TestDetectFormat:
+    # Title signals (no soup)
+    def test_title_cd_keyword(self):
+        assert detect_format("Box Metallica - The Metallica Blacklist 4 CDs") == "cd"
+
+    def test_title_vinyl_keyword(self):
+        assert detect_format("Abbey Road [Disco de Vinil]") == "vinyl"
+
+    def test_silent_title_no_soup_is_unknown(self):
+        assert detect_format("Adele - 30") == "unknown"
+
+    # Selected swatch — pt-BR label "CD de áudio" (regression: \x08 bytes made
+    # the cd/mp3/dvd/digital alternatives of _FORMAT_NONVINYL_RE unmatchable)
+    def test_selected_swatch_cd_de_audio(self):
+        html = (
+            '<div id="tmmSwatches">'
+            '<div class="swatchElement selected"><span>CD de áudio R$ 69,82</span></div>'
+            "</div>"
+        )
+        assert detect_format("Adele - 30", _soup(html)) == "cd"
+
+    def test_selected_swatch_vinyl(self):
+        html = (
+            '<div id="tmmSwatches">'
+            '<div class="swatchElement selected"><span>Disco de Vinil R$ 199,00</span></div>'
+            "</div>"
+        )
+        assert detect_format("Abbey Road", _soup(html)) == "vinyl"
+
+    # Sibling-variant: vinyl swatch links a DIFFERENT ASIN → this ASIN is the
+    # non-vinyl variant
+    def test_vinyl_sibling_swatch_means_cd(self):
+        html = (
+            '<div id="tmmSwatches">'
+            '<div class="swatchElement"><a href="/Album-Vinil/dp/B000OTHER01/ref=x">'
+            "Disco de Vinil R$ 219,00</a></div>"
+            "</div>"
+        )
+        assert detect_format("Some Album", _soup(html), asin="B000THISCD") == "cd"
+
+    def test_vinyl_swatch_own_asin_not_sibling(self):
+        html = (
+            '<div id="tmmSwatches">'
+            '<div class="swatchElement"><a href="/dp/B000THISLP">Disco de Vinil</a></div>'
+            "</div>"
+        )
+        assert detect_format("Some Album", _soup(html), asin="B000THISLP") == "unknown"
+
+    # Details "Formato" row (single-format pages)
+    def test_details_row_audio_cd(self):
+        html = '<div id="detailBullets_feature_div">Formato : Áudio CD</div>'
+        assert detect_format("Silent Title", _soup(html)) == "cd"
+
+    def test_details_row_vinil(self):
+        html = '<div id="detailBullets_feature_div">Formato : Vinil</div>'
+        assert detect_format("Silent Title", _soup(html)) == "vinyl"
+
+    # Breadcrumb regression: root category "CD e Vinil" appears on every BR
+    # music product and must NOT count as vinyl evidence
+    def test_breadcrumb_cd_e_vinil_is_not_vinyl_evidence(self):
+        html = (
+            '<div id="wayfinding-breadcrumbs_feature_div">'
+            "CD e Vinil › Hard Rock e Metal › Heavy Metal</div>"
+            '<div id="detailBullets_feature_div">Peso do produto : 100 g</div>'
+        )
+        assert detect_format("Countdown To Extinction [Remastered]", _soup(html)) == "unknown"
 
 
 # ─── normalize_artist ────────────────────────────────────────────────────────
