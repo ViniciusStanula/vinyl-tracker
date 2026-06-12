@@ -12,44 +12,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 
-async function CarouselLoader({ searchTerm, artista }: { searchTerm: string; artista?: string }) {
-  if (searchTerm || artista) return null;
-  const items = await queryCarouselDiscosWithCache();
-  return <ArtistasCarousel items={items} />;
-}
-
-function CarouselSkeleton() {
-  return (
-    <section className="mb-10">
-      <div className="flex items-center justify-between mb-3">
-        <div className="h-7 w-48 bg-groove rounded animate-pulse" />
-        <div className="flex gap-1.5">
-          <div className="w-11 h-11 rounded-full bg-groove animate-pulse" />
-          <div className="w-11 h-11 rounded-full bg-groove animate-pulse" />
-        </div>
-      </div>
-      {/* Line heights mirror DiscoCard exactly (artist 15px, title min-h-10,
-          price 25px inside p-4) so the Suspense swap causes zero layout shift. */}
-      <div className="flex gap-3 overflow-hidden pb-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="shrink-0 w-44 sm:w-52 bg-sleeve border border-groove rounded-xl overflow-hidden animate-pulse">
-            <div className="aspect-square bg-label" />
-            <div className="p-4">
-              <div className="h-[15px] w-1/2 bg-groove rounded" />
-              <div className="mt-0.5 h-10 bg-groove rounded" />
-              <div className="pt-2">
-                {!HIDE_PRICE_HISTORY && <div className="mb-1 h-[18px] w-11 bg-groove rounded" />}
-                <div className="h-[25px] w-2/3 bg-groove rounded" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
+
+// Reversible hero test: set HIDE_HERO=1 to remove the hero banner.
+// When hidden, the carousel moves into the first fold and its first slides
+// (priority images in DiscoCard) become the LCP candidates.
+const SHOW_HERO = process.env.HIDE_HERO !== "1";
 
 export const revalidate = 1800;
 
@@ -127,14 +95,19 @@ export default async function HomePage({
   const searchTerm = q?.trim() ?? "";
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
-  // Fetch main grid and count in parallel — carousel streams in separately via Suspense.
+  // Fetch grid, count, and carousel in parallel. Carousel is awaited inline
+  // (no Suspense) so its HTML ships in the initial flush — no skeleton swap,
+  // and the first slides' priority images are discovered immediately.
+  // Cache misses are absorbed by the crawler's post-purge warm-up GETs.
   let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
   let total = 0, totalPages = 0;
   let count = 0;
+  let carouselItems: Awaited<ReturnType<typeof queryCarouselDiscosWithCache>> = [];
   try {
-    ([{ items, total, totalPages }, count] = await Promise.all([
+    ([{ items, total, totalPages }, count, carouselItems] = await Promise.all([
       queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }),
       getDiscoCount(),
+      searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscosWithCache(),
     ]));
   } catch {
     // DB unavailable — render empty state
@@ -145,7 +118,8 @@ export default async function HomePage({
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
 
-      {/* ── Hero ────────────────────────────────────────────────── */}
+      {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test) ── */}
+      {SHOW_HERO && (
       <header className="relative mb-8 overflow-hidden rounded-2xl border border-groove min-h-[300px] sm:min-h-[360px] flex items-center">
         {/* Background photo */}
         <Image
@@ -199,11 +173,10 @@ export default async function HomePage({
           </div>
         </div>
       </header>
+      )}
 
       {/* ── Artistas mais Ouvidos carousel ──────────────────────── */}
-      <Suspense fallback={<CarouselSkeleton />}>
-        <CarouselLoader searchTerm={searchTerm} artista={artista} />
-      </Suspense>
+      <ArtistasCarousel items={carouselItems} />
 
       {/* ── Sort bar ────────────────────────────────────────────── */}
       <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
