@@ -3,6 +3,18 @@ import type { NextRequest } from "next/server";
 import { detectBot } from "@/lib/bots";
 
 export function proxy(request: NextRequest) {
+  // Block high-volume bot traffic from SG/CN/MY when the request has no
+  // Portuguese Accept-Language — confirmed via GA4 (0% engagement).
+  // Legitimate PT-BR speakers in those countries still pass through.
+  const country = request.headers.get("x-vercel-ip-country") ?? "";
+  const lang = request.headers.get("accept-language") ?? "";
+  if (
+    (country === "SG" || country === "CN" || country === "MY") &&
+    !lang.toLowerCase().includes("pt")
+  ) {
+    return new Response("", { status: 403 });
+  }
+
   const ua = request.headers.get("user-agent") ?? "";
   const isMcp = request.nextUrl.pathname.startsWith("/api/mcp");
   const bot = detectBot(ua);
