@@ -12,7 +12,7 @@ import { toJsonLd } from "@/lib/jsonld";
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
-  display: "swap",
+  display: "optional",
 });
 
 /* DM Sans — clean, humanist sans-serif for body copy */
@@ -62,7 +62,7 @@ const organizationJsonLd = toJsonLd({
     "@type": "ImageObject",
     url: `${SITE_URL}/og-default.png`,
   },
-  description: "Rastreador de preços de discos de vinil na Amazon Brasil. Monitora mais de 11.000 títulos com alertas de promoções e histórico de preços.",
+  description: "Rastreador de preços de discos de vinil na Amazon Brasil. Monitora mais de 33.000 títulos com alertas de promoções e histórico de preços.",
   foundingDate: "2026",
   founder: {
     "@type": "Person",

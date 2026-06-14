@@ -54,7 +54,7 @@ function buildJsonLd(data: ChartsData | null) {
     datePublished: "2026-05-20",
     dateModified: dateStr,
     inLanguage: "pt-BR",
-    author: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
+    author: { "@type": "Person", "@id": `${SITE_URL}/sobre#person`, name: "Vinicius Stanula", url: `${SITE_URL}/sobre`, sameAs: ["https://linkedin.com/in/vinicius-stanula"] },
     publisher: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
     mainEntityOfPage: {
       "@type": "WebPage",

@@ -125,7 +125,7 @@ export default function ComoGuardarPage() {
     inLanguage: "pt-BR",
     articleSection: "Guias",
     keywords: "cuidar de discos de vinil, limpar disco de vinil, armazenar vinil, limpeza vinil, manutenção vinil",
-    author: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
+    author: { "@type": "Person", "@id": `${SITE_URL}/sobre#person`, name: "Vinicius Stanula", url: `${SITE_URL}/sobre`, sameAs: ["https://linkedin.com/in/vinicius-stanula"] },
     publisher: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
     image: { "@type": "ImageObject", url: `${SITE_URL}/blog/como-cuidar-de-discos-de-vinil.jpg`, width: 1200, height: 800 },

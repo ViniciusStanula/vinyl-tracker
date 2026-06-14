@@ -77,7 +77,7 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
       >
         {items.map((disco, i) => (
           <div key={disco.id} className="snap-start shrink-0 w-44 sm:w-52">
-            <DiscoCard disco={disco} priority={i < 3} />
+            <DiscoCard disco={disco} priority={i < 1} />
           </div>
         ))}
       </div>

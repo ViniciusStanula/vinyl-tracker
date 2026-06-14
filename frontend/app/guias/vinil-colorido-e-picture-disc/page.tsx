@@ -100,7 +100,7 @@ export default function VinilColoridoPage() {
     inLanguage: "pt-BR",
     articleSection: "Guias",
     keywords: "vinil colorido, picture disc, splatter vinyl, vinil colorido qualidade, picture disc som, vinil colorido vs preto",
-    author: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
+    author: { "@type": "Person", "@id": `${SITE_URL}/sobre#person`, name: "Vinicius Stanula", url: `${SITE_URL}/sobre`, sameAs: ["https://linkedin.com/in/vinicius-stanula"] },
     publisher: { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "Garimpa Vinil" },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/guias/${SLUG}` },
     image: {
