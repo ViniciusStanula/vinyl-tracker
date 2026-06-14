@@ -105,7 +105,7 @@ def is_vinyl(title: str, card=None) -> bool:
 # Positive vinyl evidence is required before a product may enter the catalog.
 # Callers must accept ONLY "vinyl" — "unknown" is rejected, never inserted.
 
-_FORMAT_VINYL_RE = re.compile(r"vinil|vinyl", re.IGNORECASE)
+_FORMAT_VINYL_RE = re.compile(r"vinil|vinyl|\blp\b", re.IGNORECASE)
 _FORMAT_NONVINYL_RE = re.compile(
     r"\bcds?\b|audio cd|áudio cd|compact disc|\bmp3\b|streaming"
     r"|\bcassette\b|\bcassete\b|\bdvd\b|blu-?ray|\bdigital\b",
