@@ -121,8 +121,18 @@ def main() -> None:
         if fmt is None:
             counts["failed"] += 1
         elif fmt == "unknown":
+            # No vinyl evidence found on the product page. Real vinyl records have
+            # "Formato : Vinil" in detail bullets and would return "vinyl" here.
+            # Products with no format signal (accessories, books, wrong items) return
+            # "unknown" — hide them so they stop appearing on the site.
             counts["unknown"] += 1
-            log.info("%s: unknown — left NULL for manual review.", asin)
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE "Disco" SET format = %s WHERE asin = %s AND format IS NULL',
+                    ("cd", asin),
+                )
+            conn.commit()
+            log.warning("%s: unknown format — no vinyl evidence on page, marking non-vinyl.", asin)
         else:
             counts[fmt] += 1
             with conn.cursor() as cur:
