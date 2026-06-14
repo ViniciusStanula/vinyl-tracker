@@ -28,12 +28,15 @@ export async function generateMetadata({
     getHreflangSlug("artist", slug).catch(() => false),
   ]);
   if (!data) return {};
-  const { canonical, total } = data;
+  const { canonical, total, bioShortPt } = data;
   const displayName = toTitleCase(canonical);
   // Unattributed crawler rows — never surface "Artista não identificado" in
   // metadata; neutral copy + noindex until re-attribution lands.
   const isUnknownArtist =
     canonical.toLowerCase() === "artista não identificado";
+  // Thin content gate: ≤2 albums with no bio = almost pure template, noindex to
+  // avoid Scaled Content Abuse exposure across thousands of niche artist pages.
+  const isThin = total <= 2 && !bioShortPt;
   const title = isUnknownArtist
     ? "Discos de Vinil — Vários Artistas | Garimpa Vinil"
     : truncateTitle(`${displayName} em Vinil — Preços e Ofertas | Garimpa Vinil`);
@@ -48,7 +51,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    ...(isUnknownArtist ? { robots: { index: false, follow: true } } : {}),
+    ...((isUnknownArtist || isThin) ? { robots: { index: false, follow: true } } : {}),
     alternates: {
       canonical: `/artista/${slug}`,
       ...(hasPeer ? {
