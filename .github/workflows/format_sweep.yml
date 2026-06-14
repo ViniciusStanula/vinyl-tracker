@@ -9,7 +9,7 @@ on:
     inputs:
       limit:
         description: "Max product pages to verify this run"
-        default: "1500"
+        default: "2000"
   schedule:
     - cron: "20 4 * * *"
 
