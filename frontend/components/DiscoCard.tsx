@@ -169,10 +169,13 @@ export default memo(function DiscoCard({
       {/* ── Info ──────────────────────────────────────────────────── */}
       <div className="p-4 flex flex-col flex-1">
 
-        {/* Artist */}
-        <span className="block text-parchment text-[10px] truncate font-bold uppercase tracking-widest">
+        {/* Artist — z-20 to sit above the full-card overlay link */}
+        <Link
+          href={`/artista/${artistaSlug}`}
+          className="relative z-20 block text-parchment text-[10px] truncate font-bold uppercase tracking-widest hover:text-cream transition-colors"
+        >
           {disco.artista}
-        </span>
+        </Link>
 
         {/* Title — Fraunces for editorial character. <p>, not a heading:
             dozens of cards per page would flood the document outline. */}

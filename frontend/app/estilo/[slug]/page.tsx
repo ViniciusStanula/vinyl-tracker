@@ -27,9 +27,10 @@ export async function generateMetadata({
     getHreflangSlug("genre", slug).catch(() => false),
   ]);
   if (!data) return {};
-  const { canonical } = data;
+  const { canonical, bioShortPt } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
   const n = data.discos.length;
+  const isThin = n <= 3 && !bioShortPt;
   const title = truncateTitle(`Discos de ${displayName} em Vinil — Ofertas | Garimpa Vinil`);
   const description = truncateDesc(
     n >= 4
@@ -40,6 +41,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    ...(isThin ? { robots: { index: false, follow: true } } : {}),
     alternates: {
       canonical: `/estilo/${slug}`,
       ...(hasPeer ? {

@@ -119,7 +119,7 @@ export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
       continue;
     }
     seenSlugs.add(slug);
-    routes.push({ url: `${SITEMAP_BASE}/artista/${slug}` });
+    routes.push({ url: `${SITEMAP_BASE}/artista/${slug}`, lastModified: new Date() });
   }
 
   if (excluded > 0) {
@@ -173,6 +173,9 @@ export async function getSitemapEstilos(): Promise<MetadataRoute.Sitemap> {
     SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
     FROM "Disco"
     WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
+      AND disponivel = TRUE
+      AND (format IS NULL OR format = 'vinyl')
+      AND price_count >= 5
   `;
 
   const seenSlugs = new Set<string>();
@@ -182,7 +185,7 @@ export async function getSitemapEstilos(): Promise<MetadataRoute.Sitemap> {
     const slug = slugifyStyle(tag);
     if (!slug || seenSlugs.has(slug)) continue;
     seenSlugs.add(slug);
-    routes.push({ url: `${SITEMAP_BASE}/estilo/${slug}` });
+    routes.push({ url: `${SITEMAP_BASE}/estilo/${slug}`, lastModified: new Date() });
   }
 
   return routes;

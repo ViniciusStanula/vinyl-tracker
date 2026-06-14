@@ -35,6 +35,7 @@ import anthropic
 from database import (
     get_connection,
     ensure_seo_content_schema,
+    fetch_artist_vinyl_catalog,
     fetch_artists_needing_bio,
     fetch_styles_needing_bio,
     save_artist_bio,
@@ -46,7 +47,10 @@ log = logging.getLogger(__name__)
 LASTFM_BASE = "https://ws.audioscrobbler.com/2.0/"
 LASTFM_RATE  = 0.25   # seconds between Last.fm requests
 CLAUDE_RATE  = 0.5    # seconds between Claude requests
-CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+# Artists get rich catalog data injected — Haiku is sufficient.
+# Styles have thinner source material; Sonnet produces more distinctive prose.
+CLAUDE_MODEL_ARTIST = "claude-haiku-4-5-20251001"
+CLAUDE_MODEL_STYLE  = "claude-sonnet-4-6"
 
 _MAX_SOURCE_CHARS = 5000
 
@@ -66,6 +70,12 @@ Regras obrigatórias:
 - Baseie o conteúdo apenas no texto fornecido, não invente fatos
 - Sem markdown, sem asteriscos, sem negrito, sem títulos
 - Parágrafos separados por linha em branco
+
+Quando dados do catálogo Garimpa Vinil forem fornecidos (seção CATÁLOGO):
+- O último parágrafo da bio DEVE mencionar quantas edições estão rastreadas no site
+- Se top_titles tiver títulos, mencione pelo menos dois pelo nome exato
+- Não mencione preços, descontos ou disponibilidade — esses dados mudam constantemente
+- Esses dados tornam o conteúdo único e citável; não os omita
 
 Retorne APENAS um JSON válido com exatamente duas chaves:
 {
@@ -121,25 +131,45 @@ def fetch_tag_bio(tag: str) -> str | None:
 
 # ── Claude helper ────────────────────────────────────────────────────────────
 
+def _format_vinyl_catalog(catalog: dict) -> str:
+    """Formats catalog dict into a prompt-ready text block."""
+    lines = [f"Edições rastreadas: {catalog['total_albums']}"]
+    if catalog.get("top_titles"):
+        lines.append("Títulos no catálogo: " + ", ".join(catalog["top_titles"]))
+    return "\n".join(lines)
+
+
 def generate_content(
     source_text: str,
     subject: str,
     kind: str,
     client: anthropic.Anthropic,
+    vinyl_catalog: dict | None = None,
+    model: str = CLAUDE_MODEL_ARTIST,
 ) -> tuple[str, str] | None:
     """
     Calls Claude to generate (intro, bio) from the Last.fm source text.
     kind: "artista" or "estilo"
+    vinyl_catalog: optional dict from fetch_artist_vinyl_catalog() — injected as
+                   a CATÁLOGO block so Claude produces site-specific, citable content.
     Returns (intro, bio) or None on failure.
     """
+    catalog_block = ""
+    if vinyl_catalog and vinyl_catalog.get("total_albums"):
+        catalog_block = (
+            "\n\nCATÁLOGO (dados reais do Garimpa Vinil — use no último parágrafo da bio):\n"
+            + _format_vinyl_catalog(vinyl_catalog)
+        )
+
     user_msg = (
         f"Texto fonte do Last.fm sobre o {kind} \"{subject}\":\n\n"
-        f"{source_text[:_MAX_SOURCE_CHARS]}\n\n"
+        f"{source_text[:_MAX_SOURCE_CHARS]}"
+        f"{catalog_block}\n\n"
         f"Gere o intro e a bio para a página deste {kind} no Garimpa Vinil."
     )
     try:
         message = client.messages.create(
-            model=CLAUDE_MODEL,
+            model=model,
             max_tokens=1200,
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_msg}],
@@ -165,7 +195,7 @@ def generate_content(
 
 # ── Main runners ─────────────────────────────────────────────────────────────
 
-def run_artists(conn, client: anthropic.Anthropic, limit: int, dry_run: bool) -> int:
+def run_artists(conn, client: anthropic.Anthropic, limit: int, dry_run: bool, sample_review: bool = False) -> int:
     artists = fetch_artists_needing_bio(conn, limit=limit)
     if not artists:
         log.info("Artists: no pending bios.")
@@ -185,7 +215,11 @@ def run_artists(conn, client: anthropic.Anthropic, limit: int, dry_run: bool) ->
             log.info("  Last.fm returned no bio — skipping.")
             continue
 
-        result = generate_content(source, artista, "artista", client)
+        catalog = fetch_artist_vinyl_catalog(conn, artista)
+        log.info("  Catalog: %d albums, top: %s", catalog["total_albums"],
+                 ", ".join(catalog["top_titles"][:3]) or "none")
+
+        result = generate_content(source, artista, "artista", client, vinyl_catalog=catalog, model=CLAUDE_MODEL_ARTIST)
         time.sleep(CLAUDE_RATE)
 
         if not result:
@@ -194,12 +228,13 @@ def run_artists(conn, client: anthropic.Anthropic, limit: int, dry_run: bool) ->
 
         intro, bio = result
 
-        if dry_run:
+        if dry_run or sample_review:
             print(f"\n{'='*60}")
             print(f"ARTISTA: {artista}")
             print(f"\n--- INTRO ---\n{intro}")
             print(f"\n--- BIO ---\n{bio}")
-        else:
+
+        if not dry_run:
             saved = save_artist_bio(conn, artista, intro, bio)
             if saved:
                 log.info("  Saved OK.")
@@ -210,7 +245,7 @@ def run_artists(conn, client: anthropic.Anthropic, limit: int, dry_run: bool) ->
     return done
 
 
-def run_styles(conn, client: anthropic.Anthropic, limit: int, dry_run: bool) -> int:
+def run_styles(conn, client: anthropic.Anthropic, limit: int, dry_run: bool, sample_review: bool = False) -> int:
     tags = fetch_styles_needing_bio(conn, limit=limit)
     if not tags:
         log.info("Styles: no pending bios.")
@@ -232,7 +267,7 @@ def run_styles(conn, client: anthropic.Anthropic, limit: int, dry_run: bool) -> 
                 save_estilo_bio(conn, tag, "", "", None)
             continue
 
-        result = generate_content(source, tag, "estilo", client)
+        result = generate_content(source, tag, "estilo", client, model=CLAUDE_MODEL_STYLE)
         time.sleep(CLAUDE_RATE)
 
         if not result:
@@ -241,12 +276,13 @@ def run_styles(conn, client: anthropic.Anthropic, limit: int, dry_run: bool) -> 
 
         intro, bio = result
 
-        if dry_run:
+        if dry_run or sample_review:
             print(f"\n{'='*60}")
             print(f"ESTILO: {tag}")
             print(f"\n--- INTRO ---\n{intro}")
             print(f"\n--- BIO ---\n{bio}")
-        else:
+
+        if not dry_run:
             saved = save_estilo_bio(conn, tag, intro, bio, source)
             if saved:
                 log.info("  Saved OK.")
@@ -264,6 +300,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=20, help="Max items per run (default: 20)")
     parser.add_argument("--mode", choices=["artists", "styles", "both"], default="both")
     parser.add_argument("--dry-run", action="store_true", help="Print output without saving to DB")
+    parser.add_argument("--sample-review", action="store_true", help="Print generated content to stdout AND save to DB (spot-check mode)")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -281,9 +318,9 @@ def main() -> None:
 
         total = 0
         if args.mode in ("artists", "both"):
-            total += run_artists(conn, client, limit=args.limit, dry_run=args.dry_run)
+            total += run_artists(conn, client, limit=args.limit, dry_run=args.dry_run, sample_review=args.sample_review)
         if args.mode in ("styles", "both"):
-            total += run_styles(conn, client, limit=args.limit, dry_run=args.dry_run)
+            total += run_styles(conn, client, limit=args.limit, dry_run=args.dry_run, sample_review=args.sample_review)
 
         if args.dry_run:
             print(f"\nDry run complete. Would have saved {total} items.")
