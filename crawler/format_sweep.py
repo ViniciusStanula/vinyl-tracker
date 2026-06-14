@@ -38,24 +38,53 @@ _BOT_SIGNAL = (
     "Enter the characters you see", "automated access to Amazon",
 )
 
+_BROWSER_IDENTITIES = [
+    "chrome136", "chrome133a", "chrome131", "chrome124", "chrome120",
+    "edge101", "firefox144", "firefox135", "firefox133",
+]
+
+_ACCEPT_LANGUAGES = [
+    "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+    "pt-BR,pt;q=0.9,en;q=0.6",
+    "pt-BR,pt;q=0.8,en-US;q=0.5",
+]
+
 
 def make_session():
     """curl_cffi session preferred; falls back to requests."""
     try:
         from curl_cffi import requests as cffi
-        s = cffi.Session(impersonate="chrome")
-        s.headers.update({"Referer": BASE_URL + "/"})
+        s = cffi.Session(impersonate=random.choice(_BROWSER_IDENTITIES))
+        s.headers.update({
+            "Accept-Language": random.choice(_ACCEPT_LANGUAGES),
+            "Referer": BASE_URL + "/",
+        })
         return s
     except ImportError:
         import requests as rlib
         s = rlib.Session()
         s.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-            "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.6",
+                          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": random.choice(_ACCEPT_LANGUAGES),
+            "DNT": "1",
+            "Connection": "keep-alive",
             "Referer": BASE_URL + "/",
         })
         return s
+
+
+def warm_up(session) -> None:
+    """Homepage → vinyl category → first search page. Sets cookies + looks organic."""
+    try:
+        session.get(BASE_URL + "/", timeout=15)
+        time.sleep(random.uniform(0.8, 1.8))
+        session.get(BASE_URL + "/CD-e-Vinil/b/?node=7791937011", timeout=15)
+        time.sleep(random.uniform(0.5, 1.2))
+    except Exception:
+        pass
 
 
 def fetch_format(session, asin: str) -> str | None:
@@ -111,6 +140,7 @@ def main() -> None:
 
     log.info("Sweeping %d ASIN(s)...", len(asins))
     session = make_session()
+    warm_up(session)
     counts = {"vinyl": 0, "cd": 0, "unknown": 0, "failed": 0}
 
     for i, asin in enumerate(asins, 1):
