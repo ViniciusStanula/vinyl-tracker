@@ -162,7 +162,11 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
         return "unknown"
 
     # Single-format page: details / ficha tecnica "Formato" row.
+    # Also check #productSubtitle — Amazon BR shows "Formato: Disco de Vinil"
+    # there on some multi-format pages where the vinyl is the selected variant
+    # but no vinyl swatch appears in #tmmSwatches (only the CD sibling does).
     for area_sel in (
+        "#productSubtitle",
         "#detailBullets_feature_div",
         "#productDetails_detailBullets_sections1",
         "#productDetails_techSpec_section_1",
