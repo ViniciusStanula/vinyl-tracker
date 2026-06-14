@@ -432,12 +432,17 @@ export default async function DiscoPage({
               {styleTags.length > 0 && (
                 <>
                   <span aria-hidden="true" className="opacity-40">·</span>
-                  <Link
-                    href={`/estilo/${slugifyStyle(styleTags[0])}`}
-                    className="hover:text-parchment transition-colors"
-                  >
-                    {styleTags[0]}
-                  </Link>
+                  {styleTags.map((tag, i) => (
+                    <span key={tag} className="contents">
+                      {i > 0 && <span aria-hidden="true" className="opacity-40">/</span>}
+                      <Link
+                        href={`/estilo/${slugifyStyle(tag)}`}
+                        className="hover:text-parchment transition-colors"
+                      >
+                        {tag}
+                      </Link>
+                    </span>
+                  ))}
                 </>
               )}
             </p>

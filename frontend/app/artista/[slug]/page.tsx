@@ -144,6 +144,7 @@ export default async function ArtistaPage({
   const musicArtistJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "MusicGroup",
+    "@id": `${siteUrl}/artista/${slug}#musicgroup`,
     name: artista,
     url: `${siteUrl}/artista/${slug}`,
     ...(topStyles.length > 0 ? { genre: topStyles } : {}),
