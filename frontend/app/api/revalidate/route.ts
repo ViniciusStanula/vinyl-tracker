@@ -26,6 +26,6 @@ export async function POST(request: NextRequest) {
   // Standard ISR: tag invalidation triggers stale-while-revalidate. First request
   // after the crawl gets the previous cached HTML instantly; background regen fires
   // and the next request gets fresh prices. No blocking render, no skeleton.
-  revalidateTag("prices");
+  revalidateTag("prices", {});
   return NextResponse.json({ revalidated: true, at: new Date().toISOString() });
 }
