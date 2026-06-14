@@ -1863,30 +1863,21 @@ def parse_page(soup) -> list[dict]:
             continue
 
         fmt = detect_format(title)
-        if fmt == "cd":
-            skipped["not_vinyl"] += 1
-            log.debug("Non-vinyl filtered (cd title): %s", title[:60])
-            continue
-
         if fmt != "vinyl":
-            # Neutral title — we are on the vinyl browse node, so trust Amazon's
-            # categorisation unless there is a vinyl swatch in the card linking
-            # to a DIFFERENT ASIN.  That pattern means this card is the CD/non-vinyl
-            # sibling of a multi-format listing; the vinyl edition has its own ASIN.
-            # Single-format cards (no format tabs at all) pass through: trust category.
-            asin_lower = asin.lower()
-            is_sibling = False
-            for link in card.select("a[href]"):
-                t = link.get_text(" ", strip=True)
-                href = (link.get("href") or "").lower()
-                if _VINYL_LABEL_RE.search(t) and "/dp/" in href and f"/dp/{asin_lower}" not in href:
-                    is_sibling = True
-                    break
-            if is_sibling:
+            # No positive vinyl title evidence.  Accept only when a vinyl-format
+            # link in the card points at THIS ASIN — multi-format cards link each
+            # sibling by href, so a vinyl link with a different ASIN is a CD card.
+            card_is_vinyl = False
+            if fmt != "cd":
+                for link in card.select("a[href]"):
+                    t = link.get_text(" ", strip=True)
+                    if t and _VINYL_LABEL_RE.search(t) and f"/dp/{asin}" in (link.get("href") or ""):
+                        card_is_vinyl = True
+                        break
+            if not card_is_vinyl:
                 skipped["not_vinyl"] += 1
-                log.debug("Non-vinyl filtered (vinyl swatch → sibling ASIN): %s", title[:60])
+                log.debug("Non-vinyl filtered (format=%s): %s", fmt, title[:60])
                 continue
-            # No sibling evidence → trust vinyl browse node, fall through to price
 
         price = extract_price(card)
         if price is None:
