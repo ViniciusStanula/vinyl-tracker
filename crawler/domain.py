@@ -143,17 +143,26 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
             return "cd"
 
     # Sibling-variant check: swatches for the page's own ASIN carry no /dp/
-    # link, so a vinyl swatch pointing at another ASIN confirms this one is
-    # the non-vinyl variant. (CD-leak audit, 2026-06-12.)
+    # link (they are the active/selected variant). A vinyl swatch linking to
+    # a DIFFERENT ASIN means that ASIN is the vinyl edition and this one is
+    # a non-vinyl sibling. Scan ALL vinyl swatches — only conclude "cd" if
+    # none of them correspond to this ASIN (handles multi-vinyl pages where
+    # standard + deluxe vinyl swatches coexist and the first one in DOM order
+    # may point to the sibling vinyl, not the current page's ASIN).
     if asin:
+        vinyl_this = False
+        vinyl_other = False
         for swatch in soup.select("#tmmSwatches .swatchElement"):
             if not _FORMAT_VINYL_RE.search(swatch.get_text(" ", strip=True)):
                 continue
             link = swatch.select_one("a[href]")
             m = _DP_ASIN_RE.search(link.get("href") or "") if link else None
             if m and m.group(1).upper() != asin.upper():
-                return "cd"
-            break  # vinyl swatch is this ASIN (or unlinked) — not a sibling
+                vinyl_other = True
+            else:
+                vinyl_this = True  # no link (= this page) or links to same ASIN
+        if vinyl_other and not vinyl_this:
+            return "cd"
 
     if selected is not None:
         # Multi-format page with an inconclusive selected swatch: the details
