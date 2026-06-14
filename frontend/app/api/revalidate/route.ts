@@ -23,10 +23,9 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ revalidated: true, paths: body.paths.length, at: new Date().toISOString() });
   }
-  // expire: 0 — immediate expiry, NOT stale-while-revalidate ("max" profile).
-  // Rule Zero: the next request must block and fetch fresh prices rather than
-  // serve one last response from the superseded crawl. The crawler's warm-up
-  // GETs absorb the blocking render for the hottest pages.
-  revalidateTag("prices", { expire: 0 });
+  // Standard ISR: tag invalidation triggers stale-while-revalidate. First request
+  // after the crawl gets the previous cached HTML instantly; background regen fires
+  // and the next request gets fresh prices. No blocking render, no skeleton.
+  revalidateTag("prices");
   return NextResponse.json({ revalidated: true, at: new Date().toISOString() });
 }

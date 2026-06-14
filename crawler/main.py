@@ -2833,11 +2833,9 @@ def _notify_revalidate(last_write_at: float | None = None) -> None:
         )
 
     try:
-        # Cache warm-up: fire GETs to the hottest pages so the SSR executes and
-        # fills the prices cache before any real user hits it. With expire:0
-        # revalidation the first request per page blocks on a fresh DB fetch —
-        # these warm-ups absorb that hit. Runs in a background thread so a slow
-        # or failed warm-up never blocks the crawler.
+        # Cache warm-up: prime the hottest pages after revalidation so the ISR
+        # background regen fires before the first real user arrives. Runs in a
+        # background thread so a slow or failed warm-up never blocks the crawler.
         warmup_paths = ["/", "/disco"]
 
         def _warmup() -> None:
