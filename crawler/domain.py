@@ -163,13 +163,14 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
         return "cd"
 
     # Sibling-variant check: scan ALL vinyl swatches.
-    # A vinyl swatch with no /dp/ link (or same ASIN) → THIS ASIN is the vinyl edition.
-    # All vinyl swatches link to OTHER ASINs → this ASIN is the non-vinyl sibling.
-    # Handles: multi-vinyl pages (standard + deluxe coexist in DOM), and the
-    # Amazon rendering quirk where CD shows as "selected" on a vinyl ASIN page.
+    # vinyl_this → THIS ASIN is the vinyl edition (swatch has no link or links here).
+    # vinyl_other only → all vinyl swatches point elsewhere; likely a CD/MP3 sibling,
+    # but Amazon also uses this layout when one ASIN is standard vinyl and a sibling
+    # is the colored/limited edition. Don't short-circuit to "cd" here — fall through
+    # to the detail area scan, which has the authoritative "Formato" field.
+    vinyl_this = False
+    vinyl_other = False
     if asin:
-        vinyl_this = False
-        vinyl_other = False
         for swatch in soup.select("#tmmSwatches .swatchElement"):
             if not _FORMAT_VINYL_RE.search(swatch.get_text(" ", strip=True)):
                 continue
@@ -179,20 +180,16 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
                 vinyl_other = True
             else:
                 vinyl_this = True  # no link (= this page) or links to same ASIN
-        if vinyl_this:
-            return "vinyl"
-        if vinyl_other:
-            return "cd"
+    if vinyl_this:
+        return "vinyl"
 
-    if selected is not None:
-        # Multi-format page, no vinyl swatch maps to this ASIN.
-        # If the selected swatch was conclusively non-vinyl, trust it; else unknown.
+    # Selected-swatch fallback — only when NO vinyl sibling ambiguity.
+    # When vinyl_other is set we defer to the detail scan below instead.
+    if selected is not None and not vinyl_other:
         return "cd" if selected_is_cd else "unknown"
 
-    # Single-format page (no #tmmSwatches): scan product detail areas.
-    # Amazon BR uses both "Formato" and "Tipo de Mídia" as the format label.
-    # Fallback: any vinyl keyword anywhere in a detail area is accepted —
-    # these sections contain factual product attributes, not marketing copy.
+    # Detail area scan — authoritative for both single-format pages and for
+    # vinyl_other cases where "Formato: Disco de Vinil" beats the swatch inference.
     for area_sel in (
         "#productSubtitle",
         "#detailBullets_feature_div",
@@ -211,10 +208,18 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
                 return "vinyl"
             if _FORMAT_NONVINYL_RE.search(segment):
                 return "cd"
-        # Broader fallback: vinyl keyword anywhere in this detail area.
-        if _FORMAT_VINYL_RE.search(text):
+        # Broader fallback: vinyl keyword anywhere — ONLY for #productSubtitle.
+        # In bullet/detail sections "N° X em CD e Vinil" appears as a category
+        # ranking on every music product and would false-positive on CD pages.
+        if area_sel == "#productSubtitle" and _FORMAT_VINYL_RE.search(text):
             return "vinyl"
 
+    # Exhausted all signals. vinyl_other means every vinyl swatch linked elsewhere
+    # and the product details had no vinyl label — most likely a non-vinyl sibling.
+    if vinyl_other:
+        return "cd"
+    if selected is not None:
+        return "cd" if selected_is_cd else "unknown"
     return "unknown"
 
 
