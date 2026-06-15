@@ -141,7 +141,7 @@ def main() -> None:
     log.info("Sweeping %d ASIN(s)...", len(asins))
     session = make_session()
     warm_up(session)
-    counts = {"vinyl": 0, "cd": 0, "unknown": 0, "failed": 0}
+    counts = {"vinyl": 0, "cd": 0, "other": 0, "unknown": 0, "failed": 0}
 
     # Early-abort threshold: if Amazon is serving degraded pages (bot pressure),
     # detect_format returns "unknown" for everything. Abort before doing mass damage.
@@ -179,7 +179,7 @@ def main() -> None:
         # Early-abort: if after the first window the unknown rate is suspiciously
         # high, Amazon is serving degraded pages — stop before more damage.
         if i == _UNKNOWN_ABORT_AFTER:
-            classified = counts["vinyl"] + counts["cd"]
+            classified = counts["vinyl"] + counts["cd"] + counts["other"]
             unknown_ratio = counts["unknown"] / i
             if unknown_ratio > _UNKNOWN_ABORT_RATIO:
                 log.error(

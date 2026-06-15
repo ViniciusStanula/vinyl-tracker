@@ -18,10 +18,13 @@ _PRICE_NUM_RE   = re.compile(r"\d+\.?\d*")
 _PRICE_START_RE = re.compile(r"^R\$|^\$|^\d+[.,]")
 
 _CD_RE = re.compile(
-    r"\bcds?\b|\[cd\]|\(cd\)|compact disc|\bcds?\s*\d|audio cd|áudio cd"
-    # Non-music merchandise (clothing, homewares, accessories) that contaminate
-    # the catalog via Amazon's related-product recommendations.
-    r"|\bcamiseta[s]?\b|\bregata[s]?\b|\bmoletom\b|\bmoletons\b"
+    r"\bcds?\b|\[cd\]|\(cd\)|compact disc|\bcds?\s*\d|audio cd|áudio cd",
+    re.IGNORECASE,
+)
+# Non-music merchandise (clothing, homewares, accessories) — classified as
+# "other" rather than "cd" so operators can distinguish contamination types.
+_MERCH_TITLE_RE = re.compile(
+    r"\bcamiseta[s]?\b|\bregata[s]?\b|\bmoletom\b|\bmoletons\b"
     r"|\bmochila[s]?\b|\balmofada[s]?\b|\bcaneca[s]?\b|\bpulseira[s]?\b"
     r"|\badesivo[s]?\b|\bchaveiro[s]?\b|\bboné[s]?\b|\bposter[s]?\b",
     re.IGNORECASE,
@@ -91,7 +94,7 @@ def parse_price_br(text: str) -> float | None:
 
 
 def is_vinyl(title: str, card=None) -> bool:
-    if _CD_RE.search(title):
+    if _CD_RE.search(title) or _MERCH_TITLE_RE.search(title):
         return False
 
     if _VINYL_TITLE_RE.search(title):
@@ -134,6 +137,8 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
     swatch that links a DIFFERENT ASIN means the vinyl edition is its own
     product and this ASIN is a non-vinyl sibling (CD/MP3/...).
     """
+    if _MERCH_TITLE_RE.search(title):
+        return "other"
     if _CD_RE.search(title):
         return "cd"
     if _VINYL_TITLE_RE.search(title):
