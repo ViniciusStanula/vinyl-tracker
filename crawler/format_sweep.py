@@ -206,9 +206,9 @@ def main() -> None:
             # no format label, no vinyl title keyword, no music breadcrumb).
             # In the sweep context we require positive vinyl evidence; absence
             # of any signal means non-vinyl — classify as "cd" and exclude.
-            fmt = "cd"
-            counts["cd"] += 1
-            log.warning("%s: no vinyl signal on full page — classifying cd.", asin)
+            fmt = "other"
+            counts["other"] += 1
+            log.warning("%s: no vinyl signal on full page — classifying other.", asin)
             with conn.cursor() as cur:
                 cur.execute(
                     'UPDATE "Disco" SET format = %s WHERE asin = %s AND format IS NULL',
