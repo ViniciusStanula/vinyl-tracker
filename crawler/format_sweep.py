@@ -32,6 +32,13 @@ from domain import detect_format
 log = logging.getLogger("format_sweep")
 
 BASE_URL = "https://www.amazon.com.br"
+_VINYL_URL_PATH = (
+    "/s?i=popular&srs=19549018011"
+    "&rh=n%3A19549018011"
+    "&s=popularity-rank"
+    "&fs=true"
+    "&ref=lp_19549018011_sar"
+)
 
 _BOT_SIGNAL = (
     "Robot Check", "validateCaptcha", "Digite os caracteres",
@@ -77,12 +84,25 @@ def make_session():
 
 
 def warm_up(session) -> None:
-    """Homepage → vinyl category → first search page. Sets cookies + looks organic."""
+    """Three-step warm-up: homepage → vinyl category → vinyl search results."""
     try:
         session.get(BASE_URL + "/", timeout=15)
         time.sleep(random.uniform(0.8, 1.8))
         session.get(BASE_URL + "/CD-e-Vinil/b/?node=7791937011", timeout=15)
         time.sleep(random.uniform(0.5, 1.2))
+        session.get(BASE_URL + _VINYL_URL_PATH, timeout=15)
+        time.sleep(random.uniform(0.5, 1.0))
+    except Exception:
+        pass
+
+
+def _quick_warmup(session) -> None:
+    """Mid-run re-warm after session rotation: homepage + category only."""
+    try:
+        session.get(BASE_URL + "/", timeout=12)
+        time.sleep(random.uniform(0.5, 1.2))
+        session.get(BASE_URL + "/CD-e-Vinil/b/?node=7791937011", timeout=12)
+        time.sleep(random.uniform(0.3, 0.8))
     except Exception:
         pass
 
@@ -142,6 +162,8 @@ def main() -> None:
     session = make_session()
     warm_up(session)
     counts = {"vinyl": 0, "cd": 0, "other": 0, "unknown": 0, "failed": 0}
+    _fetches_this_session = 0
+    _rotate_after = int(random.uniform(30, 50))
 
     # Early-abort threshold: if Amazon is serving degraded pages (bot pressure),
     # detect_format returns "unknown" for everything. Abort before doing mass damage.
@@ -149,8 +171,17 @@ def main() -> None:
     _UNKNOWN_ABORT_RATIO = 0.80 # abort if >80% unknown in first window
 
     for i, asin in enumerate(asins, 1):
+        # Rotate session periodically so we don't burn a single cookie fingerprint.
+        if _fetches_this_session >= _rotate_after:
+            log.info("Rotating session after %d fetches.", _fetches_this_session)
+            session = make_session()
+            _quick_warmup(session)
+            _fetches_this_session = 0
+            _rotate_after = int(random.uniform(30, 50))
+
         try:
             fmt = fetch_format(session, asin)
+            _fetches_this_session += 1
         except RuntimeError:
             break  # bot challenge — stop politely, resume next run
 
