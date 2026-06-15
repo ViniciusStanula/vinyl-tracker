@@ -116,7 +116,8 @@ _FORMAT_VINYL_RE = re.compile(r"vinil|vinyl|\blp\b", re.IGNORECASE)
 _FORMAT_NONVINYL_RE = re.compile(
     r"\bcds?\b|audio cd|áudio cd|compact disc|\bmp3\b|streaming"
     r"|\bcassette\b|\bcassete\b|\bdvd\b|blu-?ray|\bdigital\b"
-    r"|capa\s+comum|capa\s+dura|\bbrochura\b|\bpaperback\b|\bhardcover\b",
+    r"|capa\s+comum|capa\s+dura|\bbrochura\b|\bpaperback\b|\bhardcover\b"
+    r"|\baudiolivros?\b|\baudiobooks?\b|\bkindle\b",
     re.IGNORECASE,
 )
 _FORMAT_LABEL_RE = re.compile(
