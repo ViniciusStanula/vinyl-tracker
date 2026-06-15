@@ -24,7 +24,7 @@ _CD_RE = re.compile(
 # Non-music merchandise (clothing, homewares, accessories) — classified as
 # "other" rather than "cd" so operators can distinguish contamination types.
 _MERCH_TITLE_RE = re.compile(
-    r"\bcamiseta[s]?\b|\bregata[s]?\b|\bmoletom\b|\bmoletons\b"
+    r"\bcamiseta[s]?\b|\bcamisa[s]?\b|\bregata[s]?\b|\bmoletom\b|\bmoletons\b"
     r"|\bmochila[s]?\b|\balmofada[s]?\b|\bcaneca[s]?\b|\bpulseira[s]?\b"
     r"|\badesivo[s]?\b|\bchaveiro[s]?\b|\bboné[s]?\b|\bposter[s]?\b",
     re.IGNORECASE,
