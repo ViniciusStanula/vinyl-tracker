@@ -122,6 +122,16 @@ def is_vinyl(title: str, card=None) -> bool:
 # Callers must accept ONLY "vinyl" — "unknown" is rejected, never inserted.
 
 _FORMAT_VINYL_RE = re.compile(r"vinil|vinyl|\blp\b", re.IGNORECASE)
+
+# Amazon BR breadcrumb root categories that are never music formats.
+# Used as a last-resort "other" signal when title+swatches+details all fail.
+_NON_MUSIC_BREADCRUMB_RE = re.compile(
+    r"instrumentos\s+musicais|moda\b|brinquedos|casa\s+e\s+cozinha"
+    r"|livros\b|eletr[oô]nicos|esportes\s+e\s+aventura"
+    r"|sa[uú]de\s+e\s+beleza|ferramentas|automotivo|pet\s+shop"
+    r"|inform[aá]tica|c[aâ]meras|v[ií]deo\s+game",
+    re.IGNORECASE,
+)
 _FORMAT_NONVINYL_RE = re.compile(
     r"\bcds?\b|audio cd|áudio cd|compact disc|\bmp3\b|streaming"
     r"|\bcassette\b|\bcassete\b|\bdvd\b|blu-?ray|\bdigital\b"
@@ -232,6 +242,13 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
         return "cd"
     if selected is not None:
         return "cd" if selected_is_cd else "unknown"
+
+    # Last resort: non-music breadcrumb category. Vinyl records are always in
+    # "CD e Vinil" or "Música"; guitars, clothing, toys etc. never are.
+    bc = soup.select_one("#wayfinding-breadcrumbs_feature_div")
+    if bc and _NON_MUSIC_BREADCRUMB_RE.search(bc.get_text(" ", strip=True)):
+        return "other"
+
     return "unknown"
 
 
