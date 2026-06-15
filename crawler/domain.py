@@ -191,6 +191,7 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
     # Detail area scan — authoritative for both single-format pages and for
     # vinyl_other cases where "Formato: Disco de Vinil" beats the swatch inference.
     for area_sel in (
+        "#bylineInfo_feature_div",   # "Artista (Artista) Formato: Disco de Vinil"
         "#productSubtitle",
         "#detailBullets_feature_div",
         "#productDetails_detailBullets_sections1",
