@@ -199,16 +199,22 @@ def main() -> None:
             break  # bot challenge — stop politely, resume next run
 
         if fmt is None:
+            # Degraded page (no #productTitle) or fetch error — retry next run.
             counts["failed"] += 1
         elif fmt == "unknown":
-            # Cannot determine format — Amazon may have served a degraded page
-            # (no detail sections) under bot pressure. These records already
-            # passed the main crawler's vinyl allowlist gate at insertion time,
-            # so "unknown" here most likely means bad HTML, not a real non-vinyl.
-            # Leave format=NULL and retry on the next sweep run instead of
-            # wrongly writing "cd" and destroying catalog entries.
-            counts["unknown"] += 1
-            log.warning("%s: unknown format — skipping (format stays NULL, retry later).", asin)
+            # Full page loaded but no vinyl signal found anywhere (no swatches,
+            # no format label, no vinyl title keyword, no music breadcrumb).
+            # In the sweep context we require positive vinyl evidence; absence
+            # of any signal means non-vinyl — classify as "cd" and exclude.
+            fmt = "cd"
+            counts["cd"] += 1
+            log.warning("%s: no vinyl signal on full page — classifying cd.", asin)
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE "Disco" SET format = %s WHERE asin = %s AND format IS NULL',
+                    (fmt, asin),
+                )
+            conn.commit()
         else:
             counts[fmt] += 1
             with conn.cursor() as cur:
