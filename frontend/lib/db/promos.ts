@@ -30,6 +30,8 @@ const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
  */
 export async function queryPriceUnder200(): Promise<ProcessedDisco[]> {
   try {
+    // Sparklines omitted: HIDE_PRICE_HISTORY=true hides them in prod, and the
+    // per-row correlated subquery was causing 60s+ build timeouts as catalog grew.
     const rows = await prisma.$queryRaw<PromoRow[]>`
       SELECT
         d.id,
@@ -47,17 +49,7 @@ export async function queryPriceUnder200(): Promise<ProcessedDisco[]> {
         d.lastfm_tags                                                    AS "lastfmTags",
         hp_latest."precoBrl"                                             AS "precoAtual",
         COALESCE(d.avg_30d::float, hp_latest."precoBrl")                 AS "mediaPreco",
-        (
-          SELECT COALESCE(json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"), '[]'::json)
-          FROM (
-            SELECT "precoBrl", "capturadoEm"
-            FROM   "HistoricoPreco"
-            WHERE  "discoId" = d.id
-              AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
-            ORDER  BY "capturadoEm" DESC
-            LIMIT  10
-          ) sp
-        )                                                                AS sparkline,
+        NULL                                                             AS sparkline,
         CASE
           WHEN COALESCE(d.avg_30d::float, hp_latest."precoBrl") > 0
           THEN (COALESCE(d.avg_30d::float, hp_latest."precoBrl") - hp_latest."precoBrl")
