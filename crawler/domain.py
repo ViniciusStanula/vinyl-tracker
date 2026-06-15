@@ -18,7 +18,12 @@ _PRICE_NUM_RE   = re.compile(r"\d+\.?\d*")
 _PRICE_START_RE = re.compile(r"^R\$|^\$|^\d+[.,]")
 
 _CD_RE = re.compile(
-    r"\bcds?\b|\[cd\]|\(cd\)|compact disc|\bcds?\s*\d|audio cd|áudio cd",
+    r"\bcds?\b|\[cd\]|\(cd\)|compact disc|\bcds?\s*\d|audio cd|áudio cd"
+    # Non-music merchandise (clothing, homewares, accessories) that contaminate
+    # the catalog via Amazon's related-product recommendations.
+    r"|\bcamiseta[s]?\b|\bregata[s]?\b|\bmoletom\b|\bmoletons\b"
+    r"|\bmochila[s]?\b|\balmofada[s]?\b|\bcaneca[s]?\b|\bpulseira[s]?\b"
+    r"|\badesivo[s]?\b|\bchaveiro[s]?\b|\bboné[s]?\b|\bposter[s]?\b",
     re.IGNORECASE,
 )
 _VINYL_TITLE_RE = re.compile(

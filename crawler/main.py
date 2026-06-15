@@ -489,7 +489,9 @@ _CONFIRMED_NON_VINYL_RE = re.compile(
     r"|\binterface\s+de\s+[aá]udio\b|\baudio\s+interface\b"
     r"|\baparador\b|\bmesa\s+aparador\b"
     r"|\bmicrofone[s]?\s+sem\s+fio\b|\bspeaker\s+de\b"
-    r"|\bbota[s]?\s+infantil\b|\bbotinha[s]?\b|\bgalocha[s]?\b|\bcowboy\b|\bcountry\s+cowboy\b",
+    r"|\bbota[s]?\s+infantil\b|\bbotinha[s]?\b|\bgalocha[s]?\b|\bcowboy\b|\bcountry\s+cowboy\b"
+    r"|\bregata[s]?\b|\bmochila[s]?\b|\balmofada[s]?\b|\bcaneca[s]?\b"
+    r"|\bpulseira[s]?\b|\badesivo[s]?\b|\bboné[s]?\b|\bposter[s]?\b",
     re.IGNORECASE,
 )
 _BOT_SIGNAL_RE = re.compile(
