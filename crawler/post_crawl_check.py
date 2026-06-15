@@ -22,6 +22,12 @@ CD_TITLE_SQL = (
     r"\mcds?\M|\[cd\]|\(cd\)|compact disc|cd duplo|cd triplo"
     r"|audio cd|áudio cd"
 )
+# Vinyl signals in a title — if present alongside "CD", the row is a bundle,
+# not a false insertion. Matches the same signals as domain._VINYL_TITLE_RE.
+VINYL_TITLE_SQL = (
+    r"vinil|vinyl|\mlp\M|\mlps\M|gatefold|180\s*g|picture.disc"
+    r"|disco.de.vinil|single.de.vinil|7\"|10\"|12\"|33.?rpm|45.?rpm"
+)
 
 
 def main() -> None:
@@ -33,10 +39,17 @@ def main() -> None:
             FROM "Disco"
             WHERE "createdAt" > NOW() - (%s * INTERVAL '1 hour')
               AND "createdAt" > %s::timestamptz
-              AND (format IS DISTINCT FROM 'vinyl' OR titulo ~* %s)
+              AND (
+                format IS DISTINCT FROM 'vinyl'
+                OR (
+                  -- vinyl row with CD title signal but NO vinyl title signal:
+                  -- true false insertion (not a bundle).
+                  titulo ~* %s AND NOT titulo ~* %s
+                )
+              )
             ORDER BY "createdAt" DESC
             """,
-            (WINDOW_HOURS, GATE_DEPLOYED_AT, CD_TITLE_SQL),
+            (WINDOW_HOURS, GATE_DEPLOYED_AT, CD_TITLE_SQL, VINYL_TITLE_SQL),
         )
         rows = cur.fetchall()
     conn.close()
