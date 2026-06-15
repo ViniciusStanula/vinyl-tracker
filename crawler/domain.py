@@ -116,7 +116,8 @@ def is_vinyl(title: str, card=None) -> bool:
 _FORMAT_VINYL_RE = re.compile(r"vinil|vinyl|\blp\b", re.IGNORECASE)
 _FORMAT_NONVINYL_RE = re.compile(
     r"\bcds?\b|audio cd|áudio cd|compact disc|\bmp3\b|streaming"
-    r"|\bcassette\b|\bcassete\b|\bdvd\b|blu-?ray|\bdigital\b",
+    r"|\bcassette\b|\bcassete\b|\bdvd\b|blu-?ray|\bdigital\b"
+    r"|capa\s+comum|capa\s+dura|\bbrochura\b|\bpaperback\b|\bhardcover\b",
     re.IGNORECASE,
 )
 _FORMAT_LABEL_RE = re.compile(
@@ -139,17 +140,16 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
     """
     if _MERCH_TITLE_RE.search(title):
         return "other"
-    if _CD_RE.search(title):
-        return "cd"
     if _VINYL_TITLE_RE.search(title):
         return "vinyl"
-    if soup is None:
-        return "unknown"
 
-    # Multi-format page: selected swatch is reliable for POSITIVE vinyl detection,
-    # but NOT as a "cd" verdict on its own — Amazon sometimes renders CD as the
-    # default selected swatch even on vinyl ASIN pages (rendering/caching quirk).
-    # Defer the cd decision to the sibling check below which reads the ASIN links.
+    if soup is None:
+        # Title-only path (search cards): trust the CD signal directly.
+        return "cd" if _CD_RE.search(title) else "unknown"
+
+    # With page HTML: check the selected swatch BEFORE the CD title signal.
+    # Amazon injects distributor titles like "The Orchard - Álbum [CD]" on vinyl
+    # ASIN pages — the selected swatch is the reliable ground-truth format field.
     selected = soup.select_one("#tmmSwatches .swatchElement.selected")
     selected_is_cd = False
     if selected is not None:
@@ -157,6 +157,10 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
         if _FORMAT_VINYL_RE.search(text):
             return "vinyl"
         selected_is_cd = bool(_FORMAT_NONVINYL_RE.search(text))
+
+    # CD title signal — checked after swatch to avoid injected-title false positives.
+    if _CD_RE.search(title):
+        return "cd"
 
     # Sibling-variant check: scan ALL vinyl swatches.
     # A vinyl swatch with no /dp/ link (or same ASIN) → THIS ASIN is the vinyl edition.
