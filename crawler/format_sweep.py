@@ -143,26 +143,28 @@ def main() -> None:
     warm_up(session)
     counts = {"vinyl": 0, "cd": 0, "unknown": 0, "failed": 0}
 
+    # Early-abort threshold: if Amazon is serving degraded pages (bot pressure),
+    # detect_format returns "unknown" for everything. Abort before doing mass damage.
+    _UNKNOWN_ABORT_AFTER = 20   # check window
+    _UNKNOWN_ABORT_RATIO = 0.80 # abort if >80% unknown in first window
+
     for i, asin in enumerate(asins, 1):
         try:
             fmt = fetch_format(session, asin)
         except RuntimeError:
             break  # bot challenge — stop politely, resume next run
+
         if fmt is None:
             counts["failed"] += 1
         elif fmt == "unknown":
-            # No vinyl evidence found on the product page. Real vinyl records have
-            # "Formato : Vinil" in detail bullets and would return "vinyl" here.
-            # Products with no format signal (accessories, books, wrong items) return
-            # "unknown" — hide them so they stop appearing on the site.
+            # Cannot determine format — Amazon may have served a degraded page
+            # (no detail sections) under bot pressure. These records already
+            # passed the main crawler's vinyl allowlist gate at insertion time,
+            # so "unknown" here most likely means bad HTML, not a real non-vinyl.
+            # Leave format=NULL and retry on the next sweep run instead of
+            # wrongly writing "cd" and destroying catalog entries.
             counts["unknown"] += 1
-            with conn.cursor() as cur:
-                cur.execute(
-                    'UPDATE "Disco" SET format = %s WHERE asin = %s AND format IS NULL',
-                    ("cd", asin),
-                )
-            conn.commit()
-            log.warning("%s: unknown format — no vinyl evidence on page, marking non-vinyl.", asin)
+            log.warning("%s: unknown format — skipping (format stays NULL, retry later).", asin)
         else:
             counts[fmt] += 1
             with conn.cursor() as cur:
@@ -173,6 +175,20 @@ def main() -> None:
             conn.commit()
             if fmt != "vinyl":
                 log.warning("%s: classified %s — excluded from site.", asin, fmt)
+
+        # Early-abort: if after the first window the unknown rate is suspiciously
+        # high, Amazon is serving degraded pages — stop before more damage.
+        if i == _UNKNOWN_ABORT_AFTER:
+            classified = counts["vinyl"] + counts["cd"]
+            unknown_ratio = counts["unknown"] / i
+            if unknown_ratio > _UNKNOWN_ABORT_RATIO:
+                log.error(
+                    "ABORT — %.0f%% unknown in first %d records (vinyl=%d cd=%d unknown=%d). "
+                    "Amazon is likely serving degraded pages. Resume after a cooldown.",
+                    unknown_ratio * 100, i, counts["vinyl"], counts["cd"], counts["unknown"],
+                )
+                break
+
         if i % 100 == 0:
             log.info("progress %d/%d  %s", i, len(asins), counts)
         time.sleep(args.delay + random.uniform(0.5, 1.5))
