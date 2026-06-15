@@ -175,7 +175,7 @@ def main() -> None:
         if _fetches_this_session >= _rotate_after:
             log.info("Rotating session after %d fetches.", _fetches_this_session)
             session = make_session()
-            _quick_warmup(session)
+            warm_up(session)
             _fetches_this_session = 0
             _rotate_after = int(random.uniform(30, 50))
 
