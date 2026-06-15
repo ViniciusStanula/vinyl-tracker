@@ -108,15 +108,21 @@ def _quick_warmup(session) -> None:
 
 
 def fetch_format(session, asin: str) -> str | None:
-    """Fetch the product page and classify. None = fetch failed (retry later)."""
+    """
+    Fetch the product page and classify.
+
+    Returns:
+      "vinyl" / "cd" / "other" — confident verdict, write to DB
+      "unknown"                 — page loaded but no format signal (genuine ambiguity)
+      None                      — fetch/HTTP error or degraded page (retry later)
+    """
     try:
         resp = session.get(f"{BASE_URL}/dp/{asin}", timeout=25)
     except Exception as exc:
         log.warning("%s: fetch error: %s", asin, exc)
         return None
     if resp.status_code == 404:
-        # Listing gone — cannot verify; treat as unknown (stays NULL).
-        return "unknown"
+        return "unknown"   # listing gone; stays NULL
     if resp.status_code != 200:
         log.warning("%s: HTTP %s", asin, resp.status_code)
         return None
@@ -126,7 +132,13 @@ def fetch_format(session, asin: str) -> str | None:
         raise RuntimeError("bot challenge")
     soup = BeautifulSoup(html, "lxml")
     title_el = soup.select_one("#productTitle")
-    title = title_el.get_text(strip=True) if title_el else ""
+    if title_el is None:
+        # No #productTitle → Amazon served a degraded/minimal page under bot
+        # pressure. Treat as a fetch failure (None) so it doesn't count toward
+        # the unknown-ratio ABORT threshold; the record will retry next run.
+        log.debug("%s: degraded page (no #productTitle) — skipping.", asin)
+        return None
+    title = title_el.get_text(strip=True)
     return detect_format(title, soup, asin=asin)
 
 
@@ -164,6 +176,7 @@ def main() -> None:
     counts = {"vinyl": 0, "cd": 0, "other": 0, "unknown": 0, "failed": 0}
     _fetches_this_session = 0
     _rotate_after = int(random.uniform(30, 50))
+    _aborted = False
 
     # Early-abort threshold: if Amazon is serving degraded pages (bot pressure),
     # detect_format returns "unknown" for everything. Abort before doing mass damage.
@@ -218,6 +231,7 @@ def main() -> None:
                     "Amazon is likely serving degraded pages. Resume after a cooldown.",
                     unknown_ratio * 100, i, counts["vinyl"], counts["cd"], counts["unknown"],
                 )
+                _aborted = True
                 break
 
         if i % 100 == 0:
@@ -226,9 +240,10 @@ def main() -> None:
 
     log.info("Sweep run finished: %s", counts)
     conn.close()
-    # Non-vinyl findings are expected during cleanup — exit 0 either way;
-    # the post-crawl monitor (not the sweep) is the alarm for NEW insertions.
-    sys.exit(0)
+    # Exit 1 on ABORT so the workflow's "if: success()" re-trigger step does
+    # not fire — prevents an infinite ABORT loop when Amazon is blocking us.
+    # The 3-hour cron acts as a cooldown restart. Non-ABORT exits use 0.
+    sys.exit(1 if _aborted else 0)
 
 
 if __name__ == "__main__":
