@@ -111,7 +111,10 @@ _FORMAT_NONVINYL_RE = re.compile(
     r"|\bcassette\b|\bcassete\b|\bdvd\b|blu-?ray|\bdigital\b",
     re.IGNORECASE,
 )
-_FORMAT_LABEL_RE = re.compile(r"(?:formato|format)\s*:?\s*", re.IGNORECASE)
+_FORMAT_LABEL_RE = re.compile(
+    r"(?:formato|format|tipo\s+de\s+m[íi]dia|m[íi]dia)\s*:?\s*",
+    re.IGNORECASE,
+)
 _DP_ASIN_RE = re.compile(r"/dp/([A-Z0-9]{10})", re.IGNORECASE)
 
 
@@ -133,22 +136,23 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
     if soup is None:
         return "unknown"
 
-    # Multi-format page: which variant does THIS ASIN represent?
+    # Multi-format page: selected swatch is reliable for POSITIVE vinyl detection,
+    # but NOT as a "cd" verdict on its own — Amazon sometimes renders CD as the
+    # default selected swatch even on vinyl ASIN pages (rendering/caching quirk).
+    # Defer the cd decision to the sibling check below which reads the ASIN links.
     selected = soup.select_one("#tmmSwatches .swatchElement.selected")
+    selected_is_cd = False
     if selected is not None:
         text = selected.get_text(" ", strip=True)
         if _FORMAT_VINYL_RE.search(text):
             return "vinyl"
-        if _FORMAT_NONVINYL_RE.search(text):
-            return "cd"
+        selected_is_cd = bool(_FORMAT_NONVINYL_RE.search(text))
 
-    # Sibling-variant check: swatches for the page's own ASIN carry no /dp/
-    # link (they are the active/selected variant). A vinyl swatch linking to
-    # a DIFFERENT ASIN means that ASIN is the vinyl edition and this one is
-    # a non-vinyl sibling. Scan ALL vinyl swatches — only conclude "cd" if
-    # none of them correspond to this ASIN (handles multi-vinyl pages where
-    # standard + deluxe vinyl swatches coexist and the first one in DOM order
-    # may point to the sibling vinyl, not the current page's ASIN).
+    # Sibling-variant check: scan ALL vinyl swatches.
+    # A vinyl swatch with no /dp/ link (or same ASIN) → THIS ASIN is the vinyl edition.
+    # All vinyl swatches link to OTHER ASINs → this ASIN is the non-vinyl sibling.
+    # Handles: multi-vinyl pages (standard + deluxe coexist in DOM), and the
+    # Amazon rendering quirk where CD shows as "selected" on a vinyl ASIN page.
     if asin:
         vinyl_this = False
         vinyl_other = False
@@ -161,19 +165,20 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
                 vinyl_other = True
             else:
                 vinyl_this = True  # no link (= this page) or links to same ASIN
-        if vinyl_other and not vinyl_this:
+        if vinyl_this:
+            return "vinyl"
+        if vinyl_other:
             return "cd"
 
     if selected is not None:
-        # Multi-format page with an inconclusive selected swatch: the details
-        # section describes the page's primary variant, not necessarily this
-        # ASIN — don't trust it.
-        return "unknown"
+        # Multi-format page, no vinyl swatch maps to this ASIN.
+        # If the selected swatch was conclusively non-vinyl, trust it; else unknown.
+        return "cd" if selected_is_cd else "unknown"
 
-    # Single-format page: details / ficha tecnica "Formato" row.
-    # Also check #productSubtitle — Amazon BR shows "Formato: Disco de Vinil"
-    # there on some multi-format pages where the vinyl is the selected variant
-    # but no vinyl swatch appears in #tmmSwatches (only the CD sibling does).
+    # Single-format page (no #tmmSwatches): scan product detail areas.
+    # Amazon BR uses both "Formato" and "Tipo de Mídia" as the format label.
+    # Fallback: any vinyl keyword anywhere in a detail area is accepted —
+    # these sections contain factual product attributes, not marketing copy.
     for area_sel in (
         "#productSubtitle",
         "#detailBullets_feature_div",
@@ -192,10 +197,10 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
                 return "vinyl"
             if _FORMAT_NONVINYL_RE.search(segment):
                 return "cd"
+        # Broader fallback: vinyl keyword anywhere in this detail area.
+        if _FORMAT_VINYL_RE.search(text):
+            return "vinyl"
 
-    # Breadcrumb check removed (CD-leak audit, 2026-06-12): the root music
-    # category "CD e Vinil" appears on every BR music product — including
-    # plain CDs — so it can never be positive vinyl evidence.
     return "unknown"
 
 
