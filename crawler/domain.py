@@ -29,6 +29,13 @@ _MERCH_TITLE_RE = re.compile(
     r"|\badesivo[s]?\b|\bchaveiro[s]?\b|\bboné[s]?\b|\bposter[s]?\b",
     re.IGNORECASE,
 )
+# Funko Pop / collectible figures — "Vinyl" means plastic material, not music.
+# Must be checked BEFORE _VINYL_TITLE_RE so "Pop! Vinyl Figure" loses to this.
+_VINYL_FIGURE_RE = re.compile(
+    r"\bfunko\b|\bvinyl\s+figure[s]?\b|\bpop!\s*vinyl\b",
+    re.IGNORECASE,
+)
+
 _VINYL_TITLE_RE = re.compile(
     r"vinil|vinyl|\blp\b"
     r'|\b7["\']\b'
@@ -94,6 +101,8 @@ def parse_price_br(text: str) -> float | None:
 
 
 def is_vinyl(title: str, card=None) -> bool:
+    if _VINYL_FIGURE_RE.search(title):
+        return False
     if _VINYL_TITLE_RE.search(title):
         return True
     if _CD_RE.search(title) or _MERCH_TITLE_RE.search(title):
@@ -138,6 +147,8 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
     swatch that links a DIFFERENT ASIN means the vinyl edition is its own
     product and this ASIN is a non-vinyl sibling (CD/MP3/...).
     """
+    if _VINYL_FIGURE_RE.search(title):
+        return "other"
     if _VINYL_TITLE_RE.search(title):
         return "vinyl"
     if _MERCH_TITLE_RE.search(title):
