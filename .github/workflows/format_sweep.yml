@@ -1,17 +1,22 @@
 name: Format Sweep (CD incident)
 
 # Classifies the physical format of catalog rows that predate the vinyl
-# allowlist gate (format IS NULL). Runs nightly in bounded chunks until the
-# whole catalog is verified, then becomes a cheap no-op.
+# allowlist gate (format IS NULL). Self-triggers after each run until no
+# NULL rows remain, then becomes a cheap no-op.
 
 on:
   workflow_dispatch:
     inputs:
       limit:
         description: "Max product pages to verify this run"
-        default: "2000"
+        default: "1000"
   schedule:
-    - cron: "20 4 * * *"
+    # Backup trigger every 3 hours — restarts the self-trigger chain if it
+    # breaks (failed run, bot abort, etc.). Concurrency group prevents overlap.
+    - cron: "20 */3 * * *"
+
+permissions:
+  actions: write  # required for gh workflow run self-trigger
 
 concurrency:
   group: format-sweep
@@ -42,3 +47,18 @@ jobs:
         run: python crawler/post_crawl_check.py
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Re-trigger if NULL rows remain
+        if: success()
+        run: |
+          REMAINING=$(psql "$DATABASE_URL" -t -c 'SELECT COUNT(*) FROM "Disco" WHERE format IS NULL' | tr -d ' ')
+          echo "Remaining NULL format rows: $REMAINING"
+          if [ "$REMAINING" -gt 0 ]; then
+            echo "Re-triggering sweep for $REMAINING remaining rows..."
+            gh workflow run format_sweep.yml
+          else
+            echo "All rows classified — sweep complete, chain stops."
+          fi
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
