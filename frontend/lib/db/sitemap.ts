@@ -101,11 +101,19 @@ function isJunkArtistSlug(slug: string): boolean {
 }
 
 export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
-  const artistRows = await prisma.disco.findMany({
-    select: { artista: true },
-    distinct: ["artista"],
-    where: { disponivel: true, OR: [{ format: null }, { format: "vinyl" }] },
-  });
+  // Mirror the thin-content noindex gate in artista/[slug]/page.tsx:
+  // isThin = total <= 2 && !bioShortPt  →  only include artists with >2 records
+  // OR a bio (LEFT JOIN ArtistMeta). Using COUNT > 2 as a safe proxy avoids
+  // a complex name-normalisation join; the 1-2-record+bio edge case is rare.
+  const artistRows = await prisma.$queryRaw<{ artista: string }[]>`
+    SELECT artista
+    FROM   "Disco"
+    WHERE  disponivel = TRUE
+      AND  (format IS NULL OR format = 'vinyl')
+    GROUP  BY artista
+    HAVING COUNT(*) > 2
+    ORDER  BY artista
+  `;
 
   const seenSlugs = new Set<string>();
   const routes: MetadataRoute.Sitemap = [];
@@ -169,13 +177,20 @@ export async function getSitemapDiscosForShard(shard: DiscoShard): Promise<Metad
 }
 
 export async function getSitemapEstilos(): Promise<MetadataRoute.Sitemap> {
+  // Mirror the thin-content noindex gate in estilo/[slug]/page.tsx:
+  // isThin = n <= 3 && !bioShortPt  →  only include tags with >3 records.
   const rows = await prisma.$queryRaw<{ tag: string }[]>`
-    SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
-    FROM "Disco"
-    WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
-      AND disponivel = TRUE
-      AND (format IS NULL OR format = 'vinyl')
-      AND price_count >= 5
+    SELECT tag
+    FROM (
+      SELECT unnest(string_to_array(lastfm_tags, ', ')) AS tag
+      FROM "Disco"
+      WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
+        AND disponivel = TRUE
+        AND (format IS NULL OR format = 'vinyl')
+        AND price_count >= 5
+    ) t
+    GROUP BY tag
+    HAVING COUNT(*) > 3
   `;
 
   const seenSlugs = new Set<string>();
