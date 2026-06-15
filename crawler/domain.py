@@ -94,11 +94,10 @@ def parse_price_br(text: str) -> float | None:
 
 
 def is_vinyl(title: str, card=None) -> bool:
-    if _CD_RE.search(title) or _MERCH_TITLE_RE.search(title):
-        return False
-
     if _VINYL_TITLE_RE.search(title):
         return True
+    if _CD_RE.search(title) or _MERCH_TITLE_RE.search(title):
+        return False
 
     if card is not None:
         card_text = card.get_text(" ", strip=True)
@@ -138,10 +137,10 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
     swatch that links a DIFFERENT ASIN means the vinyl edition is its own
     product and this ASIN is a non-vinyl sibling (CD/MP3/...).
     """
-    if _MERCH_TITLE_RE.search(title):
-        return "other"
     if _VINYL_TITLE_RE.search(title):
         return "vinyl"
+    if _MERCH_TITLE_RE.search(title):
+        return "other"
 
     if soup is None:
         # Title-only path (search cards): trust the CD signal directly.

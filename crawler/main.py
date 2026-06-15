@@ -1458,7 +1458,7 @@ def _is_confirmed_non_vinyl(soup) -> bool:
     title_el = soup.select_one("#productTitle")
     title = title_el.get_text(strip=True) if title_el else ""
 
-    if title and _CONFIRMED_NON_VINYL_RE.search(title):
+    if title and _CONFIRMED_NON_VINYL_RE.search(title) and not _VINYL_LABEL_RE.search(title):
         log.debug("_is_confirmed_non_vinyl: title match — %r", title[:80])
         return True
 
