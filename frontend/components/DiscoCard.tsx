@@ -32,6 +32,8 @@ export interface DiscoCardProps {
   confidenceLevel?: string | null;
   /** Comma-separated Last.fm genre tags, e.g. "rock, classic rock" */
   lastfmTags?: string | null;
+  /** When false, renders as greyed-out with Indisponível badge. Defaults to true. */
+  disponivel?: boolean;
 }
 
 /** 44×18 px SVG sparkline showing the 30-day price trend. */
@@ -83,6 +85,7 @@ export default memo(function DiscoCard({
       minimumFractionDigits: 2,
     });
 
+  const isUnavailable     = disco.disponivel === false;
   const descontoPercent   = Math.round(disco.desconto * 100);
   const showOriginalPrice = descontoPercent > 0;
   const dealScore         = disco.dealScore ?? null;
@@ -96,7 +99,7 @@ export default memo(function DiscoCard({
   const cardRing = (!HIDE_PRICE_HISTORY && dealScore === 3) ? " ring-1 ring-gold/40" : "";
 
   return (
-    <div className={`relative group bg-sleeve rounded-xl overflow-hidden flex flex-col border border-groove hover:border-wax transition-colors duration-200${cardRing}`}>
+    <div className={`relative group bg-sleeve rounded-xl overflow-hidden flex flex-col border border-groove hover:border-wax transition-colors duration-200${cardRing}${isUnavailable ? " opacity-60 grayscale" : ""}`}>
       {/* Full-card link */}
       <Link
         href={`/disco/${disco.slug}`}
@@ -130,40 +133,47 @@ export default memo(function DiscoCard({
         {/* Subtle gradient overlay — bottom fade for legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-record/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-        {/* Deal tier badge — suppressed when HIDE_PRICE_HISTORY */}
-        {!HIDE_PRICE_HISTORY && dealScore !== null && (
-          <div className={`absolute bottom-2 left-2 z-20 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-            dealScore === 3
-              ? "bg-gold/90 text-record"
-              : dealScore === 2
-              ? "bg-deal/90 text-cream"
-              : "bg-record/70 text-parchment backdrop-blur-sm"
-          }`}>
-            {dealScore === 3 && <span aria-hidden="true">✦</span>}
-            {dealScore === 2 && <span aria-hidden="true">✓</span>}
-            {dealScore === 3 ? "Melhor Preço" : dealScore === 2 ? "Ótima Oferta" : "Boa Oferta"}
+        {isUnavailable ? (
+          <div className="absolute bottom-2 left-2 z-20 inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-groove/90 text-dust">
+            Indisponível
           </div>
+        ) : (
+          <>
+            {/* Deal tier badge — suppressed when HIDE_PRICE_HISTORY */}
+            {!HIDE_PRICE_HISTORY && dealScore !== null && (
+              <div className={`absolute bottom-2 left-2 z-20 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                dealScore === 3
+                  ? "bg-gold/90 text-record"
+                  : dealScore === 2
+                  ? "bg-deal/90 text-cream"
+                  : "bg-record/70 text-parchment backdrop-blur-sm"
+              }`}>
+                {dealScore === 3 && <span aria-hidden="true">✦</span>}
+                {dealScore === 2 && <span aria-hidden="true">✓</span>}
+                {dealScore === 3 ? "Melhor Preço" : dealScore === 2 ? "Ótima Oferta" : "Boa Oferta"}
+              </div>
+            )}
+
+            {/* Discount badge — suppressed alongside deal badge (% has no reference without avg) */}
+            {!HIDE_PRICE_HISTORY && descontoPercent > 0 && (
+              <div className="absolute top-2 left-2 z-20 bg-cut text-cream text-xs font-black px-2.5 py-1 rounded-md shadow-lg shadow-cut/30 tabular-nums">
+                -{descontoPercent}%
+              </div>
+            )}
+
+            {/* Amazon quick-link — hover only */}
+            <a
+              href={affiliateUrl(disco.url)}
+              target="_blank"
+              rel="sponsored noopener noreferrer"
+              className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity bg-record/80 text-cream text-xs font-medium px-2.5 py-1.5 rounded-md backdrop-blur-sm"
+              aria-label={`Ver ${disco.titulo} na Amazon`}
+            >
+              Amazon ↗
+              <span className="block text-[9px] text-dust/70 leading-none mt-0.5">#anúncio</span>
+            </a>
+          </>
         )}
-
-        {/* Discount badge — suppressed alongside deal badge (% has no reference without avg) */}
-        {!HIDE_PRICE_HISTORY && descontoPercent > 0 && (
-          <div className="absolute top-2 left-2 z-20 bg-cut text-cream text-xs font-black px-2.5 py-1 rounded-md shadow-lg shadow-cut/30 tabular-nums">
-            -{descontoPercent}%
-          </div>
-        )}
-
-
-        {/* Amazon quick-link — hover only */}
-        <a
-          href={affiliateUrl(disco.url)}
-          target="_blank"
-          rel="sponsored noopener noreferrer"
-          className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity bg-record/80 text-cream text-xs font-medium px-2.5 py-1.5 rounded-md backdrop-blur-sm"
-          aria-label={`Ver ${disco.titulo} na Amazon`}
-        >
-          Amazon ↗
-          <span className="block text-[9px] text-dust/70 leading-none mt-0.5">#anúncio</span>
-        </a>
       </div>
 
       {/* ── Info ──────────────────────────────────────────────────── */}
@@ -187,24 +197,27 @@ export default memo(function DiscoCard({
         </p>
 
         {/* ── Price section ──────────────────────────────────────── */}
-        <div className="mt-auto pt-2">
-          {!HIDE_PRICE_HISTORY && (sparkline.length >= 2 || showOriginalPrice) && (
-            <div className="flex items-center gap-2 mb-1">
-              {sparkline.length >= 2 && <Sparkline values={sparkline} avg={disco.mediaPreco} />}
-              {showOriginalPrice && (
-                <p className="text-dust text-xs line-through ml-auto tabular-nums">
-                  {fmt(disco.mediaPreco)}
-                </p>
-              )}
-            </div>
-          )}
+        {isUnavailable ? (
+          <p className="mt-auto pt-2 text-dust text-sm font-medium">Indisponível na Amazon</p>
+        ) : (
+          <div className="mt-auto pt-2">
+            {!HIDE_PRICE_HISTORY && (sparkline.length >= 2 || showOriginalPrice) && (
+              <div className="flex items-center gap-2 mb-1">
+                {sparkline.length >= 2 && <Sparkline values={sparkline} avg={disco.mediaPreco} />}
+                {showOriginalPrice && (
+                  <p className="text-dust text-xs line-through ml-auto tabular-nums">
+                    {fmt(disco.mediaPreco)}
+                  </p>
+                )}
+              </div>
+            )}
 
-          {/* Current price — bold, gold, large */}
-          <p className="font-display text-gold font-black text-xl leading-tight tabular-nums">
-            {fmt(disco.precoAtual)}
-          </p>
-
-        </div>
+            {/* Current price — bold, gold, large */}
+            <p className="font-display text-gold font-black text-xl leading-tight tabular-nums">
+              {fmt(disco.precoAtual)}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

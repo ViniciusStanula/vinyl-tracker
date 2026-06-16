@@ -47,7 +47,7 @@ export async function generateMetadata({
           ? `1 disco de ${displayName} em vinil na Amazon, com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
           : `${total} discos de ${displayName} em vinil na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
       );
-  const firstImage = data.items.find((d) => d.imgUrl)?.imgUrl ?? null;
+  const firstImage = data.items.find((d) => d.imgUrl)?.imgUrl ?? data.unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
   return {
     title,
     description,
@@ -108,7 +108,7 @@ export default async function ArtistaPage({
   }
   if (!data) notFound();
 
-  const { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt } = data;
+  const { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, unavailableItems } = data;
   const artista = toTitleCase(canonical);
 
   const siteUrl = SITE_URL;
@@ -230,6 +230,19 @@ export default async function ArtistaPage({
               Limpar filtros
             </Link>
           )}
+        </section>
+      )}
+
+      {unavailableItems.length > 0 && (
+        <section aria-label="Discos indisponíveis" className="mt-10">
+          <h2 className="font-display text-lg font-bold text-dust mb-3">
+            Indisponível no momento
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+            {unavailableItems.map((disco) => (
+              <DiscoCard key={disco.id} disco={disco} />
+            ))}
+          </div>
         </section>
       )}
 

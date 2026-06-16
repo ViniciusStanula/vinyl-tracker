@@ -41,6 +41,19 @@ export type ArtistaPageData = {
   sameAs: string[];
   bioShortPt: string | null;
   bioPt: string | null;
+  unavailableItems: ProcessedDisco[];
+};
+
+type UnavailableRow = {
+  id: string;
+  titulo: string;
+  artista: string;
+  slug: string;
+  estilo: string | null;
+  imgUrl: string | null;
+  url: string;
+  rating: string | null;
+  reviewCount: string | null;
 };
 
 const _getArtistaPageData = unstable_cache(
@@ -216,16 +229,51 @@ const _getArtistaPageData = unstable_cache(
       LIMIT 1
     `;
 
-    const [countResult, rows, tagsRows, metaRows] = await Promise.all([
+    const unavailableQuery = prisma.$queryRaw<UnavailableRow[]>`
+      SELECT id, titulo, artista, slug, estilo, "imgUrl", url, rating, "reviewCount"
+      FROM "Disco"
+      WHERE artista = ANY(${variants})
+        AND disponivel = FALSE
+        AND (format IS NULL OR format = 'vinyl')
+        AND price_count >= 5
+      ORDER BY titulo ASC
+      LIMIT 50
+    `;
+
+    const [countResult, rows, tagsRows, metaRows, unavailableRows] = await Promise.all([
       countQuery,
       mainQuery,
       tagsQuery,
       metaQuery,
+      unavailableQuery,
     ]);
     const meta = metaRows[0] ?? null;
 
     const total = Number(countResult[0].total);
-    if (total === 0) return null;
+
+    const unavailableItems: ProcessedDisco[] = unavailableRows.map((row) => ({
+      id:              row.id,
+      slug:            row.slug,
+      titulo:          row.titulo,
+      artista:         row.artista,
+      estilo:          row.estilo,
+      imgUrl:          row.imgUrl,
+      url:             row.url,
+      rating:          row.rating !== null ? Number(row.rating) : null,
+      reviewCount:     row.reviewCount !== null ? Number(row.reviewCount) : null,
+      precoAtual:      0,
+      mediaPreco:      0,
+      emPromocao:      false,
+      desconto:        0,
+      sparkline:       [],
+      dealScore:       null,
+      confidenceLevel: null,
+      historyDays:     null,
+      lastfmTags:      null,
+      disponivel:      false,
+    }));
+
+    if (total === 0 && unavailableItems.length === 0) return null;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const topStyles = getTopStyles(tagsRows.map((r) => r.lastfmTags), 5, canonical);
     const sameAs = [meta?.wikidataUrl, meta?.wikipediaUrl, meta?.spotifyUrl]
@@ -287,7 +335,7 @@ const _getArtistaPageData = unstable_cache(
       }];
     });
 
-    return { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt };
+    return { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, unavailableItems };
   },
   ["artista-page"],
   { tags: ["prices"], revalidate: 3600 }

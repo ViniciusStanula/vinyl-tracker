@@ -97,6 +97,8 @@ export type ProcessedDisco = {
   historyDays: number | null;
   /** Comma-separated Last.fm genre tags, e.g. "rock, classic rock, hard rock" */
   lastfmTags: string | null;
+  /** When false, record is no longer listed on Amazon. Renders as greyed-out on artist page. */
+  disponivel?: boolean;
 };
 
 export async function queryDiscos(params: {
