@@ -16,58 +16,6 @@ export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag
 
 type Sort = "deals" | "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const [data, hasPeer] = await Promise.all([
-    getEstiloPageData(slug).catch(() => null),
-    getHreflangSlug("genre", slug).catch(() => false),
-  ]);
-  if (!data) return {};
-  const { canonical, bioShortPt } = data;
-  const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
-  const n = data.discos.length;
-  const isThin = n <= 3 && !bioShortPt;
-  const title = truncateTitle(`Discos de ${displayName} em Vinil — Ofertas | Garimpa Vinil`);
-  const description = truncateDesc(
-    n >= 4
-      ? `${n} discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
-      : `Discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
-  );
-  const firstImage = data.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
-  return {
-    title,
-    description,
-    ...(isThin ? { robots: { index: false, follow: true } } : {}),
-    alternates: {
-      canonical: `/estilo/${slug}`,
-      ...(hasPeer ? {
-        languages: {
-          "pt-BR": `/estilo/${slug}`,
-          "en-US": `${PEER_ORIGIN}/genre/${slug}`,
-          "x-default": `${PEER_ORIGIN}/genre/${slug}`,
-        },
-      } : {}),
-    },
-    openGraph: {
-      title,
-      description,
-      url: `/estilo/${slug}`,
-      type: "website",
-      images: firstImage ? [{ url: firstImage, alt: displayName }] : ["/og-default.png"],
-    },
-    twitter: {
-      card: firstImage ? "summary_large_image" : "summary",
-      title,
-      description,
-      images: [firstImage ?? "/og-default.png"],
-    },
-  };
-}
-
 export default async function EstiloPage({
   params,
   searchParams,
@@ -81,8 +29,12 @@ export default async function EstiloPage({
     precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
 
   let data: SerializedEstiloData | null = null;
+  let hasPeer = false;
   try {
-    data = await getEstiloPageData(slug);
+    [data, hasPeer] = await Promise.all([
+      getEstiloPageData(slug),
+      getHreflangSlug("genre", slug).catch(() => false as false),
+    ]);
   } catch (err) {
     console.error("[EstiloPage] getEstiloPageData failed for slug=%s", slug);
     if (process.env.NODE_ENV === "development") console.error(err);
@@ -99,6 +51,17 @@ export default async function EstiloPage({
 
   const { canonical, discos, bioShortPt, bioPt } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const n = discos.length;
+  const isThin = n <= 3 && !bioShortPt;
+  const metaTitle = truncateTitle(`Discos de ${displayName} em Vinil — Ofertas | Garimpa Vinil`);
+  const metaDesc = truncateDesc(
+    n >= 4
+      ? `${n} discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
+      : `Discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
+  );
+  const firstImageEstilo = discos.find((d) => d.imgUrl)?.imgUrl ?? null;
+  const estiloCanonicalUrl = `${SITE_URL}/estilo/${slug}`;
 
   let relatedEstilos: RelatedEstilo[] = [];
   try {
@@ -185,7 +148,28 @@ export default async function EstiloPage({
   });
 
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <>
+      <title>{metaTitle}</title>
+      <meta name="description" content={metaDesc} />
+      <link rel="canonical" href={estiloCanonicalUrl} />
+      {isThin && <meta name="robots" content="noindex, follow" />}
+      <meta property="og:type" content="website" />
+      <meta property="og:title" content={metaTitle} />
+      <meta property="og:description" content={metaDesc} />
+      <meta property="og:url" content={estiloCanonicalUrl} />
+      <meta property="og:image" content={firstImageEstilo ?? `${SITE_URL}/og-default.png`} />
+      <meta name="twitter:card" content={firstImageEstilo ? "summary_large_image" : "summary"} />
+      <meta name="twitter:title" content={metaTitle} />
+      <meta name="twitter:description" content={metaDesc} />
+      <meta name="twitter:image" content={firstImageEstilo ?? `${SITE_URL}/og-default.png`} />
+      {hasPeer && (
+        <>
+          <link rel="alternate" hrefLang="pt-BR" href={estiloCanonicalUrl} />
+          <link rel="alternate" hrefLang="en-US" href={`${PEER_ORIGIN}/genre/${slug}`} />
+          <link rel="alternate" hrefLang="x-default" href={`${PEER_ORIGIN}/genre/${slug}`} />
+        </>
+      )}
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -289,5 +273,6 @@ export default async function EstiloPage({
 
       <BackToTop />
     </main>
+    </>
   );
 }

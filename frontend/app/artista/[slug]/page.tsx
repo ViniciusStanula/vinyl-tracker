@@ -17,67 +17,6 @@ import { toJsonLd } from "@/lib/jsonld";
 
 export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const [data, hasPeer] = await Promise.all([
-    getArtistaPageData(slug, 1, "desconto", null).catch(() => null),
-    getHreflangSlug("artist", slug).catch(() => false),
-  ]);
-  if (!data) return {};
-  const { canonical, total, bioShortPt } = data;
-  const displayName = toTitleCase(canonical);
-  // Unattributed crawler rows — never surface "Artista não identificado" in
-  // metadata; neutral copy + noindex until re-attribution lands.
-  const isUnknownArtist =
-    canonical.toLowerCase() === "artista não identificado";
-  // Thin content gate: ≤2 albums with no bio = almost pure template, noindex to
-  // avoid Scaled Content Abuse exposure across thousands of niche artist pages.
-  const isThin = total <= 2 && !bioShortPt;
-  const title = isUnknownArtist
-    ? "Discos de Vinil — Vários Artistas | Garimpa Vinil"
-    : truncateTitle(`${displayName} em Vinil — Preços e Ofertas | Garimpa Vinil`);
-  const description = isUnknownArtist
-    ? truncateDesc("Discos de vinil de vários artistas na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.")
-    : truncateDesc(
-        total === 1
-          ? `1 disco de ${displayName} em vinil na Amazon, com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
-          : `${total} discos de ${displayName} em vinil na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
-      );
-  const firstImage = data.items.find((d) => d.imgUrl)?.imgUrl ?? data.unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
-  return {
-    title,
-    description,
-    ...((isUnknownArtist || isThin) ? { robots: { index: false, follow: true } } : {}),
-    alternates: {
-      canonical: `/artista/${slug}`,
-      ...(hasPeer ? {
-        languages: {
-          "pt-BR": `/artista/${slug}`,
-          "en-US": `${PEER_ORIGIN}/artist/${slug}`,
-          "x-default": `${PEER_ORIGIN}/artist/${slug}`,
-        },
-      } : {}),
-    },
-    openGraph: {
-      title,
-      description,
-      url: `/artista/${slug}`,
-      type: "website",
-      images: firstImage ? [{ url: firstImage, alt: displayName }] : ["/og-default.png"],
-    },
-    twitter: {
-      card: firstImage ? "summary_large_image" : "summary",
-      title,
-      description,
-      images: [firstImage ?? "/og-default.png"],
-    },
-  };
-}
-
 export default async function ArtistaPage({
   params,
   searchParams,
@@ -92,8 +31,12 @@ export default async function ArtistaPage({
   const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 
   let data: ArtistaPageData | null = null;
+  let hasPeer = false;
   try {
-    data = await getArtistaPageData(slug, currentPage, sort, precoMax);
+    [data, hasPeer] = await Promise.all([
+      getArtistaPageData(slug, currentPage, sort, precoMax),
+      getHreflangSlug("artist", slug).catch(() => false as false),
+    ]);
   } catch (err) {
     console.error("[ArtistaPage] getArtistaPageData failed for slug=%s", slug);
     if (process.env.NODE_ENV === "development") console.error(err);
@@ -110,6 +53,21 @@ export default async function ArtistaPage({
 
   const { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, unavailableItems } = data;
   const artista = toTitleCase(canonical);
+
+  const isUnknownArtist = canonical.toLowerCase() === "artista não identificado";
+  const isThin = total <= 2 && !bioShortPt;
+  const metaTitle = isUnknownArtist
+    ? "Discos de Vinil — Vários Artistas | Garimpa Vinil"
+    : truncateTitle(`${artista} em Vinil — Preços e Ofertas | Garimpa Vinil`);
+  const metaDesc = isUnknownArtist
+    ? truncateDesc("Discos de vinil de vários artistas na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.")
+    : truncateDesc(
+        total === 1
+          ? `1 disco de ${artista} em vinil na Amazon, com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
+          : `${total} discos de ${artista} em vinil na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
+      );
+  const firstImage = items.find((d) => d.imgUrl)?.imgUrl ?? unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
+  const canonicalUrl = `${SITE_URL}/artista/${slug}`;
 
   const siteUrl = SITE_URL;
 
@@ -152,7 +110,28 @@ export default async function ArtistaPage({
   });
 
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <>
+      <title>{metaTitle}</title>
+      <meta name="description" content={metaDesc} />
+      <link rel="canonical" href={canonicalUrl} />
+      {(isUnknownArtist || isThin) && <meta name="robots" content="noindex, follow" />}
+      <meta property="og:type" content="website" />
+      <meta property="og:title" content={metaTitle} />
+      <meta property="og:description" content={metaDesc} />
+      <meta property="og:url" content={canonicalUrl} />
+      <meta property="og:image" content={firstImage ?? `${SITE_URL}/og-default.png`} />
+      <meta name="twitter:card" content={firstImage ? "summary_large_image" : "summary"} />
+      <meta name="twitter:title" content={metaTitle} />
+      <meta name="twitter:description" content={metaDesc} />
+      <meta name="twitter:image" content={firstImage ?? `${SITE_URL}/og-default.png`} />
+      {hasPeer && (
+        <>
+          <link rel="alternate" hrefLang="pt-BR" href={canonicalUrl} />
+          <link rel="alternate" hrefLang="en-US" href={`${PEER_ORIGIN}/artist/${slug}`} />
+          <link rel="alternate" hrefLang="x-default" href={`${PEER_ORIGIN}/artist/${slug}`} />
+        </>
+      )}
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -257,5 +236,6 @@ export default async function ArtistaPage({
 
       <BackToTop />
     </main>
+    </>
   );
 }
