@@ -2,6 +2,16 @@ import { NextResponse, after } from "next/server";
 import type { NextRequest } from "next/server";
 import { detectBot } from "@/lib/bots";
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.garimpavinil.com.br";
+
+function addCanonical(res: NextResponse, pathname: string): NextResponse {
+  if (!pathname.startsWith("/api/")) {
+    res.headers.set("Link", `<${SITE_URL}${pathname}>; rel="canonical"`);
+  }
+  return res;
+}
+
 export function proxy(request: NextRequest) {
   // Block high-volume bot traffic from SG/CN/MY when the request has no
   // Portuguese Accept-Language — confirmed via GA4 (0% engagement).
@@ -22,7 +32,7 @@ export function proxy(request: NextRequest) {
   // /api/mcp is always logged: MCP/agent clients often send generic UAs
   // (node, python-httpx, ...) that the bot list won't match.
   // Every other path: bots only — humans exit immediately with zero extra work.
-  if (!bot && !isMcp) return NextResponse.next();
+  if (!bot && !isMcp) return addCanonical(NextResponse.next(), request.nextUrl.pathname);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -66,7 +76,7 @@ export function proxy(request: NextRequest) {
     }
   });
 
-  return NextResponse.next();
+  return addCanonical(NextResponse.next(), request.nextUrl.pathname);
 }
 
 export const config = {
