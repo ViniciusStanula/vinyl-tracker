@@ -30,13 +30,9 @@ export async function proxy(request: NextRequest) {
   const isMcp = pathname.startsWith("/api/mcp");
   const bot = detectBot(ua);
 
-  // /api/mcp is always logged: MCP/agent clients often send generic UAs
-  // (node, python-httpx, ...) that the bot list won't match.
-  // Every other path: bots only — humans exit immediately with zero extra work.
-  if (!bot && !isMcp) return addCanonical(NextResponse.next(), pathname);
-
-  // For artista/estilo bot requests: check thin-page status and set X-Robots-Tag.
-  // The API response is CDN-cached (s-maxage=3600) so only the first hit per slug
+  // Check thin-page status for artista/estilo — all requests, not just bots,
+  // so the X-Robots-Tag header is visible in browser DevTools for verification.
+  // API response is CDN-cached (s-maxage=3600): only the first hit per slug
   // per hour touches the DB; all others are cache hits with ~0ms overhead.
   let xRobotsTag: string | null = null;
   const artistaMatch = pathname.match(/^\/artista\/([a-z0-9-]+)$/);
@@ -54,8 +50,17 @@ export async function proxy(request: NextRequest) {
         if (data.noindex) xRobotsTag = "noindex, follow";
       }
     } catch {
-      // timeout or error — skip; bots still get a valid page
+      // timeout or error — skip; page still served normally
     }
+  }
+
+  // /api/mcp is always logged: MCP/agent clients often send generic UAs
+  // (node, python-httpx, ...) that the bot list won't match.
+  // Every other path: bots only — humans exit immediately with zero extra work.
+  if (!bot && !isMcp) {
+    const res = addCanonical(NextResponse.next(), pathname);
+    if (xRobotsTag) res.headers.set("X-Robots-Tag", xRobotsTag);
+    return res;
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
