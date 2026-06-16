@@ -334,21 +334,27 @@ export default async function DiscoPage({
       ? [
           {
             q: `Qual o menor preço já registrado de ${disco.titulo} em vinil?`,
-            a: `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. O preço atual é ${fmt(precoAtual)}.`,
+            a: disponivel
+              ? `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. O preço atual é ${fmt(precoAtual)}.`
+              : `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. Este disco está indisponível na Amazon no momento.`,
           },
-          {
-            q: `O preço de ${disco.titulo} está bom agora?`,
-            a:
-              statusPreco === "menor"
-                ? `Sim — ${fmt(precoAtual)} é o menor preço já registrado pelo nosso monitoramento para este disco.`
-                : statusPreco === "aumento"
-                ? `O preço atual (${fmt(precoAtual)}) está acima da média histórica de ${fmt(media)}. Pode valer a pena esperar uma queda.`
-                : `O preço atual (${fmt(precoAtual)}) está próximo da média histórica de ${fmt(media)}.`,
-          },
-          {
-            q: `Com que frequência o preço de ${disco.titulo} é verificado?`,
-            a: `O preço é verificado automaticamente várias vezes ao dia na Amazon Brasil. Já registramos ${valores.length} capturas de preço para este disco.`,
-          },
+          ...(disponivel
+            ? [
+                {
+                  q: `O preço de ${disco.titulo} está bom agora?`,
+                  a:
+                    statusPreco === "menor"
+                      ? `Sim — ${fmt(precoAtual)} é o menor preço já registrado pelo nosso monitoramento para este disco.`
+                      : statusPreco === "aumento"
+                      ? `O preço atual (${fmt(precoAtual)}) está acima da média histórica de ${fmt(media)}. Pode valer a pena esperar uma queda.`
+                      : `O preço atual (${fmt(precoAtual)}) está próximo da média histórica de ${fmt(media)}.`,
+                },
+                {
+                  q: `Com que frequência o preço de ${disco.titulo} é verificado?`,
+                  a: `O preço é verificado automaticamente várias vezes ao dia na Amazon Brasil. Já registramos ${valores.length} capturas de preço para este disco.`,
+                },
+              ]
+            : []),
         ]
       : [];
 
