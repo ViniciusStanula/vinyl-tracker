@@ -12,7 +12,7 @@ function addCanonical(res: NextResponse, pathname: string): NextResponse {
   return res;
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Block high-volume bot traffic from SG/CN/MY when the request has no
   // Portuguese Accept-Language — confirmed via GA4 (0% engagement).
   // Legitimate PT-BR speakers in those countries still pass through.
@@ -25,14 +25,38 @@ export function proxy(request: NextRequest) {
     return new Response("", { status: 403 });
   }
 
+  const pathname = request.nextUrl.pathname;
   const ua = request.headers.get("user-agent") ?? "";
-  const isMcp = request.nextUrl.pathname.startsWith("/api/mcp");
+  const isMcp = pathname.startsWith("/api/mcp");
   const bot = detectBot(ua);
 
   // /api/mcp is always logged: MCP/agent clients often send generic UAs
   // (node, python-httpx, ...) that the bot list won't match.
   // Every other path: bots only — humans exit immediately with zero extra work.
-  if (!bot && !isMcp) return addCanonical(NextResponse.next(), request.nextUrl.pathname);
+  if (!bot && !isMcp) return addCanonical(NextResponse.next(), pathname);
+
+  // For artista/estilo bot requests: check thin-page status and set X-Robots-Tag.
+  // The API response is CDN-cached (s-maxage=3600) so only the first hit per slug
+  // per hour touches the DB; all others are cache hits with ~0ms overhead.
+  let xRobotsTag: string | null = null;
+  const artistaMatch = pathname.match(/^\/artista\/([a-z0-9-]+)$/);
+  const estiloMatch = pathname.match(/^\/estilo\/([a-z0-9-]+)$/);
+  if (artistaMatch || estiloMatch) {
+    const type = artistaMatch ? "artista" : "estilo";
+    const slug = (artistaMatch ?? estiloMatch)![1];
+    try {
+      const checkRes = await fetch(
+        `${request.nextUrl.origin}/api/internal/noindex?type=${type}&slug=${slug}`,
+        { signal: AbortSignal.timeout(2000) }
+      );
+      if (checkRes.ok) {
+        const data = await checkRes.json() as { noindex: boolean };
+        if (data.noindex) xRobotsTag = "noindex, follow";
+      }
+    } catch {
+      // timeout or error — skip; bots still get a valid page
+    }
+  }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -41,7 +65,7 @@ export function proxy(request: NextRequest) {
   // Snapshot request data now — the request object should not be touched
   // after the response is sent.
   const row = {
-    path: request.nextUrl.pathname,
+    path: pathname,
     query: request.nextUrl.search || null,
     user_agent: ua.slice(0, 512),
     bot_name: bot?.name ?? "unknown",
@@ -76,7 +100,9 @@ export function proxy(request: NextRequest) {
     }
   });
 
-  return addCanonical(NextResponse.next(), request.nextUrl.pathname);
+  const res = addCanonical(NextResponse.next(), pathname);
+  if (xRobotsTag) res.headers.set("X-Robots-Tag", xRobotsTag);
+  return res;
 }
 
 export const config = {
