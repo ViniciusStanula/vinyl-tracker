@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { Prisma } from "@prisma/client";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { slugifyStyle } from "@/lib/utils/styleUtils";
@@ -7,10 +8,25 @@ import { slugifyStyle } from "@/lib/utils/styleUtils";
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
 const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";
 
+const ESTILO_PAGE_SIZE = 60;
+
+function estiloOrderBy(sort: string): Prisma.Sql {
+  switch (sort) {
+    case "deals":       return Prisma.sql`c.deal_score DESC NULLS LAST, desconto DESC NULLS LAST`;
+    case "menor-preco": return Prisma.sql`hp_latest.preco ASC`;
+    case "maior-preco": return Prisma.sql`hp_latest.preco DESC`;
+    case "avaliados":   return Prisma.sql`c.rating::float DESC NULLS LAST`;
+    case "az":          return Prisma.sql`c.titulo ASC`;
+    default:            return Prisma.sql`desconto DESC NULLS LAST`;
+  }
+}
+
 export type SerializedEstiloData = {
   canonical: string;
   bioShortPt: string | null;
   bioPt: string | null;
+  total: number;
+  totalPages: number;
   discos: {
     id: string;
     titulo: string;
@@ -33,7 +49,12 @@ export type SerializedEstiloData = {
 export type RelatedEstilo = { tag: string; slug: string };
 
 const _getEstiloPageData = unstable_cache(
-  async (slug: string): Promise<SerializedEstiloData | null> => {
+  async (
+    slug: string,
+    page: number,
+    sort: string,
+    precoMax: number | null,
+  ): Promise<SerializedEstiloData | null> => {
     const canonicalRow = await prisma.$queryRaw<{ tag: string }[]>`
       WITH tags AS (
         SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
@@ -54,6 +75,14 @@ const _getEstiloPageData = unstable_cache(
     if (canonicalRow.length === 0) return null;
     const canonical = canonicalRow[0].tag;
 
+    const wherePrecoMax =
+      precoMax !== null && !isNaN(precoMax)
+        ? Prisma.sql`AND hp_latest.preco <= ${precoMax}`
+        : Prisma.sql``;
+
+    const orderBy  = estiloOrderBy(sort);
+    const offset   = (page - 1) * ESTILO_PAGE_SIZE;
+
     const bioQuery = prisma.$queryRaw<{ bioShortPt: string | null; bioPt: string | null }[]>`
       SELECT bio_short_pt AS "bioShortPt", bio_pt AS "bioPt"
       FROM "EstiloMeta"
@@ -61,7 +90,23 @@ const _getEstiloPageData = unstable_cache(
       LIMIT 1
     `;
 
-    const [rows, bioRows] = await Promise.all([prisma.$queryRaw<{
+    const countQuery = prisma.$queryRaw<[{ total: bigint }]>`
+      SELECT COUNT(*) AS total
+      FROM "Disco" c
+      INNER JOIN LATERAL (
+        SELECT "precoBrl"::float AS preco
+        FROM "HistoricoPreco"
+        WHERE "discoId" = c.id
+        ORDER BY "capturadoEm" DESC LIMIT 1
+      ) hp_latest ON true
+      WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(c.lastfm_tags), ', '))
+        AND c.disponivel = TRUE
+        AND (c.format IS NULL OR c.format = 'vinyl')
+        AND c.price_count >= 5
+        ${wherePrecoMax}
+    `;
+
+    const mainQuery = prisma.$queryRaw<{
       id: string;
       titulo: string;
       artista: string;
@@ -78,15 +123,6 @@ const _getEstiloPageData = unstable_cache(
       desconto: number;
       sparkline: unknown;
     }[]>`
-      WITH candidates AS (
-        SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
-               deal_score, confidence_level, last_crawled_at, avg_30d
-        FROM "Disco"
-        WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
-          AND disponivel = TRUE
-          AND (format IS NULL OR format = 'vinyl')
-          AND price_count >= 5
-      )
       SELECT
         c.id,
         c.titulo,
@@ -121,24 +157,35 @@ const _getEstiloPageData = unstable_cache(
             LIMIT 10
           ) sp
         ) AS sparkline
-      FROM candidates c
+      FROM "Disco" c
       INNER JOIN LATERAL (
         SELECT "precoBrl"::float AS preco
         FROM "HistoricoPreco"
         WHERE "discoId" = c.id
-        ORDER BY "capturadoEm" DESC
-        LIMIT 1
+        ORDER BY "capturadoEm" DESC LIMIT 1
       ) hp_latest ON true
-      ORDER BY c.deal_score DESC NULLS LAST, desconto DESC NULLS LAST
-      LIMIT 96
-    `, bioQuery]);
+      WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(c.lastfm_tags), ', '))
+        AND c.disponivel = TRUE
+        AND (c.format IS NULL OR c.format = 'vinyl')
+        AND c.price_count >= 5
+        ${wherePrecoMax}
+      ORDER BY ${orderBy}
+      LIMIT ${ESTILO_PAGE_SIZE}
+      OFFSET ${offset}
+    `;
 
-    const bio = bioRows[0] ?? null;
+    const [bioRows, countResult, rows] = await Promise.all([bioQuery, countQuery, mainQuery]);
+
+    const bio   = bioRows[0] ?? null;
+    const total = Number(countResult[0].total);
+    const totalPages = Math.max(1, Math.ceil(total / ESTILO_PAGE_SIZE));
 
     return {
       canonical,
-      bioShortPt: bio?.bioShortPt ?? null,
-      bioPt:      bio?.bioPt ?? null,
+      bioShortPt:  bio?.bioShortPt ?? null,
+      bioPt:       bio?.bioPt ?? null,
+      total,
+      totalPages,
       discos: rows.map((row) => {
         let sparkline: number[] = [];
         if (Array.isArray(row.sparkline)) {

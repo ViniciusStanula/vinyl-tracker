@@ -159,11 +159,17 @@ export default async function ArtistaPage({
         <StyleTags tags={topStyles} />
       </header>
 
-      {bioShortPt && (
+      {bioShortPt ? (
         <div className="mb-5 bg-sleeve border border-groove rounded-xl px-5 py-4">
           <p className="text-parchment text-sm leading-relaxed">{bioShortPt}</p>
         </div>
-      )}
+      ) : !isUnknownArtist && total > 0 ? (
+        <p className="mb-5 text-dust text-sm">
+          {total === 1
+            ? `1 disco de ${artista} disponível em vinil na Amazon Brasil com histórico de preços.`
+            : `${total} discos de ${artista} disponíveis em vinil na Amazon Brasil, cada um com histórico de preços de 12 meses.`}
+        </p>
+      ) : null}
 
       <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
         <Suspense>

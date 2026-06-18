@@ -1,6 +1,7 @@
 import DiscoCard from "@/components/DiscoCard";
 import SortBar from "@/components/SortBar";
 import BackToTop from "@/components/BackToTop";
+import Pagination from "@/components/Pagination";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -12,27 +13,32 @@ import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 
-export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
+export const revalidate = 3600;
 
-type Sort = "deals" | "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az";
+// Genres that have a dedicated /guias/ page — used to surface crosslinks.
+const GENRE_GUIA: Record<string, string> = {
+  rock: "/guias/rock",
+};
+
+const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
 
 export default async function EstiloPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string; precoMax?: string }>;
+  searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
 }) {
   const { slug } = await params;
-  const { sort = "desconto", precoMax: precoMaxStr } = await searchParams;
-  const precoMax =
-    precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
+  const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
+  const precoMax = precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
+  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 
   let data: SerializedEstiloData | null = null;
   let hasPeer = false;
   try {
     [data, hasPeer] = await Promise.all([
-      getEstiloPageData(slug),
+      getEstiloPageData(slug, currentPage, sort, precoMax),
       getHreflangSlug("genre", slug).catch(() => false as false),
     ]);
   } catch (err) {
@@ -49,15 +55,14 @@ export default async function EstiloPage({
   }
   if (!data) notFound();
 
-  const { canonical, discos, bioShortPt, bioPt } = data;
+  const { canonical, discos, bioShortPt, bioPt, total, totalPages } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const n = discos.length;
-  const isThin = n <= 3 && !bioShortPt;
+  const isThin = total <= 3 && !bioShortPt;
   const metaTitle = truncateTitle(`Discos de ${displayName} em Vinil — Ofertas | Garimpa Vinil`);
   const metaDesc = truncateDesc(
-    n >= 4
-      ? `${n} discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
+    total >= 4
+      ? `${total} discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
       : `Discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
   );
   const firstImageEstilo = discos.find((d) => d.imgUrl)?.imgUrl ?? null;
@@ -70,66 +75,29 @@ export default async function EstiloPage({
     console.error("[EstiloPage] getRelatedEstilos failed for canonical=%s", canonical, err);
   }
 
-  const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
-
+  // Apply staleness check for deal badge display only (DB handles sort).
   const discosProcessados = discos.map((disco) => {
-    const crawledAt = disco.lastCrawledAt
-      ? new Date(disco.lastCrawledAt).getTime()
-      : null;
-    const dealIsStale =
-      crawledAt === null || Date.now() - crawledAt > DEAL_STALE_MS;
-    const dealScore =
-      disco.dealScore !== null && !dealIsStale ? disco.dealScore : null;
-
+    const crawledAt = disco.lastCrawledAt ? new Date(disco.lastCrawledAt).getTime() : null;
+    const dealIsStale = crawledAt === null || Date.now() - crawledAt > DEAL_STALE_MS;
+    const dealScore = disco.dealScore !== null && !dealIsStale ? disco.dealScore : null;
     return {
       ...disco,
       rating: disco.rating ? Number(disco.rating) : null,
       emPromocao: dealScore !== null,
       dealScore,
+      disponivel: true,
     };
   });
 
-  const filtrados =
-    precoMax !== null && !isNaN(precoMax)
-      ? discosProcessados.filter((d) => d.precoAtual <= precoMax)
-      : discosProcessados;
-
-  const sorted = [...filtrados].sort((a, b) => {
-    switch (sort as Sort) {
-      case "deals":
-        return (b.dealScore ?? -1) - (a.dealScore ?? -1) || b.desconto - a.desconto;
-      case "menor-preco":
-        return a.precoAtual - b.precoAtual;
-      case "maior-preco":
-        return b.precoAtual - a.precoAtual;
-      case "avaliados":
-        return (b.rating ?? 0) - (a.rating ?? 0);
-      case "az":
-        return a.titulo.localeCompare(b.titulo, "pt-BR");
-      case "desconto":
-      default:
-        return b.desconto - a.desconto;
-    }
-  });
-
-  // Cap rendered cards — big styles (rock, pop) would otherwise ship
-  // thousands of cards in one HTML payload.
-  const GRID_CAP = 60;
-  const visiveis = sorted.slice(0, GRID_CAP);
-
   const siteUrl = SITE_URL;
+  const guiaUrl = GENRE_GUIA[canonical.toLowerCase()] ?? null;
 
   const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Início", item: `${siteUrl}/` },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: displayName,
-        item: `${siteUrl}/estilo/${slug}`,
-      },
+      { "@type": "ListItem", position: 2, name: displayName, item: `${siteUrl}/estilo/${slug}` },
     ],
   });
 
@@ -138,13 +106,20 @@ export default async function EstiloPage({
     "@type": "ItemList",
     name: `Discos de ${displayName}`,
     url: `${siteUrl}/estilo/${slug}`,
-    numberOfItems: sorted.length,
-    itemListElement: sorted.slice(0, 10).map((disco, i) => ({
+    numberOfItems: total,
+    itemListElement: discos.slice(0, 10).map((disco, i) => ({
       "@type": "ListItem",
       position: i + 1,
       url: `${siteUrl}/disco/${disco.slug}`,
       name: disco.titulo,
     })),
+  });
+
+  const musicGenreJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "MusicGenre",
+    name: displayName,
+    url: `${siteUrl}/estilo/${slug}`,
   });
 
   return (
@@ -174,6 +149,8 @@ export default async function EstiloPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: musicGenreJsonLd }} />
       <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
           Início
@@ -187,7 +164,7 @@ export default async function EstiloPage({
           {displayName}
         </h1>
         <p className="mt-1 text-dust text-sm">
-          {formatDiscoCount(sorted.length)}
+          {formatDiscoCount(total)}
           {precoMax !== null && !isNaN(precoMax)
             ? ` até R$ ${precoMax.toLocaleString("pt-BR")}`
             : ""}
@@ -200,28 +177,60 @@ export default async function EstiloPage({
         </div>
       )}
 
+      {/* Guide crosslink — only when a /guias/ page exists for this genre */}
+      {guiaUrl && (
+        <div className="mb-5 flex items-center gap-2 text-sm">
+          <span className="text-dust">Quer conhecer mais sobre {displayName}?</span>
+          <Link
+            href={guiaUrl}
+            className="text-parchment hover:text-gold underline underline-offset-2 transition-colors font-medium"
+          >
+            Ver guia de {displayName} →
+          </Link>
+        </div>
+      )}
+
+      {/* Related genres — above the grid for topical graph signals */}
+      {relatedEstilos.length > 0 && (
+        <div className="mb-5">
+          <p className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
+            Estilos relacionados
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {relatedEstilos.map((e) => (
+              <li key={e.slug}>
+                <Link
+                  href={`/estilo/${e.slug}`}
+                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+                >
+                  {e.tag.replace(/\b\w/g, (c) => c.toUpperCase())}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="mb-4">
         <Suspense>
           <SortBar />
         </Suspense>
       </div>
 
-      {sorted.length > 0 ? (
+      {discosProcessados.length > 0 ? (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-            {visiveis.map((disco, index) => (
+            {discosProcessados.map((disco, index) => (
               <DiscoCard key={disco.id} disco={disco} priority={index < 4} />
             ))}
           </div>
-          {sorted.length > GRID_CAP && (
-            <p className="text-dust text-sm text-center mt-6">
-              Exibindo os {GRID_CAP} primeiros de {sorted.length} discos.
-              Use os filtros para refinar, ou{" "}
-              <Link href="/disco" className="text-parchment hover:text-gold underline underline-offset-2 transition-colors">
-                veja o catálogo completo
-              </Link>
-              .
-            </p>
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              searchParams={{ sort: sort !== "desconto" ? sort : undefined, precoMax: precoMaxStr }}
+              basePath={`/estilo/${slug}`}
+            />
           )}
         </>
       ) : (
@@ -241,33 +250,12 @@ export default async function EstiloPage({
         </div>
       )}
 
-
       {bioPt && (
         <section className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
           <h2 className="font-display text-xl font-bold text-cream mb-3">Sobre o estilo {displayName}</h2>
           {bioPt.split("\n\n").map((p, i) => (
             <p key={i} className="text-parchment text-sm leading-relaxed mb-3 last:mb-0">{p}</p>
           ))}
-        </section>
-      )}
-
-      {relatedEstilos.length > 0 && (
-        <section className="mt-12 pt-8 border-t border-groove">
-          <h2 className="text-dust text-xs font-semibold uppercase tracking-widest mb-3">
-            Outros estilos
-          </h2>
-          <ul className="flex flex-wrap gap-1.5">
-            {relatedEstilos.map((e) => (
-              <li key={e.slug}>
-                <Link
-                  href={`/estilo/${e.slug}`}
-                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-                >
-                  {e.tag.replace(/\b\w/g, (c) => c.toUpperCase())}
-                </Link>
-              </li>
-            ))}
-          </ul>
         </section>
       )}
 

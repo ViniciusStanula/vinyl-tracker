@@ -4,6 +4,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getDiscoCount } from "@/lib/db/home";
 import { queryCarouselDiscosWithCache } from "@/lib/db/carousel";
+import { toJsonLd } from "@/lib/jsonld";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
 import ArtistasCarousel from "@/components/ArtistasCarousel";
@@ -71,6 +72,15 @@ export async function generateMetadata({
   };
 }
 
+// Top genres surfaced as quick-links below the artist carousel.
+const GENRE_LINKS = [
+  { label: "Rock",       slug: "rock" },
+  { label: "Jazz",       slug: "jazz" },
+  { label: "MPB",        slug: "mpb" },
+  { label: "Pop",        slug: "pop" },
+  { label: "Clássica",   slug: "classical" },
+  { label: "Reggae",     slug: "reggae" },
+] as const;
 
 export default async function HomePage({
   searchParams,
@@ -115,8 +125,38 @@ export default async function HomePage({
 
   const currentPage = Math.min(page, totalPages);
 
+  const websiteJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${SITE_URL}/#website`,
+    name: "Garimpa Vinil",
+    url: SITE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/?q={search_term_string}` },
+      "query-input": "required name=search_term_string",
+    },
+  });
+
+  const organizationJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
+    name: "Garimpa Vinil",
+    url: SITE_URL,
+    logo: `${SITE_URL}/og-default.png`,
+    description: "Histórico de preços de discos de vinil na Amazon Brasil. Monitora mais de 28 mil títulos com gráfico de 12 meses e alertas de oferta.",
+    sameAs: [
+      "https://www.instagram.com/garimpavinil/",
+    ],
+  });
+
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: websiteJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJsonLd }} />
 
       {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test) ── */}
       {SHOW_HERO && (
@@ -137,12 +177,12 @@ export default async function HomePage({
         {/* Content */}
         <div className="relative z-10 px-6 py-8 sm:py-14 max-w-lg">
           <span className="text-gold text-[11px] font-bold uppercase tracking-[0.2em] block mb-3">
-            Curadoria Especializada
+            Amazon Brasil · Curadoria Especializada
           </span>
           <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-black leading-[0.95] mb-4 [text-wrap:balance]">
-            <span className="italic text-cream">O Garimpo do Vinil</span>
+            <span className="italic text-cream">Histórico de Preços</span>
             <br />
-            <span className="not-italic text-gold">Começa Aqui.</span>
+            <span className="not-italic text-gold">de Discos de Vinil</span>
           </h1>
           <p className="text-cream text-sm sm:text-base max-w-md leading-relaxed mb-4">
             Catálogo de discos de vinil na Amazon Brasil com preços atualizados. Encontre bons momentos para comprar.
@@ -177,6 +217,27 @@ export default async function HomePage({
 
       {/* ── Artistas mais Ouvidos carousel ──────────────────────── */}
       <ArtistasCarousel items={carouselItems} />
+
+      {/* ── Genre quick-links ────────────────────────────────────── */}
+      {!searchTerm && !artista && (
+        <nav aria-label="Explorar por estilo" className="flex flex-wrap gap-2 mb-6">
+          {GENRE_LINKS.map(({ label, slug }) => (
+            <Link
+              key={slug}
+              href={`/estilo/${slug}`}
+              className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+            >
+              {label}
+            </Link>
+          ))}
+          <Link
+            href="/artistas"
+            className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+          >
+            Ver todos os artistas →
+          </Link>
+        </nav>
+      )}
 
       {/* ── Sort bar ────────────────────────────────────────────── */}
       <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">

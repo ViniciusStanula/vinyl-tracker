@@ -342,3 +342,41 @@ const _getArtistaPageData = unstable_cache(
 );
 
 export const getArtistaPageData = cache(_getArtistaPageData);
+
+export type ArtistaListItem = {
+  artista: string;
+  slug: string;
+  discoCount: number;
+  imgUrl: string | null;
+};
+
+const _getArtistasList = unstable_cache(
+  async (): Promise<ArtistaListItem[]> => {
+    const rows = await prisma.$queryRaw<{
+      artista: string;
+      discoCount: bigint;
+      imgUrl: string | null;
+    }[]>`
+      SELECT
+        artista,
+        COUNT(*) AS "discoCount",
+        MIN("imgUrl") FILTER (WHERE "imgUrl" IS NOT NULL) AS "imgUrl"
+      FROM "Disco"
+      WHERE disponivel = TRUE
+        AND (format IS NULL OR format = 'vinyl')
+        AND price_count >= 5
+      GROUP BY artista
+      ORDER BY artista ASC
+    `;
+    return rows.map((r) => ({
+      artista: r.artista,
+      slug: slugifyArtist(r.artista),
+      discoCount: Number(r.discoCount),
+      imgUrl: r.imgUrl,
+    }));
+  },
+  ["artistas-list"],
+  { tags: ["prices"], revalidate: 21600 }
+);
+
+export const getArtistasList = cache(_getArtistasList);
