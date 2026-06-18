@@ -3,6 +3,7 @@ import createMDX from "@next/mdx";
 import path from "path";
 
 const isDev = process.env.NODE_ENV === "development";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.garimpavinil.com.br";
 
 const SECURITY_HEADERS = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -57,7 +58,7 @@ const nextConfig: NextConfig = {
       {
         source: "/",
         headers: [
-          { key: "Link", value: '</llms.txt>; rel="llms-txt", </llms.txt>; rel="service-doc"' },
+          { key: "Link", value: `<${SITE_URL}/>; rel="canonical", </llms.txt>; rel="llms-txt", </llms.txt>; rel="service-doc"` },
         ],
       },
     ];
