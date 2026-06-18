@@ -964,6 +964,17 @@ def fetch_product_page(session, url: str, retries: int = 3, referer: str | None 
                 _quick_warmup(session)
                 continue
             resp.raise_for_status()
+            # Detect off-domain redirects (e.g., Amazon → primevideo.com).
+            # curl_cffi and requests both expose the final URL via resp.url.
+            final_url = getattr(resp, "url", "") or ""
+            if final_url and "amazon.com.br" not in final_url:
+                log.info(
+                    "[fetch_product] Off-Amazon redirect %s → %s — 404",
+                    url[:60], final_url[:80],
+                )
+                _metrics.record_http("ok", latency_ms)
+                pool.report_ok(proxy)
+                return None, 404, session, proxy
         except Exception as exc:
             _metrics.record_http("net_error")
             log.warning(
