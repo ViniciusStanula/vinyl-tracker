@@ -159,7 +159,7 @@ export default function InfiniteGrid({
             </div>
           )}
           {!hasMore && !loading && !fetchError && items.length > 0 && (
-            <p className="text-ash text-xs">Todos os discos foram carregados</p>
+            <p className="text-dust text-xs">Todos os discos foram carregados</p>
           )}
         </div>
       )}

@@ -64,7 +64,7 @@ export default function PriceHistoryTable({ rows }: Props) {
                     <td
                       className={`py-1.5 text-right tabular-nums ${
                         delta === null
-                          ? "text-ash"
+                          ? "text-dust"
                           : delta > 0
                           ? "text-cut"
                           : delta < 0

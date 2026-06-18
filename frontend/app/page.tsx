@@ -4,7 +4,6 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getDiscoCount } from "@/lib/db/home";
 import { queryCarouselDiscosWithCache } from "@/lib/db/carousel";
-import { toJsonLd } from "@/lib/jsonld";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
 import ArtistasCarousel from "@/components/ArtistasCarousel";
@@ -125,38 +124,8 @@ export default async function HomePage({
 
   const currentPage = Math.min(page, totalPages);
 
-  const websiteJsonLd = toJsonLd({
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": `${SITE_URL}/#website`,
-    name: "Garimpa Vinil",
-    url: SITE_URL,
-    potentialAction: {
-      "@type": "SearchAction",
-      target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/?q={search_term_string}` },
-      "query-input": "required name=search_term_string",
-    },
-  });
-
-  const organizationJsonLd = toJsonLd({
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": `${SITE_URL}/#organization`,
-    name: "Garimpa Vinil",
-    url: SITE_URL,
-    logo: `${SITE_URL}/og-default.png`,
-    description: "Histórico de preços de discos de vinil na Amazon Brasil. Monitora mais de 28 mil títulos com gráfico de 12 meses e alertas de oferta.",
-    sameAs: [
-      "https://www.instagram.com/garimpavinil/",
-    ],
-  });
-
   return (
     <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
-      {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: websiteJsonLd }} />
-      {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJsonLd }} />
 
       {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test) ── */}
       {SHOW_HERO && (

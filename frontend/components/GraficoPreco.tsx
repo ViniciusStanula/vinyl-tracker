@@ -227,7 +227,6 @@ export default function GraficoPreco({ precos }: Props) {
           }}
           onMouseLeave={() => setHoveredIdx(null)}
           onTouchMove={(e) => {
-            e.preventDefault();
             const touch = e.touches[0];
             const rect = e.currentTarget.getBoundingClientRect();
             const ratio = (touch.clientX - rect.left) / rect.width;

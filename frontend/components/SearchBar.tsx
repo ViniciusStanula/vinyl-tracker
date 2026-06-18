@@ -96,7 +96,8 @@ export default function SearchBar() {
           autoComplete="off"
           aria-label="Buscar discos de vinil"
           aria-expanded={showDropdown}
-          aria-haspopup="listbox"
+          aria-haspopup="menu"
+          aria-controls="search-suggestions"
           placeholder="Busque por artista, álbum ou código..."
           defaultValue={searchParams.get("q") ?? ""}
           onChange={handleChange}

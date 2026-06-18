@@ -475,7 +475,7 @@ export default async function DiscoPage({
                   </svg>
                 </a>
                 <div className="flex items-center justify-between mt-2 px-1">
-                  <p className="text-ash text-xs">Preços podem variar · <span className="text-dust/60">#anúncio</span></p>
+                  <p className="text-dust text-xs">Preços podem variar · <span className="text-dust/60">#anúncio</span></p>
                   <CopyLinkButton />
                 </div>
               </>
@@ -485,7 +485,7 @@ export default async function DiscoPage({
                   Indisponível na Amazon
                 </div>
                 {dataAtual && (
-                  <p className="text-xs text-ash pl-1">Último registro em {dataAtualLabel}</p>
+                  <p className="text-xs text-dust pl-1">Último registro em {dataAtualLabel}</p>
                 )}
                 <div className="flex justify-end">
                   <CopyLinkButton />

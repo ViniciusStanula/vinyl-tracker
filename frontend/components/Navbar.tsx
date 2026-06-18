@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import SearchBar from "./SearchBar";
 
@@ -31,12 +31,39 @@ const NAV_LINKS = [
 export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => { setOpen(false); }, [pathname]);
 
   useEffect(() => {
     if (!open) return;
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
+
+    // Move focus to first nav link when drawer opens
+    const firstLink = navRef.current?.querySelector<HTMLElement>("a");
+    firstLink?.focus();
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+        setTimeout(() => buttonRef.current?.focus(), 0);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const nav = navRef.current;
+      if (!nav) return;
+      const focusable = Array.from(nav.querySelectorAll<HTMLElement>("a[href], button"));
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
@@ -90,6 +117,7 @@ export default function Navbar() {
 
           {/* ── Mobile hamburger ── */}
           <button
+            ref={buttonRef}
             className="sm:hidden w-11 h-11 flex items-center justify-center rounded-lg text-parchment hover:text-cream hover:bg-groove/40 transition-colors active:scale-95 shrink-0"
             onClick={() => setOpen(v => !v)}
             aria-label={open ? "Fechar menu" : "Abrir menu"}
@@ -115,10 +143,11 @@ export default function Navbar() {
         <>
           <div
             className="fixed inset-0 z-40 bg-record/60 backdrop-blur-[2px] sm:hidden"
-            onClick={() => setOpen(false)}
-            aria-hidden
+            onClick={() => { setOpen(false); buttonRef.current?.focus(); }}
+            aria-hidden="true"
           />
           <nav
+            ref={navRef}
             id="mobile-nav"
             className="fixed top-[62px] left-0 right-0 z-40 bg-sleeve border-b border-groove shadow-2xl sm:hidden"
             aria-label="Menu principal"

@@ -61,7 +61,8 @@ export default function SearchDropdown({ query, onClose }: Props) {
 
   return (
     <div
-      role="listbox"
+      id="search-suggestions"
+      role="menu"
       aria-label="Sugestões de busca"
       className="absolute top-full left-0 right-0 mt-1.5 bg-sleeve border border-groove rounded-xl shadow-2xl overflow-hidden z-50"
     >
@@ -88,7 +89,7 @@ export default function SearchDropdown({ query, onClose }: Props) {
       {results.map((r, idx) => (
         <Link
           key={r.id}
-          role="option"
+          role="menuitem"
           href={`/artista/${slugifyArtist(r.artista)}`}
           onClick={onClose}
           className={`flex items-center gap-3 px-4 py-2.5 hover:bg-groove transition-colors${
@@ -129,6 +130,7 @@ export default function SearchDropdown({ query, onClose }: Props) {
       {/* "See all results" footer when at the 8-result cap */}
       {results.length >= 8 && (
         <Link
+          role="menuitem"
           href={`/?q=${encodeURIComponent(query)}`}
           onClick={onClose}
           className="flex items-center justify-center gap-1 px-4 py-2.5 text-dust text-xs hover:text-cream hover:bg-groove transition-colors border-t border-groove/50"

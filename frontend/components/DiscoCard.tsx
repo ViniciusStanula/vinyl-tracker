@@ -116,7 +116,6 @@ export default memo(function DiscoCard({
             fill
             sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, (max-width: 1279px) 25vw, (max-width: 1535px) 20vw, 17vw"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
-            unoptimized
             priority={priority}
             loading={priority ? undefined : "lazy"}
           />

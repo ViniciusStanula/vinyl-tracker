@@ -54,7 +54,7 @@ export default function Pagination({
   const btnIdle =
     "bg-groove text-parchment hover:bg-wax hover:text-cream";
   const btnDisabled =
-    "bg-sleeve text-ash cursor-not-allowed select-none";
+    "bg-sleeve text-dust cursor-not-allowed select-none";
 
   return (
     <nav
