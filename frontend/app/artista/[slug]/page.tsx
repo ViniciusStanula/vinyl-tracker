@@ -75,13 +75,9 @@ export default async function ArtistaPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Início", item: `${siteUrl}/` },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: artista,
-        item: `${siteUrl}/artista/${slug}`,
-      },
+      { "@type": "ListItem", position: 1, name: "Início",   item: `${siteUrl}/` },
+      { "@type": "ListItem", position: 2, name: "Artistas", item: `${siteUrl}/artistas` },
+      { "@type": "ListItem", position: 3, name: artista,    item: `${siteUrl}/artista/${slug}` },
     ],
   });
 
@@ -141,6 +137,10 @@ export default async function ArtistaPage({
       <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
           Início
+        </Link>
+        <span aria-hidden="true">›</span>
+        <Link href="/artistas" className="hover:text-cream transition-colors">
+          Artistas
         </Link>
         <span aria-hidden="true">›</span>
         <span className="text-parchment">{artista}</span>

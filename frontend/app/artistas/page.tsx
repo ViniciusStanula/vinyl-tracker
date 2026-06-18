@@ -104,12 +104,12 @@ export default async function ArtistasIndexPage() {
                     <li key={item.slug}>
                       <Link
                         href={`/artista/${item.slug}`}
-                        className="flex flex-col gap-0.5 px-3 py-2.5 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove transition-colors"
+                        className="flex flex-col justify-between h-[72px] px-3 py-2.5 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove transition-colors"
                       >
                         <span className="text-parchment text-sm font-medium leading-tight line-clamp-2">
                           {item.artista}
                         </span>
-                        <span className="text-dust text-xs tabular-nums">
+                        <span className="text-dust text-xs tabular-nums mt-1">
                           {item.discoCount} {item.discoCount === 1 ? "disco" : "discos"}
                         </span>
                       </Link>
