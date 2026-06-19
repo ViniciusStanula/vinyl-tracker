@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     );
 
     await resend.emails.send({
-      from: "alertas@mail.garimpavinil.com.br",
+      from: "Garimpa Vinil Alertas <alertas@mail.garimpavinil.com.br>",
       to: [email],
       subject: `Confirme seu alerta para "${disco.titulo}"`,
       html,

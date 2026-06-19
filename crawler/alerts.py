@@ -14,7 +14,7 @@ import requests
 log = logging.getLogger(__name__)
 
 _RESEND_URL = "https://api.resend.com/emails"
-_FROM = "alertas@mail.garimpavinil.com.br"
+_FROM = "Garimpa Vinil Alertas <alertas@mail.garimpavinil.com.br>"
 _SITE = "https://www.garimpavinil.com.br"
 
 
