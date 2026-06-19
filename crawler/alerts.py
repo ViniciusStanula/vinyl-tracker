@@ -93,7 +93,7 @@ def send_price_alert_email(
     payload = {
         "from": _FROM,
         "to": [email],
-        "subject": f"Preço de "{titulo}" baixou para {new_brl}",
+        "subject": f'Preço de "{titulo}" baixou para {new_brl}',
         "html": html,
         "text": text,
     }

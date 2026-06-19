@@ -1103,7 +1103,7 @@ def check_alert_crossings(
             SELECT a.id, a.email, a.filters, a.last_known_price, a.manage_token,
                    d.titulo, d.slug
             FROM alert_subscriptions a
-            JOIN "Disco" d ON d.id = (a.filters->>'record_id')::uuid
+            JOIN "Disco" d ON d.id = (a.filters->>'record_id')
             WHERE a.status = 'confirmed'
               AND (a.filters->>'record_id') = %s
               {deal_guard}

@@ -78,7 +78,7 @@ export async function getSubscriptionByToken(
       d.slug,
       d.avg_30d::text
     FROM alert_subscriptions a
-    JOIN "Disco" d ON d.id = (a.filters->>'record_id')::uuid
+    JOIN "Disco" d ON d.id = (a.filters->>'record_id')
     WHERE a.manage_token = ${manageToken}
     LIMIT 1
   `;
