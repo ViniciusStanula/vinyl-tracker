@@ -20,12 +20,16 @@ export async function createSubscription(
   maxPrice: number,
 ): Promise<{ id: string; manageToken: string } | null> {
   const manageToken = randomBytes(32).toString("hex");
-
+  // Use jsonb_build_object — Prisma adapter-pg doesn't apply ::jsonb on
+  // parameterized values reliably, so we avoid the cast entirely.
   const rows = await prisma.$queryRaw<{ id: string; manage_token: string }[]>`
     INSERT INTO alert_subscriptions (email, filters, manage_token)
     VALUES (
       ${email},
-      ${JSON.stringify({ record_id: recordId, max_price: maxPrice })}::jsonb,
+      jsonb_build_object(
+        'record_id'::text, ${recordId}::text,
+        'max_price'::text,  ${maxPrice}::numeric
+      ),
       ${manageToken}
     )
     RETURNING id::text, manage_token
@@ -41,7 +45,7 @@ export async function confirmSubscription(
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     UPDATE alert_subscriptions
     SET status = 'confirmed', confirmed_at = NOW()
-    WHERE id = ${id}::uuid
+    WHERE id::text = ${id}
       AND manage_token = ${manageToken}
       AND status = 'pending'
     RETURNING id::text
@@ -110,7 +114,7 @@ export async function deleteSubscriptionByToken(
 export async function recordExists(recordId: string): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT id::text FROM "Disco"
-    WHERE id = ${recordId}::uuid
+    WHERE id::text = ${recordId}
       AND disponivel = TRUE
       AND (format IS NULL OR format = 'vinyl')
     LIMIT 1

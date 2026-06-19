@@ -52,14 +52,20 @@ export async function POST(req: NextRequest) {
   // Fetch record info for the email (reuse the query already done in recordExists flow)
   const { prisma } = await import("@/lib/db/prisma");
   const discoRows = await prisma.$queryRaw<{ titulo: string; artista: string; slug: string }[]>`
-    SELECT titulo, artista, slug FROM "Disco" WHERE id = ${record_id}::uuid LIMIT 1
+    SELECT titulo, artista, slug FROM "Disco" WHERE id::text = ${record_id} LIMIT 1
   `;
   const disco = discoRows[0];
   if (!disco) {
     return NextResponse.json({ error: "Disco não encontrado." }, { status: 404 });
   }
 
-  const sub = await createSubscription(email, record_id, maxPrice);
+  let sub: Awaited<ReturnType<typeof createSubscription>>;
+  try {
+    sub = await createSubscription(email, record_id, maxPrice);
+  } catch (err) {
+    console.error("createSubscription threw:", err);
+    return NextResponse.json({ error: "Erro interno ao criar alerta." }, { status: 500 });
+  }
   if (!sub) {
     return NextResponse.json({ error: "Erro ao criar alerta." }, { status: 500 });
   }
