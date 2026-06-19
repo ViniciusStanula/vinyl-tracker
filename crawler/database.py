@@ -235,6 +235,15 @@ def upsert_batch(conn, items: list[dict]) -> int:
         log.debug("Inserted %d HistoricoPreco rows.", len(preco_rows))
 
     conn.commit()
+
+    # Fire crossing checks after the price commit. skip_if_deal=True because search-card
+    # prices can be wrong for deal items (Phase 0 re-validates them via mark_stale_price).
+    for (disco_id_str, preco_brl, _, _) in preco_rows:
+        try:
+            check_alert_crossings(conn, disco_id_str, float(preco_brl), skip_if_deal=True)
+        except Exception as exc:
+            log.warning("check_alert_crossings failed for disco %s: %s", disco_id_str, exc)
+
     return len(items)
 
 
@@ -492,6 +501,7 @@ def mark_stale_price(
             (review_count, disco_id),
         )
     conn.commit()
+    check_alert_crossings(conn, disco_id, price_brl)
 
 
 def update_disco_metadata(
@@ -1062,6 +1072,107 @@ def save_estilo_bio(conn, tag: str, intro: str, bio: str, lastfm_summary: str | 
         conn.rollback()
         log.warning("save_estilo_bio failed for %s: %s", tag, exc)
         return False
+
+
+def check_alert_crossings(
+    conn,
+    disco_id: str,
+    price_brl: float,
+    *,
+    skip_if_deal: bool = False,
+) -> None:
+    """
+    Fire price-drop alert emails for confirmed subscriptions on a threshold crossing.
+
+    A crossing fires when:
+      - last_known_price was NULL (first observation) or above the threshold, AND
+      - price_brl is now at or below the threshold
+
+    skip_if_deal=True (used by upsert_batch): skips discos with deal_score IS NOT NULL
+    because search-card prices can be unreliable for multi-format ASINs. Those discos
+    are re-validated with authoritative prices via mark_stale_price (Phase 0/3), which
+    calls this function with skip_if_deal=False.
+
+    Always updates last_known_price for all matched subscriptions regardless of crossing.
+    Batch-updates last_alert_sent_at only for subscriptions that triggered an alert.
+    """
+    deal_guard = "AND d.deal_score IS NULL" if skip_if_deal else ""
+    with _cursor(conn) as cur:
+        cur.execute(
+            f"""
+            SELECT a.id, a.email, a.filters, a.last_known_price, a.manage_token,
+                   d.titulo, d.slug
+            FROM alert_subscriptions a
+            JOIN "Disco" d ON d.id = (a.filters->>'record_id')::uuid
+            WHERE a.status = 'confirmed'
+              AND (a.filters->>'record_id') = %s
+              {deal_guard}
+            """,
+            (str(disco_id),),
+        )
+        rows = cur.fetchall()
+
+    if not rows:
+        return
+
+    from alerts import send_price_alert_email  # local import — only when subscriptions exist
+
+    triggered_ids: list[str] = []
+    all_ids: list[str] = []
+
+    for row_id, email, filters, last_known_price, manage_token, titulo, slug in rows:
+        all_ids.append(str(row_id))
+        try:
+            threshold = float(filters["max_price"])
+        except (KeyError, TypeError, ValueError):
+            log.warning("alert_subscriptions id=%s has invalid max_price in filters", row_id)
+            continue
+
+        last_price = float(last_known_price) if last_known_price is not None else None
+        was_above = last_price is None or last_price > threshold
+        now_at_or_below = price_brl <= threshold
+
+        if was_above and now_at_or_below:
+            try:
+                send_price_alert_email(
+                    email=email,
+                    titulo=titulo,
+                    disco_slug=slug,
+                    old_price=last_price,
+                    new_price=price_brl,
+                    manage_token=manage_token,
+                )
+            except Exception as exc:
+                log.warning("send_price_alert_email failed for sub %s: %s", row_id, exc)
+            triggered_ids.append(str(row_id))
+
+    if not all_ids:
+        return
+
+    with _cursor(conn) as cur:
+        if triggered_ids:
+            cur.execute(
+                """
+                UPDATE alert_subscriptions
+                SET last_known_price = %s, last_alert_sent_at = NOW()
+                WHERE id = ANY(%s::uuid[])
+                """,
+                (price_brl, triggered_ids),
+            )
+            non_triggered = [i for i in all_ids if i not in set(triggered_ids)]
+        else:
+            non_triggered = all_ids
+
+        if non_triggered:
+            cur.execute(
+                """
+                UPDATE alert_subscriptions
+                SET last_known_price = %s
+                WHERE id = ANY(%s::uuid[])
+                """,
+                (price_brl, non_triggered),
+            )
+    conn.commit()
 
 
 def limpar_historico_antigo(conn, days: int = 365) -> int:

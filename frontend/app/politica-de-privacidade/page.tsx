@@ -43,6 +43,61 @@ export default function PoliticaDePrivacidadePage() {
         </section>
 
         <section className="bg-sleeve border border-groove rounded-xl p-6">
+          <h2 className="font-display text-lg font-bold text-cream mb-3">Alertas de preço</h2>
+          <p className="mb-3">
+            O site oferece um serviço opcional de alertas de preço: você pode cadastrar seu e-mail
+            e um preço limite para um disco específico, e receberá uma notificação quando o preço
+            cair para esse valor.
+          </p>
+          <p className="mb-3">
+            <strong className="text-cream">O que coletamos:</strong> endereço de e-mail e a
+            preferência de alerta (qual disco e qual preço limite).
+          </p>
+          <p className="mb-3">
+            <strong className="text-cream">Para que serve:</strong> exclusivamente para enviar
+            a notificação de queda de preço que você pediu. Esses dados não são usados para
+            marketing nem compartilhados com terceiros.
+          </p>
+          <p className="mb-3">
+            <strong className="text-cream">Base legal (LGPD, Art. 7º, I):</strong> consentimento.
+            O alerta só é ativado após você confirmar pelo link enviado ao seu e-mail
+            (dupla confirmação), que é o registro do seu consentimento.
+          </p>
+          <p className="mb-3">
+            <strong className="text-cream">Retenção:</strong> alertas confirmados ficam ativos
+            até você cancelar. Alertas não confirmados são excluídos automaticamente após 7 dias.
+          </p>
+          <p className="mb-3">
+            <strong className="text-cream">Como cancelar:</strong> cada e-mail de alerta contém
+            um link de gerenciamento. Um clique exclui imediatamente seu e-mail e preferências dos
+            nossos servidores — sem necessidade de criar conta ou entrar em contato com o suporte.
+            É um direito seu pela LGPD (Art. 18, VI).
+          </p>
+          <p>
+            <strong className="text-cream">Operadores de dados:</strong> o{" "}
+            <a
+              href="https://resend.com/legal/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gold hover:underline"
+            >
+              Resend
+            </a>{" "}
+            (plataforma de envio de e-mail) e o{" "}
+            <a
+              href="https://supabase.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gold hover:underline"
+            >
+              Supabase
+            </a>{" "}
+            (banco de dados) processam esses dados em nosso nome, conforme suas próprias
+            políticas de privacidade.
+          </p>
+        </section>
+
+        <section className="bg-sleeve border border-groove rounded-xl p-6">
           <h2 className="font-display text-lg font-bold text-cream mb-3">Cookies</h2>
           <p className="mb-3">
             O site pode utilizar cookies técnicos essenciais para o funcionamento correto das páginas e cookies de analytics para medir o uso do site de forma anônima.

@@ -461,37 +461,67 @@ export default async function DiscoPage({
             )}
 
             {/* CTA */}
-            {disponivel ? (
-              <>
-                <a
-                  href={affiliateUrl(disco.url)}
-                  target="_blank"
-                  rel="sponsored noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full bg-gold hover:bg-goldlit text-record font-bold text-sm py-4 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-record"
-                >
-                  Ver na Amazon
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </a>
-                <div className="flex items-center justify-between mt-2 px-1">
-                  <p className="text-dust text-xs">Preços podem variar · <span className="text-dust/60">#anúncio</span></p>
-                  <CopyLinkButton />
+            {(() => {
+              const alertParams = new URLSearchParams({
+                record_id: disco.id,
+                titulo:    disco.titulo,
+                artista:   disco.artista,
+                slug:      disco.slug,
+                preco:     precoAtual > 0 ? String(precoAtual) : "",
+                ...(disco.imgUrl ? { imgUrl: disco.imgUrl } : {}),
+              });
+              const alertUrl = `/alertas?${alertParams.toString()}`;
+
+              return disponivel ? (
+                <>
+                  <a
+                    href={affiliateUrl(disco.url)}
+                    target="_blank"
+                    rel="sponsored noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full bg-gold hover:bg-goldlit text-record font-bold text-sm py-4 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-record"
+                  >
+                    Ver na Amazon
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </a>
+                  <div className="flex items-center justify-between mt-2 px-1">
+                    <p className="text-dust text-xs">Preços podem variar · <span className="text-dust/60">#anúncio</span></p>
+                    <CopyLinkButton />
+                  </div>
+                  <Link
+                    href={alertUrl}
+                    className="flex items-center justify-center gap-1.5 w-full border border-groove text-dust hover:text-cream hover:border-parchment/40 text-sm py-3.5 rounded-xl transition-colors mt-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-5M13 21a2 2 0 01-4 0" />
+                    </svg>
+                    Criar alerta de preço
+                  </Link>
+                </>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-center bg-groove text-dust font-bold text-sm py-4 rounded-xl cursor-not-allowed border border-wax/50">
+                    Indisponível na Amazon
+                  </div>
+                  {dataAtual && (
+                    <p className="text-xs text-dust pl-1">Último registro em {dataAtualLabel}</p>
+                  )}
+                  <Link
+                    href={alertUrl}
+                    className="flex items-center justify-center gap-1.5 w-full bg-gold hover:bg-goldlit text-record font-bold text-sm py-3.5 rounded-xl transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-5M13 21a2 2 0 01-4 0" />
+                    </svg>
+                    Avise-me quando voltar
+                  </Link>
+                  <div className="flex justify-end">
+                    <CopyLinkButton />
+                  </div>
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-center bg-groove text-dust font-bold text-sm py-4 rounded-xl cursor-not-allowed border border-wax/50">
-                  Indisponível na Amazon
-                </div>
-                {dataAtual && (
-                  <p className="text-xs text-dust pl-1">Último registro em {dataAtualLabel}</p>
-                )}
-                <div className="flex justify-end">
-                  <CopyLinkButton />
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Stats bar — suppressed when HIDE_PRICE_HISTORY */}
             {!HIDE_PRICE_HISTORY && (

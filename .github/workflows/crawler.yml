@@ -64,6 +64,8 @@ jobs:
           CREATORS_TPD: "8640"
           FRESHNESS_FLOOR_MINUTES: "180"
           AMAZON_MAX_CONCURRENCY: "4"
+          # ── Alert emails ──
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
 
       - name: Post-crawl data-quality check (CD incident)
         if: always()
