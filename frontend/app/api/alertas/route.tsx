@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Erro ao criar alerta." }, { status: 500 });
   }
 
-  const confirmUrl = `${SITE_URL}/alertas/confirmar?id=${sub.id}&token=${sub.manageToken}`;
+  const confirmUrl = `${SITE_URL}/api/alertas/confirmar?id=${sub.id}&token=${sub.manageToken}`;
   const manageUrl = `${SITE_URL}/alertas/gerenciar/${sub.manageToken}`;
 
   try {
