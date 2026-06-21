@@ -1154,7 +1154,7 @@ def check_alert_crossings(
             cur.execute(
                 """
                 UPDATE alert_subscriptions
-                SET last_known_price = %s, last_alert_sent_at = NOW()
+                SET last_known_price = %s, last_alert_sent_at = NOW(), status = 'unsubscribed'
                 WHERE id = ANY(%s::uuid[])
                 """,
                 (price_brl, triggered_ids),
