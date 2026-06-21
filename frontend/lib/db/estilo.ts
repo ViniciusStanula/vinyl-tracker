@@ -225,7 +225,7 @@ const _getEstiloPageData = unstable_cache(
     };
   },
   ["estilo-page"],
-  { tags: ["prices"], revalidate: 3600 }
+  { tags: ["prices"], revalidate: 86400 }
 );
 
 export const getEstiloPageData = cache(_getEstiloPageData);
@@ -273,7 +273,7 @@ const _getRelatedEstilos = unstable_cache(
     return rows.map((r) => ({ tag: r.tag, slug: slugifyStyle(r.tag) }));
   },
   ["estilo-related"],
-  { tags: ["prices"], revalidate: 3600 }
+  { tags: ["prices"], revalidate: 86400 }
 );
 
 export const getRelatedEstilos = cache(_getRelatedEstilos);

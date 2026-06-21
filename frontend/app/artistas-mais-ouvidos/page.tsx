@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 import { toJsonLd } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
 
-export const revalidate = 1800;
+export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: "Artistas mais Ouvidos — Garimpa Vinil",

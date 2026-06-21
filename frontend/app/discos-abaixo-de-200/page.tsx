@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 import { toJsonLd } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
 
-export const revalidate = 1800;
+export const revalidate = 86400;
 
 export async function generateMetadata(): Promise<Metadata> {
   let count = 0;

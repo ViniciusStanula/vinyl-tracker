@@ -35,6 +35,7 @@ load_dotenv_if_present()
 from database import (
     upsert_batch,
     limpar_historico_antigo,
+    limpar_bot_hits_antigos,
     get_connection,
     ensure_schema_extras,
     ensure_category_tables,
@@ -3278,7 +3279,8 @@ def main():
             log.warning("Time limit reached — skipping Phase 4 history cleanup.")
         else:
             t0 = time.monotonic()
-            limpar_historico_antigo(conn)
+            limpar_historico_antigo(conn, days=180)
+            limpar_bot_hits_antigos(conn)
             log.info("Phase 4 cleanup: %.0fs", time.monotonic() - t0)
 
         # ── Phase 5: Last.fm album enrichment ─────────────────────────────

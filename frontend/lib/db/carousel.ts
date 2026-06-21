@@ -182,7 +182,7 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
 export const queryCarouselDiscosWithCache = unstable_cache(
   queryCarouselDiscos,
   ["carousel-discos"],
-  { tags: ["prices"], revalidate: 1800 },
+  { tags: ["prices"], revalidate: 86400 },
 );
 
 // Shared artist matching — cached 1 week under `lastfm` tag.
@@ -337,5 +337,5 @@ async function queryTopArtistAllDeals(
 export const queryTopArtistAllDealsWithCache = unstable_cache(
   queryTopArtistAllDeals,
   ["top-artist-all-deals"],
-  { tags: ["prices"], revalidate: 1800 },
+  { tags: ["prices"], revalidate: 86400 },
 );

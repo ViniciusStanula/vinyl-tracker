@@ -13,7 +13,7 @@ import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 // Genres that have a dedicated /guias/ page — used to surface crosslinks.
 const GENRE_GUIA: Record<string, string> = {

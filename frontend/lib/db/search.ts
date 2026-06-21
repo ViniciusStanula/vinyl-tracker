@@ -67,7 +67,7 @@ async function fetchSuggestions(q: string): Promise<SearchSuggestion[]> {
 const _getCachedSuggestions = unstable_cache(
   fetchSuggestions,
   ["search-suggestions"],
-  { tags: ["prices"], revalidate: 600 }
+  { tags: ["prices"], revalidate: 3600 }
 );
 
 export const getCachedSuggestions = (q: string) => _getCachedSuggestions(q);

@@ -126,5 +126,5 @@ export async function queryPriceUnder200(): Promise<ProcessedDisco[]> {
 export const queryPriceUnder200WithCache = unstable_cache(
   queryPriceUnder200,
   ["price-under-200"],
-  { tags: ["prices"], revalidate: 1800 },
+  { tags: ["prices"], revalidate: 86400 },
 );

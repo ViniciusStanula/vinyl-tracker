@@ -24,7 +24,7 @@ import { toJsonLd } from "@/lib/jsonld";
 
 // Safety net only — the crawler's /api/revalidate webhook is the real trigger.
 // 1800 matches the data-layer TTL so the HTML cache never outlives its data.
-export const revalidate = 1800;
+export const revalidate = 86400;
 
 export default async function DiscoPage({
   params,

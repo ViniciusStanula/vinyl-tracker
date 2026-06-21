@@ -48,7 +48,7 @@ const _getDiscoWithPrecos = unstable_cache(
     });
   },
   ["disco-with-precos"],
-  { tags: ["prices"], revalidate: 1800 },
+  { tags: ["prices"], revalidate: 86400 },
 );
 
 // unstable_cache serializes to JSON — Prisma Date objects become strings.
@@ -143,5 +143,5 @@ export const getRelatedDeals = unstable_cache(
     `;
   },
   ["disco-related-deals"],
-  { tags: ["prices"], revalidate: 1800 }
+  { tags: ["prices"], revalidate: 86400 }
 );

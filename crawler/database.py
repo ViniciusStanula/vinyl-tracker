@@ -1197,3 +1197,20 @@ def limpar_historico_antigo(conn, days: int = 365) -> int:
     if deleted > 0:
         log.info("Cleaned up %d HistoricoPreco rows older than %d days.", deleted, days)
     return deleted
+
+
+def limpar_bot_hits_antigos(conn, days: int = 30) -> int:
+    """
+    Deletes bot_hits records older than `days` days.
+    No retention limit existed before — this prevents unbounded storage growth.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            "DELETE FROM bot_hits WHERE created_at < NOW() - (%s * INTERVAL '1 day')",
+            (days,)
+        )
+        deleted = cur.rowcount
+    conn.commit()
+    if deleted > 0:
+        log.info("Cleaned up %d bot_hits rows older than %d days.", deleted, days)
+    return deleted

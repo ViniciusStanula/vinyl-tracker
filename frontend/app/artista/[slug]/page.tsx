@@ -15,7 +15,7 @@ import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 
-export const revalidate = 3600; // safety-net; on-demand purge via revalidateTag("prices") fires first
+export const revalidate = 86400; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
 export default async function ArtistaPage({
   params,
@@ -56,15 +56,16 @@ export default async function ArtistaPage({
 
   const isUnknownArtist = canonical.toLowerCase() === "artista não identificado";
   const isThin = total <= 2 && !bioShortPt;
+  const discoLabel = total === 1 ? "1 disco" : `${total} discos`;
   const metaTitle = isUnknownArtist
     ? "Discos de Vinil — Vários Artistas | Garimpa Vinil"
-    : truncateTitle(`${artista} em Vinil — Preços e Ofertas | Garimpa Vinil`);
+    : truncateTitle(`${artista} em Vinil (${discoLabel}) — Histórico de Preço | Garimpa Vinil`);
   const metaDesc = isUnknownArtist
     ? truncateDesc("Discos de vinil de vários artistas na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.")
     : truncateDesc(
         total === 1
-          ? `1 disco de ${artista} em vinil na Amazon, com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
-          : `${total} discos de ${artista} em vinil na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.`
+          ? `Vinil de ${artista} na Amazon Brasil com histórico de preço de 12 meses. Veja se está com desconto hoje antes de comprar.`
+          : `${total} vinis de ${artista} na Amazon Brasil, cada um com histórico de preço de 12 meses. Veja qual está com desconto hoje antes de comprar.`
       );
   const firstImage = items.find((d) => d.imgUrl)?.imgUrl ?? unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
   const canonicalUrl = `${SITE_URL}/artista/${slug}`;
