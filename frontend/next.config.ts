@@ -41,6 +41,8 @@ const nextConfig: NextConfig = {
     "/guias/rock/[slug]": ["../enriched_data.json"],
   },
   images: {
+    minimumCacheTTL: 2592000, // 30 days — Amazon covers rarely change; default 60s caused constant re-transformation
+    deviceSizes: [320, 420, 640, 828], // album covers max 416px; no need for 1080–3840 variants
     remotePatterns: [
       { protocol: "https", hostname: "m.media-amazon.com" },
       { protocol: "https", hostname: "images-na.ssl-images-amazon.com" },
