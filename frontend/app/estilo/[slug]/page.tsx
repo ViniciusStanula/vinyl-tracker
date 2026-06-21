@@ -15,11 +15,6 @@ import { toJsonLd } from "@/lib/jsonld";
 
 export const revalidate = 86400;
 
-// Genres that have a dedicated /guias/ page — used to surface crosslinks.
-const GENRE_GUIA: Record<string, string> = {
-  rock: "/guias/rock",
-};
-
 const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
 
 export default async function EstiloPage({
@@ -96,7 +91,6 @@ export default async function EstiloPage({
   });
 
   const siteUrl = SITE_URL;
-  const guiaUrl = GENRE_GUIA[canonical.toLowerCase()] ?? null;
 
   const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
@@ -185,19 +179,6 @@ export default async function EstiloPage({
       {bioShortPt && (
         <div className="mb-5 bg-sleeve border border-groove rounded-xl px-5 py-4">
           <p className="text-parchment text-sm leading-relaxed">{bioShortPt}</p>
-        </div>
-      )}
-
-      {/* Guide crosslink — only when a /guias/ page exists for this genre */}
-      {guiaUrl && (
-        <div className="mb-5 flex items-center gap-2 text-sm">
-          <span className="text-dust">Quer conhecer mais sobre {displayName}?</span>
-          <Link
-            href={guiaUrl}
-            className="text-parchment hover:text-gold underline underline-offset-2 transition-colors font-medium"
-          >
-            Ver guia de {displayName} →
-          </Link>
         </div>
       )}
 
