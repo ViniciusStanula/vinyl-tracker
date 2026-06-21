@@ -29,6 +29,7 @@ export default async function sitemap(props: {
       { url: `${SITEMAP_BASE}/disco`, changeFrequency: "daily", priority: 0.8 },
       { url: `${SITEMAP_BASE}/discos-abaixo-de-200`, changeFrequency: "daily", priority: 0.7 },
       { url: `${SITEMAP_BASE}/artistas-mais-ouvidos`, changeFrequency: "weekly", priority: 0.6 },
+      { url: `${SITEMAP_BASE}/estilos`, changeFrequency: "weekly", priority: 0.7 },
       { url: `${SITEMAP_BASE}/sobre`, changeFrequency: "monthly", priority: 0.4 },
       { url: `${SITEMAP_BASE}/guias`, changeFrequency: "weekly", priority: 0.8 },
       { url: `${SITEMAP_BASE}/guias/top-artistas-spotify`, changeFrequency: "daily", priority: 0.7 },

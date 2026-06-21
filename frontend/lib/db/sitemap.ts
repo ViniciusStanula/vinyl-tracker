@@ -105,8 +105,8 @@ export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
   // isThin = total <= 2 && !bioShortPt  →  only include artists with >2 records
   // OR a bio (LEFT JOIN ArtistMeta). Using COUNT > 2 as a safe proxy avoids
   // a complex name-normalisation join; the 1-2-record+bio edge case is rare.
-  const artistRows = await prisma.$queryRaw<{ artista: string }[]>`
-    SELECT artista
+  const artistRows = await prisma.$queryRaw<{ artista: string; lastUpdated: Date }[]>`
+    SELECT artista, MAX("updatedAt") AS "lastUpdated"
     FROM   "Disco"
     WHERE  (format IS NULL OR format = 'vinyl')
       AND  price_count >= 5
@@ -119,15 +119,15 @@ export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
   const routes: MetadataRoute.Sitemap = [];
   let excluded = 0;
 
-  for (const { artista } of artistRows) {
-    const slug = slugifyArtist(artista);
+  for (const row of artistRows) {
+    const slug = slugifyArtist(row.artista);
     if (!slug || seenSlugs.has(slug)) continue;
     if (isJunkArtistSlug(slug)) {
       excluded++;
       continue;
     }
     seenSlugs.add(slug);
-    routes.push({ url: `${SITEMAP_BASE}/artista/${slug}`, lastModified: new Date() });
+    routes.push({ url: `${SITEMAP_BASE}/artista/${slug}`, lastModified: row.lastUpdated });
   }
 
   if (excluded > 0) {
@@ -176,10 +176,10 @@ export async function getSitemapDiscosForShard(shard: DiscoShard): Promise<Metad
 export async function getSitemapEstilos(): Promise<MetadataRoute.Sitemap> {
   // Mirror the thin-content noindex gate in estilo/[slug]/page.tsx:
   // isThin = n <= 3 && !bioShortPt  →  only include tags with >3 records.
-  const rows = await prisma.$queryRaw<{ tag: string }[]>`
-    SELECT tag
+  const rows = await prisma.$queryRaw<{ tag: string; lastUpdated: Date }[]>`
+    SELECT tag, MAX("updatedAt") AS "lastUpdated"
     FROM (
-      SELECT unnest(string_to_array(lastfm_tags, ', ')) AS tag
+      SELECT unnest(string_to_array(lastfm_tags, ', ')) AS tag, "updatedAt"
       FROM "Disco"
       WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
         AND disponivel = TRUE
@@ -193,11 +193,11 @@ export async function getSitemapEstilos(): Promise<MetadataRoute.Sitemap> {
   const seenSlugs = new Set<string>();
   const routes: MetadataRoute.Sitemap = [];
 
-  for (const { tag } of rows) {
-    const slug = slugifyStyle(tag);
+  for (const row of rows) {
+    const slug = slugifyStyle(row.tag);
     if (!slug || seenSlugs.has(slug)) continue;
     seenSlugs.add(slug);
-    routes.push({ url: `${SITEMAP_BASE}/estilo/${slug}`, lastModified: new Date() });
+    routes.push({ url: `${SITEMAP_BASE}/estilo/${slug}`, lastModified: row.lastUpdated });
   }
 
   return routes;

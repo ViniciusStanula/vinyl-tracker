@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
-import { getEstiloPageData, getRelatedEstilos, type SerializedEstiloData, type RelatedEstilo } from "@/lib/db/estilo";
+import { getEstiloPageData, getRelatedEstilos, getTopArtistsForEstilo, type SerializedEstiloData, type RelatedEstilo, type TopArtistForEstilo } from "@/lib/db/estilo";
 import { getHreflangSlug } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -69,11 +69,17 @@ export default async function EstiloPage({
   const estiloCanonicalUrl = `${SITE_URL}/estilo/${slug}`;
 
   let relatedEstilos: RelatedEstilo[] = [];
-  try {
-    relatedEstilos = await getRelatedEstilos(canonical);
-  } catch (err) {
-    console.error("[EstiloPage] getRelatedEstilos failed for canonical=%s", canonical, err);
-  }
+  let topArtists: TopArtistForEstilo[] = [];
+  [relatedEstilos, topArtists] = await Promise.all([
+    getRelatedEstilos(canonical).catch((err) => {
+      console.error("[EstiloPage] getRelatedEstilos failed for canonical=%s", canonical, err);
+      return [] as RelatedEstilo[];
+    }),
+    getTopArtistsForEstilo(canonical).catch((err) => {
+      console.error("[EstiloPage] getTopArtistsForEstilo failed for canonical=%s", canonical, err);
+      return [] as TopArtistForEstilo[];
+    }),
+  ]);
 
   // Apply staleness check for deal badge display only (DB handles sort).
   const discosProcessados = discos.map((disco) => {
@@ -96,8 +102,9 @@ export default async function EstiloPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Início", item: `${siteUrl}/` },
-      { "@type": "ListItem", position: 2, name: displayName, item: `${siteUrl}/estilo/${slug}` },
+      { "@type": "ListItem", position: 1, name: "Início",  item: `${siteUrl}/` },
+      { "@type": "ListItem", position: 2, name: "Estilos", item: `${siteUrl}/estilos` },
+      { "@type": "ListItem", position: 3, name: displayName, item: `${siteUrl}/estilo/${slug}` },
     ],
   });
 
@@ -151,11 +158,15 @@ export default async function EstiloPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: musicGenreJsonLd }} />
-      <nav className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
+      <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">
           Início
         </Link>
-        <span>›</span>
+        <span aria-hidden="true">›</span>
+        <Link href="/estilos" className="hover:text-cream transition-colors">
+          Estilos
+        </Link>
+        <span aria-hidden="true">›</span>
         <span className="text-parchment">{displayName}</span>
       </nav>
 
@@ -187,6 +198,27 @@ export default async function EstiloPage({
           >
             Ver guia de {displayName} →
           </Link>
+        </div>
+      )}
+
+      {/* Top artists in this genre — internal link equity to artist pages */}
+      {topArtists.length > 0 && (
+        <div className="mb-5">
+          <p className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
+            Artistas em {displayName}
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {topArtists.map((a) => (
+              <li key={a.slug}>
+                <Link
+                  href={`/artista/${a.slug}`}
+                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+                >
+                  {a.artista}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

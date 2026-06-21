@@ -87,43 +87,6 @@ body::after {
   contain: strict;
 }
 
-/* ── Range input — price alert slider ────────────────────────────── */
-input[type="range"].price-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  border-radius: 999px;
-  outline: none;
-  cursor: pointer;
-}
-
-input[type="range"].price-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--color-gold);
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-  transition: transform 150ms ease, box-shadow 150ms ease;
-}
-
-input[type="range"].price-slider:hover::-webkit-slider-thumb,
-input[type="range"].price-slider:focus-visible::-webkit-slider-thumb {
-  transform: scale(1.18);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-gold) 20%, transparent),
-              0 2px 8px rgba(0, 0, 0, 0.5);
-}
-
-input[type="range"].price-slider::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 50%;
-  background: var(--color-gold);
-  cursor: pointer;
-}
-
 /* ── Modal animations ────────────────────────────────────────────── */
 @keyframes overlay-in {
   from { opacity: 0; }
@@ -157,9 +120,6 @@ input[type="range"].price-slider::-moz-range-thumb {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  input[type="range"].price-slider::-webkit-slider-thumb {
-    transition: none;
-  }
   .animate-overlay-in,
   .animate-modal-in {
     animation: none;

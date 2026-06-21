@@ -8,6 +8,10 @@ Allow: /
 # Internal search results — noindex'd in metadata too
 Disallow: /*?*q=
 Disallow: /*?q=
+# User-specific / transactional pages — not indexable
+Disallow: /alertas
+Disallow: /confirmar
+Disallow: /gerenciar
 
 Sitemap: https://www.garimpavinil.com.br/sitemap.xml
 

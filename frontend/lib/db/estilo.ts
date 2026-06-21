@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { slugifyStyle } from "@/lib/utils/styleUtils";
+import { slugifyArtist } from "@/lib/utils/slugify";
 
 // Same accent-normalization constants as the artist page SQL slug matching
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
@@ -277,3 +278,64 @@ const _getRelatedEstilos = unstable_cache(
 );
 
 export const getRelatedEstilos = cache(_getRelatedEstilos);
+
+export type TopArtistForEstilo = { artista: string; slug: string; discoCount: number };
+
+const _getTopArtistsForEstilo = unstable_cache(
+  async (canonical: string): Promise<TopArtistForEstilo[]> => {
+    const rows = await prisma.$queryRaw<{ artista: string; disco_count: bigint }[]>`
+      SELECT artista, COUNT(*) AS disco_count
+      FROM "Disco"
+      WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
+        AND disponivel = TRUE
+        AND (format IS NULL OR format = 'vinyl')
+        AND price_count >= 5
+      GROUP BY artista
+      ORDER BY disco_count DESC
+      LIMIT 8
+    `;
+    return rows.map((r) => ({
+      artista: r.artista,
+      slug: slugifyArtist(r.artista),
+      discoCount: Number(r.disco_count),
+    }));
+  },
+  ["estilo-top-artists"],
+  { tags: ["prices"], revalidate: 86400 }
+);
+
+export const getTopArtistsForEstilo = cache(_getTopArtistsForEstilo);
+
+export type EstiloListItem = { tag: string; slug: string; discoCount: number };
+
+const _getEstilosList = unstable_cache(
+  async (): Promise<EstiloListItem[]> => {
+    const rows = await prisma.$queryRaw<{ tag: string; disco_count: bigint }[]>`
+      SELECT tag, COUNT(*) AS disco_count
+      FROM (
+        SELECT unnest(string_to_array(lastfm_tags, ', ')) AS tag
+        FROM "Disco"
+        WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
+          AND disponivel = TRUE
+          AND (format IS NULL OR format = 'vinyl')
+          AND price_count >= 5
+      ) t
+      GROUP BY tag
+      HAVING COUNT(*) > 3
+      ORDER BY COUNT(*) DESC
+    `;
+    const seenSlugs = new Set<string>();
+    const result: EstiloListItem[] = [];
+    for (const r of rows) {
+      const slug = slugifyStyle(r.tag);
+      if (!slug || seenSlugs.has(slug)) continue;
+      seenSlugs.add(slug);
+      result.push({ tag: r.tag, slug, discoCount: Number(r.disco_count) });
+    }
+    return result;
+  },
+  ["estilos-list"],
+  { tags: ["prices"], revalidate: 86400 }
+);
+
+export const getEstilosList = cache(_getEstilosList);
