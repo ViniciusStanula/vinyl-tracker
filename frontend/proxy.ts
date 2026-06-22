@@ -9,7 +9,7 @@ function addCanonical(res: NextResponse, pathname: string, searchParams: URLSear
   if (!pathname.startsWith("/api/")) {
     const pageParam = searchParams.get("page");
     const page = pageParam ? parseInt(pageParam, 10) : 1;
-    const canonicalPath = page > 1 ? `${pathname}?page=${page}` : pathname;
+    const canonicalPath = page > 1 ? `${pathname}?page=${page}` : pathname === "/" ? "" : pathname;
     res.headers.set("Link", `<${SITE_URL}${canonicalPath}>; rel="canonical"`);
   }
   return res;

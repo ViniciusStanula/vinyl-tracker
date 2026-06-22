@@ -65,7 +65,7 @@ const nextConfig: NextConfig = {
       {
         source: "/",
         headers: [
-          { key: "Link", value: `<${SITE_URL}/>; rel="canonical", </llms.txt>; rel="llms-txt", </llms.txt>; rel="service-doc"` },
+          { key: "Link", value: `<${SITE_URL}>; rel="canonical", </llms.txt>; rel="llms-txt", </llms.txt>; rel="service-doc"` },
         ],
       },
     ];

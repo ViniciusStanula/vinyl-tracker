@@ -56,9 +56,9 @@ export async function generateMetadata({
     title: HOME_TITLE,
     description,
     alternates: {
-      canonical: `${SITE_URL}/`,
+      canonical: SITE_URL,
       languages: {
-        "pt-BR": `${SITE_URL}/`,
+        "pt-BR": SITE_URL,
         "en-US": `${PEER_ORIGIN}/`,
         "x-default": `${PEER_ORIGIN}/`,
       },
