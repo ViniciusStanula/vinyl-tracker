@@ -128,7 +128,9 @@ export default async function EstiloPage({
       <title>{metaTitle}</title>
       <meta name="description" content={metaDesc} />
       <link rel="canonical" href={estiloCanonicalUrl} />
-      {isThin && <meta name="robots" content="noindex, follow" />}
+      {(isThin || currentPage > 1 || sort !== "desconto" || precoMax !== null) && (
+        <meta name="robots" content="noindex, follow" />
+      )}
       <meta property="og:type" content="website" />
       <meta property="og:title" content={metaTitle} />
       <meta property="og:description" content={metaDesc} />

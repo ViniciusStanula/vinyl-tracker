@@ -15,12 +15,18 @@ export const revalidate = 86400;
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; artista?: string; page?: string; precoMax?: string }>;
 }) {
-  const { q } = await searchParams;
-  // Internal search results must not be indexed (Google spam policy +
-  // unbounded crawl space). Canonical alone is only a hint.
-  if (q?.trim()) {
+  const { q, sort, artista, page, precoMax } = await searchParams;
+  // Noindex all filtered/paginated variants — unbounded param space, canonical
+  // consolidation handles link equity. noindex,follow keeps links followable.
+  const isVariant =
+    Boolean(q?.trim()) ||
+    (sort !== undefined && sort !== "desconto") ||
+    Boolean(artista) ||
+    (page !== undefined && parseInt(page, 10) > 1) ||
+    Boolean(precoMax);
+  if (isVariant) {
     return {
       title: "Catálogo de Discos de Vinil — Garimpa Vinil",
       robots: { index: false, follow: true },

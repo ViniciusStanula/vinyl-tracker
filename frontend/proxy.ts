@@ -30,29 +30,8 @@ export async function proxy(request: NextRequest) {
   const isMcp = pathname.startsWith("/api/mcp");
   const bot = detectBot(ua);
 
-  // Check thin-page status for artista/estilo — all requests, not just bots,
-  // so the X-Robots-Tag header is visible in browser DevTools for verification.
-  // API response is CDN-cached (s-maxage=3600): only the first hit per slug
-  // per hour touches the DB; all others are cache hits with ~0ms overhead.
-  let xRobotsTag: string | null = null;
-  const artistaMatch = pathname.match(/^\/artista\/([a-z0-9-]+)$/);
-  const estiloMatch = pathname.match(/^\/estilo\/([a-z0-9-]+)$/);
-  if (artistaMatch || estiloMatch) {
-    const type = artistaMatch ? "artista" : "estilo";
-    const slug = (artistaMatch ?? estiloMatch)![1];
-    try {
-      const checkRes = await fetch(
-        `${request.nextUrl.origin}/api/internal/noindex?type=${type}&slug=${slug}`,
-        { signal: AbortSignal.timeout(2000) }
-      );
-      if (checkRes.ok) {
-        const data = await checkRes.json() as { noindex: boolean };
-        if (data.noindex) xRobotsTag = "noindex, follow";
-      }
-    } catch {
-      // timeout or error — skip; page still served normally
-    }
-  }
+  // noindex for thin artista/estilo pages is handled by the page's own
+  // <meta name="robots"> tag (same thresholds). No serial pre-flight needed.
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -99,9 +78,7 @@ export async function proxy(request: NextRequest) {
     }
   });
 
-  const res = addCanonical(NextResponse.next(), pathname);
-  if (xRobotsTag) res.headers.set("X-Robots-Tag", xRobotsTag);
-  return res;
+  return addCanonical(NextResponse.next(), pathname);
 }
 
 export const config = {

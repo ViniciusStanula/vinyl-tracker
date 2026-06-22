@@ -4,6 +4,7 @@ import {
   getSitemapArtists,
   getSitemapDiscosForShard,
   getSitemapEstilos,
+  getLatestDiscoUpdate,
   DISCO_SHARDS,
   type DiscoShard,
 } from "@/lib/db/sitemap";
@@ -22,24 +23,31 @@ export default async function sitemap(props: {
   const id = await props.id;
 
   if (id === "estatico") {
-    const rockSubgenres = getRockSubgenres();
-    const now = new Date();
+    const [rockSubgenres, latestUpdate] = await Promise.all([
+      Promise.resolve(getRockSubgenres()),
+      getLatestDiscoUpdate(),
+    ]);
+    // Articles with known update dates; listing pages use latestUpdate (real price-change signal).
+    // top-artistas-spotify updates daily with Spotify data, so latestUpdate is used there too.
+    const ARTICLES_MODIFIED = new Date("2026-06-09");
+    const ROCK_GUIDE_DATE   = new Date("2026-05-26");
     return [
-      { url: SITEMAP_BASE, lastModified: now, changeFrequency: "daily", priority: 1.0 },
-      { url: `${SITEMAP_BASE}/disco`, changeFrequency: "daily", priority: 0.8 },
-      { url: `${SITEMAP_BASE}/discos-abaixo-de-200`, changeFrequency: "daily", priority: 0.7 },
-      { url: `${SITEMAP_BASE}/artistas-mais-ouvidos`, changeFrequency: "weekly", priority: 0.6 },
-      { url: `${SITEMAP_BASE}/estilos`, changeFrequency: "weekly", priority: 0.7 },
-      { url: `${SITEMAP_BASE}/sobre`, changeFrequency: "monthly", priority: 0.4 },
-      { url: `${SITEMAP_BASE}/guias`, changeFrequency: "weekly", priority: 0.8 },
-      { url: `${SITEMAP_BASE}/guias/top-artistas-spotify`, changeFrequency: "daily", priority: 0.7 },
-      { url: `${SITEMAP_BASE}/guias/como-cuidar-de-discos-de-vinil`, changeFrequency: "monthly", priority: 0.8 },
-      { url: `${SITEMAP_BASE}/guias/vinil-colorido-e-picture-disc`, changeFrequency: "monthly", priority: 0.8 },
-      { url: `${SITEMAP_BASE}/guias/vinil-180g-vale-a-pena`, changeFrequency: "monthly", priority: 0.8 },
-      { url: `${SITEMAP_BASE}/guias/como-avaliar-estado-disco-vinil`, changeFrequency: "monthly", priority: 0.8 },
-      { url: `${SITEMAP_BASE}/guias/rock`, changeFrequency: "monthly", priority: 0.8 },
+      { url: SITEMAP_BASE,                                              lastModified: latestUpdate,       changeFrequency: "daily",   priority: 1.0 },
+      { url: `${SITEMAP_BASE}/disco`,                                   lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.8 },
+      { url: `${SITEMAP_BASE}/discos-abaixo-de-200`,                    lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.7 },
+      { url: `${SITEMAP_BASE}/artistas-mais-ouvidos`,                   lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
+      { url: `${SITEMAP_BASE}/estilos`,                                 lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.7 },
+      { url: `${SITEMAP_BASE}/sobre` },
+      { url: `${SITEMAP_BASE}/guias`,                                   lastModified: ARTICLES_MODIFIED,  changeFrequency: "weekly",  priority: 0.8 },
+      { url: `${SITEMAP_BASE}/guias/top-artistas-spotify`,              lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.7 },
+      { url: `${SITEMAP_BASE}/guias/como-cuidar-de-discos-de-vinil`,   lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },
+      { url: `${SITEMAP_BASE}/guias/vinil-colorido-e-picture-disc`,    lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },
+      { url: `${SITEMAP_BASE}/guias/vinil-180g-vale-a-pena`,           lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },
+      { url: `${SITEMAP_BASE}/guias/como-avaliar-estado-disco-vinil`,  lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },
+      { url: `${SITEMAP_BASE}/guias/rock`,                              lastModified: ROCK_GUIDE_DATE,    changeFrequency: "monthly", priority: 0.8 },
       ...rockSubgenres.map((sg) => ({
         url: `${SITEMAP_BASE}/guias/rock/${sg.slug}`,
+        lastModified: ROCK_GUIDE_DATE,
         changeFrequency: "monthly" as const,
         priority: 0.7,
       })),

@@ -24,13 +24,19 @@ export const revalidate = 86400;
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; artista?: string; page?: string; precoMax?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, sort, artista, page, precoMax } = await searchParams;
   const HOME_TITLE = "Garimpa Vinil — Histórico de Preços de Discos de Vinil";
-  // Internal search results must not be indexed (Google spam policy +
-  // unbounded crawl space). Canonical alone is only a hint.
-  if (q?.trim()) {
+  // Noindex all filtered/paginated variants — unbounded param space, canonical
+  // consolidation handles link equity. noindex,follow keeps links followable.
+  const isVariant =
+    Boolean(q?.trim()) ||
+    (sort !== undefined && sort !== "desconto") ||
+    Boolean(artista) ||
+    (page !== undefined && parseInt(page, 10) > 1) ||
+    Boolean(precoMax);
+  if (isVariant) {
     return {
       title: HOME_TITLE,
       robots: { index: false, follow: true },

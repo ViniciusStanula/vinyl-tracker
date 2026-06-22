@@ -100,16 +100,31 @@ function isJunkArtistSlug(slug: string): boolean {
   return tokens.some((t) => JUNK_TOKENS.has(t));
 }
 
+export const getLatestDiscoUpdate = unstable_cache(
+  async (): Promise<Date> => {
+    const rows = await prisma.$queryRaw<[{ maxUpdatedAt: Date }]>`
+      SELECT MAX("updatedAt") AS "maxUpdatedAt" FROM "Disco"
+      WHERE (format IS NULL OR format = 'vinyl')
+    `;
+    return rows[0]?.maxUpdatedAt ?? new Date();
+  },
+  ["latest-disco-update"],
+  { tags: ["prices"], revalidate: 3600 },
+);
+
 export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
   // Mirror the thin-content noindex gate in artista/[slug]/page.tsx:
   // isThin = total <= 2 && !bioShortPt  →  only include artists with >2 records
   // OR a bio (LEFT JOIN ArtistMeta). Using COUNT > 2 as a safe proxy avoids
   // a complex name-normalisation join; the 1-2-record+bio edge case is rare.
+  // disponivel = TRUE: artists whose entire catalog is unavailable would pass
+  // HAVING but their page gets noindexed — skip them here to keep sitemap clean.
   const artistRows = await prisma.$queryRaw<{ artista: string; lastUpdated: Date }[]>`
     SELECT artista, MAX("updatedAt") AS "lastUpdated"
     FROM   "Disco"
     WHERE  (format IS NULL OR format = 'vinyl')
       AND  price_count >= 5
+      AND  disponivel = TRUE
     GROUP  BY artista
     HAVING COUNT(*) > 2
     ORDER  BY artista
