@@ -14,8 +14,82 @@ import { getHreflangSlug } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
+import type { Metadata } from "next";
 
 export const revalidate = 86400; // safety-net; on-demand purge via revalidateTag("prices") fires first
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
+  const precoMax = precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
+  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
+
+  const [data, hasPeer] = await Promise.all([
+    getArtistaPageData(slug, currentPage, sort, precoMax).catch(() => null),
+    getHreflangSlug("artist", slug).catch(() => false as false),
+  ]);
+
+  if (!data) return { title: "Artista | Garimpa Vinil" };
+
+  const { canonical, items, total, bioShortPt, unavailableItems } = data;
+  const artista = toTitleCase(canonical);
+  const isUnknownArtist = canonical.toLowerCase() === "artista não identificado";
+  const isThin = total <= 2 && !bioShortPt;
+  const noindex = isUnknownArtist || isThin || currentPage > 1;
+
+  const discoLabel = total === 1 ? "1 disco" : `${total} discos`;
+  const title = isUnknownArtist
+    ? "Discos de Vinil — Vários Artistas | Garimpa Vinil"
+    : truncateTitle(`${artista} em Vinil (${discoLabel}) — Histórico de Preço | Garimpa Vinil`);
+  const description = isUnknownArtist
+    ? truncateDesc("Discos de vinil de vários artistas na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.")
+    : truncateDesc(
+        total === 1
+          ? `Vinil de ${artista} na Amazon Brasil com histórico de preço de 12 meses. Veja se está com desconto hoje antes de comprar.`
+          : `${total} vinis de ${artista} na Amazon Brasil, cada um com histórico de preço de 12 meses. Veja qual está com desconto hoje antes de comprar.`
+      );
+  const firstImage = items.find((d) => d.imgUrl)?.imgUrl ?? unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
+  const canonicalUrl = currentPage > 1
+    ? `${SITE_URL}/artista/${slug}?page=${currentPage}`
+    : `${SITE_URL}/artista/${slug}`;
+
+  return {
+    title,
+    description,
+    robots: noindex ? { index: false, follow: true } : undefined,
+    alternates: {
+      canonical: canonicalUrl,
+      ...(hasPeer && !noindex
+        ? {
+            languages: {
+              "pt-BR": `${SITE_URL}/artista/${slug}`,
+              "en-US": `${PEER_ORIGIN}/artist/${slug}`,
+              "x-default": `${PEER_ORIGIN}/artist/${slug}`,
+            },
+          }
+        : {}),
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonicalUrl,
+      images: [firstImage ?? `${SITE_URL}/og-default.png`],
+    },
+    twitter: {
+      card: firstImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: [firstImage ?? `${SITE_URL}/og-default.png`],
+    },
+  };
+}
 
 export default async function ArtistaPage({
   params,
@@ -31,12 +105,8 @@ export default async function ArtistaPage({
   const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 
   let data: ArtistaPageData | null = null;
-  let hasPeer = false;
   try {
-    [data, hasPeer] = await Promise.all([
-      getArtistaPageData(slug, currentPage, sort, precoMax),
-      getHreflangSlug("artist", slug).catch(() => false as false),
-    ]);
+    data = await getArtistaPageData(slug, currentPage, sort, precoMax);
   } catch (err) {
     console.error("[ArtistaPage] getArtistaPageData failed for slug=%s", slug);
     if (process.env.NODE_ENV === "development") console.error(err);
@@ -55,22 +125,6 @@ export default async function ArtistaPage({
   const artista = toTitleCase(canonical);
 
   const isUnknownArtist = canonical.toLowerCase() === "artista não identificado";
-  const isThin = total <= 2 && !bioShortPt;
-  const discoLabel = total === 1 ? "1 disco" : `${total} discos`;
-  const metaTitle = isUnknownArtist
-    ? "Discos de Vinil — Vários Artistas | Garimpa Vinil"
-    : truncateTitle(`${artista} em Vinil (${discoLabel}) — Histórico de Preço | Garimpa Vinil`);
-  const metaDesc = isUnknownArtist
-    ? truncateDesc("Discos de vinil de vários artistas na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.")
-    : truncateDesc(
-        total === 1
-          ? `Vinil de ${artista} na Amazon Brasil com histórico de preço de 12 meses. Veja se está com desconto hoje antes de comprar.`
-          : `${total} vinis de ${artista} na Amazon Brasil, cada um com histórico de preço de 12 meses. Veja qual está com desconto hoje antes de comprar.`
-      );
-  const firstImage = items.find((d) => d.imgUrl)?.imgUrl ?? unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
-  const canonicalUrl = currentPage > 1
-    ? `${SITE_URL}/artista/${slug}?page=${currentPage}`
-    : `${SITE_URL}/artista/${slug}`;
 
   const siteUrl = SITE_URL;
 
@@ -110,28 +164,6 @@ export default async function ArtistaPage({
 
   return (
     <>
-      <title>{metaTitle}</title>
-      <meta name="description" content={metaDesc} />
-      <link rel="canonical" href={canonicalUrl} />
-      {(isUnknownArtist || isThin || currentPage > 1) && (
-        <meta name="robots" content="noindex, follow" />
-      )}
-      <meta property="og:type" content="website" />
-      <meta property="og:title" content={metaTitle} />
-      <meta property="og:description" content={metaDesc} />
-      <meta property="og:url" content={canonicalUrl} />
-      <meta property="og:image" content={firstImage ?? `${SITE_URL}/og-default.png`} />
-      <meta name="twitter:card" content={firstImage ? "summary_large_image" : "summary"} />
-      <meta name="twitter:title" content={metaTitle} />
-      <meta name="twitter:description" content={metaDesc} />
-      <meta name="twitter:image" content={firstImage ?? `${SITE_URL}/og-default.png`} />
-      {hasPeer && (
-        <>
-          <link rel="alternate" hrefLang="pt-BR" href={canonicalUrl} />
-          <link rel="alternate" hrefLang="en-US" href={`${PEER_ORIGIN}/artist/${slug}`} />
-          <link rel="alternate" hrefLang="x-default" href={`${PEER_ORIGIN}/artist/${slug}`} />
-        </>
-      )}
       <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />

@@ -12,10 +12,78 @@ import { getHreflangSlug } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
+import type { Metadata } from "next";
 
 export const revalidate = 86400;
 
 const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
+  const precoMax = precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
+  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
+
+  const [data, hasPeer] = await Promise.all([
+    getEstiloPageData(slug, currentPage, sort, precoMax).catch(() => null),
+    getHreflangSlug("genre", slug).catch(() => false as false),
+  ]);
+
+  if (!data) return { title: "Estilo | Garimpa Vinil" };
+
+  const { canonical, discos, total, bioShortPt } = data;
+  const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
+  const isThin = total <= 3 && !bioShortPt;
+  const noindex = isThin || currentPage > 1;
+
+  const title = truncateTitle(`Discos de ${displayName} em Vinil — Ofertas | Garimpa Vinil`);
+  const description = truncateDesc(
+    total >= 4
+      ? `${total} discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
+      : `Discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
+  );
+  const firstImage = discos.find((d) => d.imgUrl)?.imgUrl ?? null;
+  const canonicalUrl = currentPage > 1
+    ? `${SITE_URL}/estilo/${slug}?page=${currentPage}`
+    : `${SITE_URL}/estilo/${slug}`;
+
+  return {
+    title,
+    description,
+    robots: noindex ? { index: false, follow: true } : undefined,
+    alternates: {
+      canonical: canonicalUrl,
+      ...(hasPeer && !noindex
+        ? {
+            languages: {
+              "pt-BR": `${SITE_URL}/estilo/${slug}`,
+              "en-US": `${PEER_ORIGIN}/genre/${slug}`,
+              "x-default": `${PEER_ORIGIN}/genre/${slug}`,
+            },
+          }
+        : {}),
+    },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonicalUrl,
+      images: [firstImage ?? `${SITE_URL}/og-default.png`],
+    },
+    twitter: {
+      card: firstImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: [firstImage ?? `${SITE_URL}/og-default.png`],
+    },
+  };
+}
 
 export default async function EstiloPage({
   params,
@@ -30,12 +98,8 @@ export default async function EstiloPage({
   const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 
   let data: SerializedEstiloData | null = null;
-  let hasPeer = false;
   try {
-    [data, hasPeer] = await Promise.all([
-      getEstiloPageData(slug, currentPage, sort, precoMax),
-      getHreflangSlug("genre", slug).catch(() => false as false),
-    ]);
+    data = await getEstiloPageData(slug, currentPage, sort, precoMax);
   } catch (err) {
     console.error("[EstiloPage] getEstiloPageData failed for slug=%s", slug);
     if (process.env.NODE_ENV === "development") console.error(err);
@@ -52,18 +116,6 @@ export default async function EstiloPage({
 
   const { canonical, discos, bioShortPt, bioPt, total, totalPages } = data;
   const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
-
-  const isThin = total <= 3 && !bioShortPt;
-  const metaTitle = truncateTitle(`Discos de ${displayName} em Vinil — Ofertas | Garimpa Vinil`);
-  const metaDesc = truncateDesc(
-    total >= 4
-      ? `${total} discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
-      : `Discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
-  );
-  const firstImageEstilo = discos.find((d) => d.imgUrl)?.imgUrl ?? null;
-  const estiloCanonicalUrl = currentPage > 1
-    ? `${SITE_URL}/estilo/${slug}?page=${currentPage}`
-    : `${SITE_URL}/estilo/${slug}`;
 
   let relatedEstilos: RelatedEstilo[] = [];
   let topArtists: TopArtistForEstilo[] = [];
@@ -127,28 +179,6 @@ export default async function EstiloPage({
 
   return (
     <>
-      <title>{metaTitle}</title>
-      <meta name="description" content={metaDesc} />
-      <link rel="canonical" href={estiloCanonicalUrl} />
-      {(isThin || currentPage > 1) && (
-        <meta name="robots" content="noindex, follow" />
-      )}
-      <meta property="og:type" content="website" />
-      <meta property="og:title" content={metaTitle} />
-      <meta property="og:description" content={metaDesc} />
-      <meta property="og:url" content={estiloCanonicalUrl} />
-      <meta property="og:image" content={firstImageEstilo ?? `${SITE_URL}/og-default.png`} />
-      <meta name="twitter:card" content={firstImageEstilo ? "summary_large_image" : "summary"} />
-      <meta name="twitter:title" content={metaTitle} />
-      <meta name="twitter:description" content={metaDesc} />
-      <meta name="twitter:image" content={firstImageEstilo ?? `${SITE_URL}/og-default.png`} />
-      {hasPeer && (
-        <>
-          <link rel="alternate" hrefLang="pt-BR" href={estiloCanonicalUrl} />
-          <link rel="alternate" hrefLang="en-US" href={`${PEER_ORIGIN}/genre/${slug}`} />
-          <link rel="alternate" hrefLang="x-default" href={`${PEER_ORIGIN}/genre/${slug}`} />
-        </>
-      )}
       <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
