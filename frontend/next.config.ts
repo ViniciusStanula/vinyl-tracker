@@ -28,6 +28,10 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Disable streaming metadata: send canonical/robots/OG in the initial <head>
+  // for all requests, including Googlebot (not in Next.js default htmlLimitedBots).
+  // Cost is negligible — generateMetadata uses React-cached DB calls.
+  htmlLimitedBots: /.*/,
   pageExtensions: ["ts", "tsx", "js", "jsx", "md", "mdx"],
   compress: true,
   poweredByHeader: false,
