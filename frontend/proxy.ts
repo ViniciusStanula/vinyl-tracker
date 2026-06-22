@@ -65,14 +65,17 @@ export async function proxy(request: NextRequest) {
     query: request.nextUrl.search || null,
     user_agent: ua.slice(0, 512),
     bot_name: bot?.name ?? null,
-    bot_category: bot?.category ?? "unknown",
+    bot_category: bot?.category ?? null,
     method: request.method,
     ip:
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") ||
       null,
     country: request.headers.get("x-vercel-ip-country"),
+    region: request.headers.get("x-vercel-ip-region"),
+    city: request.headers.get("x-vercel-ip-city"),
     referer: request.headers.get("referer"),
+    accept_language: request.headers.get("accept-language")?.slice(0, 40) ?? null,
   };
 
   // Fire-and-forget: runs after the response is sent, never delays TTFB.
