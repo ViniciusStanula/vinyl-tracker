@@ -114,20 +114,21 @@ export const getLatestDiscoUpdate = unstable_cache(
 
 export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {
   // Mirror the thin-content noindex gate in artista/[slug]/page.tsx:
-  // isThin = total <= 2 && !bioShortPt  →  only include artists with >2 records
-  // OR a bio (LEFT JOIN ArtistMeta). Using COUNT > 2 as a safe proxy avoids
-  // a complex name-normalisation join; the 1-2-record+bio edge case is rare.
+  // isThin = total <= 2 && !bioShortPt → include artists with >2 records
+  // OR with a bio (even if ≤2 records). LEFT JOIN ArtistMeta checks bio_short_pt.
   // disponivel = TRUE: artists whose entire catalog is unavailable would pass
   // HAVING but their page gets noindexed — skip them here to keep sitemap clean.
   const artistRows = await prisma.$queryRaw<{ artista: string; lastUpdated: Date }[]>`
-    SELECT artista, MAX("updatedAt") AS "lastUpdated"
-    FROM   "Disco"
-    WHERE  (format IS NULL OR format = 'vinyl')
-      AND  price_count >= 5
-      AND  disponivel = TRUE
-    GROUP  BY artista
+    SELECT d.artista, MAX(d."updatedAt") AS "lastUpdated"
+    FROM   "Disco" d
+    LEFT JOIN "ArtistMeta" am ON am.artista = d.artista
+    WHERE  (d.format IS NULL OR d.format = 'vinyl')
+      AND  d.price_count >= 5
+      AND  d.disponivel = TRUE
+    GROUP  BY d.artista
     HAVING COUNT(*) > 2
-    ORDER  BY artista
+        OR MAX(CASE WHEN am.bio_short_pt IS NOT NULL AND am.bio_short_pt != '' THEN 1 ELSE 0 END) = 1
+    ORDER  BY d.artista
   `;
 
   const seenSlugs = new Set<string>();
@@ -166,19 +167,22 @@ export async function getSitemapDiscosForShard(shard: DiscoShard): Promise<Metad
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE (format IS NULL OR format = 'vinyl') AND price_count >= 5 AND LEFT(slug, 1) !~ '[a-z0-9]'
+      WHERE (format IS NULL OR format = 'vinyl') AND price_count >= 5 AND disponivel = TRUE AND LEFT(slug, 1) !~ '[a-z0-9]'
+      ORDER BY slug
     `;
   } else if (shard === "09") {
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE (format IS NULL OR format = 'vinyl') AND price_count >= 5 AND LEFT(slug, 1) ~ '[0-9]'
+      WHERE (format IS NULL OR format = 'vinyl') AND price_count >= 5 AND disponivel = TRUE AND LEFT(slug, 1) ~ '[0-9]'
+      ORDER BY slug
     `;
   } else {
     discos = await prisma.$queryRaw<{ slug: string; updatedAt: Date }[]>`
       SELECT slug, "updatedAt"
       FROM "Disco"
-      WHERE (format IS NULL OR format = 'vinyl') AND price_count >= 5 AND LEFT(slug, 1) = ${shard}
+      WHERE (format IS NULL OR format = 'vinyl') AND price_count >= 5 AND disponivel = TRUE AND LEFT(slug, 1) = ${shard}
+      ORDER BY slug
     `;
   }
 
