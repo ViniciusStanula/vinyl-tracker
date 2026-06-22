@@ -54,15 +54,6 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // /api/mcp is always logged: MCP/agent clients often send generic UAs
-  // (node, python-httpx, ...) that the bot list won't match.
-  // Every other path: bots only — humans exit immediately with zero extra work.
-  if (!bot && !isMcp) {
-    const res = addCanonical(NextResponse.next(), pathname);
-    if (xRobotsTag) res.headers.set("X-Robots-Tag", xRobotsTag);
-    return res;
-  }
-
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return NextResponse.next(); // misconfig must never break pages
@@ -73,8 +64,8 @@ export async function proxy(request: NextRequest) {
     path: pathname,
     query: request.nextUrl.search || null,
     user_agent: ua.slice(0, 512),
-    bot_name: bot?.name ?? "unknown",
-    bot_category: bot?.category ?? "mcp_client",
+    bot_name: bot?.name ?? null,
+    bot_category: bot?.category ?? "unknown",
     method: request.method,
     ip:
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
