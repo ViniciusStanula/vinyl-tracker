@@ -338,7 +338,7 @@ const _getArtistaPageData = unstable_cache(
     return { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, unavailableItems };
   },
   ["artista-page"],
-  { tags: ["prices"], revalidate: 1800 }
+  { tags: ["prices"], revalidate: 21600 }
 );
 
 export const getArtistaPageData = cache(_getArtistaPageData);

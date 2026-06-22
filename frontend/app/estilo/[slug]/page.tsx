@@ -61,7 +61,9 @@ export default async function EstiloPage({
       : `Discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
   );
   const firstImageEstilo = discos.find((d) => d.imgUrl)?.imgUrl ?? null;
-  const estiloCanonicalUrl = `${SITE_URL}/estilo/${slug}`;
+  const estiloCanonicalUrl = currentPage > 1
+    ? `${SITE_URL}/estilo/${slug}?page=${currentPage}`
+    : `${SITE_URL}/estilo/${slug}`;
 
   let relatedEstilos: RelatedEstilo[] = [];
   let topArtists: TopArtistForEstilo[] = [];
@@ -128,7 +130,7 @@ export default async function EstiloPage({
       <title>{metaTitle}</title>
       <meta name="description" content={metaDesc} />
       <link rel="canonical" href={estiloCanonicalUrl} />
-      {(isThin || currentPage > 1 || sort !== "desconto" || precoMax !== null) && (
+      {(isThin || currentPage > 1) && (
         <meta name="robots" content="noindex, follow" />
       )}
       <meta property="og:type" content="website" />

@@ -226,7 +226,7 @@ const _getEstiloPageData = unstable_cache(
     };
   },
   ["estilo-page"],
-  { tags: ["prices"], revalidate: 1800 }
+  { tags: ["prices"], revalidate: 21600 }
 );
 
 export const getEstiloPageData = cache(_getEstiloPageData);

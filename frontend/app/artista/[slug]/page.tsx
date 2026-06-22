@@ -68,7 +68,9 @@ export default async function ArtistaPage({
           : `${total} vinis de ${artista} na Amazon Brasil, cada um com histórico de preço de 12 meses. Veja qual está com desconto hoje antes de comprar.`
       );
   const firstImage = items.find((d) => d.imgUrl)?.imgUrl ?? unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
-  const canonicalUrl = `${SITE_URL}/artista/${slug}`;
+  const canonicalUrl = currentPage > 1
+    ? `${SITE_URL}/artista/${slug}?page=${currentPage}`
+    : `${SITE_URL}/artista/${slug}`;
 
   const siteUrl = SITE_URL;
 
@@ -111,7 +113,7 @@ export default async function ArtistaPage({
       <title>{metaTitle}</title>
       <meta name="description" content={metaDesc} />
       <link rel="canonical" href={canonicalUrl} />
-      {(isUnknownArtist || isThin || currentPage > 1 || sort !== "desconto" || precoMax !== null) && (
+      {(isUnknownArtist || isThin || currentPage > 1) && (
         <meta name="robots" content="noindex, follow" />
       )}
       <meta property="og:type" content="website" />

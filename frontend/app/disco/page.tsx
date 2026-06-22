@@ -17,19 +17,16 @@ export async function generateMetadata({
 }: {
   searchParams: Promise<{ q?: string; sort?: string; artista?: string; page?: string; precoMax?: string }>;
 }) {
-  const { q, sort, artista, page, precoMax } = await searchParams;
-  // Noindex all filtered/paginated variants — unbounded param space, canonical
-  // consolidation handles link equity. noindex,follow keeps links followable.
-  const isVariant =
-    Boolean(q?.trim()) ||
-    (sort !== undefined && sort !== "desconto") ||
-    Boolean(artista) ||
-    (page !== undefined && parseInt(page, 10) > 1) ||
-    Boolean(precoMax);
-  if (isVariant) {
+  const { q, page } = await searchParams;
+  if (q?.trim()) {
+    return { title: "Catálogo de Discos de Vinil — Garimpa Vinil", robots: { index: false, follow: true } };
+  }
+  const pageNum = page !== undefined ? parseInt(page, 10) : 1;
+  if (pageNum > 1) {
     return {
       title: "Catálogo de Discos de Vinil — Garimpa Vinil",
       robots: { index: false, follow: true },
+      alternates: { canonical: `/disco?page=${pageNum}` },
     };
   }
   let count = 0;

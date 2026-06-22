@@ -5,9 +5,12 @@ import { detectBot } from "@/lib/bots";
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.garimpavinil.com.br";
 
-function addCanonical(res: NextResponse, pathname: string): NextResponse {
+function addCanonical(res: NextResponse, pathname: string, searchParams: URLSearchParams): NextResponse {
   if (!pathname.startsWith("/api/")) {
-    res.headers.set("Link", `<${SITE_URL}${pathname}>; rel="canonical"`);
+    const pageParam = searchParams.get("page");
+    const page = pageParam ? parseInt(pageParam, 10) : 1;
+    const canonicalPath = page > 1 ? `${pathname}?page=${page}` : pathname;
+    res.headers.set("Link", `<${SITE_URL}${canonicalPath}>; rel="canonical"`);
   }
   return res;
 }
@@ -78,7 +81,7 @@ export async function proxy(request: NextRequest) {
     }
   });
 
-  return addCanonical(NextResponse.next(), pathname);
+  return addCanonical(NextResponse.next(), pathname, request.nextUrl.searchParams);
 }
 
 export const config = {

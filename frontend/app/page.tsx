@@ -26,20 +26,21 @@ export async function generateMetadata({
 }: {
   searchParams: Promise<{ q?: string; sort?: string; artista?: string; page?: string; precoMax?: string }>;
 }) {
-  const { q, sort, artista, page, precoMax } = await searchParams;
+  const { q, page } = await searchParams;
   const HOME_TITLE = "Garimpa Vinil — Histórico de Preços de Discos de Vinil";
-  // Noindex all filtered/paginated variants — unbounded param space, canonical
-  // consolidation handles link equity. noindex,follow keeps links followable.
-  const isVariant =
-    Boolean(q?.trim()) ||
-    (sort !== undefined && sort !== "desconto") ||
-    Boolean(artista) ||
-    (page !== undefined && parseInt(page, 10) > 1) ||
-    Boolean(precoMax);
-  if (isVariant) {
+  // Search results: noindex. robots.txt also disallows ?q= as belt-and-suspenders.
+  if (q?.trim()) {
+    return { title: HOME_TITLE, robots: { index: false, follow: true } };
+  }
+  // Pagination: noindex + self-canonical. Page N is not a duplicate of page 1,
+  // so canonical must not point to page 1. sort/artista/precoMax variants are
+  // indexable and consolidate to base via proxy's cross-URL canonical header.
+  const pageNum = page !== undefined ? parseInt(page, 10) : 1;
+  if (pageNum > 1) {
     return {
       title: HOME_TITLE,
       robots: { index: false, follow: true },
+      alternates: { canonical: `${SITE_URL}/?page=${pageNum}` },
     };
   }
   let count = 0;
