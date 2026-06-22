@@ -22,10 +22,92 @@ import { getHreflangRecord } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
+import type { Metadata } from "next";
 
 // Safety net only — the crawler's /api/revalidate webhook is the real trigger.
 // 1800 matches the data-layer TTL so the HTML cache never outlives its data.
 export const revalidate = 86400;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const disco = await getDiscoWithPrecos(slug).catch(() => null);
+  if (!disco || (disco.format && disco.format !== "vinyl")) {
+    return { title: "Disco de Vinil | Garimpa Vinil" };
+  }
+
+  const peerSlug = await getHreflangRecord(disco.asin).catch(() => null);
+
+  const tituloLimpo = cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
+  const isUnknownArtistDisco = disco.artista.toLowerCase() === "artista não identificado";
+  const includeArtist = !isUnknownArtistDisco && !tituloLimpo.toLowerCase().includes(disco.artista.toLowerCase());
+  const base = includeArtist ? `${tituloLimpo} em Vinil — ${disco.artista}` : `${tituloLimpo} em Vinil`;
+  let title = `${base} | Garimpa Vinil`;
+  if (title.length > 60) title = base;
+  if (title.length > 60 && includeArtist) title = `${tituloLimpo} em Vinil`;
+  if (title.length > 60) title = `${truncateTitle(tituloLimpo, 51)} em Vinil`;
+
+  const valores = disco.precos.map((p) => Number(p.precoBrl));
+  const precoAtual = valores.at(-1) ?? 0;
+  const precoMin = valores.length ? Math.min(...valores) : precoAtual;
+  const media = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : precoAtual;
+  const minRecord = disco.precos.length > 0
+    ? disco.precos.reduce((a, b) => Number(a.precoBrl) < Number(b.precoBrl) ? a : b)
+    : null;
+  const statusPreco: "menor" | "aumento" | "estavel" | null =
+    valores.length >= 2
+      ? precoAtual <= precoMin ? "menor" : precoAtual > media * 1.03 ? "aumento" : "estavel"
+      : null;
+
+  const fmtR = (v: number) => `R$ ${Math.round(v)}`;
+  let description: string;
+  if (!precoAtual) {
+    description = `${tituloLimpo} em vinil: acompanhe o preço na Amazon e veja o histórico de 12 meses antes de comprar.`;
+  } else if (valores.length < 2) {
+    description = `${tituloLimpo} em vinil a ${fmtR(precoAtual)} na Amazon. Acompanhe o histórico de preços e o gráfico de 12 meses antes de comprar.`;
+  } else if (precoMin < precoAtual && minRecord) {
+    const mes = minRecord.capturadoEm.toLocaleDateString("pt-BR", { month: "long", timeZone: "America/Sao_Paulo" });
+    description = `${tituloLimpo} em vinil a ${fmtR(precoAtual)} na Amazon. Menor preço já registrado: ${fmtR(precoMin)} em ${mes}. Gráfico de 12 meses pra decidir a hora de comprar.`;
+  } else {
+    const rel = precoAtual < media * 0.98 ? `abaixo da média de ${fmtR(media)}` : precoAtual > media * 1.02 ? `acima da média de ${fmtR(media)}` : `na média de ${fmtR(media)}`;
+    description = `Vinil de ${tituloLimpo} a ${fmtR(precoAtual)} na Amazon, ${rel} dos últimos 12 meses. Veja o gráfico antes de comprar.`;
+  }
+  description = truncateDesc(description);
+  const canonicalUrl = `${SITE_URL}/disco/${slug}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+      ...(peerSlug
+        ? {
+            languages: {
+              "pt-BR": canonicalUrl,
+              "en-US": `${PEER_ORIGIN}/record/${peerSlug}`,
+              "x-default": `${PEER_ORIGIN}/record/${peerSlug}`,
+            },
+          }
+        : {}),
+    },
+    openGraph: {
+      type: "music.album",
+      title,
+      description,
+      url: canonicalUrl,
+      images: [disco.imgUrl ?? `${SITE_URL}/og-default.png`],
+    },
+    twitter: {
+      card: disco.imgUrl ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: [disco.imgUrl ?? `${SITE_URL}/og-default.png`],
+    },
+  };
+}
 
 export default async function DiscoPage({
   params,
@@ -93,31 +175,6 @@ export default async function DiscoPage({
         ? "aumento"
         : "estavel"
       : null;
-
-  // Metadata — computed here so React 19 hoists <title>/<meta> to <head> in SSR
-  const tituloLimpo = cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
-  const isUnknownArtistDisco = disco.artista.toLowerCase() === "artista não identificado";
-  const includeArtist = !isUnknownArtistDisco && !tituloLimpo.toLowerCase().includes(disco.artista.toLowerCase());
-  const base = includeArtist ? `${tituloLimpo} em Vinil — ${disco.artista}` : `${tituloLimpo} em Vinil`;
-  let metaTitle = `${base} | Garimpa Vinil`;
-  if (metaTitle.length > 60) metaTitle = base;
-  if (metaTitle.length > 60 && includeArtist) metaTitle = `${tituloLimpo} em Vinil`;
-  if (metaTitle.length > 60) metaTitle = `${truncateTitle(tituloLimpo, 51)} em Vinil`;
-  const fmtR = (v: number) => `R$ ${Math.round(v)}`;
-  let metaDesc: string;
-  if (!precoAtual) {
-    metaDesc = `${tituloLimpo} em vinil: acompanhe o preço na Amazon e veja o histórico de 12 meses antes de comprar.`;
-  } else if (valores.length < 2) {
-    metaDesc = `${tituloLimpo} em vinil a ${fmtR(precoAtual)} na Amazon. Acompanhe o histórico de preços e o gráfico de 12 meses antes de comprar.`;
-  } else if (precoMin < precoAtual && minRecord) {
-    const mes = minRecord.capturadoEm.toLocaleDateString("pt-BR", { month: "long", timeZone: "America/Sao_Paulo" });
-    metaDesc = `${tituloLimpo} em vinil a ${fmtR(precoAtual)} na Amazon. Menor preço já registrado: ${fmtR(precoMin)} em ${mes}. Gráfico de 12 meses pra decidir a hora de comprar.`;
-  } else {
-    const rel = precoAtual < media * 0.98 ? `abaixo da média de ${fmtR(media)}` : precoAtual > media * 1.02 ? `acima da média de ${fmtR(media)}` : `na média de ${fmtR(media)}`;
-    metaDesc = `Vinil de ${tituloLimpo} a ${fmtR(precoAtual)} na Amazon, ${rel} dos últimos 12 meses. Veja o gráfico antes de comprar.`;
-  }
-  metaDesc = truncateDesc(metaDesc);
-  const discoCanonicalUrl = `${SITE_URL}/disco/${slug}`;
 
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -309,25 +366,6 @@ export default async function DiscoPage({
 
   return (
     <>
-      <title>{metaTitle}</title>
-      <meta name="description" content={metaDesc} />
-      <link rel="canonical" href={discoCanonicalUrl} />
-      <meta property="og:type" content="music.album" />
-      <meta property="og:title" content={metaTitle} />
-      <meta property="og:description" content={metaDesc} />
-      <meta property="og:url" content={discoCanonicalUrl} />
-      <meta property="og:image" content={disco.imgUrl ?? `${SITE_URL}/og-default.png`} />
-      <meta name="twitter:card" content={disco.imgUrl ? "summary_large_image" : "summary"} />
-      <meta name="twitter:title" content={metaTitle} />
-      <meta name="twitter:description" content={metaDesc} />
-      <meta name="twitter:image" content={disco.imgUrl ?? `${SITE_URL}/og-default.png`} />
-      {peerSlug && (
-        <>
-          <link rel="alternate" hrefLang="pt-BR" href={discoCanonicalUrl} />
-          <link rel="alternate" hrefLang="en-US" href={`${PEER_ORIGIN}/record/${peerSlug}`} />
-          <link rel="alternate" hrefLang="x-default" href={`${PEER_ORIGIN}/record/${peerSlug}`} />
-        </>
-      )}
       <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: productJsonLd }} />

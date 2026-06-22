@@ -1,17 +1,18 @@
 import { prisma } from "@/lib/db/prisma";
+import { cache } from "react";
 
-export async function getHreflangSlug(type: string, slug: string): Promise<boolean> {
+export const getHreflangSlug = cache(async (type: string, slug: string): Promise<boolean> => {
   const row = await prisma.hreflangSlug.findFirst({
     where: { type, slug },
     select: { slug: true },
   });
   return row !== null;
-}
+});
 
-export async function getHreflangRecord(asin: string): Promise<string | null> {
+export const getHreflangRecord = cache(async (asin: string): Promise<string | null> => {
   const row = await prisma.hreflangRecord.findUnique({
     where: { asin },
     select: { peerSlug: true },
   });
   return row?.peerSlug ?? null;
-}
+});
