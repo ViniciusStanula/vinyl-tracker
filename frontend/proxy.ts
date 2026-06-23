@@ -87,7 +87,10 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return addCanonical(NextResponse.next(), pathname, request.nextUrl.searchParams);
+  const res = addCanonical(NextResponse.next(), pathname, request.nextUrl.searchParams);
+  // TEMP diagnostic — confirms the proxy executes in prod and what it detected.
+  res.headers.set("x-grmp-proxy", bot?.name ?? "ran");
+  return res;
 }
 
 export const config = {
