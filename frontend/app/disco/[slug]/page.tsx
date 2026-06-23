@@ -166,18 +166,23 @@ export default async function DiscoPage({
         )
       : null;
 
-  // 3-state price status (evaluated in priority order)
-  const statusPreco: "menor" | "aumento" | "estavel" | null =
+  // 4-state price status (evaluated in priority order)
+  const statusPreco: "menor" | "aumento" | "abaixo" | "estavel" | null =
     valores.length >= 2
       ? precoAtual <= precoMin
         ? "menor"
         : precoAtual > media * 1.03
         ? "aumento"
+        : precoAtual < media * 0.97
+        ? "abaixo"
         : "estavel"
       : null;
 
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // Discount vs. the 12-month average — same source as the badge and the Média delta.
+  const fmtPct = (v: number) => `${v.toFixed(1).replace(".", ",")}%`;
 
   const BRT = "America/Sao_Paulo";
 
@@ -340,6 +345,8 @@ export default async function DiscoPage({
                       ? `Sim — ${fmt(precoAtual)} é o menor preço já registrado pelo nosso monitoramento para este disco.`
                       : statusPreco === "aumento"
                       ? `O preço atual (${fmt(precoAtual)}) está acima da média histórica de ${fmt(media)}. Pode valer a pena esperar uma queda.`
+                      : statusPreco === "abaixo"
+                      ? `Sim — o preço atual (${fmt(precoAtual)}) está abaixo da média histórica de ${fmt(media)}. Bom momento para comprar.`
                       : `O preço atual (${fmt(precoAtual)}) está próximo da média histórica de ${fmt(media)}.`,
                 },
                 {
@@ -476,10 +483,17 @@ export default async function DiscoPage({
 
           {/* Price block */}
           <div className="mt-4">
-            {/* Price */}
-            <span className="font-display text-3xl sm:text-4xl font-black text-gold leading-none tabular-nums block mb-1">
-              {fmt(precoAtual)}
-            </span>
+            {/* Price + discount badge (badge vs. 12-month average, ungated like the delta below) */}
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
+              <span className="font-display text-3xl sm:text-4xl font-black text-gold leading-none tabular-nums">
+                {fmt(precoAtual)}
+              </span>
+              {disponivel && desconto >= 1 && (
+                <span className="bg-deallit text-record text-sm font-black px-2.5 py-1 rounded-md tabular-nums">
+                  ↓ {fmtPct(desconto)}
+                </span>
+              )}
+            </div>
 
             {/* Avg reference + delta — shown on product page regardless of HIDE_PRICE_HISTORY */}
             {media > 0 && (
@@ -492,8 +506,8 @@ export default async function DiscoPage({
                     desconto >= 1 ? "text-deallit" : "text-cut"
                   }`}>
                     {desconto >= 0
-                      ? `↓ ${Math.abs(desconto).toFixed(1)}%`
-                      : `↑ ${Math.abs(desconto).toFixed(1)}%`}
+                      ? `↓ ${fmtPct(Math.abs(desconto))}`
+                      : `↑ ${fmtPct(Math.abs(desconto))}`}
                   </span>
                 )}
               </div>

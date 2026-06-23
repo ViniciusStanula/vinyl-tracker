@@ -8,7 +8,7 @@ import { buildOrderBy, PAGE_SIZE, type ProcessedDisco } from "@/lib/queryDiscos"
 
 // translate() constant strings — same character table as slugifyArtist() NFD normalization
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
-const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";
+const ACCENT_TO   = "aaaaaaeeeeiiiiooooouuuucny";
 
 type ArtistaRow = {
   id: string;
