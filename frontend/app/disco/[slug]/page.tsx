@@ -54,6 +54,9 @@ export async function generateMetadata({
   const precoAtual = valores.at(-1) ?? 0;
   const precoMin = valores.length ? Math.min(...valores) : precoAtual;
   const media = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : precoAtual;
+  // Average comparison uses avg_30d (recent), not the 12-month mean — the latter is
+  // skewed high by old outlier prices. Matches the on-page Média line and FAQ.
+  const avg30d = disco.avg30d != null ? Number(disco.avg30d) : media;
   const minRecord = disco.precos.length > 0
     ? disco.precos.reduce((a, b) => Number(a.precoBrl) < Number(b.precoBrl) ? a : b)
     : null;
@@ -72,8 +75,8 @@ export async function generateMetadata({
     const mes = minRecord.capturadoEm.toLocaleDateString("pt-BR", { month: "long", timeZone: "America/Sao_Paulo" });
     description = `${tituloLimpo} em vinil a ${fmtR(precoAtual)} na Amazon. Menor preço já registrado: ${fmtR(precoMin)} em ${mes}. Gráfico de 12 meses pra decidir a hora de comprar.`;
   } else {
-    const rel = precoAtual < media * 0.98 ? `abaixo da média de ${fmtR(media)}` : precoAtual > media * 1.02 ? `acima da média de ${fmtR(media)}` : `na média de ${fmtR(media)}`;
-    description = `Vinil de ${tituloLimpo} a ${fmtR(precoAtual)} na Amazon, ${rel} dos últimos 12 meses. Veja o gráfico antes de comprar.`;
+    const rel = precoAtual < avg30d * 0.98 ? `abaixo da média de ${fmtR(avg30d)}` : precoAtual > avg30d * 1.02 ? `acima da média de ${fmtR(avg30d)}` : `na média de ${fmtR(avg30d)}`;
+    description = `Vinil de ${tituloLimpo} a ${fmtR(precoAtual)} na Amazon, ${rel} dos últimos 30 dias. Veja o gráfico antes de comprar.`;
   }
   description = truncateDesc(description);
   const canonicalUrl = `${SITE_URL}/disco/${slug}`;
