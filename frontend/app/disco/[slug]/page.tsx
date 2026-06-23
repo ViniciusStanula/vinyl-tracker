@@ -150,8 +150,6 @@ export default async function DiscoPage({
     valores.length > 0
       ? valores.reduce((a, b) => a + b, 0) / valores.length
       : precoAtual;
-  const desconto = media > 0 ? ((media - precoAtual) / media) * 100 : 0;
-
   // The discount badge mirrors the cards and the deal scorer: it measures against
   // the 30-day average (avg_30d), not the 12-month average. A record only carries a
   // badge when it's actually cheaper than its recent price — not merely below an
@@ -502,19 +500,19 @@ export default async function DiscoPage({
               )}
             </div>
 
-            {/* Avg reference + delta — shown on product page regardless of HIDE_PRICE_HISTORY */}
-            {media > 0 && (
+            {/* Avg reference + delta — 30-day avg, same reference as the badge above */}
+            {avg30d > 0 && (
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-dust text-sm tabular-nums">
-                  Média: {fmt(media)}
+                  Média: {fmt(avg30d)}
                 </span>
-                {Math.abs(desconto) >= 1 && (
+                {Math.abs(desconto30d) >= 1 && (
                   <span className={`text-xs font-bold ${
-                    desconto >= 1 ? "text-deallit" : "text-cut"
+                    desconto30d >= 1 ? "text-deallit" : "text-cut"
                   }`}>
-                    {desconto >= 0
-                      ? `↓ ${fmtPct(Math.abs(desconto))}`
-                      : `↑ ${fmtPct(Math.abs(desconto))}`}
+                    {desconto30d >= 0
+                      ? `↓ ${fmtPct(Math.abs(desconto30d))}`
+                      : `↑ ${fmtPct(Math.abs(desconto30d))}`}
                   </span>
                 )}
               </div>
