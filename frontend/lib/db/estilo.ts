@@ -7,7 +7,7 @@ import { slugifyArtist } from "@/lib/utils/slugify";
 
 // Same accent-normalization constants as the artist page SQL slug matching
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
-const ACCENT_TO   = "aaaaaaeeeeiiiioooouuuucny";
+const ACCENT_TO   = "aaaaaaeeeeiiiiooooouuuucny";
 
 const ESTILO_PAGE_SIZE = 60;
 

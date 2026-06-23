@@ -11,7 +11,7 @@ export const SITEMAP_BASE = SITE_URL;
 
 // Must match the translate() expression in estilo/[slug]/page.tsx
 const ACCENT_FROM = Prisma.raw(`'áàâãäåéèêëíìîïóòôõöúùûüçñý'`);
-const ACCENT_TO   = Prisma.raw(`'aaaaaaeeeeiiiioooouuuucny'`);
+const ACCENT_TO   = Prisma.raw(`'aaaaaaeeeeiiiiooooouuuucny'`);
 
 export type SitemapPageData = {
   artists: { nome: string; slug: string }[];
