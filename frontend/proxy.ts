@@ -60,26 +60,31 @@ export async function proxy(request: NextRequest) {
     accept_language: request.headers.get("accept-language")?.slice(0, 40) ?? null,
   };
 
-  // Fire-and-forget: runs after the response is sent, never delays TTFB.
-  // "Prefer: return=minimal" is required — the anon role has no SELECT on
-  // bot_hits, so asking PostgREST to return the row would fail the insert.
-  after(async () => {
-    try {
-      await fetch(`${url}/rest/v1/bot_hits`, {
-        method: "POST",
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify(row),
-        signal: AbortSignal.timeout(5000),
-      });
-    } catch (err) {
-      console.error("[bot-log] insert failed:", err);
-    }
-  });
+  // Only log recognised bots — human browsers add row volume with no signal.
+  // null bot = regular visitor, skip. MCP path always has bot set (mcp_client).
+  if (bot) {
+    // Fire-and-forget: runs after the response is sent, never delays TTFB.
+    // "Prefer: return=minimal" is required — the anon role has no SELECT on
+    // bot_hits, so asking PostgREST to return the row would fail the insert.
+    // 15 s timeout: Supabase cold-start from Vercel edge can exceed 5 s.
+    after(async () => {
+      try {
+        await fetch(`${url}/rest/v1/bot_hits`, {
+          method: "POST",
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify(row),
+          signal: AbortSignal.timeout(15000),
+        });
+      } catch (err) {
+        console.error("[bot-log] insert failed:", err);
+      }
+    });
+  }
 
   return addCanonical(NextResponse.next(), pathname, request.nextUrl.searchParams);
 }
