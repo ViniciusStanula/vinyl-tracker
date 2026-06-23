@@ -1,4 +1,4 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { detectBot } from "@/lib/bots";
 
@@ -63,27 +63,28 @@ export async function proxy(request: NextRequest) {
   // Only log recognised bots — human browsers add row volume with no signal.
   // null bot = regular visitor, skip. MCP path always has bot set (mcp_client).
   if (bot) {
-    // Fire-and-forget: runs after the response is sent, never delays TTFB.
+    // Awaited, not fire-and-forget: after()/waitUntil does not flush for
+    // pass-through (NextResponse.next()) proxy responses on Vercel, so every
+    // prod bot hit was silently dropped. Bots are low-volume and don't need
+    // sub-ms TTFB; the 3 s timeout bounds the wait so a Supabase cold start
+    // drops the log rather than hanging the crawler.
     // "Prefer: return=minimal" is required — the anon role has no SELECT on
     // bot_hits, so asking PostgREST to return the row would fail the insert.
-    // 15 s timeout: Supabase cold-start from Vercel edge can exceed 5 s.
-    after(async () => {
-      try {
-        await fetch(`${url}/rest/v1/bot_hits`, {
-          method: "POST",
-          headers: {
-            apikey: key,
-            Authorization: `Bearer ${key}`,
-            "Content-Type": "application/json",
-            Prefer: "return=minimal",
-          },
-          body: JSON.stringify(row),
-          signal: AbortSignal.timeout(15000),
-        });
-      } catch (err) {
-        console.error("[bot-log] insert failed:", err);
-      }
-    });
+    try {
+      await fetch(`${url}/rest/v1/bot_hits`, {
+        method: "POST",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify(row),
+        signal: AbortSignal.timeout(3000),
+      });
+    } catch (err) {
+      console.error("[bot-log] insert failed:", err);
+    }
   }
 
   return addCanonical(NextResponse.next(), pathname, request.nextUrl.searchParams);
