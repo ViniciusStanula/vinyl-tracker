@@ -150,10 +150,10 @@ export default async function DiscoPage({
     valores.length > 0
       ? valores.reduce((a, b) => a + b, 0) / valores.length
       : precoAtual;
-  // The discount badge mirrors the cards and the deal scorer: it measures against
-  // the 30-day average (avg_30d), not the 12-month average. A record only carries a
-  // badge when it's actually cheaper than its recent price — not merely below an
-  // older, higher long-term average (which would flag false "deals").
+  // The price delta and the "está bom agora" FAQ measure against the 30-day average
+  // (avg_30d) — the same reference the cards and the deal scorer use — not the
+  // 12-month average, which is skewed high by old outlier prices and would imply
+  // discounts on records that aren't actually cheaper than recently.
   const avg30d = disco.avg30d != null ? Number(disco.avg30d) : media;
   const desconto30d = avg30d > 0 ? ((avg30d - precoAtual) / avg30d) * 100 : 0;
 
@@ -171,14 +171,15 @@ export default async function DiscoPage({
         )
       : null;
 
-  // 4-state price status (evaluated in priority order)
+  // 4-state price status (evaluated in priority order), judged against avg_30d —
+  // "is it cheaper than recently", matching the badge/deal scorer.
   const statusPreco: "menor" | "aumento" | "abaixo" | "estavel" | null =
     valores.length >= 2
       ? precoAtual <= precoMin
         ? "menor"
-        : precoAtual > media * 1.03
+        : precoAtual > avg30d * 1.03
         ? "aumento"
-        : precoAtual < media * 0.97
+        : precoAtual < avg30d * 0.97
         ? "abaixo"
         : "estavel"
       : null;
@@ -349,10 +350,10 @@ export default async function DiscoPage({
                     statusPreco === "menor"
                       ? `Sim — ${fmt(precoAtual)} é o menor preço já registrado pelo nosso monitoramento para este disco.`
                       : statusPreco === "aumento"
-                      ? `O preço atual (${fmt(precoAtual)}) está acima da média histórica de ${fmt(media)}. Pode valer a pena esperar uma queda.`
+                      ? `O preço atual (${fmt(precoAtual)}) está acima da média dos últimos 30 dias (${fmt(avg30d)}). Pode valer a pena esperar uma queda.`
                       : statusPreco === "abaixo"
-                      ? `Sim — o preço atual (${fmt(precoAtual)}) está abaixo da média histórica de ${fmt(media)}. Bom momento para comprar.`
-                      : `O preço atual (${fmt(precoAtual)}) está próximo da média histórica de ${fmt(media)}.`,
+                      ? `Sim — o preço atual (${fmt(precoAtual)}) está abaixo da média dos últimos 30 dias (${fmt(avg30d)}). Bom momento para comprar.`
+                      : `O preço atual (${fmt(precoAtual)}) está próximo da média dos últimos 30 dias (${fmt(avg30d)}).`,
                 },
                 {
                   q: `Com que frequência o preço de ${disco.titulo} é verificado?`,
@@ -488,17 +489,10 @@ export default async function DiscoPage({
 
           {/* Price block */}
           <div className="mt-4">
-            {/* Price + discount badge (badge vs. 30-day avg, matching the cards/deal scorer) */}
-            <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <span className="font-display text-3xl sm:text-4xl font-black text-gold leading-none tabular-nums">
-                {fmt(precoAtual)}
-              </span>
-              {disponivel && desconto30d >= 1 && (
-                <span className="bg-deallit text-record text-sm font-black px-2.5 py-1 rounded-md tabular-nums">
-                  ↓ {fmtPct(desconto30d)}
-                </span>
-              )}
-            </div>
+            {/* Price */}
+            <span className="font-display text-3xl sm:text-4xl font-black text-gold leading-none tabular-nums block mb-1">
+              {fmt(precoAtual)}
+            </span>
 
             {/* Avg reference + delta — 30-day avg, same reference as the badge above */}
             {avg30d > 0 && (
