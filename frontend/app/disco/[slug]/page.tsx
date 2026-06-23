@@ -152,6 +152,13 @@ export default async function DiscoPage({
       : precoAtual;
   const desconto = media > 0 ? ((media - precoAtual) / media) * 100 : 0;
 
+  // The discount badge mirrors the cards and the deal scorer: it measures against
+  // the 30-day average (avg_30d), not the 12-month average. A record only carries a
+  // badge when it's actually cheaper than its recent price — not merely below an
+  // older, higher long-term average (which would flag false "deals").
+  const avg30d = disco.avg30d != null ? Number(disco.avg30d) : media;
+  const desconto30d = avg30d > 0 ? ((avg30d - precoAtual) / avg30d) * 100 : 0;
+
   // Record when the historical min and max occurred
   const minRecord =
     disco.precos.length > 0
@@ -181,7 +188,7 @@ export default async function DiscoPage({
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  // Discount vs. the 12-month average — same source as the badge and the Média delta.
+  // pt-BR percent, one decimal — used by the discount badge and the Média delta.
   const fmtPct = (v: number) => `${v.toFixed(1).replace(".", ",")}%`;
 
   const BRT = "America/Sao_Paulo";
@@ -483,14 +490,14 @@ export default async function DiscoPage({
 
           {/* Price block */}
           <div className="mt-4">
-            {/* Price + discount badge (badge vs. 12-month average, ungated like the delta below) */}
+            {/* Price + discount badge (badge vs. 30-day avg, matching the cards/deal scorer) */}
             <div className="flex items-center gap-3 mb-1 flex-wrap">
               <span className="font-display text-3xl sm:text-4xl font-black text-gold leading-none tabular-nums">
                 {fmt(precoAtual)}
               </span>
-              {disponivel && desconto >= 1 && (
+              {disponivel && desconto30d >= 1 && (
                 <span className="bg-deallit text-record text-sm font-black px-2.5 py-1 rounded-md tabular-nums">
-                  ↓ {fmtPct(desconto)}
+                  ↓ {fmtPct(desconto30d)}
                 </span>
               )}
             </div>
