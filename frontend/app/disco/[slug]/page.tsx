@@ -28,6 +28,16 @@ import type { Metadata } from "next";
 // 1800 matches the data-layer TTL so the HTML cache never outlives its data.
 export const revalidate = 86400;
 
+// Without this a dynamic route renders dynamically (Cache-Control: no-store) in
+// Next 16 — the docs require returning an array, even empty, to enable ISR.
+// [] prebuilds nothing at build time; each /disco/[slug] is rendered and
+// CDN-cached on first request, then revalidated by the crawler's
+// revalidateTag("prices") and the 24h safety-net above. dynamicParams stays
+// true (default) so every slug is allowed.
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {
