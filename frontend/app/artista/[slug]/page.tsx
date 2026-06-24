@@ -1,6 +1,5 @@
 import DiscoCard from "@/components/DiscoCard";
-import Pagination from "@/components/Pagination";
-import SortBar from "@/components/SortBar";
+import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
 import StyleTags from "@/components/StyleTags";
 import Link from "next/link";
@@ -8,8 +7,7 @@ import { notFound } from "next/navigation";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { toTitleCase } from "@/lib/utils/titleCase";
 import { formatDiscoCount } from "@/lib/utils/formatters";
-import { Suspense } from "react";
-import { getArtistaPageData, type ArtistaPageData } from "@/lib/db/artista";
+import { getArtistaPageData } from "@/lib/db/artista";
 import { getHreflangSlug } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -18,21 +16,32 @@ import type { Metadata } from "next";
 
 export const revalidate = 86400; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
+// Without this Next 16 renders the route dynamically (Cache-Control: no-store).
+// [] = nothing prebuilt; each artist is rendered + CDN-cached on first request.
+// Sort/filter/pagination run client-side (ArtistaRecords) so no server
+// searchParams force the route dynamic. dynamicParams stays true (default).
+export function generateStaticParams() {
+  return [];
+}
+
+// Catalog cap: fetch the artist's whole set so client-side filtering is correct.
+// Covers every real artist (max non-"unknown" is well under this); the
+// "Artista não identificado" bucket is noindex, so truncation there is fine.
+const RECORDS_CAP = 200;
+
+// Filter-independent metadata: canonical is always the clean URL, so any
+// ?-variant a user shares consolidates to it. Reading no searchParams here is
+// part of what keeps the route static.
 export async function generateMetadata({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
-  const precoMax = precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
-  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 
   const [data, hasPeer] = await Promise.all([
-    getArtistaPageData(slug, currentPage, sort, precoMax).catch(() => null),
-    getHreflangSlug("artist", slug).catch(() => false as false),
+    getArtistaPageData(slug, 1, "desconto", null, RECORDS_CAP).catch(() => null),
+    getHreflangSlug("artist", slug).catch(() => false as const),
   ]);
 
   if (!data) return { title: "Artista | Garimpa Vinil" };
@@ -41,7 +50,7 @@ export async function generateMetadata({
   const artista = toTitleCase(canonical);
   const isUnknownArtist = canonical.toLowerCase() === "artista não identificado";
   const isThin = total <= 2 && !bioShortPt;
-  const noindex = isUnknownArtist || isThin || currentPage > 1;
+  const noindex = isUnknownArtist || isThin;
 
   const discoLabel = total === 1 ? "1 disco" : `${total} discos`;
   const title = isUnknownArtist
@@ -55,9 +64,7 @@ export async function generateMetadata({
           : `${total} vinis de ${artista} na Amazon Brasil, cada um com histórico de preço de 12 meses. Veja qual está com desconto hoje antes de comprar.`
       );
   const firstImage = items.find((d) => d.imgUrl)?.imgUrl ?? unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
-  const canonicalUrl = currentPage > 1
-    ? `${SITE_URL}/artista/${slug}?page=${currentPage}`
-    : `${SITE_URL}/artista/${slug}`;
+  const canonicalUrl = `${SITE_URL}/artista/${slug}`;
 
   return {
     title,
@@ -93,39 +100,19 @@ export async function generateMetadata({
 
 export default async function ArtistaPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
 }) {
   const { slug } = await params;
-  const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
-  const precoMax =
-    precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
-  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 
-  let data: ArtistaPageData | null = null;
-  try {
-    data = await getArtistaPageData(slug, currentPage, sort, precoMax);
-  } catch (err) {
-    console.error("[ArtistaPage] getArtistaPageData failed for slug=%s", slug);
-    if (process.env.NODE_ENV === "development") console.error(err);
-    return (
-      <main id="main-content" className="max-w-7xl mx-auto px-4 py-24 text-center">
-        <p className="font-display text-parchment text-lg font-semibold mb-2">
-          Erro ao carregar página do artista
-        </p>
-        <p className="text-dust text-sm">Tente novamente em alguns instantes.</p>
-      </main>
-    );
-  }
+  // Whole catalog, default sort, no filter → static/cacheable; ArtistaRecords
+  // does sort/filter/pagination in the browser.
+  const data = await getArtistaPageData(slug, 1, "desconto", null, RECORDS_CAP);
   if (!data) notFound();
 
-  const { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, unavailableItems } = data;
+  const { canonical, items, total, topStyles, sameAs, bioShortPt, bioPt, unavailableItems } = data;
   const artista = toTitleCase(canonical);
-
   const isUnknownArtist = canonical.toLowerCase() === "artista não identificado";
-
   const siteUrl = SITE_URL;
 
   const breadcrumbJsonLd = toJsonLd({
@@ -187,12 +174,7 @@ export default async function ArtistaPage({
         <h1 className="font-display text-3xl font-black text-cream [text-wrap:balance]">
           {artista}
         </h1>
-        <p className="mt-1 text-dust text-sm">
-          {formatDiscoCount(total)}
-          {precoMax !== null && !isNaN(precoMax)
-            ? ` até R$ ${precoMax.toLocaleString("pt-BR")}`
-            : ""}
-        </p>
+        <p className="mt-1 text-dust text-sm">{formatDiscoCount(total)}</p>
         <StyleTags tags={topStyles} />
       </header>
 
@@ -208,51 +190,10 @@ export default async function ArtistaPage({
         </p>
       ) : null}
 
-      <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
-        <Suspense>
-          <SortBar />
-        </Suspense>
-      </div>
-
       {items.length > 0 ? (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-            {items.map((disco, index) => (
-              <DiscoCard key={disco.id} disco={disco} priority={index < 4} />
-            ))}
-          </div>
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              searchParams={{ sort: sort !== "desconto" ? sort : undefined, precoMax: precoMaxStr }}
-              basePath={`/artista/${slug}`}
-            />
-          )}
-        </>
+        <ArtistaRecords items={items} slug={slug} />
       ) : (
-        <section aria-label="Sem resultados" className="text-center py-24 text-dust">
-          <div className="inline-block mb-5 opacity-40">
-            <svg viewBox="0 0 64 64" fill="none" className="w-16 h-16 mx-auto" aria-hidden="true">
-              <circle cx="32" cy="32" r="30" className="fill-gold" opacity="0.3" />
-              <circle cx="32" cy="32" r="20" className="fill-record" opacity="0.8" />
-              <circle cx="32" cy="32" r="5"  className="fill-gold" opacity="0.4" />
-              <circle cx="32" cy="32" r="2"  className="fill-record" />
-            </svg>
-          </div>
-          <p className="font-display text-parchment text-lg font-semibold mb-2">
-            Nenhum disco encontrado
-          </p>
-          <p className="text-dust text-sm mb-4">Tente ajustar os filtros.</p>
-          {(precoMax !== null || sort !== "desconto") && (
-            <Link
-              href={`/artista/${slug}`}
-              className="inline-flex items-center gap-2 bg-groove hover:bg-wax text-parchment text-sm px-5 py-2 rounded-full transition-colors border border-wax/60"
-            >
-              Limpar filtros
-            </Link>
-          )}
-        </section>
+        <p className="text-dust text-sm py-12 text-center">Nenhum disco disponível no momento.</p>
       )}
 
       {unavailableItems.length > 0 && (

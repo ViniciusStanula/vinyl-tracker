@@ -62,6 +62,11 @@ const _getArtistaPageData = unstable_cache(
     page: number,
     sort: string,
     precoMax: number | null,
+    // Page render passes a large pageSize to fetch the artist's whole catalog in
+    // one shot so sort/filter/pagination can run client-side (keeps the route
+    // ISR-cacheable — no server searchParams). Defaults to PAGE_SIZE for any
+    // legacy paginated caller.
+    pageSize: number = PAGE_SIZE,
   ): Promise<ArtistaPageData | null> => {
     // Pre-filter at the DB level using a SQL slug approximation so we transfer
     // only candidates instead of the full artist table. Two expressions cover:
@@ -208,7 +213,7 @@ const _getArtistaPageData = unstable_cache(
         END AS desconto
       FROM  base
       ORDER BY ${order}
-      LIMIT  ${PAGE_SIZE}
+      LIMIT  ${pageSize}
       OFFSET ${offset}
     `;
 
