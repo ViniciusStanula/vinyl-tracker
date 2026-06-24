@@ -66,18 +66,26 @@ async function _getDiscoWithPrecosHydrated(slug: string) {
 }
 export const getDiscoWithPrecos = cache(_getDiscoWithPrecosHydrated);
 
-export async function getDiscoMeta(slug: string): Promise<DiscoMeta | null> {
-  const rows = await prisma.$queryRaw<[DiscoMeta]>`
-    SELECT
-      disponivel,
-      lastfm_tags      AS "lastfmTags",
-      lastfm_listeners AS "lastfmListeners",
-      lastfm_playcount AS "lastfmPlaycount",
-      lastfm_wiki_pt   AS "lastfmWikiPt"
-    FROM "Disco" WHERE slug = ${slug}
-  `;
-  return rows[0] ?? null;
-}
+// Wrapped in unstable_cache like the other disco reads: a bare prisma call here
+// opts /disco/[slug] out of ISR entirely (route renders dynamic, Cache-Control:
+// no-store, every Googlebot hit is an uncached SSR). Tagged "prices" because
+// `disponivel` changes with each crawl, so revalidateTag("prices") refreshes it.
+export const getDiscoMeta = unstable_cache(
+  async (slug: string): Promise<DiscoMeta | null> => {
+    const rows = await prisma.$queryRaw<[DiscoMeta]>`
+      SELECT
+        disponivel,
+        lastfm_tags      AS "lastfmTags",
+        lastfm_listeners AS "lastfmListeners",
+        lastfm_playcount AS "lastfmPlaycount",
+        lastfm_wiki_pt   AS "lastfmWikiPt"
+      FROM "Disco" WHERE slug = ${slug}
+    `;
+    return rows[0] ?? null;
+  },
+  ["disco-meta"],
+  { tags: ["prices"], revalidate: 86400 },
+);
 
 export const getRelatedDeals = unstable_cache(
   async (discoId: string, tags: string[]): Promise<RelatedDeal[]> => {
