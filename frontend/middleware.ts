@@ -1,3 +1,10 @@
+// NOTE: Next 16 renamed this convention to `proxy.ts`, which the build prints a
+// deprecation warning for. We deliberately keep `middleware.ts`: Next 16 compiles
+// `proxy.ts` as a Node-runtime function (functions-config-manifest.json) that
+// Vercel does not currently invoke, leaving middleware-manifest.json empty — so
+// the proxy never ran in prod (bot_hits only ever held local-dev rows). The
+// legacy `middleware.ts` name compiles to edge middleware that Vercel runs.
+// Revisit once Vercel supports the Node-runtime proxy.
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { detectBot } from "@/lib/bots";
@@ -15,7 +22,7 @@ function addCanonical(res: NextResponse, pathname: string, searchParams: URLSear
   return res;
 }
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // Block high-volume bot traffic from SG/CN/MY when the request has no
   // Portuguese Accept-Language — confirmed via GA4 (0% engagement).
   // Legitimate PT-BR speakers in those countries still pass through.
