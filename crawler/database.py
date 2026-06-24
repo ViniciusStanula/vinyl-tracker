@@ -365,6 +365,57 @@ def ensure_schema_extras(conn) -> None:
     log.info("ensure_schema_extras: schema migration applied.")
 
 
+# ─────────────────────────────────────────────────────────────
+#  Cross-run Creators-API budget ledger
+#  The TPD counter inside CreatorsClient is per-process; GHA runs are
+#  serialized (concurrency group), so seeding each run from this shared row
+#  and flushing usage back makes the UTC-day cap hold across runs.
+# ─────────────────────────────────────────────────────────────
+def ensure_api_budget_ledger(conn) -> None:
+    """Idempotently create the per-day API-usage ledger (one row per UTC day)."""
+    with _cursor(conn) as cur:
+        cur.execute("SET LOCAL lock_timeout = '10s'")
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS api_budget_ledger (
+                day        DATE        PRIMARY KEY,
+                used       INTEGER     NOT NULL DEFAULT 0,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    conn.commit()
+
+
+def get_api_budget_used(conn, day=None) -> int:
+    """Return getItems calls already spent today (UTC). 0 if no row yet."""
+    with _cursor(conn) as cur:
+        if day is None:
+            cur.execute("SELECT used FROM api_budget_ledger WHERE day = (NOW() AT TIME ZONE 'UTC')::date")
+        else:
+            cur.execute("SELECT used FROM api_budget_ledger WHERE day = %s", (day,))
+        row = cur.fetchone()
+    return int(row[0]) if row else 0
+
+
+def add_api_budget_used(conn, delta: int) -> None:
+    """Atomically add `delta` calls to today's (UTC) ledger row. No-op if delta<=0."""
+    if delta <= 0:
+        return
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            INSERT INTO api_budget_ledger (day, used, updated_at)
+            VALUES ((NOW() AT TIME ZONE 'UTC')::date, %s, NOW())
+            ON CONFLICT (day) DO UPDATE
+                SET used = api_budget_ledger.used + EXCLUDED.used,
+                    updated_at = NOW()
+            """,
+            (delta,),
+        )
+    conn.commit()
+
+
 def fetch_active_deals(conn) -> list[dict]:
     """
     Returns all Disco records that are currently on an active deal.
@@ -428,9 +479,12 @@ def fetch_stale_records(
     floor_clause = ""
     params: list = [list(seen_asins) if seen_asins else ["__none__"]]
     if floor_minutes and floor_minutes > 0:
-        # deal_score carve-out FIRST so Rule Zero can never be floored out.
+        # HOT-SET carve-out: active deals (Rule Zero) AND recently-flagged rows
+        # (flagged within 30d) bypass the floor so the hot set is re-priced every
+        # run, not throttled to once per `floor_minutes`.
         floor_clause = (
             " AND (deal_score IS NOT NULL"
+            " OR last_flagged_at > NOW() - INTERVAL '30 days'"
             " OR last_crawled_at IS NULL"
             " OR last_crawled_at < NOW() - (%s * INTERVAL '1 minute'))"
         )
@@ -447,7 +501,7 @@ def fetch_stale_records(
             ORDER BY
                 CASE
                     WHEN deal_score IS NOT NULL                        THEN 0
-                    WHEN last_flagged_at > NOW() - INTERVAL '14 days' THEN 1
+                    WHEN last_flagged_at > NOW() - INTERVAL '30 days' THEN 1
                     ELSE                                                    2
                 END,
                 last_crawled_at ASC NULLS FIRST

@@ -175,7 +175,7 @@ export default async function HomePage({
           )}
           <div className="flex gap-3 flex-wrap">
             <Link
-              href="/disco"
+              href="/ofertas"
               className="inline-flex items-center gap-2 bg-gold hover:bg-goldlit text-record font-bold text-sm px-6 py-3 rounded-xl transition-colors"
             >
               Ver Ofertas de Hoje

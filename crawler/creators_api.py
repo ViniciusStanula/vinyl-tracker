@@ -76,6 +76,7 @@ class CreatorsConfig:
     scope:         str
     tps:           float
     tpd:           int
+    tpd_per_run:   int
     # v2.x credentials need "Version <n>" in the Authorization header plus an
     # x-marketplace header. v3.x (new LWA creds) do not. Leave unset for v3.x.
     credential_version: str | None
@@ -96,6 +97,10 @@ class CreatorsConfig:
 
         tps = float(_env("CREATORS_TPS", default="1") or "1")
         tpd = int(_env("CREATORS_TPD", default="8640") or "8640")
+        # Per-RUN cap. Keeps a single (now-concurrent) run from draining the whole
+        # day budget and starving later runs' Phase-0 deal revalidation. Default
+        # leaves >= one run's worth of day budget free for each of ~8 daily runs.
+        tpd_per_run = int(_env("CREATORS_TPD_PER_RUN", default="1000") or "1000")
 
         resources_env = _env("CREATORS_RESOURCES")
         resources = (
@@ -114,6 +119,7 @@ class CreatorsConfig:
             scope=_env("CREATORS_SCOPE", default="creatorsapi::default"),
             tps=tps,
             tpd=tpd,
+            tpd_per_run=tpd_per_run,
             credential_version=_env("CREATORS_CREDENTIAL_VERSION"),
             resources=resources,
         )
@@ -216,16 +222,39 @@ class _TokenBucket:
             waited += sleep_for
             time.sleep(sleep_for)
 
+    def throttle_down(self, factor: float = 0.5, floor: float = 0.1) -> float:
+        """Adaptively lower the fill rate (on 429s) so we ease off below the
+        configured TPS. Never raises the rate. Returns the new rate.
+        Lowering the rate only slows token refill, so the <=TPS guarantee holds."""
+        with self._lock:
+            self._rate = max(floor, self._rate * factor)
+            return self._rate
+
+    def recover(self, ceiling: float, factor: float = 1.25) -> float:
+        """Gently restore the fill rate toward (never above) the configured TPS
+        after sustained success. Returns the new rate."""
+        with self._lock:
+            self._rate = min(ceiling, self._rate * factor)
+            return self._rate
+
 
 class _DailyBudget:
-    """Thread-safe daily request counter (TPD). Resets at UTC midnight.
-    Counts every HTTP request (including retries), matching how Amazon meters."""
+    """Thread-safe request counter with a hard ceiling. Resets at UTC midnight.
+    Counts every HTTP request (including retries), matching how Amazon meters.
 
-    def __init__(self, limit: int) -> None:
+    Used for two distinct ceilings:
+      - the per-process DAY budget, seeded with ``initial_used`` from a shared
+        cross-run ledger so the true UTC-day cap holds across serialized runs;
+      - a plain per-RUN cap (initial_used=0, no seeding) that bounds a single
+        run so concurrency can't drain the whole day budget in one process and
+        starve later runs' Phase-0 deal revalidation.
+    """
+
+    def __init__(self, limit: int, initial_used: int = 0) -> None:
         self._limit = limit
         self._lock = threading.Lock()
         self._day = datetime.now(timezone.utc).date()
-        self._used = 0
+        self._used = initial_used
 
     def _roll_if_needed_locked(self) -> None:
         today = datetime.now(timezone.utc).date()
@@ -238,7 +267,7 @@ class _DailyBudget:
             self._roll_if_needed_locked()
             if self._used >= self._limit:
                 raise BudgetExhausted(
-                    f"Daily budget exhausted ({self._used}/{self._limit} for {self._day} UTC)."
+                    f"Budget exhausted ({self._used}/{self._limit} for {self._day} UTC)."
                 )
             self._used += 1
 
@@ -248,26 +277,51 @@ class _DailyBudget:
             return max(0, self._limit - self._used)
 
     @property
+    def used(self) -> int:
+        with self._lock:
+            self._roll_if_needed_locked()
+            return self._used
+
+    @property
     def limit(self) -> int:
         return self._limit
 
 
 class RateLimiter:
-    """Per-credential limiter bundling TPS (token bucket) + TPD (daily budget).
-    One instance is shared across all worker threads for a credential."""
+    """Per-credential limiter bundling TPS (token bucket) + two request ceilings:
+    a per-RUN cap and a per-DAY budget (seeded from a shared cross-run ledger).
+    One instance is shared across all worker threads for a credential, so the
+    TPS bucket serializes concurrent workers to <= tps even transiently.
 
-    def __init__(self, tps: float, tpd: int) -> None:
+    ``per_run`` defaults to ``tpd`` (single ceiling, old behaviour) when not set.
+    ``day_used`` seeds the day budget with calls already spent earlier today by
+    prior runs, so the UTC-day cap is enforced across serialized processes.
+    """
+
+    def __init__(
+        self,
+        tps: float,
+        tpd: int,
+        per_run: int | None = None,
+        day_used: int = 0,
+    ) -> None:
         self.bucket = _TokenBucket(tps)
-        self.budget = _DailyBudget(tpd)
+        self.budget = _DailyBudget(tpd, initial_used=day_used)      # day cap (seeded)
+        self.run_budget = _DailyBudget(per_run if per_run else tpd)  # per-run cap
 
     def acquire(self) -> float:
-        """Reserve one request slot: spend daily budget first, then pace to TPS.
-        Returns seconds spent waiting on the TPS bucket."""
-        self.budget.consume()  # raises BudgetExhausted before we wait on TPS
+        """Reserve one request slot: spend per-run + day budget first, then pace
+        to TPS. Either budget raises BudgetExhausted before we wait on TPS."""
+        self.run_budget.consume()  # per-run cap — bounds a single process
+        self.budget.consume()      # day cap — shared via seeded ledger
         return self.bucket.acquire()
 
     def budget_remaining(self) -> int:
-        return self.budget.remaining()
+        """Effective remaining = the tighter of the run cap and the day cap."""
+        return min(self.run_budget.remaining(), self.budget.remaining())
+
+    def day_used(self) -> int:
+        return self.budget.used
 
 
 # ─────────────────────────────────────────────────────────────
@@ -427,11 +481,14 @@ class CreatorsClient:
         max_retries: int = 5,
         backoff_base_s: float = 1.0,
         backoff_cap_s: float = 30.0,
+        day_used: int = 0,
     ) -> None:
         self.cfg = cfg
         self._session = requests.Session()
         self.tokens = token_mgr or TokenManager(cfg, self._session)
-        self.limiter = limiter or RateLimiter(cfg.tps, cfg.tpd)
+        self.limiter = limiter or RateLimiter(
+            cfg.tps, cfg.tpd, per_run=cfg.tpd_per_run, day_used=day_used,
+        )
         self.max_retries = max_retries
         self.backoff_base_s = backoff_base_s
         self.backoff_cap_s = backoff_cap_s
@@ -440,6 +497,10 @@ class CreatorsClient:
             "requests": 0, "ok": 0, "http_429": 0, "http_5xx": 0,
             "retries": 0, "token_refreshes_on_401": 0, "throttle_wait_s": 0.0,
         }
+        # Adaptive TPS: on 429 the token bucket eases below the configured TPS;
+        # after a streak of clean responses it climbs back toward (never above) it.
+        self._consec_ok = 0
+        self._RECOVER_AFTER = 25  # clean responses before stepping the rate back up
 
     # ── public ──────────────────────────────────────────────────────────────
     def get_items(self, asins: list[str]) -> list[ItemResult]:
@@ -451,6 +512,10 @@ class CreatorsClient:
 
     def budget_remaining(self) -> int:
         return self.limiter.budget_remaining()
+
+    def day_used(self) -> int:
+        """getItems calls counted against the UTC-day budget (seeded + this run)."""
+        return self.limiter.day_used()
 
     # ── internal ────────────────────────────────────────────────────────────
     def _headers(self, token: str) -> dict:
@@ -510,6 +575,10 @@ class CreatorsClient:
             if resp.status_code in self._RETRYABLE:
                 if resp.status_code == 429:
                     self.stats["http_429"] += 1
+                    # Ease the steady rate below TPS so we stop tripping the limit.
+                    self._consec_ok = 0
+                    new_rate = self.limiter.bucket.throttle_down()
+                    log.warning("getItems 429 — easing TPS to %.3f req/s.", new_rate)
                 else:
                     self.stats["http_5xx"] += 1
                 if attempt < self.max_retries:
@@ -526,6 +595,11 @@ class CreatorsClient:
                 )
 
             self.stats["ok"] += 1
+            # Sustained success → gently restore the rate toward the configured TPS.
+            self._consec_ok += 1
+            if self._consec_ok >= self._RECOVER_AFTER:
+                self._consec_ok = 0
+                self.limiter.bucket.recover(self.cfg.tps)
             return self._parse_response(resp.json())
 
         return []

@@ -25,12 +25,14 @@ async function _fetchTopArtists(): Promise<string[]> {
   const key = process.env.LASTFM_API_KEY;
   if (!key) return [];
 
-  const [p1, p2] = await Promise.all([
-    fetchPage(key, 1).catch(() => [] as LfmArtist[]),
-    fetchPage(key, 2).catch(() => [] as LfmArtist[]),
-  ]);
+  // Top-2000 (4 pages x 500). Widened from top-1000 so the homepage carousel's
+  // best-deal-per-artist pool reaches beyond the most mainstream names and can
+  // surface stronger discounts from a broader set of recognizable artists.
+  const pages = await Promise.all(
+    [1, 2, 3, 4].map((p) => fetchPage(key, p).catch(() => [] as LfmArtist[])),
+  );
 
-  return [...new Set([...p1, ...p2].map((a) => a.name).filter(Boolean))];
+  return [...new Set(pages.flat().map((a) => a.name).filter(Boolean))];
 }
 
 // Cache Last.fm chart for 1 week — artist lineup changes slowly.

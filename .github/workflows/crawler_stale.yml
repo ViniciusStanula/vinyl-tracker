@@ -53,7 +53,9 @@ jobs:
           CREATORS_PARTNER_TAG: ${{ secrets.CREATORS_PARTNER_TAG }}
           CREATORS_CREDENTIAL_VERSION: v3.1
           CREATORS_TPS: "1"
-          CREATORS_TPD: "8640"
+          CREATORS_TPD: "8640"          # UTC-day cap, enforced across runs via api_budget_ledger
+          CREATORS_TPD_PER_RUN: "1000"  # per-run cap
+          CREATORS_API_WORKERS: "8"     # parallel getItems; shared TPS bucket caps real rate at <= TPS
           FRESHNESS_FLOOR_MINUTES: "180"
           AMAZON_MAX_CONCURRENCY: "4"
 

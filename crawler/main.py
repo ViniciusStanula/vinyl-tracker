@@ -48,6 +48,9 @@ from database import (
     update_disco_metadata,
     fetch_pending_discovered,
     delete_discovered_vinyls,
+    ensure_api_budget_ledger,
+    get_api_budget_used,
+    add_api_budget_used,
 )
 from bs4 import BeautifulSoup
 from deal_scorer import score_deals
@@ -2641,17 +2644,55 @@ def crawl_stale_records(
 #  Gated by CREATORS_REFRESH_ENABLED; the scraper path stays as fallback.
 # ─────────────────────────────────────────────────────────────
 _creators_client = None
+_api_budget_flushed = 0  # getItems calls already persisted to the ledger this run
+
+# Parallel in-flight getItems calls. The shared TPS token bucket still serializes
+# them to <= CREATORS_TPS, so concurrency only overlaps per-call latency (lifting
+# real throughput toward the allowed rate) — it never raises the instantaneous TPS.
+CREATORS_API_WORKERS = max(1, int(os.environ.get("CREATORS_API_WORKERS", "8") or "8"))
 
 
-def _get_creators_client():
-    """Lazily build a single shared CreatorsClient and attach it to metrics."""
-    global _creators_client
+def _get_creators_client(conn=None):
+    """Lazily build a single shared CreatorsClient and attach it to metrics.
+
+    When conn is given, the per-process day budget is seeded with calls already
+    spent earlier today (shared ledger) so the UTC-day cap holds across the ~8
+    serialized daily runs."""
+    global _creators_client, _api_budget_flushed
     if _creators_client is None:
         from creators_api import CreatorsConfig, CreatorsClient
-        _creators_client = CreatorsClient(CreatorsConfig.from_env())
+        day_used = 0
+        if conn is not None:
+            try:
+                day_used = get_api_budget_used(conn)
+            except Exception as exc:
+                log.warning("Could not read api_budget_ledger (assuming 0 used): %s", exc)
+        _creators_client = CreatorsClient(CreatorsConfig.from_env(), day_used=day_used)
+        _api_budget_flushed = day_used  # already on the ledger; don't re-add it
         _metrics.attach_api_client(_creators_client)
-        log.info("Creators API client initialised for refresh (TPS/TPD from env).")
+        log.info(
+            "Creators API client initialised — TPS=%s per-run=%s day-cap=%s "
+            "(seeded %d used today), workers=%d.",
+            _creators_client.cfg.tps, _creators_client.cfg.tpd_per_run,
+            _creators_client.cfg.tpd, day_used, CREATORS_API_WORKERS,
+        )
     return _creators_client
+
+
+def _flush_api_budget(conn) -> None:
+    """Persist getItems calls spent since the last flush to the shared ledger so
+    later runs see them. Cheap UPSERT; safe to call frequently."""
+    global _api_budget_flushed
+    if _creators_client is None:
+        return
+    try:
+        used = _creators_client.day_used()
+        delta = used - _api_budget_flushed
+        if delta > 0:
+            add_api_budget_used(conn, delta)
+            _api_budget_flushed = used
+    except Exception as exc:
+        log.warning("api_budget_ledger flush failed: %s", exc)
 
 
 # Availability types the API reports for a definitively out-of-stock offer.
@@ -2680,41 +2721,29 @@ def crawl_stale_records_api(
 
     Returns (updated, unavailable, errors).
     """
-    client = _get_creators_client()
+    client = _get_creators_client(conn)
     now = datetime.now(timezone.utc)
-    updated = unavailable = deals_cleared = errors = 0
+    counts = {"updated": 0, "unavailable": 0, "deals_cleared": 0, "errors": 0}
     total = len(records)
     by_asin = {r["asin"]: r for r in records}
-    asins = list(by_asin.keys())
+    _asins = list(by_asin.keys())
+    chunks = [_asins[i:i + 10] for i in range(0, len(_asins), 10)]
 
-    log.info("Stale-records (API): %d records, TPS=%s TPD=%s",
-             total, client.cfg.tps, client.cfg.tpd)
+    log.info("Stale-records (API): %d records, TPS=%s per-run=%s day-cap=%s workers=%d",
+             total, client.cfg.tps, client.cfg.tpd_per_run, client.cfg.tpd,
+             CREATORS_API_WORKERS)
 
     from creators_api import BudgetExhausted
 
-    for i in range(0, len(asins), 10):
-        if deadline is not None and time.monotonic() >= deadline:
-            log.warning("API refresh: time limit reached after %d/%d records.", i, total)
-            break
-        chunk = asins[i:i + 10]
-        try:
-            results = {r.asin: r for r in client.get_items(chunk)}
-        except BudgetExhausted as exc:
-            log.warning("API refresh: %s — stopping (deals were processed first).", exc)
-            break
-        except Exception as exc:
-            log.warning("API refresh: getItems failed for chunk %d: %s", i // 10, exc)
-            errors += len(chunk)
-            continue
-
+    def _apply(chunk: list[str], results: dict) -> None:
+        """Apply one chunk's API results to the DB. Runs on the MAIN thread only
+        (psycopg2 connection is not thread-safe) while workers fetch in parallel."""
         for asin in chunk:
-            rec = by_asin[asin]
-            disco_id = rec["id"]
+            disco_id = by_asin[asin]["id"]
             res = results.get(asin)
             if res is None:
-                errors += 1  # transient miss — do NOT mark unavailable
+                counts["errors"] += 1  # transient miss — do NOT mark unavailable
                 continue
-
             oos = (res.in_stock is False) or (
                 isinstance(res.availability_type, str)
                 and res.availability_type.upper() in _API_OOS_TYPES
@@ -2722,34 +2751,68 @@ def crawl_stale_records_api(
             if oos:
                 if not dry_run:
                     mark_unavailable(conn, disco_id)
-                unavailable += 1
+                counts["unavailable"] += 1
             elif res.price is not None:
                 if not dry_run:
-                    # review_count omitted on purpose → COALESCE preserves stored value.
+                    # review_count omitted → COALESCE preserves stored value.
                     mark_stale_price(conn, disco_id, res.price, now, review_count=None)
-                updated += 1
+                counts["updated"] += 1
                 _metrics.record_useful(1)
             else:
                 # In stock signal but no purchasable price → clear like the scraper.
                 if not dry_run:
                     mark_unavailable(conn, disco_id)
-                deals_cleared += 1
+                counts["deals_cleared"] += 1
 
-        # Progress every ~250 records so a long Phase-3 run shows live movement.
-        done = i + len(chunk)
-        if (i // 10) % 25 == 0 or done >= total:
-            log.info(
-                "  [API refresh] %d/%d — updated=%d unavail=%d cleared=%d err=%d | budget=%s",
-                done, total, updated, unavailable, deals_cleared, errors,
-                client.budget_remaining(),
-            )
+    # Workers run getItems concurrently (overlapping latency); the shared token
+    # bucket caps the real rate at <= TPS. DB writes stay on the main thread.
+    done = 0
+    budget_hit = False
+    with ThreadPoolExecutor(max_workers=CREATORS_API_WORKERS) as pool:
+        futures = {pool.submit(client.get_items, chunk): chunk for chunk in chunks}
+        for fut in as_completed(futures):
+            chunk = futures[fut]
+            if deadline is not None and time.monotonic() >= deadline:
+                for f in futures:
+                    f.cancel()
+                log.warning("API refresh: time limit reached after %d/%d records.", done, total)
+                break
+            try:
+                results = {r.asin: r for r in fut.result()}
+            except BudgetExhausted as exc:
+                # Per-run or day cap reached. Stop submitting more; deals were
+                # processed first (separate Phase-0 call), so Rule Zero holds.
+                budget_hit = True
+                for f in futures:
+                    f.cancel()
+                log.warning("API refresh: %s — stopping (deals already revalidated).", exc)
+                break
+            except Exception as exc:
+                log.warning("API refresh: getItems failed for a chunk: %s", exc)
+                counts["errors"] += len(chunk)
+                continue
 
+            _apply(chunk, results)
+            done += len(chunk)
+
+            # Persist budget spend so later runs see it; progress every ~250 records.
+            if done % 250 < 10 or done >= total:
+                _flush_api_budget(conn)
+                log.info(
+                    "  [API refresh] %d/%d — updated=%d unavail=%d cleared=%d err=%d | budget=%s",
+                    done, total, counts["updated"], counts["unavailable"],
+                    counts["deals_cleared"], counts["errors"], client.budget_remaining(),
+                )
+
+    _flush_api_budget(conn)  # final flush
     log.info(
         "Stale-records (API) done — %d updated | %d unavailable | %d deals_cleared"
-        " | %d errors | budget_remaining=%s",
-        updated, unavailable, deals_cleared, errors, client.budget_remaining(),
+        " | %d errors | budget_remaining=%s%s",
+        counts["updated"], counts["unavailable"], counts["deals_cleared"],
+        counts["errors"], client.budget_remaining(),
+        " | BUDGET CAP HIT" if budget_hit else "",
     )
-    return updated, unavailable, errors
+    return counts["updated"], counts["unavailable"], counts["errors"]
 
 
 # ─────────────────────────────────────────────────────────────
@@ -2921,6 +2984,13 @@ def main():
             pass
     # Durable metrics table (best-effort; never blocks the crawl).
     ensure_metrics_table(conn)
+    # Shared cross-run API-budget ledger (best-effort). Lets each serialized run
+    # seed its day budget from prior runs so CREATORS_TPD holds across the day.
+    if CREATORS_REFRESH_ENABLED:
+        try:
+            ensure_api_budget_ledger(conn)
+        except Exception as exc:
+            log.warning("ensure_api_budget_ledger failed (day cap falls back to per-run): %s", exc)
     try:
 
         # ── Phase 0: Re-validate active deals (highest priority) ──────────
@@ -3232,6 +3302,13 @@ def main():
 
                 phase3_total += len(batch)
                 seen_asins.update(r["asin"] for r in batch)
+
+                # Budget guard: once the per-run / day API cap is spent, further
+                # batches would each exhaust instantly and spin. Stop cleanly.
+                if CREATORS_REFRESH_ENABLED and _creators_client is not None \
+                        and _creators_client.budget_remaining() <= 0:
+                    log.info("Phase 3: Creators API budget spent for this run — stopping.")
+                    break
 
                 if _stale_abort.is_set():
                     remaining = (phase3_deadline - time.monotonic()) if phase3_deadline is not None else None
