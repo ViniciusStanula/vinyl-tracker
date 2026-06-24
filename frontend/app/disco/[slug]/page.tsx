@@ -45,8 +45,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const disco = await getDiscoWithPrecos(slug).catch(() => null);
+  // notFound() here (not just in the page body) so the 404 status is set BEFORE
+  // loading.tsx starts streaming the body — once streaming begins the status is
+  // locked at 200 (Next streams a noindex soft-404 otherwise). Excluded non-vinyl
+  // records (CD/junk) thus return a real 404, not a 200 soft-404.
   if (!disco || (disco.format && disco.format !== "vinyl")) {
-    return { title: "Disco de Vinil | Garimpa Vinil" };
+    notFound();
   }
 
   const peerSlug = await getHreflangRecord(disco.asin).catch(() => null);
