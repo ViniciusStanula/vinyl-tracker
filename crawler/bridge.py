@@ -242,6 +242,10 @@ def fetch_active_deals(conn) -> dict:
               AND d.disponivel = TRUE
               AND d.avg_30d IS NOT NULL
               AND d.avg_30d > 0
+              -- Vinyl-only: same gate as every site surface. Without it, CDs/junk
+              -- ('cd'/'other' format) with a deal_score were reaching Telegram.
+              -- NULL = not yet classified, treated as vinyl (matches the site).
+              AND (d.format IS NULL OR d.format = 'vinyl')
         """)
         return {row["asin"]: dict(row) for row in cur.fetchall()}
 
