@@ -2815,6 +2815,30 @@ def crawl_stale_records_api(
     return counts["updated"], counts["unavailable"], counts["errors"]
 
 
+# In-loop deal refresh cadence (B2): during the long Phase-3 sweep, re-price ALL
+# active deals this often and purge only the deal surfaces. Single process, single
+# token bucket → <= CREATORS_TPS by construction. ~109 calls/pass at current size.
+_DEAL_REFRESH_INTERVAL_S = int(os.environ.get("DEAL_REFRESH_INTERVAL_S", "1800") or "1800")
+
+
+def _inloop_deal_refresh(conn, deadline: float | None) -> int:
+    """Re-validate every active deal mid-sweep (Rule Zero freshness), re-score, and
+    fire the narrow `deals` cache purge so home/ofertas/carousel regenerate within
+    ~minutes. Uses the SAME CreatorsClient (one bucket, one ledger) as the sweep —
+    no second concurrent API consumer, no TPS or TPD double-counting. Returns the
+    number of active deals re-checked.
+    """
+    deals = fetch_active_deals(conn)
+    if not deals:
+        return 0
+    log.info("Phase 3 in-loop deal refresh — re-pricing %d active deals.", len(deals))
+    crawl_stale_records_api(deals, conn, dry_run=False, deadline=deadline)
+    score_deals(conn)  # prices + scores now consistent before the purge
+    _notify_revalidate(last_write_at=time.time(), fatal=False,
+                       label="in-loop-deals", tag="deals")
+    return len(deals)
+
+
 # ─────────────────────────────────────────────────────────────
 #  CLI
 # ─────────────────────────────────────────────────────────────
@@ -2854,7 +2878,7 @@ def parse_args():
 
 
 def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
-                       label: str = "end-of-run") -> None:
+                       label: str = "end-of-run", tag: str = "prices") -> None:
     """POST to the Next.js on-demand revalidation endpoint to purge the price cache.
 
     Called multiple times per run (Rule Zero freshness): once right after Phase-0
@@ -2866,6 +2890,10 @@ def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
     workflow's "Open issue on failure" step fires (dead-man's switch). The mid-run
     calls pass fatal=False — a transient webhook failure there must NOT abort the
     crawl; the later calls (and the fatal end-of-run one) still cover the cache.
+
+    tag: which cache tag to purge. "prices" (default) for the broad Phase-0 /
+    Phase-3.5 / end-of-run purges; "deals" for the frequent in-loop deal refresh,
+    which regenerates only the deal surfaces (home, ofertas, carousel).
 
     last_write_at: time.time() right after the relevant DB commit, for the
     write→revalidate gap log. If gap > 30 s, something is slow.
@@ -2885,7 +2913,7 @@ def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
     for attempt in range(1, len(backoffs) + 2):
         try:
             t0 = time.time()
-            resp = _requests.post(url, json={"secret": secret}, timeout=10)
+            resp = _requests.post(url, json={"secret": secret, "tag": tag}, timeout=10)
             elapsed_ms = int((time.time() - t0) * 1000)
             if resp.status_code == 200:
                 gap_s = t0 - last_write_at if last_write_at is not None else None
@@ -3040,11 +3068,16 @@ def main():
                 # Phase 2.5 never executes.
                 score_deals(conn)
                 # Rule Zero freshness: deal prices + scores are now consistent in
-                # the DB (re-priced, then re-scored). Purge the price cache NOW so
-                # the rendered deal surfaces refresh within minutes, instead of
-                # waiting ~2h for the end-of-run webhook. Best-effort (fatal=False):
-                # a transient failure here must not abort the crawl.
-                _notify_revalidate(last_write_at=time.time(), fatal=False, label="post-phase0")
+                # the DB (re-priced, then re-scored). This is the run-start instance
+                # of the B2 deal refresh — purge the narrow `deals` surfaces NOW so
+                # the deal pages refresh within minutes, instead of waiting ~2h for
+                # the end-of-run webhook. Best-effort (fatal=False): a transient
+                # failure here must not abort the crawl. (Phase 0 is KEPT, not folded
+                # out: it seeds seen_asins so Phase 3 skips these deals, and it gives
+                # the earliest purge — dropping it would delay first deal freshness to
+                # Phase-3 start.)
+                _notify_revalidate(last_write_at=time.time(), fatal=False,
+                                   label="post-phase0", tag="deals")
                 log.info("Phase 0 done: %.0fs", time.monotonic() - t0)
                 log.info("Phase 0 bot-detection: %s", _bot_phase_summary(_snap_pre0, _bot_stats.snapshot()))
             else:
@@ -3281,6 +3314,11 @@ def main():
             t0_phase3 = time.monotonic()
             _snap_pre3 = _bot_stats.snapshot()
             _metrics.start_phase("phase3_stale_records")
+            # B2: timer for the in-loop deal refresh. Seeded one full interval in the
+            # past so the FIRST refresh fires on the opening batch boundary — this
+            # closes the Phase-1 gap (deals were last purged at run start by Phase 0,
+            # ~30-60 min ago by the time the sweep begins).
+            last_deal_refresh = time.monotonic() - _DEAL_REFRESH_INTERVAL_S
 
             while True:
                 if phase3_deadline is not None and time.monotonic() >= phase3_deadline:
@@ -3318,6 +3356,16 @@ def main():
 
                 phase3_total += len(batch)
                 seen_asins.update(r["asin"] for r in batch)
+
+                # B2 in-loop deal refresh: at this clean batch boundary, if ~30 min
+                # have passed, re-price ALL active deals + narrow `deals` purge so
+                # the deal surfaces stay fresh during the long sweep. Runs BEFORE the
+                # budget guard so deals get budget priority (Rule Zero); if it spends
+                # the cap, the guard below then stops the sweep cleanly.
+                if CREATORS_REFRESH_ENABLED and \
+                        time.monotonic() - last_deal_refresh >= _DEAL_REFRESH_INTERVAL_S:
+                    _inloop_deal_refresh(conn, phase3_deadline)
+                    last_deal_refresh = time.monotonic()
 
                 # Budget guard: once the per-run / day API cap is spent, further
                 # batches would each exhaust instantly and spin. Stop cleanly.

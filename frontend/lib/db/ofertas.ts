@@ -106,9 +106,10 @@ export async function queryOfertas(): Promise<ProcessedDisco[]> {
   }
 }
 
-// Cached under `prices` tag — invalidated by the crawler webhook after each run.
+// Cached under `prices` (broad end-of-run purge) and `deals` (in-loop ~30min
+// deal refresh that regenerates only the deal surfaces).
 export const queryOfertasWithCache = unstable_cache(
   queryOfertas,
   ["ofertas-by-tier"],
-  { tags: ["prices"], revalidate: 14400 },
+  { tags: ["prices", "deals"], revalidate: 14400 },
 );

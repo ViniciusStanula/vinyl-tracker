@@ -182,7 +182,8 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
 export const queryCarouselDiscosWithCache = unstable_cache(
   queryCarouselDiscos,
   ["carousel-discos"],
-  { tags: ["prices"], revalidate: 14400 },
+  // Also tagged `deals`: the in-loop deal refresh purges this surface every ~30min.
+  { tags: ["prices", "deals"], revalidate: 14400 },
 );
 
 // Shared artist matching — cached 1 week under `lastfm` tag.

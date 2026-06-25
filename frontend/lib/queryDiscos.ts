@@ -288,5 +288,8 @@ export async function queryDiscos(params: {
 export const queryDiscosWithCache = unstable_cache(
   queryDiscos,
   ["discos-homepage"],
-  { tags: ["prices"], revalidate: 14400 },
+  // Also tagged `deals`: the in-loop deal refresh purges this surface every ~30min.
+  // sort=desconto makes the home grid a primary deal surface; every rendered value
+  // is still the latest committed row, so this is fresher deals, never a stale price.
+  { tags: ["prices", "deals"], revalidate: 14400 },
 );
