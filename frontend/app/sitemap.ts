@@ -29,7 +29,7 @@ export default async function sitemap(props: {
     ]);
     // Articles with known update dates; listing pages use latestUpdate (real price-change signal).
     // top-artistas-spotify updates daily with Spotify data, so latestUpdate is used there too.
-    const ARTICLES_MODIFIED = new Date("2026-06-09");
+    const ARTICLES_MODIFIED = new Date("2026-06-25");
     const ROCK_GUIDE_DATE   = new Date("2026-05-26");
     return [
       { url: SITEMAP_BASE,                                              lastModified: latestUpdate,       changeFrequency: "daily",   priority: 1.0 },

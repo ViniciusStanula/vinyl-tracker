@@ -140,6 +140,12 @@ export default function GuiasPage() {
           vale pagar por 180g ou edição colorida, e rankings dos melhores discos por subgênero
           montados com dados do Discogs.
         </p>
+        <p className="text-parchment text-sm leading-relaxed max-w-2xl mt-3">
+          Cada guia parte do que muda pra quem ouve e compra vinil no Brasil: o clima que empena
+          disco, o preço que pesa na hora de escolher entre original e reissue, o sebo onde o
+          grading nem sempre é honesto. Os guias práticos ensinam a cuidar, limpar e avaliar; os
+          rankings apontam o que procurar primeiro.
+        </p>
       </header>
 
       {/* Featured: newest guide */}

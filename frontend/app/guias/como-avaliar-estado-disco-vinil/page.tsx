@@ -24,7 +24,7 @@ const PAGE_TITLE = "Como Avaliar o Estado de um Disco de Vinil";
 const PAGE_DESC =
   "Guia Goldmine de grading: o que significa Mint, NM, VG+, VG e Poor, como inspecionar disco e capa, abreviações do Discogs e como o grading afeta o preço.";
 const DATE = "2026-05-31";
-const DATE_MODIFIED = "2026-06-09";
+const DATE_MODIFIED = "2026-06-25";
 const HERO_IMAGE = `${SITE_URL}/blog/inspecao-estado-disco-vinil.jpg`;
 
 export const metadata: Metadata = {
@@ -185,6 +185,10 @@ const FAQ = [
     q: "Como o grading da capa afeta o preço se o disco está ótimo?",
     a: "Depende do perfil do comprador. Quem compra só para ouvir liga menos para a capa. Quem coleciona com atenção ao conjunto completo paga mais por capa em bom estado. Em geral, um disco NM numa capa VG vale menos do que o mesmo disco NM numa capa NM. No Discogs, o padrão é informar os dois separadamente (ex.: Media NM / Sleeve VG+) justamente para o comprador poder julgar os dois lados.",
   },
+  {
+    q: "Como grado um disco que vou vender?",
+    a: "Inspeção visual sob luz oblíqua, teste da unha e, sempre que possível, play-grading: ouça o disco antes de cravar o grau. Avalie disco e capa separados. A regra de ouro do Discogs é graduar conservador: na dúvida entre dois graus, use o mais baixo. Comprador que recebe melhor do que esperava volta a comprar; comprador que recebe pior do que pagou abre disputa e não volta nunca. Tire fotos do disco inclinado contra a luz e informe os dois graus na descrição.",
+  },
 ];
 
 export default function GradingPage() {
@@ -271,7 +275,7 @@ export default function GradingPage() {
           <span>
             Atualizado em{" "}
             <time dateTime={DATE_MODIFIED} className="text-parchment">
-              9 de junho de 2026
+              25 de junho de 2026
             </time>
           </span>
           <span className="flex items-center gap-1">
@@ -599,6 +603,31 @@ export default function GradingPage() {
                 </div>
               </div>
             </div>
+            <div>
+              <h3 className="font-display text-base font-bold text-cream mb-3">
+                Play-Grading: a Única Forma de Confirmar o Som
+              </h3>
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
+                <p>
+                  Inspeção visual e teste da unha avaliam a aparência do disco, não o som. Um disco
+                  pode passar limpo no olho e na unha e ainda chiar, estalar ou distorcer quando
+                  toca. Marca rasa que a unha não pega, sujeira no fundo do sulco, desgaste de
+                  audições antigas com agulha gasta: nada disso aparece sem botar pra tocar.
+                </p>
+                <p>
+                  Play-grading é isso: ouvir o disco inteiro, dos dois lados, antes de cravar o
+                  grau. O guia do Discogs trata como expectativa padrão para vender com honestidade,
+                  principalmente de VG+ pra baixo, onde a diferença entre um grau e outro é audível.
+                  Em sebo nem sempre dá pra fazer, e é por isso que limpeza e inspeção visual viram
+                  tão importantes. Mas se você vende, play-grade.
+                </p>
+                <p>
+                  O mínimo viável: ouça as primeiras e as últimas faixas de cada lado. O começo do
+                  lado pega a entrada da agulha; o fim é onde a distorção de final de sulco aparece
+                  primeiro num disco gasto. Se der pra ouvir inteiro, melhor ainda.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -708,6 +737,28 @@ export default function GradingPage() {
                 <p className="text-dust text-xs leading-relaxed">{note}</p>
               </div>
             ))}
+          </div>
+          <div className="mt-5 bg-sleeve border border-groove rounded-xl p-5">
+            <p className="font-display text-sm font-bold text-cream mb-2">Exemplo na prática</p>
+            <div className="space-y-3 text-parchment text-sm leading-relaxed">
+              <p>
+                Os percentuais acima viram número real assim. Pegue um título com muita oferta,
+                digamos Rumours do Fleetwood Mac, e abra a aba Statistics da prensagem que te
+                interessa no Discogs. Lá ficam o &quot;Last Sold&quot; e o histórico de vendas com o grau
+                de cada uma.
+              </p>
+              <p>
+                Se as cópias NM saíram numa faixa e as VG+ saíram perto de 60% disso, o desconto
+                bate com a tabela: VG+ vale entre 55 e 70% do NM. Quando uma listagem VG+ pede quase
+                preço de NM, agora você tem com o que comparar. E quando vê uma VG+ honesta bem
+                abaixo da média, sabe que achou uma boa.
+              </p>
+              <p>
+                O pulo do gato é comparar dentro da mesma prensagem. Um original japonês e um reissue
+                recente do mesmo álbum são dois mercados diferentes, com preços diferentes por grau.
+                A aba Statistics é por release, não por álbum, justamente por isso.
+              </p>
+            </div>
           </div>
           <p className="text-dust text-xs leading-relaxed mt-4">
             Faixas de preço por grau baseadas no{" "}

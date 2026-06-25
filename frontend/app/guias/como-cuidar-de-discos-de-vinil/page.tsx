@@ -56,7 +56,7 @@ const PAGE_TITLE = "Como Cuidar de Discos de Vinil: Guia Completo Para Sua Cole�
 const PAGE_DESC =
   "Guia de limpeza, armazenamento no clima do Brasil, cuidados com agulha e checklist de manutenção para sua coleção de vinil durar décadas.";
 const DATE = "2026-05-27";
-const DATE_MODIFIED = "2026-06-09";
+const DATE_MODIFIED = "2026-06-25";
 
 export const metadata: Metadata = {
   title: "Como Cuidar de Discos de Vinil: Guia Completo | Garimpa Vinil",
@@ -80,9 +80,11 @@ const TOC = [
   { id: "agulha", label: "Cuidados com a agulha" },
   { id: "armazenamento", label: "Armazenamento no clima do Brasil" },
   { id: "plasticos-estantes", label: "Plásticos, capas e estantes" },
+  { id: "transporte", label: "Transporte e mudança" },
   { id: "herdados-sebo", label: "Discos herdados, de sebo ou mofados" },
   { id: "diagnostico", label: "Chiado, estalo e pulo: diagnóstico" },
   { id: "checklist", label: "Checklist de manutenção" },
+  { id: "organizar", label: "Organizar e catalogar a coleção" },
   { id: "onde-comprar", label: "Onde comprar acessórios no Brasil" },
   { id: "faq", label: "Perguntas frequentes" },
 ];
@@ -111,6 +113,14 @@ const FAQ = [
   {
     q: "Disco riscado tem conserto?",
     a: "Depende do tipo de risco. Arranhão muito superficial às vezes melhora com limpeza profunda, porque a sensação de \"risco\" pode ser sujeira impregnada. Já o arranhão que engata a unha de verdade é dano físico permanente no sulco, sem volta possível em casa.",
+  },
+  {
+    q: "Vale a pena uma pistola antiestática?",
+    a: "Não é obrigatória, mas ajuda em clima seco. A escova de fibra de carbono dá conta da estática na maioria dos casos. Se o disco volta a atrair poeira logo depois de escovado, comum em apartamento com ar-condicionado ligado o ano todo ou no inverno seco do Sul e do Sudeste, a pistola antiestática neutraliza a carga com dois ou três disparos sem encostar no disco. Custa mais ou menos o preço de um disco novo e dura anos.",
+  },
+  {
+    q: "Como transporto discos numa mudança?",
+    a: "Sempre na vertical, em caixa firme e cheia o suficiente pra nada tombar, nunca deitados com peso em cima. Caixa de papelão de mudança aguenta bem, mas não exagere no tamanho: uma caixa cheia de LP passa fácil de 20 quilos. O ponto crítico é o calor: porta-malas fechado no sol brasileiro vira forno e empena disco em uma tarde. Leve a coleção no habitáculo com ar-condicionado e não esqueça a caixa no carro depois que chegar.",
   },
 ];
 
@@ -193,7 +203,7 @@ export default function ComoGuardarPage() {
           <span>
             Atualizado em{" "}
             <time dateTime={DATE_MODIFIED} className="text-parchment">
-              9 de junho de 2026
+              25 de junho de 2026
             </time>
           </span>
           <span className="flex items-center gap-1">
@@ -219,7 +229,7 @@ export default function ComoGuardarPage() {
       </figure>
 
       {/* Quick answer */}
-      <p className="text-parchment text-sm leading-relaxed mb-8 bg-sleeve border border-groove rounded-xl px-4 py-3">
+      <p className="[grid-column:1/-1] text-parchment text-sm leading-relaxed mb-8 bg-sleeve border border-groove rounded-xl px-4 py-3">
         Resposta rápida: guarde os discos na vertical, longe de sol, calor e umidade; escove com
         fibra de carbono antes de cada audição; faça limpeza profunda com água destilada e sabão
         neutro em todo disco usado; mantenha a agulha limpa e troque dentro da vida útil; e nunca
@@ -525,6 +535,31 @@ export default function ComoGuardarPage() {
                 escovada com fibra de carbono e, se quiser ser caprichoso, um pano de microfibra
                 úmido com água destilada protegem sua agulha desde a primeira rotação.
               </p>
+            </div>
+            <div>
+              <h3 className="font-display text-base font-bold text-cream mb-3">
+                Estática: Escova de Carbono, Pistola Antiestática e o Que Evitar
+              </h3>
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
+                <p>
+                  A escova de fibra de carbono resolve a maior parte da estática do dia a dia. Em
+                  clima seco, ou quando o disco vira ímã de poeira logo depois de escovado, a
+                  estática está vencendo a escova. É aí que entra a pistola antiestática.
+                </p>
+                <p>
+                  Ela dispara um jato de íons que neutraliza a carga da superfície sem encostar no
+                  disco. Dois ou três disparos a alguns centímetros, com o disco parado, e a poeira
+                  para de grudar. Não é item obrigatório, mas em apartamento com ar-condicionado
+                  ligado o ano todo, ou no inverno seco do Sul e do Sudeste, faz diferença real.
+                  Custa mais ou menos o preço de um disco novo e dura anos.
+                </p>
+                <p>
+                  O que não funciona: pano seco comum gera mais estática do que tira; spray
+                  antiestático de roupa deixa resíduo químico no sulco; e esfregar o disco na
+                  camiseta, o clássico, risca e carrega ainda mais. Estática se neutraliza, não se
+                  esfrega.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -837,6 +872,67 @@ export default function ComoGuardarPage() {
           </div>
         </section>
 
+        {/* 7b */}
+        <section id="transporte">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
+            Transporte e Mudança: Como Mover Discos Sem Destruir a Coleção
+          </h2>
+          <p className="text-parchment text-sm leading-relaxed mb-6 bg-sleeve border border-groove rounded-xl px-4 py-3">
+            Transporte sempre na vertical, em caixa firme que não deixe os discos tombarem. Nunca
+            deite a caixa. E o maior inimigo não é o tranco, é o calor: porta-malas fechado no sol
+            empena disco em uma tarde.
+          </p>
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-display text-base font-bold text-cream mb-3">
+                Numa mudança
+              </h3>
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
+                <p>
+                  Caixa de papelão reforçada, daquelas de mudança mesmo, é melhor do que parece:
+                  aguenta peso e mantém os discos firmes. Encha até ficar apertado o suficiente pra
+                  nada tombar, sem comprimir a ponto de entortar. Uma caixa cheia de LP passa fácil
+                  de 20 quilos, então caixa pequena e cheia é melhor que caixa grande que arrebenta
+                  no meio do caminho.
+                </p>
+                <p>
+                  Deitar os discos, nem numa mudança curta. Disco na horizontal com peso em cima
+                  empena do mesmo jeito que empenaria na estante. Vertical do começo ao fim.
+                </p>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-display text-base font-bold text-cream mb-3">
+                Pelo correio ou transportadora
+              </h3>
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
+                <p>
+                  Vender ou comprar à distância pede embalagem específica. O disco sai da capa e
+                  viaja ao lado dela, nunca dentro: se a embalagem leva um tranco com o disco
+                  encaixado, a borda corta a abertura da capa e abre a costura. O mailer próprio de
+                  LP, aquele papelão rígido em formato de disco, existe no mercado nacional e custa
+                  pouco perto do prejuízo de um disco quebrado no caminho.
+                </p>
+                <p>
+                  Reforço nas quinas, fita boa, e a palavra &quot;frágil&quot; não impressiona ninguém na
+                  transportadora: quem protege é a embalagem, não o aviso.
+                </p>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-display text-base font-bold text-cream mb-3">
+                O porta-malas é uma armadilha
+              </h3>
+              <p className="text-parchment text-base leading-relaxed">
+                Carro parado no sol vira forno. Porta-malas fechado passa fácil de 60°C numa tarde
+                de verão brasileiro, e isso empena disco em questão de horas. Se for de carro, leve
+                a coleção no habitáculo com ar-condicionado, e não deixe a caixa esquecida no carro
+                depois de chegar.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* 8 */}
         <section id="herdados-sebo">
           <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
@@ -1072,6 +1168,61 @@ export default function ComoGuardarPage() {
                 </ul>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* 10b */}
+        <section id="organizar">
+          <h2 className="font-display text-2xl font-black text-cream mb-5 [text-wrap:balance]">
+            Como Organizar e Catalogar a Coleção
+          </h2>
+          <p className="text-parchment text-base leading-relaxed mb-6">
+            Coleção pequena você organiza de cabeça. Passou de uns duzentos discos e começa o
+            problema clássico: comprar de novo um disco que já tinha, esquecer onde guardou aquele
+            LP, perder a noção do que tem. Catalogar resolve isso.
+          </p>
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-display text-base font-bold text-cream mb-3">
+                Discogs como catálogo
+              </h3>
+              <div className="space-y-3 text-parchment text-base leading-relaxed">
+                <p>
+                  O Discogs tem uma função de coleção gratuita que faz o trabalho pesado: você
+                  adiciona cada disco pela edição exata, mesma prensagem, mesmo ano, mesmo país, e
+                  ele guarda tudo, inclusive uma estimativa do valor de mercado da sua coleção. Pra
+                  quem compra muito, é a forma mais simples de não comprar duplicado e de saber o
+                  que realmente tem na estante.
+                </p>
+                <p>
+                  O detalhe que importa: registre a edição certa. O mesmo álbum tem dezenas de
+                  prensagens diferentes, e o valor muda muito entre elas. Catalogar a edição errada
+                  esvazia metade da utilidade.
+                </p>
+              </div>
+            </div>
+            <div>
+              <h3 className="font-display text-base font-bold text-cream mb-3">
+                Uma planilha simples também serve
+              </h3>
+              <p className="text-parchment text-base leading-relaxed">
+                Não quer depender de site? Uma planilha resolve: artista, título, ano da edição,
+                estado do disco e da capa, onde guardou. Cinco colunas. O que não dá é ficar sem
+                registro nenhum quando a coleção cresce.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-display text-base font-bold text-cream mb-3">
+                Por que catalogar também é cuidar
+              </h3>
+              <p className="text-parchment text-base leading-relaxed">
+                Anotar o estado de cada disco no momento em que ele entra na coleção cria uma linha
+                de base. Daqui a dois anos, se um disco começar a chiar, você sabe se ele já veio
+                assim ou se algo no seu manuseio, na sua agulha ou no seu armazenamento piorou. Sem
+                registro, é só palpite. Vale até pros discos novos: anote que entrou lacrado e em
+                que data, e você tem o histórico real de cada peça.
+              </p>
+            </div>
           </div>
         </section>
 

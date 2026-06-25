@@ -218,6 +218,17 @@ export default async function ArtistaPage({
         </section>
       )}
 
+      {!isUnknownArtist && total > 0 && (
+        <section aria-label="Guias relacionados" className="mt-10 pt-6 border-t border-groove flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <Link href="/guias/como-cuidar-de-discos-de-vinil" className="text-dust hover:text-gold transition-colors">
+            Como cuidar dos seus discos de vinil
+          </Link>
+          <Link href="/guias/vinil-180g-vale-a-pena" className="text-dust hover:text-gold transition-colors">
+            Vinil 180g vale a pena?
+          </Link>
+        </section>
+      )}
+
       <BackToTop />
     </main>
     </>

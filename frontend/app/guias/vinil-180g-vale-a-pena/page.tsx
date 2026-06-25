@@ -24,7 +24,7 @@ const PAGE_TITLE = "Vinil 180g Vale a Pena? Diferença Real ou Marketing?";
 const PAGE_DESC =
   "O peso do disco influencia o som? Separamos diferença real (durabilidade, VTA, superfície) de marketing puro, com foco no comprador brasileiro.";
 const DATE = "2026-05-31";
-const DATE_MODIFIED = "2026-06-09";
+const DATE_MODIFIED = "2026-06-25";
 const HERO_IMAGE = `${SITE_URL}/blog/agulha-toca-discos-vinil.jpg`;
 
 export const metadata: Metadata = {
@@ -175,7 +175,7 @@ export default function Vinil180gPage() {
           <span>
             Atualizado em{" "}
             <time dateTime={DATE_MODIFIED} className="text-parchment">
-              9 de junho de 2026
+              25 de junho de 2026
             </time>
           </span>
           <span className="flex items-center gap-1">
@@ -423,6 +423,12 @@ export default function Vinil180gPage() {
                   completa dizendo que o resultado prático são menos ressonâncias durante a reprodução.
                 </p>
                 <p>
+                  Vale separar isso de wow &amp; flutter, a variação de velocidade que deixa o som
+                  &quot;chorado&quot;. Quem mais controla wow &amp; flutter é a inércia do prato, não a do
+                  disco: o peso do LP some perto da massa do prato girando. O 180g ajuda na margem,
+                  mas não conserta um toca-discos de velocidade instável.
+                </p>
+                <p>
                   O ponto de atenção, levantado pelo próprio Johannsen, é que toca-discos de entrada
                   se beneficiam mais dessa característica do que equipamentos de alto padrão. Um
                   toca-discos de alta fidelidade já tem controle de vibração próprio. Num Audio-Technica
@@ -664,6 +670,16 @@ export default function Vinil180gPage() {
                 </ul>
               </div>
             ))}
+          </div>
+          <div className="mt-5 bg-sleeve border border-groove rounded-xl p-5">
+            <p className="font-display text-sm font-bold text-cream mb-2">E o custo ambiental?</p>
+            <p className="text-parchment text-sm leading-relaxed">
+              Tem um custo que raramente entra no debate: 180g é mais plástico. Um disco de 180g usa
+              cerca de 30% mais PVC que um de 140g, leva mais tempo na prensa e gasta mais energia
+              por unidade. PVC é derivado de petróleo. Se o peso extra não traz ganho sonoro real,
+              sobra mais material e mais consumo pra produzir o mesmo som. Não é motivo pra parar de
+              comprar 180g, mas pra quem leva isso em conta, entra na decisão junto com o preço.
+            </p>
           </div>
         </section>
 

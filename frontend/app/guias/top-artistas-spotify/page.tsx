@@ -185,6 +185,27 @@ export default function TopArtistasSptPage() {
       {/* ── Charts interativos ───────────────────────────────────── */}
       <ChartsContent data={data} />
 
+      {/* ── Contexto evergreen — não muda com os dados diários ────── */}
+      <section className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
+        <h2 className="font-display text-base font-bold text-cream mb-3">
+          Por que streaming importa pra quem compra vinil
+        </h2>
+        <div className="space-y-3 text-parchment text-sm leading-relaxed">
+          <p>
+            O que toca no Spotify hoje vira pressão de demanda no vinil amanhã. Quando um artista
+            estoura nos streams, a procura pelos discos dele sobe junto, e o preço acompanha: edição
+            esgotada some do mercado, reissue some das prateleiras, original de sebo valoriza.
+            Acompanhar quem está subindo é uma forma de comprar antes da onda, não depois.
+          </p>
+          <p>
+            Funciona melhor com artista de catálogo antigo voltando à tona. Uma música numa trilha
+            de série ou num trend pode ressuscitar um álbum de quarenta anos atrás, e aí o vinil
+            daquele disco, que ninguém queria, vira item disputado em semanas. O ranking diário
+            ajuda a pegar esse movimento no começo.
+          </p>
+        </div>
+      </section>
+
       {/* ── Seções explicativas — abaixo do ranking ──────────────── */}
       <div className="mt-10 grid sm:grid-cols-2 gap-4">
         <section className="bg-sleeve border border-groove rounded-xl p-6">

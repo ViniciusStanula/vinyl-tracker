@@ -293,6 +293,34 @@ export default async function HomePage({
         </section>
       )}
 
+      {/* ── Guias quick-links — discovery footer ─────────────────── */}
+      {!searchTerm && !artista && (
+        <section aria-label="Guias de vinil" className="mt-12 pt-8 border-t border-groove">
+          <h2 className="font-display text-lg font-bold text-cream mb-3">Guias de Vinil</h2>
+          <nav className="flex flex-wrap gap-2">
+            {[
+              { href: "/guias/como-cuidar-de-discos-de-vinil", label: "Como cuidar do vinil" },
+              { href: "/guias/vinil-180g-vale-a-pena",         label: "Vinil 180g vale a pena?" },
+              { href: "/guias/vinil-colorido-e-picture-disc",  label: "Colorido e picture disc" },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+              >
+                {label}
+              </Link>
+            ))}
+            <Link
+              href="/guias"
+              className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+            >
+              Todos os guias →
+            </Link>
+          </nav>
+        </section>
+      )}
+
       <BackToTop />
     </main>
   );

@@ -24,7 +24,7 @@ const PAGE_TITLE = "Vinil Colorido e Picture Disc Valem a Pena?";
 const PAGE_DESC =
   "Colorido soa pior que preto? E picture disc? Mito vs. realidade técnica: carbon black, polietileno, splatter e quando cada formato vale a pena comprar.";
 const DATE = "2026-06-01";
-const DATE_MODIFIED = "2026-06-09";
+const DATE_MODIFIED = "2026-06-25";
 const HERO_IMAGE = `${SITE_URL}/blog/vinil-colorido-close.jpg`;
 
 export const metadata: Metadata = {
@@ -174,7 +174,7 @@ export default function VinilColoridoPage() {
           <span>
             Atualizado em{" "}
             <time dateTime={DATE_MODIFIED} className="text-parchment">
-              9 de junho de 2026
+              25 de junho de 2026
             </time>
           </span>
           <span className="flex items-center gap-1">
@@ -360,6 +360,50 @@ export default function VinilColoridoPage() {
                 )}
               </div>
             ))}
+          </div>
+
+          <div className="mt-8">
+            <h3 className="font-display text-base font-bold text-cream mb-3">
+              Todos os Tipos Lado a Lado
+            </h3>
+            <p className="text-parchment text-sm leading-relaxed mb-4">
+              O que esperar de cada formato em som e em valor de coleção. &quot;Risco pequeno&quot; quer
+              dizer que uma planta séria controla bem; numa planta de segundo escalão, qualquer um
+              deles pode variar.
+            </p>
+            <div className="overflow-x-auto rounded-xl border border-groove">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-groove bg-sleeve">
+                    <th className="py-3 px-4 text-left text-[10px] font-semibold text-dust uppercase tracking-wider">Tipo</th>
+                    <th className="py-3 px-4 text-left text-[10px] font-semibold text-dust uppercase tracking-wider">Som</th>
+                    <th className="py-3 px-4 text-left text-[10px] font-semibold text-dust uppercase tracking-wider">Coleção</th>
+                    <th className="py-3 px-4 text-left text-[10px] font-semibold text-dust uppercase tracking-wider">O que pesa</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { tipo: "Preto", som: "Referência", colecao: "Padrão", nota: "Carbon black: superfície mais silenciosa e PVC mais resistente" },
+                    { tipo: "Colorido sólido", som: "Igual ao preto", colecao: "Médio", nota: "Em planta boa, indistinguível num teste cego" },
+                    { tipo: "Transparente / clear", som: "Quase igual", colecao: "Médio", nota: "Sem a antiestática do preto; mais sensível a UV" },
+                    { tipo: "Splatter / marble", som: "Risco pequeno", colecao: "Alto", nota: "Aplicação em parte manual; depende do controle da planta" },
+                    { tipo: "Galaxy / nebuloso", som: "Risco pequeno", colecao: "Alto", nota: "Mesma lógica do splatter: mais cor, mais variável" },
+                    { tipo: "Neon / UV-reativo", som: "Quase igual", colecao: "Alto", nota: "Pigmento fluorescente; o visual chama mais que o som incomoda" },
+                    { tipo: "Glow in the dark", som: "Risco pequeno a médio", colecao: "Alto", nota: "Pigmento fosforescente adiciona partícula ao PVC e pode subir o ruído de fundo" },
+                    { tipo: "Branco", som: "Quase igual", colecao: "Médio", nota: "Pigmento opaco; bom em planta boa" },
+                    { tipo: "Metálico (ouro, prata)", som: "Pior documentado", colecao: "Alto", nota: "Partícula metálica eleva o ruído, principalmente no grave" },
+                    { tipo: "Picture disc", som: "Pior", colecao: "Alto (display)", nota: "Sulco em foil de polietileno: mais ruído e degradação mais rápida" },
+                  ].map(({ tipo, som, colecao, nota }) => (
+                    <tr key={tipo} className="border-b border-groove/40 last:border-0 hover:bg-sleeve/60 transition-colors">
+                      <td className="py-2.5 px-4 text-cream text-xs font-medium">{tipo}</td>
+                      <td className="py-2.5 px-4 text-parchment text-xs">{som}</td>
+                      <td className="py-2.5 px-4 text-parchment text-xs">{colecao}</td>
+                      <td className="py-2.5 px-4 text-dust text-xs leading-relaxed">{nota}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 

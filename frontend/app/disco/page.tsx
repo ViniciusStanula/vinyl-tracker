@@ -123,7 +123,11 @@ export default async function DiscosPage({
         <Link href="/guias" className="text-parchment hover:text-gold underline underline-offset-2 transition-colors">
           guias de vinil
         </Link>{" "}
-        para descobrir novos álbuns.
+        para descobrir novos álbuns e{" "}
+        <Link href="/guias/como-cuidar-de-discos-de-vinil" className="text-parchment hover:text-gold underline underline-offset-2 transition-colors">
+          aprender a cuidar deles
+        </Link>
+        .
       </p>
 
       {/* ── Sort bar — sticky so filters stay in view while scrolling */}
