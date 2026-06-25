@@ -10,7 +10,7 @@ import { Suspense } from "react";
 
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
 
-export const revalidate = 86400;
+export const revalidate = 14400;
 
 export async function generateMetadata({
   searchParams,

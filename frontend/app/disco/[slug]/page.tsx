@@ -26,7 +26,7 @@ import type { Metadata } from "next";
 
 // Safety net only — the crawler's /api/revalidate webhook is the real trigger.
 // 1800 matches the data-layer TTL so the HTML cache never outlives its data.
-export const revalidate = 86400;
+export const revalidate = 14400;
 
 // Without this a dynamic route renders dynamically (Cache-Control: no-store) in
 // Next 16 — the docs require returning an array, even empty, to enable ISR.

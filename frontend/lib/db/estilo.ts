@@ -226,7 +226,7 @@ const _getEstiloPageData = unstable_cache(
     };
   },
   ["estilo-page"],
-  { tags: ["prices"], revalidate: 21600 }
+  { tags: ["prices"], revalidate: 14400 }
 );
 
 export const getEstiloPageData = cache(_getEstiloPageData);
@@ -274,7 +274,7 @@ const _getRelatedEstilos = unstable_cache(
     return rows.map((r) => ({ tag: r.tag, slug: slugifyStyle(r.tag) }));
   },
   ["estilo-related"],
-  { tags: ["prices"], revalidate: 86400 }
+  { tags: ["prices"], revalidate: 14400 }
 );
 
 export const getRelatedEstilos = cache(_getRelatedEstilos);
@@ -301,7 +301,7 @@ const _getTopArtistsForEstilo = unstable_cache(
     }));
   },
   ["estilo-top-artists"],
-  { tags: ["prices"], revalidate: 86400 }
+  { tags: ["prices"], revalidate: 14400 }
 );
 
 export const getTopArtistsForEstilo = cache(_getTopArtistsForEstilo);
@@ -335,7 +335,7 @@ const _getEstilosList = unstable_cache(
     return result;
   },
   ["estilos-list"],
-  { tags: ["prices"], revalidate: 86400 }
+  { tags: ["prices"], revalidate: 14400 }
 );
 
 export const getEstilosList = cache(_getEstilosList);

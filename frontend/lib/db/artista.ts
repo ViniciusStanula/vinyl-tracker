@@ -343,7 +343,7 @@ const _getArtistaPageData = unstable_cache(
     return { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, unavailableItems };
   },
   ["artista-page"],
-  { tags: ["prices"], revalidate: 21600 }
+  { tags: ["prices"], revalidate: 14400 }
 );
 
 export const getArtistaPageData = cache(_getArtistaPageData);
@@ -381,7 +381,7 @@ const _getArtistasList = unstable_cache(
     }));
   },
   ["artistas-list"],
-  { tags: ["prices"], revalidate: 86400 }
+  { tags: ["prices"], revalidate: 14400 }
 );
 
 export const getArtistasList = cache(_getArtistasList);

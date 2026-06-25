@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { toJsonLd } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
 
-export const revalidate = 86400;
+export const revalidate = 14400;
 
 // Tier metadata (3 = best). Copy is pt-BR and avoids em dashes per house style.
 const TIERS = [

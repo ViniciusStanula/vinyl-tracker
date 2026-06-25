@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
-export const revalidate = 21600;
+export const revalidate = 14400;
 
 export const metadata: Metadata = {
   title: "Estilos Musicais em Vinil | Garimpa Vinil",

@@ -14,7 +14,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
-export const revalidate = 86400; // safety-net; on-demand purge via revalidateTag("prices") fires first
+export const revalidate = 14400; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
 // Without this Next 16 renders the route dynamically (Cache-Control: no-store).
 // [] = nothing prebuilt; each artist is rendered + CDN-cached on first request.

@@ -14,7 +14,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
-export const revalidate = 86400;
+export const revalidate = 14400;
 
 const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
 

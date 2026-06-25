@@ -19,7 +19,7 @@ const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false
 // (priority images in DiscoCard) become the LCP candidates.
 const SHOW_HERO = process.env.HIDE_HERO !== "1";
 
-export const revalidate = 86400;
+export const revalidate = 14400;
 
 export async function generateMetadata({
   searchParams,

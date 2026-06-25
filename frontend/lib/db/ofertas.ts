@@ -110,5 +110,5 @@ export async function queryOfertas(): Promise<ProcessedDisco[]> {
 export const queryOfertasWithCache = unstable_cache(
   queryOfertas,
   ["ofertas-by-tier"],
-  { tags: ["prices"], revalidate: 86400 },
+  { tags: ["prices"], revalidate: 14400 },
 );

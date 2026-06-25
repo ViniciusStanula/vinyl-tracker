@@ -2853,17 +2853,22 @@ def parse_args():
     return parser.parse_args()
 
 
-def _notify_revalidate(last_write_at: float | None = None) -> None:
-    """POST to the Next.js on-demand revalidation endpoint after a successful crawl.
+def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
+                       label: str = "end-of-run") -> None:
+    """POST to the Next.js on-demand revalidation endpoint to purge the price cache.
 
-    Retries up to 4 attempts with 5/15/45 s backoff. Any final failure —
-    network error or non-200 response (e.g. 401 from a rotated secret) —
-    raises RuntimeError so the run exits non-zero and the workflow's
-    "Open issue on failure" step fires (dead-man's switch for the cache
-    pipeline; the site would otherwise silently fall back to TTL staleness).
+    Called multiple times per run (Rule Zero freshness): once right after Phase-0
+    deal writes land, once after Phase-3.5 rescore, and finally at end-of-run.
+    revalidateTag is idempotent, so repeated calls just trigger another
+    stale-while-revalidate regen — no double-purge race or partial state.
 
-    last_write_at: time.time() recorded right after the final DB commit.
-    Used to log the write→revalidate gap. If gap > 30 s, something is slow.
+    fatal: the end-of-run call passes fatal=True so a final failure raises and the
+    workflow's "Open issue on failure" step fires (dead-man's switch). The mid-run
+    calls pass fatal=False — a transient webhook failure there must NOT abort the
+    crawl; the later calls (and the fatal end-of-run one) still cover the cache.
+
+    last_write_at: time.time() right after the relevant DB commit, for the
+    write→revalidate gap log. If gap > 30 s, something is slow.
     """
     import threading
     import requests as _requests
@@ -2886,8 +2891,8 @@ def _notify_revalidate(last_write_at: float | None = None) -> None:
                 gap_s = t0 - last_write_at if last_write_at is not None else None
                 gap_label = f" | write→notify: {gap_s:.1f}s" if gap_s is not None else ""
                 log.info(
-                    "Revalidation: HTTP 200 in %dms (attempt %d)%s",
-                    elapsed_ms, attempt, gap_label,
+                    "Revalidation [%s]: HTTP 200 in %dms (attempt %d)%s",
+                    label, elapsed_ms, attempt, gap_label,
                 )
                 if gap_s is not None and gap_s > 30:
                     log.warning(
@@ -2897,17 +2902,22 @@ def _notify_revalidate(last_write_at: float | None = None) -> None:
                     )
                 break
             last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
-            log.warning("Revalidation attempt %d failed — %s", attempt, last_error)
+            log.warning("Revalidation [%s] attempt %d failed — %s", label, attempt, last_error)
         except Exception as exc:
             last_error = str(exc)
-            log.warning("Revalidation attempt %d failed — %s", attempt, last_error)
+            log.warning("Revalidation [%s] attempt %d failed — %s", label, attempt, last_error)
         if attempt <= len(backoffs):
             time.sleep(backoffs[attempt - 1])
     else:
-        raise RuntimeError(
-            f"Cache revalidation failed after {len(backoffs) + 1} attempts — "
-            f"last error: {last_error}. Site is serving TTL-fallback prices."
+        msg = (
+            f"Cache revalidation [{label}] failed after {len(backoffs) + 1} attempts — "
+            f"last error: {last_error}."
         )
+        if fatal:
+            raise RuntimeError(msg + " Site is serving TTL-fallback prices.")
+        # Mid-run best-effort purge: log and continue; later calls + the fatal
+        # end-of-run call still cover the cache. Do not abort the crawl.
+        log.warning("%s Mid-run purge skipped; later revalidation will cover it.", msg)
 
     try:
         # Cache warm-up: prime the hottest pages after revalidation so the ISR
@@ -3029,6 +3039,12 @@ def main():
                 # invalidated would stay visible if Phase 1 returns no results and
                 # Phase 2.5 never executes.
                 score_deals(conn)
+                # Rule Zero freshness: deal prices + scores are now consistent in
+                # the DB (re-priced, then re-scored). Purge the price cache NOW so
+                # the rendered deal surfaces refresh within minutes, instead of
+                # waiting ~2h for the end-of-run webhook. Best-effort (fatal=False):
+                # a transient failure here must not abort the crawl.
+                _notify_revalidate(last_write_at=time.time(), fatal=False, label="post-phase0")
                 log.info("Phase 0 done: %.0fs", time.monotonic() - t0)
                 log.info("Phase 0 bot-detection: %s", _bot_phase_summary(_snap_pre0, _bot_stats.snapshot()))
             else:
@@ -3348,6 +3364,10 @@ def main():
                         scoring_summary["cleared"],
                         scoring_summary["skipped"],
                     )
+                    # Phase 3 re-priced the stale backlog and Phase 3.5 re-scored;
+                    # purge the price cache now so newly-flagged/cleared deals render
+                    # before the end-of-run webhook. Best-effort (fatal=False).
+                    _notify_revalidate(last_write_at=time.time(), fatal=False, label="post-phase3.5")
             else:
                 log.info("No stale records — all known records appeared in this crawl.")
 

@@ -12,7 +12,7 @@ const _getDiscoCount = unstable_cache(
   async (): Promise<number> =>
     prisma.disco.count({ where: { disponivel: true, priceCount: { gte: 5 }, OR: [{ format: null }, { format: "vinyl" }] } }),
   ["home-disco-count"],
-  { tags: ["prices"], revalidate: 86400 },
+  { tags: ["prices"], revalidate: 14400 },
 );
 
 export const getDiscoCount = cache(() => _getDiscoCount());

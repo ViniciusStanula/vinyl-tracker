@@ -288,5 +288,5 @@ export async function queryDiscos(params: {
 export const queryDiscosWithCache = unstable_cache(
   queryDiscos,
   ["discos-homepage"],
-  { tags: ["prices"], revalidate: 86400 },
+  { tags: ["prices"], revalidate: 14400 },
 );
