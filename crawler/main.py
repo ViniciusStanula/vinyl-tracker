@@ -3425,7 +3425,8 @@ def main():
         else:
             t0 = time.monotonic()
             limpar_historico_antigo(conn, days=180)
-            limpar_bot_hits_antigos(conn)
+            # 60d so bot_hits always holds >= 2 months for recrawl-interval analysis.
+            limpar_bot_hits_antigos(conn, days=60)
             log.info("Phase 4 cleanup: %.0fs", time.monotonic() - t0)
 
         # ── Phase 5: Last.fm album enrichment ─────────────────────────────
