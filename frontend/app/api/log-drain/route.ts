@@ -1,18 +1,21 @@
-// Vercel Log Drain receiver. Vercel's proxy/middleware function is not invoked
-// in prod on this Next 16.2.9 deployment (no x-grmp-proxy header, no bot_hits
-// rows except local-dev ::1), so request-time bot logging is impossible from the
-// app. Instead, Vercel streams every edge request log here — including hits
-// served from the CDN cache, which middleware never saw — and we filter bot
+// Vercel Log Drain receiver. Vercel does not invoke the proxy/middleware
+// function in prod on this Next 16.2.9 deployment (no x-grmp-proxy header, no
+// bot_hits rows except local-dev ::1), so request-time bot logging from the app
+// is impossible. Instead Vercel streams every edge request log here — including
+// hits served from the CDN cache, which middleware never saw — and we filter bot
 // user-agents into bot_hits.
+//
+// Inserts go through Prisma (DATABASE_URL, runtime env) rather than the Supabase
+// REST API: the NEXT_PUBLIC_SUPABASE_* vars are inlined at build time and were
+// not reliably present in this function, whereas the app's Prisma client already
+// works in prod.
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { prisma } from "@/lib/db/prisma";
 import { detectBot } from "@/lib/bots";
 
-// Vercel sends batched NDJSON; reading the raw body is required for signature
-// verification, so opt out of any body parsing/caching.
+// Batched NDJSON; raw body is needed for signature verification.
 export const dynamic = "force-dynamic";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const DRAIN_SECRET = process.env.LOG_DRAIN_SECRET;
 
 // One edge-request log entry (subset of Vercel's schema we use).
@@ -53,9 +56,6 @@ export async function POST(req: Request) {
   if (!signatureOk(raw, req.headers.get("x-vercel-signature"))) {
     return new Response("invalid signature", { status: 401, headers });
   }
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    return new Response("ok", { status: 200, headers }); // never make Vercel retry
-  }
 
   // NDJSON: one JSON object per line. (A JSON-array format is also tolerated.)
   const entries: LogEntry[] = [];
@@ -91,9 +91,9 @@ export async function POST(req: Request) {
     rows.push({
       path: qIdx === -1 ? fullPath : fullPath.slice(0, qIdx),
       query: qIdx === -1 ? null : fullPath.slice(qIdx),
-      user_agent: ua.slice(0, 512),
-      bot_name: bot.name,
-      bot_category: bot.category,
+      userAgent: ua.slice(0, 512),
+      botName: bot.name,
+      botCategory: bot.category,
       method: p.method ?? "GET",
       ip: p.clientIp ?? null,
       country: null, // edge logs carry edge region, not visitor country
@@ -102,42 +102,21 @@ export async function POST(req: Request) {
     });
   }
 
-  // TEMP DIAGNOSTIC: capture insert outcome so a signed test reveals the failure.
-  let insertStatus: number | null = null;
+  // TEMP DIAGNOSTIC: report counts + insert outcome so a signed test confirms it.
+  let inserted = 0;
   let insertError: string | null = null;
   if (rows.length > 0) {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/bot_hits`, {
-        method: "POST",
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal", // anon role has no SELECT on bot_hits
-        },
-        body: JSON.stringify(rows), // PostgREST bulk insert
-        signal: AbortSignal.timeout(5000),
-      });
-      insertStatus = r.status;
-      if (!r.ok) insertError = (await r.text()).slice(0, 300);
+      const res = await prisma.botHit.createMany({ data: rows });
+      inserted = res.count;
     } catch (err) {
       insertError = err instanceof Error ? err.message : String(err);
       console.error("[log-drain] insert failed:", err);
     }
   }
 
-  // TEMP DIAGNOSTIC body. Vercel only checks for 2xx; this payload is for us.
   return new Response(
-    JSON.stringify({
-      ok: true,
-      rawLen: raw.length,
-      parsed: entries.length,
-      bots: rows.length,
-      supabase: Boolean(SUPABASE_URL && SUPABASE_KEY),
-      sample: entries[0] ? Object.keys(entries[0]) : [],
-      insertStatus,
-      insertError,
-    }),
+    JSON.stringify({ ok: true, parsed: entries.length, bots: rows.length, inserted, insertError }),
     { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
   );
 }
