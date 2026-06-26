@@ -102,9 +102,12 @@ export async function POST(req: Request) {
     });
   }
 
+  // TEMP DIAGNOSTIC: capture insert outcome so a signed test reveals the failure.
+  let insertStatus: number | null = null;
+  let insertError: string | null = null;
   if (rows.length > 0) {
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/bot_hits`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/bot_hits`, {
         method: "POST",
         headers: {
           apikey: SUPABASE_KEY,
@@ -115,11 +118,26 @@ export async function POST(req: Request) {
         body: JSON.stringify(rows), // PostgREST bulk insert
         signal: AbortSignal.timeout(5000),
       });
+      insertStatus = r.status;
+      if (!r.ok) insertError = (await r.text()).slice(0, 300);
     } catch (err) {
+      insertError = err instanceof Error ? err.message : String(err);
       console.error("[log-drain] insert failed:", err);
     }
   }
 
-  // Always 200 fast so Vercel does not retry/back off the drain.
-  return new Response("ok", { status: 200, headers });
+  // TEMP DIAGNOSTIC body. Vercel only checks for 2xx; this payload is for us.
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      rawLen: raw.length,
+      parsed: entries.length,
+      bots: rows.length,
+      supabase: Boolean(SUPABASE_URL && SUPABASE_KEY),
+      sample: entries[0] ? Object.keys(entries[0]) : [],
+      insertStatus,
+      insertError,
+    }),
+    { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
+  );
 }
