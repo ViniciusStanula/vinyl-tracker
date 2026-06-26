@@ -102,21 +102,14 @@ export async function POST(req: Request) {
     });
   }
 
-  // TEMP DIAGNOSTIC: report counts + insert outcome so a signed test confirms it.
-  let inserted = 0;
-  let insertError: string | null = null;
   if (rows.length > 0) {
     try {
-      const res = await prisma.botHit.createMany({ data: rows });
-      inserted = res.count;
+      await prisma.botHit.createMany({ data: rows });
     } catch (err) {
-      insertError = err instanceof Error ? err.message : String(err);
       console.error("[log-drain] insert failed:", err);
     }
   }
 
-  return new Response(
-    JSON.stringify({ ok: true, parsed: entries.length, bots: rows.length, inserted, insertError }),
-    { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
-  );
+  // Always 200 fast so Vercel does not retry/back off the drain.
+  return new Response("ok", { status: 200, headers });
 }
