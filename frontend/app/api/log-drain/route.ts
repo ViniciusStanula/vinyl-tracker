@@ -10,6 +10,7 @@
 // not reliably present in this function, whereas the app's Prisma client already
 // works in prod.
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { detectBot } from "@/lib/bots";
 
@@ -77,14 +78,15 @@ export async function POST(req: Request) {
     }
   }
 
-  const rows = [];
+  const rows: Prisma.BotHitCreateManyInput[] = [];
   for (const e of entries) {
     const p = e.proxy;
     if (!p) continue;
     const ua = Array.isArray(p.userAgent) ? p.userAgent[0] : p.userAgent;
     if (!ua) continue;
+    // Store every request. Known bots get tagged; unrecognised UAs (incl.
+    // unknown crawlers and humans) land with bot_name=null so nothing is missed.
     const bot = detectBot(ua);
-    if (!bot) continue; // only recognised bots — humans add volume, no signal
 
     const fullPath = p.path ?? "/";
     const qIdx = fullPath.indexOf("?");
@@ -92,8 +94,8 @@ export async function POST(req: Request) {
       path: qIdx === -1 ? fullPath : fullPath.slice(0, qIdx),
       query: qIdx === -1 ? null : fullPath.slice(qIdx),
       userAgent: ua.slice(0, 512),
-      botName: bot.name,
-      botCategory: bot.category,
+      botName: bot?.name ?? null,
+      botCategory: bot?.category ?? null,
       method: p.method ?? "GET",
       ip: p.clientIp ?? null,
       country: null, // edge logs carry edge region, not visitor country
