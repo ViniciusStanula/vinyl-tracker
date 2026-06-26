@@ -92,6 +92,10 @@ model BotHit {
   city           String?
   referer        String?
   acceptLanguage String?  @map("accept_language")
+  // Vercel request id (x-vercel-id); same across a request's log lines.
+  // Backed by a PARTIAL unique index (WHERE request_id IS NOT NULL) applied via
+  // raw SQL, so duplicate deliveries of one request are dropped on insert.
+  requestId      String?  @map("request_id")
 
   @@index([createdAt(sort: Desc)])
   @@index([botName])

@@ -21,6 +21,9 @@ const DRAIN_SECRET = process.env.LOG_DRAIN_SECRET;
 
 // One edge-request log entry (subset of Vercel's schema we use).
 interface LogEntry {
+  // Vercel request id (x-vercel-id), stable across a request's log lines.
+  requestId?: string;
+  id?: string; // per-log-line id; fallback only
   proxy?: {
     path?: string;
     method?: string;
@@ -28,6 +31,7 @@ interface LogEntry {
     clientIp?: string;
     region?: string;
     userAgent?: string | string[];
+    requestId?: string;
   };
 }
 
@@ -101,12 +105,15 @@ export async function POST(req: Request) {
       country: null, // edge logs carry edge region, not visitor country
       region: p.region ?? null,
       referer: p.referer ?? null,
+      requestId: e.requestId ?? p.requestId ?? null,
     });
   }
 
   if (rows.length > 0) {
     try {
-      await prisma.botHit.createMany({ data: rows });
+      // skipDuplicates -> ON CONFLICT DO NOTHING; the partial unique index on
+      // request_id drops repeat deliveries of the same request.
+      await prisma.botHit.createMany({ data: rows, skipDuplicates: true });
     } catch (err) {
       console.error("[log-drain] insert failed:", err);
     }
