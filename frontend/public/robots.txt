@@ -1,141 +1,21 @@
 # ============================================================
 # robots.txt — garimpavinil.com.br
 # ============================================================
-# NOTE: Specific user-agent groups override User-agent: * entirely.
-# Disallow rules MUST be repeated in each named group or they don't apply.
 
-# --- All crawlers (wildcard) --------------------------------
 User-agent: *
 Allow: /
 # Internal search results — noindex'd in metadata too (belt-and-suspenders)
 Disallow: /*?*q=
+Disallow: /*_rsc=
 # User-specific / transactional pages
 Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
+# AI-training opt-out (contentsignals.org; advisory, not yet enforced)
+Content-Signal: search=yes, ai-input=yes, ai-train=no
 
 Sitemap: https://www.garimpavinil.com.br/sitemap.xml
 
 # --- Common Crawl — block entirely --------------------------
-# Primary purpose is building AI training datasets; ai-train=no signals
-# are not honored by CCBot, so the only effective opt-out is Disallow.
+# Primary purpose is AI training datasets; ai-train=no isn't honored by CCBot,
+# so the only effective opt-out is Disallow.
 User-agent: CCBot
 Disallow: /
-
-# --- AI crawlers — explicit usage signals -------------------
-# Content-Signal spec: https://contentsignals.org
-# ai-train=no is a forward declaration; not yet enforced by crawlers.
-# Disallow rules repeated here because specific groups override User-agent: *.
-
-# OpenAI
-User-agent: GPTBot
-User-agent: OAI-SearchBot
-User-agent: ChatGPT-User
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Anthropic
-User-agent: ClaudeBot
-User-agent: Claude-Web
-User-agent: anthropic-ai
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Google (Gemini / Vertex AI training)
-User-agent: Google-Extended
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Perplexity
-User-agent: PerplexityBot
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# ByteDance
-User-agent: Bytespider
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Amazon
-User-agent: Amazonbot
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Apple (Applebot = search/Spotlight; Applebot-Extended = Apple Intelligence)
-User-agent: Applebot
-User-agent: Applebot-Extended
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Meta
-User-agent: meta-externalagent
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Cohere
-User-agent: cohere-ai
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Allen Institute for AI
-User-agent: AI2Bot
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Diffbot (knowledge graph enrichment)
-User-agent: Diffbot
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
-
-# Omgili / Webz.io
-User-agent: Omgilibot
-Allow: /
-Disallow: /*?*q=
-Disallow: /alertas
-Disallow: /confirmar
-Disallow: /gerenciar
-Content-Signal: search=yes, ai-input=yes, ai-train=no
