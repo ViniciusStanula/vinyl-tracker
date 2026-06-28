@@ -118,6 +118,10 @@ export default memo(function DiscoCard({
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
             priority={priority}
             loading={priority ? undefined : "lazy"}
+            // Lazy (below-fold) covers skip Vercel optimization — the SL416
+            // Amazon URL is already card-sized, so serve it direct ($0 quota).
+            // Priority (LCP) covers stay optimized to protect Core Web Vitals.
+            unoptimized={!priority}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
