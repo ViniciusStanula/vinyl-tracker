@@ -86,6 +86,7 @@ model BotHit {
   botName        String?  @map("bot_name")
   botCategory    String?  @map("bot_category")
   method         String
+  status         Int?
   ip             String?
   country        String?
   region         String?

@@ -103,6 +103,7 @@ interface LogEntry {
   proxy?: {
     path?: string; method?: string; referer?: string; clientIp?: string;
     region?: string; userAgent?: string | string[]; requestId?: string;
+    statusCode?: number;
   };
 }
 
@@ -155,6 +156,7 @@ Deno.serve(async (req) => {
       bot_name: bot?.name ?? null,
       bot_category: bot?.category ?? null,
       method: p.method ?? "GET",
+      status: p.statusCode ?? null,
       ip: p.clientIp ?? null,
       region: p.region ?? null,
       referer: p.referer ?? null,
@@ -167,7 +169,7 @@ Deno.serve(async (req) => {
       // ON CONFLICT honours the partial unique index (WHERE request_id IS NOT
       // NULL), dropping repeat deliveries of the same request.
       const cols = ["path", "query", "user_agent", "bot_name", "bot_category",
-        "method", "ip", "region", "referer", "request_id"] as const;
+        "method", "status", "ip", "region", "referer", "request_id"] as const;
       await sql`
         insert into bot_hits ${sql(rows, ...cols)}
         on conflict (request_id) where request_id is not null do nothing
