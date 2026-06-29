@@ -93,6 +93,10 @@ export async function POST(req: Request) {
     const bot = detectBot(ua);
 
     const fullPath = p.path ?? "/";
+    // Skip the drain logging its own POSTs (Vercel logs every edge request,
+    // incl. deliveries to this endpoint — a self-feed loop that was ~97% of
+    // all rows) and static assets. Keeps bot_hits to real page traffic.
+    if (fullPath === "/api/log-drain" || fullPath.startsWith("/_next/")) continue;
     const qIdx = fullPath.indexOf("?");
     rows.push({
       path: qIdx === -1 ? fullPath : fullPath.slice(0, qIdx),
