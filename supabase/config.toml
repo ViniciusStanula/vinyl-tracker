@@ -1,0 +1,7 @@
+project_id = "vinyl-tracker"
+
+# Vercel Log Drain posts with no Supabase JWT — disable JWT verification so the
+# function gateway accepts it. Auth is enforced inside the function via the
+# x-vercel-signature HMAC instead.
+[functions.log-drain]
+verify_jwt = false
