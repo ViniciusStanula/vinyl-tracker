@@ -871,6 +871,7 @@ def fetch_albums_needing_lastfm_enrichment(
             SELECT id, titulo, artista FROM "Disco"
             WHERE lastfm_listeners IS NULL
               AND disponivel = TRUE
+              AND (format IS NULL OR format = 'vinyl')
               {unident_clause}
             ORDER BY price_count DESC
             LIMIT %s
@@ -968,6 +969,7 @@ def fetch_albums_needing_mb(conn, limit: int = 200) -> list[dict]:
             SELECT id, titulo, artista FROM "Disco"
             WHERE mb_mbid IS NULL
               AND disponivel = TRUE
+              AND (format IS NULL OR format = 'vinyl')
               AND artista !~* 'artista n[ãa]o identificad'
             ORDER BY lastfm_listeners DESC NULLS LAST
             LIMIT %s
@@ -1014,12 +1016,61 @@ def fetch_albums_needing_tracklist(conn, limit: int = 200) -> list[dict]:
             WHERE mb_mbid IS NOT NULL AND mb_mbid <> ''
               AND mb_tracklist IS NULL
               AND disponivel = TRUE
+              AND (format IS NULL OR format = 'vinyl')
             ORDER BY lastfm_listeners DESC NULLS LAST
             LIMIT %s
             """,
             (limit,),
         )
         return [{"id": r[0], "mbid": r[1]} for r in cur.fetchall()]
+
+
+def fetch_records_needing_llm_recovery(conn, limit: int = 200) -> list[dict]:
+    """
+    Vinyl records the Last.fm drain tried and FAILED (lastfm_listeners = 0),
+    not yet re-parsed by the LLM (lookup_artist IS NULL). These usually have a
+    corrupted artista/titulo that defeated both regex and the album.search.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT id, titulo, artista FROM "Disco"
+            WHERE lastfm_listeners = 0
+              AND lookup_artist IS NULL
+              AND disponivel = TRUE
+              AND (format IS NULL OR format = 'vinyl')
+              AND artista !~* 'artista n[ãa]o identificad'
+            ORDER BY price_count DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [{"id": r[0], "titulo": r[1], "artista": r[2]} for r in cur.fetchall()]
+
+
+def bulk_update_llm_recovery(conn, updates: list[dict]) -> int:
+    """
+    Writes the LLM-parsed lookup name (always, '' marks parse-failed-but-tried)
+    and, when Last.fm matched on that name, the recovered listeners/playcount.
+    Each item: {"id", "lookup_artist", "lookup_album", "listeners", "playcount"}.
+    """
+    if not updates:
+        return 0
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            """UPDATE "Disco"
+               SET lookup_artist    = %(lookup_artist)s,
+                   lookup_album     = %(lookup_album)s,
+                   lastfm_listeners = %(listeners)s,
+                   lastfm_playcount = %(playcount)s
+               WHERE id = %(id)s""",
+            updates,
+            page_size=200,
+        )
+    conn.commit()
+    log.debug("bulk_update_llm_recovery: updated %d records.", len(updates))
+    return len(updates)
 
 
 def fetch_albums_needing_rating(conn, limit: int = 200) -> list[dict]:
@@ -1034,6 +1085,7 @@ def fetch_albums_needing_rating(conn, limit: int = 200) -> list[dict]:
             WHERE mb_mbid IS NOT NULL AND mb_mbid <> ''
               AND mb_rating IS NULL
               AND disponivel = TRUE
+              AND (format IS NULL OR format = 'vinyl')
             ORDER BY lastfm_listeners DESC NULLS LAST
             LIMIT %s
             """,

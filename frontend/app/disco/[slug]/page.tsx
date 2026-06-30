@@ -645,43 +645,57 @@ export default async function DiscoPage({
       </div>
 
       {(() => {
-        const sobreSection = albumInfo ? (() => {
+        const sobreSection = (() => {
+          // Section is independent of Last.fm now: show it if there's anything
+          // worth showing — listener stats (>0), wiki, MB facts, or Amazon rating.
+          const hasLastfm = albumInfo != null && albumInfo.listeners > 0;
+          const wikiSummary = albumInfo?.wikiSummary ?? null;
+          const hasMb = mbInfo != null && Boolean(
+            mbInfo.releaseYear || mbInfo.primaryType ||
+            mbInfo.genres.length > 0 || mbInfo.tracklist.length > 0 || mbInfo.rating
+          );
+          const hasAmazon = Boolean(rating && disco.reviewCount && disco.reviewCount > 0);
+          if (!hasLastfm && !wikiSummary && !hasMb && !hasAmazon) return undefined;
+
           const cleanTitle = cleanAlbumTitle(disco.titulo, disco.artista);
           const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
           return (
             <section className="space-y-4">
-              {/* Last.fm stats + attribution header */}
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
-                <a
-                  href={lastfmUrl}
-                  target="_blank"
-                  rel="nofollow noopener noreferrer"
-                  className="text-xs text-dust hover:text-parchment transition-colors flex items-center gap-1"
-                  aria-label={`Ver ${disco.titulo} no Last.fm`}
-                >
-                  Dados: Last.fm ↗
-                </a>
+                {hasLastfm && (
+                  <a
+                    href={lastfmUrl}
+                    target="_blank"
+                    rel="nofollow noopener noreferrer"
+                    className="text-xs text-dust hover:text-parchment transition-colors flex items-center gap-1"
+                    aria-label={`Ver ${disco.titulo} no Last.fm`}
+                  >
+                    Dados: Last.fm ↗
+                  </a>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-sleeve rounded-xl border border-groove p-4">
-                  <p className="text-xs text-dust mb-1">Ouvintes</p>
-                  <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.listeners)}</p>
-                </div>
-                <div className="bg-sleeve rounded-xl border border-groove p-4">
-                  <p className="text-xs text-dust mb-1">Reproduções</p>
-                  <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.playcount)}</p>
-                </div>
-              </div>
-
-              {albumInfo.wikiSummary && (
-                <div className="bg-sleeve rounded-xl border border-groove p-4">
-                  <WikiExpander text={albumInfo.wikiSummary} />
+              {hasLastfm && albumInfo && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-sleeve rounded-xl border border-groove p-4">
+                    <p className="text-xs text-dust mb-1">Ouvintes</p>
+                    <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.listeners)}</p>
+                  </div>
+                  <div className="bg-sleeve rounded-xl border border-groove p-4">
+                    <p className="text-xs text-dust mb-1">Reproduções</p>
+                    <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.playcount)}</p>
+                  </div>
                 </div>
               )}
 
-              {mbInfo && (mbInfo.releaseYear || mbInfo.primaryType || mbInfo.genres.length > 0) && (
+              {wikiSummary && (
+                <div className="bg-sleeve rounded-xl border border-groove p-4">
+                  <WikiExpander text={wikiSummary} />
+                </div>
+              )}
+
+              {hasMb && mbInfo && (
                 <div className="bg-sleeve rounded-xl border border-groove p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs font-semibold text-dust uppercase tracking-wide">Ficha técnica</h3>
@@ -775,7 +789,7 @@ export default async function DiscoPage({
               )}
             </section>
           );
-        })() : undefined;
+        })();
 
         if (HIDE_PRICE_HISTORY) {
           // Price history hidden — render Sobre content directly, no tabs, no empty Preços tab.
