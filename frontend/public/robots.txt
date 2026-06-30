@@ -19,3 +19,13 @@ Sitemap: https://www.garimpavinil.com.br/sitemap.xml
 # so the only effective opt-out is Disallow.
 User-agent: CCBot
 Disallow: /
+
+# --- SEO-tool crawlers — block entirely ---------------------
+# Backlink/competitor scrapers that out-crawl Googlebot ~3:1 while providing
+# zero value to us (they feed competitors' tools) and cost serverless
+# invocations. All four honor robots.txt.
+User-agent: SemrushBot
+User-agent: AhrefsBot
+User-agent: MJ12bot
+User-agent: DotBot
+Disallow: /

@@ -148,6 +148,11 @@ Deno.serve(async (req) => {
     if (fullPath === "/api/log-drain" || fullPath.startsWith("/_next/")) continue;
 
     const bot = detectBot(ua);
+    // Bots-only: skip real browser-UA humans (~99% of volume). detectBot still
+    // returns a value for unknown crawlers (name "unmatched": any UA with
+    // bot/crawler/spider/scrape) and script clients ("http-client"), so newly
+    // emerging bots are still captured for review and promotion.
+    if (!bot) continue;
     const qIdx = fullPath.indexOf("?");
     rows.push({
       path: qIdx === -1 ? fullPath : fullPath.slice(0, qIdx),
