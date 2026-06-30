@@ -1,0 +1,62 @@
+name: Last.fm Listener Backfill
+
+# Drains the Last.fm album-enrichment backlog (lastfm_listeners IS NULL).
+# The crawler's Phase 5 only enriches 200 rows/run, so the legacy backlog
+# never clears; this self-triggers until it is drained, then idles. Uses a
+# different API than MusicBrainz, so it may run alongside mb_enrichment.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_chunks:
+        description: "Chunks (200 rows each) this run"
+        default: "40"
+  schedule:
+    - cron: "10 1 * * *"   # daily 01:10 UTC — restarts the chain if broken
+
+permissions:
+  actions: write
+
+concurrency:
+  group: listeners-backfill
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+      MAX_CHUNKS: ${{ github.event.inputs.max_chunks || '40' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r crawler/requirements.txt
+
+      - name: Drain listener backlog
+        working-directory: crawler
+        run: python backfill_listeners.py --max-chunks "$MAX_CHUNKS"
+
+      - name: Re-trigger if backlog remains
+        if: success()
+        run: |
+          REMAINING=$(psql "$DATABASE_URL" -t -c "
+            SELECT COUNT(*) FROM \"Disco\"
+            WHERE lastfm_listeners IS NULL AND disponivel = TRUE
+              AND artista !~* 'artista n[ãa]o identificad'
+          " | tr -d ' ')
+          echo "Remaining NULL-listener rows: $REMAINING"
+          if [ "$REMAINING" -gt 0 ]; then
+            echo "Re-triggering for $REMAINING remaining rows..."
+            gh workflow run listeners_backfill.yml
+          else
+            echo "Listener backlog drained — chain stops."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,78 @@
+name: MusicBrainz Enrichment
+
+# Enriches matched discos with MusicBrainz release-group data in three
+# sequential passes (MusicBrainz allows ~1 request/sec per IP, so they must
+# not overlap):
+#   1. mb_enrich    — match release-group: mbid, year, type, genres
+#   2. mb_rating    — community rating (>=10 votes surfaced on the page)
+#   3. mb_tracklist — tracklist + per-track durations
+# Self-triggers after each run until no enrichment work remains, then becomes
+# a cheap no-op. Daily cron restarts the chain if it ever breaks.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_chunks:
+        description: "Chunks (200 rows each) per pass this run"
+        default: "10"
+  schedule:
+    - cron: "40 1 * * *"   # daily 01:40 UTC — restarts the chain if broken
+
+permissions:
+  actions: write   # required for the gh workflow run self-trigger
+
+concurrency:
+  group: mb-enrichment    # one MB job at a time (rate limit)
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      MAX_CHUNKS: ${{ github.event.inputs.max_chunks || '10' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r crawler/requirements.txt
+
+      - name: Pass 1 — match release-groups
+        working-directory: crawler
+        run: python mb_enrich.py --max-chunks "$MAX_CHUNKS"
+
+      - name: Pass 2 — community ratings
+        working-directory: crawler
+        run: python mb_rating.py --max-chunks "$MAX_CHUNKS"
+
+      - name: Pass 3 — tracklists + durations
+        working-directory: crawler
+        run: python mb_tracklist.py --max-chunks "$MAX_CHUNKS"
+
+      - name: Re-trigger if enrichment work remains
+        if: success()
+        run: |
+          REMAINING=$(psql "$DATABASE_URL" -t -c "
+            SELECT
+              (SELECT COUNT(*) FROM \"Disco\"
+                 WHERE mb_mbid IS NULL AND disponivel = TRUE
+                   AND artista !~* 'artista n[ãa]o identificad')
+            + (SELECT COUNT(*) FROM \"Disco\"
+                 WHERE mb_mbid <> '' AND mb_rating IS NULL AND disponivel = TRUE)
+            + (SELECT COUNT(*) FROM \"Disco\"
+                 WHERE mb_mbid <> '' AND mb_tracklist IS NULL AND disponivel = TRUE)
+          " | tr -d ' ')
+          echo "Remaining MB enrichment rows: $REMAINING"
+          if [ "$REMAINING" -gt 0 ]; then
+            echo "Re-triggering for $REMAINING remaining rows..."
+            gh workflow run mb_enrichment.yml
+          else
+            echo "All MB enrichment complete — chain stops."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
