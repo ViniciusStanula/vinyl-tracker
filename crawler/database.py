@@ -1022,6 +1022,46 @@ def fetch_albums_needing_tracklist(conn, limit: int = 200) -> list[dict]:
         return [{"id": r[0], "mbid": r[1]} for r in cur.fetchall()]
 
 
+def fetch_albums_needing_rating(conn, limit: int = 200) -> list[dict]:
+    """
+    Matched MB release-groups (mb_mbid set) without a community rating yet.
+    Most-listened first so popular pages get ratings earliest.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT id, mb_mbid FROM "Disco"
+            WHERE mb_mbid IS NOT NULL AND mb_mbid <> ''
+              AND mb_rating IS NULL
+              AND disponivel = TRUE
+            ORDER BY lastfm_listeners DESC NULLS LAST
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [{"id": r[0], "mbid": r[1]} for r in cur.fetchall()]
+
+
+def bulk_update_rating(conn, updates: list[dict]) -> int:
+    """
+    Writes mb_rating (0-5) and mb_rating_votes for album IDs.
+    A rating of -1 marks a fetched-but-unrated row so it is not re-queried.
+    Each item: {"id", "rating", "votes"}.
+    """
+    if not updates:
+        return 0
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            'UPDATE "Disco" SET mb_rating = %(rating)s, mb_rating_votes = %(votes)s WHERE id = %(id)s',
+            updates,
+            page_size=200,
+        )
+    conn.commit()
+    log.debug("bulk_update_rating: updated %d records.", len(updates))
+    return len(updates)
+
+
 def bulk_update_tracklist(conn, updates: list[dict]) -> int:
     """
     Writes mb_tracklist (JSON array of track titles) for album IDs.
