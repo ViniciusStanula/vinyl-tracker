@@ -37,11 +37,14 @@ HERE = Path(__file__).parent
 PASSES = ["mb_enrich.py", "mb_rating.py", "mb_tracklist.py"]
 
 
-def run_pass(script: str) -> int:
-    """Runs one MB pass to completion. Returns its exit code."""
+def run_pass(script: str, max_chunks: int = 0) -> int:
+    """Runs one MB pass. max_chunks>0 bounds it (interleaved mode); 0 = to completion."""
+    cmd = [sys.executable, str(HERE / script)]
+    if max_chunks > 0:
+        cmd += ["--max-chunks", str(max_chunks)]
     log.info("── starting %s ──", script)
     t0 = time.monotonic()
-    proc = subprocess.run([sys.executable, str(HERE / script)], cwd=str(HERE))
+    proc = subprocess.run(cmd, cwd=str(HERE))
     log.info("── %s finished (exit %d) in %.0fs ──",
              script, proc.returncode, time.monotonic() - t0)
     return proc.returncode
@@ -50,6 +53,9 @@ def run_pass(script: str) -> int:
 def parse_args():
     p = argparse.ArgumentParser(description="Run the MusicBrainz enrichment passes in sequence")
     p.add_argument("--once",  action="store_true", help="Run one full cycle, then stop")
+    p.add_argument("--chunks-per-pass", type=int, default=0, metavar="N",
+                   help="Chunks (200 rows) per pass each cycle. >0 = interleaved "
+                        "(match/rate/tracklist trickle in together). 0 = each pass to completion.")
     p.add_argument("--sleep", type=int, default=3600, metavar="S",
                    help="Seconds to sleep between cycles when looping (default: 3600)")
     return p.parse_args()
@@ -60,10 +66,10 @@ def main():
     cycle = 0
     while True:
         cycle += 1
-        log.info("===== cycle %d =====", cycle)
+        log.info("===== cycle %d (chunks-per-pass=%d) =====", cycle, args.chunks_per_pass)
         for script in PASSES:
             try:
-                run_pass(script)
+                run_pass(script, args.chunks_per_pass)
             except Exception as exc:
                 log.error("pass %s crashed: %s — continuing to next pass.", script, exc)
         if args.once:
