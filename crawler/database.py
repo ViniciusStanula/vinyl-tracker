@@ -854,14 +854,24 @@ def bulk_update_tags(conn, artista_to_tags: dict[str, str]) -> int:
     return updated
 
 
-def fetch_albums_needing_lastfm_enrichment(conn, limit: int = 500) -> list[dict]:
-    """Albums where lastfm_listeners IS NULL — never enriched via album.getInfo."""
+def fetch_albums_needing_lastfm_enrichment(
+    conn, limit: int = 500, exclude_unidentified: bool = False
+) -> list[dict]:
+    """Albums where lastfm_listeners IS NULL — never enriched via album.getInfo.
+
+    exclude_unidentified skips placeholder-artist rows ("Artista não
+    identificado") that Last.fm can never match; used by the backlog drainer.
+    """
+    unident_clause = (
+        "AND artista !~* 'artista n[ãa]o identificad'" if exclude_unidentified else ""
+    )
     with _cursor(conn) as cur:
         cur.execute(
-            """
+            f"""
             SELECT id, titulo, artista FROM "Disco"
             WHERE lastfm_listeners IS NULL
               AND disponivel = TRUE
+              {unident_clause}
             ORDER BY price_count DESC
             LIMIT %s
             """,
@@ -909,6 +919,126 @@ def bulk_update_lastfm_album_info(conn, updates: list[dict]) -> int:
         )
     conn.commit()
     log.debug("bulk_update_lastfm_album_info: updated %d records.", len(updates))
+    return len(updates)
+
+
+# ── MusicBrainz release-group enrichment ────────────────────────────────────
+
+def ensure_mb_columns(conn) -> None:
+    """Adds the MusicBrainz columns if missing. Idempotent, raw DDL (no Prisma).
+
+    Checks information_schema first and skips the ALTER when all columns already
+    exist — ALTER takes ACCESS EXCLUSIVE even for a no-op IF NOT EXISTS, which
+    would fight the live site / concurrent jobs for the lock on every run.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT count(*) FROM information_schema.columns
+            WHERE table_name = 'Disco'
+              AND column_name IN
+                ('mb_mbid','mb_first_release_date','mb_primary_type','mb_genres')
+            """
+        )
+        if cur.fetchone()[0] == 4:
+            log.debug("ensure_mb_columns: columns already present, skipping DDL.")
+            return
+        cur.execute("SET LOCAL lock_timeout = '10s'")
+        cur.execute(
+            """
+            ALTER TABLE "Disco"
+                ADD COLUMN IF NOT EXISTS mb_mbid               TEXT,
+                ADD COLUMN IF NOT EXISTS mb_first_release_date TEXT,
+                ADD COLUMN IF NOT EXISTS mb_primary_type       TEXT,
+                ADD COLUMN IF NOT EXISTS mb_genres             TEXT
+            """
+        )
+    conn.commit()
+    log.debug("ensure_mb_columns: MusicBrainz columns created.")
+
+
+def fetch_albums_needing_mb(conn, limit: int = 200) -> list[dict]:
+    """
+    Identified, available albums not yet searched on MusicBrainz (mb_mbid IS NULL).
+    Most-listened first so the highest-traffic disco pages get enriched earliest.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT id, titulo, artista FROM "Disco"
+            WHERE mb_mbid IS NULL
+              AND disponivel = TRUE
+              AND artista !~* 'artista n[ãa]o identificad'
+            ORDER BY lastfm_listeners DESC NULLS LAST
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [{"id": r[0], "titulo": r[1], "artista": r[2]} for r in cur.fetchall()]
+
+
+def bulk_update_mb(conn, updates: list[dict]) -> int:
+    """
+    Writes MusicBrainz fields for album IDs.
+    Each item: {"id", "mbid", "first_release_date", "primary_type", "genres"}.
+    mbid="" marks a searched-but-unmatched row so it is not re-queried.
+    """
+    if not updates:
+        return 0
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            """UPDATE "Disco"
+               SET mb_mbid               = %(mbid)s,
+                   mb_first_release_date = %(first_release_date)s,
+                   mb_primary_type       = %(primary_type)s,
+                   mb_genres             = %(genres)s
+               WHERE id = %(id)s""",
+            updates,
+            page_size=200,
+        )
+    conn.commit()
+    log.debug("bulk_update_mb: updated %d records.", len(updates))
+    return len(updates)
+
+
+def fetch_albums_needing_tracklist(conn, limit: int = 200) -> list[dict]:
+    """
+    Matched MB release-groups (mb_mbid set) without a tracklist yet.
+    Most-listened first so popular pages get tracklists earliest.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT id, mb_mbid FROM "Disco"
+            WHERE mb_mbid IS NOT NULL AND mb_mbid <> ''
+              AND mb_tracklist IS NULL
+              AND disponivel = TRUE
+            ORDER BY lastfm_listeners DESC NULLS LAST
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [{"id": r[0], "mbid": r[1]} for r in cur.fetchall()]
+
+
+def bulk_update_tracklist(conn, updates: list[dict]) -> int:
+    """
+    Writes mb_tracklist (JSON array of track titles) for album IDs.
+    An empty-array string "[]" marks a row as fetched-but-no-tracklist.
+    Each item: {"id", "tracklist"}.
+    """
+    if not updates:
+        return 0
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            'UPDATE "Disco" SET mb_tracklist = %(tracklist)s WHERE id = %(id)s',
+            updates,
+            page_size=200,
+        )
+    conn.commit()
+    log.debug("bulk_update_tracklist: updated %d records.", len(updates))
     return len(updates)
 
 

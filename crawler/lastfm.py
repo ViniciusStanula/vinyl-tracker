@@ -345,6 +345,7 @@ def enrich_album_infos(
     delay: float = 0.5,
     deadline: float | None = None,
     limit: int = 500,
+    exclude_unidentified: bool = False,
 ) -> int:
     """
     Fetches Last.fm album.getInfo for albums where lastfm_listeners IS NULL.
@@ -355,7 +356,9 @@ def enrich_album_infos(
         log.debug("LASTFM_API_KEY not set — skipping album enrichment.")
         return 0
 
-    albums = fetch_albums_needing_lastfm_enrichment(conn, limit=limit)
+    albums = fetch_albums_needing_lastfm_enrichment(
+        conn, limit=limit, exclude_unidentified=exclude_unidentified
+    )
     if not albums:
         log.debug("Album enrichment: all albums already enriched.")
         return 0

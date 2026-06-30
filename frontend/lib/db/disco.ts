@@ -9,6 +9,13 @@ export type DiscoMeta = {
   lastfmListeners: number | null;
   lastfmPlaycount: number | null;
   lastfmWikiPt: string | null;
+  mbMbid: string | null;
+  mbFirstReleaseDate: string | null;
+  mbPrimaryType: string | null;
+  mbGenres: string | null;
+  mbTracklist: string | null;
+  mbRating: number | null;
+  mbRatingVotes: number | null;
 };
 
 export type RelatedDeal = {
@@ -78,7 +85,14 @@ export const getDiscoMeta = unstable_cache(
         lastfm_tags      AS "lastfmTags",
         lastfm_listeners AS "lastfmListeners",
         lastfm_playcount AS "lastfmPlaycount",
-        lastfm_wiki_pt   AS "lastfmWikiPt"
+        lastfm_wiki_pt   AS "lastfmWikiPt",
+        mb_mbid                AS "mbMbid",
+        mb_first_release_date  AS "mbFirstReleaseDate",
+        mb_primary_type        AS "mbPrimaryType",
+        mb_genres              AS "mbGenres",
+        mb_tracklist           AS "mbTracklist",
+        mb_rating              AS "mbRating",
+        mb_rating_votes        AS "mbRatingVotes"
       FROM "Disco" WHERE slug = ${slug}
     `;
     return rows[0] ?? null;

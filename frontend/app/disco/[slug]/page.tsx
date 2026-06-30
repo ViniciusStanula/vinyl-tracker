@@ -9,6 +9,7 @@ import CopyLinkButton from "@/components/CopyLinkButton";
 import AlertaTrigger from "@/components/AlertaTrigger";
 import TabNav from "@/components/TabNav";
 import WikiExpander from "@/components/WikiExpander";
+import Tracklist from "@/components/Tracklist";
 
 // Matches the flag in DiscoCard.tsx — see that file for full rationale.
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
@@ -18,6 +19,7 @@ import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, type RelatedDeal } from "@/lib/db/disco";
+import { getEstilosList } from "@/lib/db/estilo";
 import { getHreflangRecord } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -142,6 +144,48 @@ export default async function DiscoPage({
         listeners:   meta.lastfmListeners,
         playcount:   meta.lastfmPlaycount ?? 0,
         wikiSummary: meta.lastfmWikiPt ?? null,
+      }
+    : null;
+
+  // MusicBrainz release-group facts (mb_mbid = "" means searched, no match).
+  // Genres link to /estilo/[slug] only when a style page actually exists for
+  // that slug (style pages are derived from lastfm_tags, not MB genres).
+  const validStyleSlugs = meta?.mbMbid
+    ? new Set((await getEstilosList()).map((e) => e.slug))
+    : new Set<string>();
+  // "Single" is frequently a wrong release-group match — hide it rather than
+  // surface a likely-mislabeled type. Localize the rest to pt-BR.
+  const MB_TYPE_PT: Record<string, string> = { Album: "Álbum", EP: "EP", Compilation: "Coletânea" };
+  const mbInfo = meta?.mbMbid
+    ? {
+        releaseYear: meta.mbFirstReleaseDate?.slice(0, 4) ?? null,
+        primaryType: meta.mbPrimaryType ? MB_TYPE_PT[meta.mbPrimaryType] ?? null : null,
+        genres: (meta.mbGenres ?? "")
+          .split(", ")
+          .filter(Boolean)
+          .slice(0, 3)
+          .map((name) => {
+            const slug = slugifyStyle(name);
+            return { name, slug: validStyleSlugs.has(slug) ? slug : null };
+          }),
+        // Community rating (0–5). Hide low-vote noise — needs >=10 votes.
+        rating:
+          meta.mbRating != null && (meta.mbRatingVotes ?? 0) >= 10
+            ? { value: meta.mbRating, votes: meta.mbRatingVotes as number }
+            : null,
+        tracklist: ((): { title: string; length: number | null }[] => {
+          try {
+            const parsed = JSON.parse(meta.mbTracklist ?? "[]");
+            if (!Array.isArray(parsed)) return [];
+            // New format: [{title, length}]. Legacy format: [string].
+            return parsed.map((t) =>
+              typeof t === "string" ? { title: t, length: null } : t
+            );
+          } catch {
+            return [];
+          }
+        })(),
+        url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
       }
     : null;
 
@@ -634,6 +678,73 @@ export default async function DiscoPage({
               {albumInfo.wikiSummary && (
                 <div className="bg-sleeve rounded-xl border border-groove p-4">
                   <WikiExpander text={albumInfo.wikiSummary} />
+                </div>
+              )}
+
+              {mbInfo && (mbInfo.releaseYear || mbInfo.primaryType || mbInfo.genres.length > 0) && (
+                <div className="bg-sleeve rounded-xl border border-groove p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-semibold text-dust uppercase tracking-wide">Ficha técnica</h3>
+                    <a
+                      href={mbInfo.url}
+                      target="_blank"
+                      rel="nofollow noopener noreferrer"
+                      className="text-xs text-dust hover:text-parchment transition-colors flex items-center gap-1"
+                      aria-label={`Ver ${disco.titulo} no MusicBrainz`}
+                    >
+                      Dados: MusicBrainz ↗
+                    </a>
+                  </div>
+                  <dl className="space-y-2 text-sm">
+                    {mbInfo.releaseYear && (
+                      <div className="flex justify-between">
+                        <dt className="text-dust">Lançamento</dt>
+                        <dd className="text-cream font-medium">{mbInfo.releaseYear}</dd>
+                      </div>
+                    )}
+                    {mbInfo.primaryType && (
+                      <div className="flex justify-between">
+                        <dt className="text-dust">Tipo</dt>
+                        <dd className="text-cream font-medium">{mbInfo.primaryType}</dd>
+                      </div>
+                    )}
+                    {mbInfo.genres.length > 0 && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Gêneros</dt>
+                        <dd className="text-cream font-medium text-right capitalize">
+                          {mbInfo.genres.map((g, i) => (
+                            <span key={g.name}>
+                              {i > 0 && ", "}
+                              {g.slug ? (
+                                <Link
+                                  href={`/estilo/${g.slug}`}
+                                  className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
+                                >
+                                  {g.name}
+                                </Link>
+                              ) : (
+                                g.name
+                              )}
+                            </span>
+                          ))}
+                        </dd>
+                      </div>
+                    )}
+                    {mbInfo.rating && (
+                      <div className="flex justify-between items-baseline">
+                        <dt className="text-dust">Avaliação</dt>
+                        <dd className="text-cream font-medium flex items-baseline gap-1.5">
+                          <svg className="w-3.5 h-3.5 fill-gold text-gold self-center" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                          {mbInfo.rating.value.toFixed(1)}<span className="text-dust">/5</span>
+                          <span className="text-dust text-xs">· {mbInfo.rating.votes} votos</span>
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  {mbInfo.tracklist.length > 0 && <Tracklist tracks={mbInfo.tracklist} />}
                 </div>
               )}
 
