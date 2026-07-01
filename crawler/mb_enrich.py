@@ -78,19 +78,28 @@ def search_release_group(artist: str, album: str) -> dict | None:
     query = urllib.parse.urlencode({
         "query": f'artist:"{artist}" AND releasegroup:"{album}"',
         "fmt":   "json",
-        "limit": "1",
+        "limit": "6",
     })
     data = _mb_get("release-group/?" + query)
     if not data:
         return None
 
-    groups = data.get("release-groups") or []
+    groups = [g for g in (data.get("release-groups") or [])
+              if int(g.get("score", 0)) >= MB_SCORE_THRESHOLD]
     if not groups:
         return None
 
+    # Prefer the album over same-titled singles/EPs — a title like "Off the
+    # Wall" returns both a Single and the Album at score 100, and limit=1 would
+    # grab whichever MB lists first. Rank: Album > EP > other; then higher
+    # score; then earliest release (original over reissue/compilation).
+    _TYPE_RANK = {"Album": 0, "EP": 1}
+    groups.sort(key=lambda g: (
+        _TYPE_RANK.get(g.get("primary-type"), 2),
+        -int(g.get("score", 0)),
+        g.get("first-release-date") or "9999",
+    ))
     rg = groups[0]
-    if int(rg.get("score", 0)) < MB_SCORE_THRESHOLD:
-        return None
 
     def _genre_names(items):
         return [
