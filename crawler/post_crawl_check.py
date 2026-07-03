@@ -24,9 +24,12 @@ CD_TITLE_SQL = (
 )
 # Vinyl signals in a title — if present alongside "CD", the row is a bundle,
 # not a false insertion. Matches the same signals as domain._VINYL_TITLE_RE.
+# The "with CD" markers (W/CD, +CD, com CD, bonus CD) denote a vinyl product
+# shipped with a bonus CD — a legitimate vinyl bundle, not CD contamination.
 VINYL_TITLE_SQL = (
     r"vinil|vinyl|\mlp\M|\mlps\M|gatefold|180\s*g|picture.disc"
     r"|disco.de.vinil|single.de.vinil|7\"|10\"|12\"|33.?rpm|45.?rpm"
+    r"|w/\s*cd|with\s*cd|\+\s*cd|com\s*cd|bonus\s*cd"
 )
 
 
