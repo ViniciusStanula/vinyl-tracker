@@ -435,6 +435,7 @@ def fetch_active_deals(conn) -> list[dict]:
             FROM "Disco"
             WHERE deal_score IS NOT NULL
               AND (format IS NULL OR format = 'vinyl')
+              AND marketplace = 'amazon'   -- fence: ML rows are priced by ml_crawler, never scraped on Amazon
             ORDER BY deal_score DESC, "updatedAt" ASC
             """,
         )
@@ -498,6 +499,7 @@ def fetch_stale_records(
             FROM "Disco"
             WHERE asin != ALL(%s){floor_clause}
               AND (format IS NULL OR format = 'vinyl')
+              AND marketplace = 'amazon'   -- fence: ML rows are priced by ml_crawler, never scraped on Amazon
             ORDER BY
                 CASE
                     WHEN deal_score IS NOT NULL                        THEN 0

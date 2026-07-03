@@ -69,7 +69,7 @@ def main():
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            query = 'SELECT id, asin FROM "Disco" WHERE disponivel = TRUE'
+            query = 'SELECT id, asin FROM "Disco" WHERE disponivel = TRUE AND marketplace = \'amazon\''
             if args.limit:
                 query += f" LIMIT {args.limit}"
             cur.execute(query)

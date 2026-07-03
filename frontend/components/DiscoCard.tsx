@@ -20,6 +20,8 @@ export interface DiscoCardProps {
   estilo: string | null;
   imgUrl: string | null;
   url: string;
+  /** Price/link source: "amazon" or "mercadolivre" — drives buy-button label + affiliate tagging */
+  marketplace: string;
   rating: number | null;
   precoAtual: number;
   mediaPreco: number;
@@ -94,6 +96,10 @@ export default memo(function DiscoCard({
   // Cards render at ~160-230px; the DB stores 1500px Amazon URLs (~200KB).
   // SL416 covers 2x DPR at ~30KB via Amazon's on-the-fly CDN resize.
   const imgUrl            = resizeAmazonImage(disco.imgUrl);
+  // Buy-link source: Amazon (default) or Mercado Livre. Drives label + tagging.
+  const isML              = disco.marketplace === "mercadolivre";
+  const lojaNome          = isML ? "Mercado Livre" : "Amazon";
+  const lojaComPrep       = isML ? "no Mercado Livre" : "na Amazon";  // pt-BR preposition
 
   // Score-3 gets a subtle gold ring — suppressed when price history is hidden
   const cardRing = (!HIDE_PRICE_HISTORY && dealScore === 3) ? " ring-1 ring-gold/40" : "";
@@ -164,15 +170,15 @@ export default memo(function DiscoCard({
               </div>
             )}
 
-            {/* Amazon quick-link — hover only */}
+            {/* Store quick-link — hover only */}
             <a
-              href={affiliateUrl(disco.url)}
+              href={affiliateUrl(disco.url, disco.marketplace)}
               target="_blank"
               rel="sponsored noopener noreferrer"
               className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity bg-record/80 text-cream text-xs font-medium px-2.5 py-1.5 rounded-md backdrop-blur-sm"
-              aria-label={`Ver ${disco.titulo} na Amazon`}
+              aria-label={`Ver ${disco.titulo} ${lojaComPrep}`}
             >
-              Amazon ↗
+              {lojaNome} ↗
               <span className="block text-[9px] text-dust/70 leading-none mt-0.5">#anúncio</span>
             </a>
           </>
@@ -201,7 +207,7 @@ export default memo(function DiscoCard({
 
         {/* ── Price section ──────────────────────────────────────── */}
         {isUnavailable ? (
-          <p className="mt-auto pt-2 text-dust text-sm font-medium">Indisponível na Amazon</p>
+          <p className="mt-auto pt-2 text-dust text-sm font-medium">Indisponível {lojaComPrep}</p>
         ) : (
           <div className="mt-auto pt-2">
             {!HIDE_PRICE_HISTORY && (sparkline.length >= 2 || showOriginalPrice) && (

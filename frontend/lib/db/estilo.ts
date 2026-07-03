@@ -35,6 +35,7 @@ export type SerializedEstiloData = {
     slug: string;
     imgUrl: string | null;
     url: string;
+    marketplace: string;
     estilo: string | null;
     rating: string | null;
     precoAtual: number;
@@ -114,6 +115,7 @@ const _getEstiloPageData = unstable_cache(
       slug: string;
       imgUrl: string | null;
       url: string;
+      marketplace: string;
       estilo: string | null;
       rating: string | null;
       dealScore: number | null;
@@ -131,6 +133,7 @@ const _getEstiloPageData = unstable_cache(
         c.slug,
         c."imgUrl",
         c.url,
+        c.marketplace,
         c.estilo,
         c.rating::text,
         c.deal_score       AS "dealScore",
@@ -207,6 +210,7 @@ const _getEstiloPageData = unstable_cache(
           slug: row.slug,
           imgUrl: row.imgUrl,
           url: row.url,
+          marketplace: row.marketplace,
           estilo: row.estilo,
           rating: row.rating ?? null,
           precoAtual: Number(row.precoAtual),

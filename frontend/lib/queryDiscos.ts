@@ -60,6 +60,7 @@ type DiscoRow = {
   estilo: string | null;
   imgUrl: string | null;
   url: string;
+  marketplace: string;
   rating: string | null;
   reviewCount: string | null;
   precoAtual: string;
@@ -82,6 +83,8 @@ export type ProcessedDisco = {
   estilo: string | null;
   imgUrl: string | null;
   url: string;
+  /** Price/link source: "amazon" or "mercadolivre" — drives the buy-button label + affiliate tagging */
+  marketplace: string;
   rating: number | null;
   reviewCount: number | null;
   precoAtual: number;
@@ -164,6 +167,7 @@ export async function queryDiscos(params: {
           d.estilo,
           d."imgUrl",
           d.url,
+          d.marketplace,
           d.rating,
           d."reviewCount",
           d.deal_score        AS "dealScore",
@@ -264,6 +268,7 @@ export async function queryDiscos(params: {
       estilo:         row.estilo,
       imgUrl:         row.imgUrl,
       url:            row.url,
+      marketplace:    row.marketplace,
       rating:         row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
       reviewCount:    row.reviewCount !== null && row.reviewCount !== undefined ? Number(row.reviewCount) : null,
       precoAtual,

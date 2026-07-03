@@ -78,17 +78,18 @@ export async function generateMetadata({
       : null;
 
   const fmtR = (v: number) => `R$ ${Math.round(v)}`;
+  const loja = disco.marketplace === "mercadolivre" ? "no Mercado Livre" : "na Amazon";
   let description: string;
   if (!precoAtual) {
-    description = `${tituloLimpo} em vinil: acompanhe o preço na Amazon e veja o histórico de 12 meses antes de comprar.`;
+    description = `${tituloLimpo} em vinil: acompanhe o preço ${loja} e veja o histórico de 12 meses antes de comprar.`;
   } else if (valores.length < 2) {
-    description = `${tituloLimpo} em vinil a ${fmtR(precoAtual)} na Amazon. Acompanhe o histórico de preços e o gráfico de 12 meses antes de comprar.`;
+    description = `${tituloLimpo} em vinil a ${fmtR(precoAtual)} ${loja}. Acompanhe o histórico de preços e o gráfico de 12 meses antes de comprar.`;
   } else if (precoMin < precoAtual && minRecord) {
     const mes = minRecord.capturadoEm.toLocaleDateString("pt-BR", { month: "long", timeZone: "America/Sao_Paulo" });
-    description = `${tituloLimpo} em vinil a ${fmtR(precoAtual)} na Amazon. Menor preço já registrado: ${fmtR(precoMin)} em ${mes}. Gráfico de 12 meses pra decidir a hora de comprar.`;
+    description = `${tituloLimpo} em vinil a ${fmtR(precoAtual)} ${loja}. Menor preço já registrado: ${fmtR(precoMin)} em ${mes}. Gráfico de 12 meses pra decidir a hora de comprar.`;
   } else {
     const rel = precoAtual < avg30d * 0.98 ? `abaixo da média de ${fmtR(avg30d)}` : precoAtual > avg30d * 1.02 ? `acima da média de ${fmtR(avg30d)}` : `na média de ${fmtR(avg30d)}`;
-    description = `Vinil de ${tituloLimpo} a ${fmtR(precoAtual)} na Amazon, ${rel} dos últimos 30 dias. Veja o gráfico antes de comprar.`;
+    description = `Vinil de ${tituloLimpo} a ${fmtR(precoAtual)} ${loja}, ${rel} dos últimos 30 dias. Veja o gráfico antes de comprar.`;
   }
   description = truncateDesc(description);
   const canonicalUrl = `${SITE_URL}/disco/${slug}`;
@@ -327,7 +328,7 @@ export default async function DiscoPage({
     "@type": "Product",
     "@id": `${siteUrl}/disco/${slug}`,
     name: disco.titulo,
-    description: `Compre ${disco.titulo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis na Amazon Brasil.`,
+    description: `Compre ${disco.titulo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}.`,
     sku: disco.asin,
     image: disco.imgUrl ?? undefined,
     brand: { "@type": "Brand", name: disco.artista },
@@ -343,7 +344,7 @@ export default async function DiscoPage({
       availability: disponivel
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
-      seller: { "@type": "Organization", name: "Amazon Brasil" },
+      seller: { "@type": "Organization", name: disco.marketplace === "mercadolivre" ? "Mercado Livre Brasil" : "Amazon Brasil" },
     },
     ...(rating && disco.reviewCount && disco.reviewCount > 0
       ? {
@@ -397,7 +398,7 @@ export default async function DiscoPage({
             q: `Qual o menor preço já registrado de ${disco.titulo} em vinil?`,
             a: disponivel
               ? `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. O preço atual é ${fmt(precoAtual)}.`
-              : `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. Este disco está indisponível na Amazon no momento.`,
+              : `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. Este disco está indisponível ${disco.marketplace === "mercadolivre" ? "no Mercado Livre" : "na Amazon"} no momento.`,
           },
           ...(disponivel
             ? [
@@ -414,7 +415,7 @@ export default async function DiscoPage({
                 },
                 {
                   q: `Com que frequência o preço de ${disco.titulo} é verificado?`,
-                  a: `O preço é verificado automaticamente várias vezes ao dia na Amazon Brasil. Já registramos ${valores.length} capturas de preço para este disco.`,
+                  a: `O preço é verificado automaticamente ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}. Já registramos ${valores.length} capturas de preço para este disco.`,
                 },
               ]
             : []),
@@ -579,15 +580,17 @@ export default async function DiscoPage({
                 imgUrl:    disco.imgUrl,
               };
 
+              const lojaComPrep = disco.marketplace === "mercadolivre" ? "no Mercado Livre" : "na Amazon";
+
               return disponivel ? (
                 <>
                   <a
-                    href={affiliateUrl(disco.url)}
+                    href={affiliateUrl(disco.url, disco.marketplace)}
                     target="_blank"
                     rel="sponsored noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full bg-gold hover:bg-goldlit text-record font-bold text-sm py-4 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-record"
                   >
-                    Ver na Amazon
+                    Ver {lojaComPrep}
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
@@ -601,7 +604,7 @@ export default async function DiscoPage({
               ) : (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-center bg-groove text-dust font-bold text-sm py-4 rounded-xl cursor-not-allowed border border-wax/50">
-                    Indisponível na Amazon
+                    Indisponível {lojaComPrep}
                   </div>
                   {dataAtual && (
                     <p className="text-xs text-dust pl-1">Último registro em {dataAtualLabel}</p>

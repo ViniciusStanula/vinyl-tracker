@@ -10,6 +10,7 @@ type OfertaRow = {
   estilo: string | null;
   imgUrl: string | null;
   url: string;
+  marketplace: string;
   rating: string | null;
   reviewCount: string | null;
   dealScore: number | null;
@@ -41,6 +42,7 @@ export async function queryOfertas(): Promise<ProcessedDisco[]> {
         d.estilo,
         d."imgUrl",
         d.url,
+        d.marketplace,
         d.rating::text                                                   AS rating,
         d."reviewCount"::text                                            AS "reviewCount",
         d.deal_score                                                     AS "dealScore",
@@ -88,6 +90,7 @@ export async function queryOfertas(): Promise<ProcessedDisco[]> {
         estilo:          row.estilo,
         imgUrl:          row.imgUrl,
         url:             row.url,
+        marketplace:     row.marketplace,
         rating:          row.rating != null ? Number(row.rating) : null,
         reviewCount:     row.reviewCount != null ? Number(row.reviewCount) : null,
         precoAtual,

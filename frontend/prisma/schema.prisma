@@ -21,6 +21,8 @@ model Disco {
   priceCount  Int      @default(0)    @map("price_count")
   // NULL = unverified; "vinyl" = confirmed; anything else = excluded (CD incident 2026-06-11)
   format      String?
+  // Price/link source: "amazon" (default) or "mercadolivre". Fences Amazon-only crawler jobs.
+  marketplace String   @default("amazon")
   avg30d      Decimal? @db.Decimal(10, 2) @map("avg_30d")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -31,6 +33,7 @@ model Disco {
   @@index([titulo])
   @@index([estilo])
   @@index([slug])
+  @@index([marketplace])
 }
 
 model ArtistMeta {

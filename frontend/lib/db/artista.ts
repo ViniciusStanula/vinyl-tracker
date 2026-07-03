@@ -18,6 +18,7 @@ type ArtistaRow = {
   estilo: string | null;
   imgUrl: string | null;
   url: string;
+  marketplace: string;
   rating: string | null;
   reviewCount: string | null;
   precoAtual: string;
@@ -52,6 +53,7 @@ type UnavailableRow = {
   estilo: string | null;
   imgUrl: string | null;
   url: string;
+  marketplace: string;
   rating: string | null;
   reviewCount: string | null;
 };
@@ -167,6 +169,7 @@ const _getArtistaPageData = unstable_cache(
           d.estilo,
           d."imgUrl",
           d.url,
+          d.marketplace,
           d.rating,
           d."reviewCount",
           d.deal_score        AS "dealScore",
@@ -235,7 +238,7 @@ const _getArtistaPageData = unstable_cache(
     `;
 
     const unavailableQuery = prisma.$queryRaw<UnavailableRow[]>`
-      SELECT id, titulo, artista, slug, estilo, "imgUrl", url, rating, "reviewCount"
+      SELECT id, titulo, artista, slug, estilo, "imgUrl", url, marketplace, rating, "reviewCount"
       FROM "Disco"
       WHERE artista = ANY(${variants})
         AND disponivel = FALSE
@@ -264,6 +267,7 @@ const _getArtistaPageData = unstable_cache(
       estilo:          row.estilo,
       imgUrl:          row.imgUrl,
       url:             row.url,
+      marketplace:     row.marketplace,
       rating:          row.rating !== null ? Number(row.rating) : null,
       reviewCount:     row.reviewCount !== null ? Number(row.reviewCount) : null,
       precoAtual:      0,
@@ -326,6 +330,7 @@ const _getArtistaPageData = unstable_cache(
         estilo:          row.estilo,
         imgUrl:          row.imgUrl,
         url:             row.url,
+        marketplace:     row.marketplace,
         rating:          row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
         reviewCount:     row.reviewCount !== null && row.reviewCount !== undefined ? Number(row.reviewCount) : null,
         precoAtual,

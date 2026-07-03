@@ -25,6 +25,7 @@ export type RelatedDeal = {
   slug: string;
   imgUrl: string | null;
   url: string;
+  marketplace: string;
   estilo: string | null;
   rating: string | null;
   precoAtual: number;
@@ -110,7 +111,7 @@ export const getRelatedDeals = unstable_cache(
       : Prisma.empty;
     return prisma.$queryRaw<RelatedDeal[]>`
       WITH candidates AS (
-        SELECT id, titulo, artista, slug, "imgUrl", url, estilo, rating,
+        SELECT id, titulo, artista, slug, "imgUrl", url, marketplace, estilo, rating,
                deal_score, confidence_level, avg_30d
         FROM "Disco"
         WHERE id != ${discoId}
@@ -129,6 +130,7 @@ export const getRelatedDeals = unstable_cache(
         c.slug,
         c."imgUrl",
         c.url,
+        c.marketplace,
         c.estilo,
         c.rating,
         c.deal_score                                         AS "dealScore",

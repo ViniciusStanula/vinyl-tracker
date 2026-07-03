@@ -159,6 +159,7 @@ def main() -> None:
             """
             SELECT asin FROM "Disco"
             WHERE format IS NULL
+              AND marketplace = 'amazon'   -- fence: never scrape ML rows on Amazon
             ORDER BY disponivel DESC, price_count DESC, "updatedAt" DESC
             LIMIT %s
             """,
