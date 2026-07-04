@@ -215,6 +215,8 @@ def clean_album_title(title: str, artist: str) -> str:
         re.search(r"[\]\)]\s*" + re.escape(artist) + r"\s*$", title, re.IGNORECASE)
     )
     t = re.sub(r"\s*\[[^\]]*\]", "", t)
+    # Amazon's bare "(X)" explicit/clean marker, e.g. "AWAKE (X) (2LP)".
+    t = re.sub(r"\s*\(x\)", "", t, flags=re.IGNORECASE)
     t = re.sub(
         r"\s*\([^)]*\)",
         lambda m: "" if _VINYL_WORDS.search(m.group()) else m.group(),

@@ -39,6 +39,8 @@ export function cleanAlbumTitle(title: string, artist: string): string {
   const trailingArtist = new RegExp(`[\\]\\)]\\s*${escapedArtist}\\s*$`, "i").test(title);
   // Remove square bracket content e.g. [Disco de Vinil], [Vinyl], [Explicit]
   t = t.replace(/\s*\[[^\]]*\]/g, "");
+  // Amazon's bare "(X)" explicit/clean marker, e.g. "AWAKE (X) (2LP)".
+  t = t.replace(/\s*\(x\)/gi, "");
   // Remove parenthetical vinyl/format descriptors
   t = t.replace(/\s*\([^)]*\)/g, (match) => (VINYL_WORDS.test(match) ? "" : match));
   // Remove variant suffix after last " - " e.g. "Album - Clear Gold Splatter"

@@ -31,6 +31,9 @@ STRIP_CASES = [
     # trailing "Limited" strips; " - Edition" caught by existing dash pass
     ("Blur", "Bustin' + Dronin' Limited", "Bustin' + Dronin'"),
     ("Nick Cave & the Bad Seeds", "The Good Son - Deluxe Edition", "The Good Son"),
+    # Amazon "(X)" explicit marker
+    ("Godsmack", "AWAKE (X) (2LP)", "AWAKE"),
+    ("Jhené Aiko", "SAIL OUT (X)", "SAIL OUT"),
 ]
 
 # titles ending in colour/loaded words that MUST survive untouched
