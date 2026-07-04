@@ -391,11 +391,14 @@ export default async function DiscoPage({
 
   // Price FAQ — programmatic Q&A from the price history we already computed.
   // Rendered visibly below and mirrored in FAQPage JSON-LD (required by Google).
+  // Use the cleaned album name (same as the page title) so questions read
+  // "... de What Color Is Love ..." not "... de LP What Color Is Love [Vinyl] ...".
+  const tituloLimpo = cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
   const faqItems =
     valores.length >= 2
       ? [
           {
-            q: `Qual o menor preço já registrado de ${disco.titulo} em vinil?`,
+            q: `Qual o menor preço já registrado de ${tituloLimpo} em vinil?`,
             a: disponivel
               ? `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. O preço atual é ${fmt(precoAtual)}.`
               : `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. Este disco está indisponível ${disco.marketplace === "mercadolivre" ? "no Mercado Livre" : "na Amazon"} no momento.`,
@@ -403,7 +406,7 @@ export default async function DiscoPage({
           ...(disponivel
             ? [
                 {
-                  q: `O preço de ${disco.titulo} está bom agora?`,
+                  q: `O preço de ${tituloLimpo} está bom agora?`,
                   a:
                     statusPreco === "menor"
                       ? `Sim — ${fmt(precoAtual)} é o menor preço já registrado pelo nosso monitoramento para este disco.`
@@ -414,7 +417,7 @@ export default async function DiscoPage({
                       : `O preço atual (${fmt(precoAtual)}) está próximo da média dos últimos 30 dias (${fmt(avg30d)}).`,
                 },
                 {
-                  q: `Com que frequência o preço de ${disco.titulo} é verificado?`,
+                  q: `Com que frequência o preço de ${tituloLimpo} é verificado?`,
                   a: `O preço é verificado automaticamente ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}. Já registramos ${valores.length} capturas de preço para este disco.`,
                 },
               ]
