@@ -154,9 +154,23 @@ def enrich_new_artists(
 # ── Album enrichment ──────────────────────────────────────────────────────────
 
 _VINYL_WORDS = re.compile(
-    r"\b(vinyl|vinil|lp|gram|colored|colou?red|remaster(?:ed)?|reissue|gatefold|"
+    r"\b(vinyl|vinil|\d*x?lp|gram|colored|colou?red|remaster(?:ed)?|reissue|gatefold|"
     r"splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|"
-    r"white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition)\b",
+    r"white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition|explicit)\b",
+    re.IGNORECASE,
+)
+
+# Trailing anniversary-edition marker Amazon leaves bare (no brackets), e.g.
+# "Stars Of CCTV: 20th Anniversary". Real albums almost never end this way.
+_TRAILING_ANNIVERSARY = re.compile(
+    r"\s*[-:–]?\s*(?:the\s+)?\d+(?:st|nd|rd|th)\s+anniversary(?:\s+edition)?\s*$",
+    re.IGNORECASE,
+)
+
+# Leading format noise Amazon prepends, e.g. "LP VINIL Foals - What Went Down".
+# Only media/format words — no colours — so a real title word is never eaten.
+_LEADING_FORMAT = re.compile(
+    r"^(?:(?:disco\s+de\s+vin(?:il|yl)|vinyl|vinil|\d*x?lp|cd)\b[\s\-]*)+",
     re.IGNORECASE,
 )
 
@@ -169,10 +183,20 @@ def clean_album_title(title: str, artist: str) -> str:
     "Dark Roots of Earth - Clear Gold Green Splatter" → "Dark Roots of Earth"
     "Dua Lipa - Dua Lipa [Disco de Vinil]"            → "Dua Lipa"
     "Fórmula, Vol. 3 (Amazon Exclusive Vinyl)"        → "Fórmula, Vol. 3"
+    "LP VINIL Foals - What Went Down"                 → "What Went Down"
+    "A Holly ... (Ultimate Deluxe Edition) [Vinyl] Dolly Parton" → "A Holly ..."
     """
     t = title
+    # Strip leading format noise ("LP VINIL ...") before the artist-prefix pass.
+    t = _LEADING_FORMAT.sub("", t)
     prefix = re.compile(r"^" + re.escape(artist) + r"\s*-\s*", re.IGNORECASE)
     t = prefix.sub("", t)
+    # Amazon sometimes appends the artist name after a bracketed edition/format
+    # marker, e.g. "... [Vinyl] Dolly Parton". Only that exact tail shape is a
+    # safe signal — a title like "Faz Igual a Cardi B [Explicit]" keeps its name.
+    trailing_artist = bool(
+        re.search(r"[\]\)]\s*" + re.escape(artist) + r"\s*$", title, re.IGNORECASE)
+    )
     t = re.sub(r"\s*\[[^\]]*\]", "", t)
     t = re.sub(
         r"\s*\([^)]*\)",
@@ -182,6 +206,15 @@ def clean_album_title(title: str, artist: str) -> str:
     dash = t.rfind(" - ")
     if dash > 0 and _VINYL_WORDS.search(t[dash + 3:]):
         t = t[:dash]
+    t = _TRAILING_ANNIVERSARY.sub("", t)
+    # Strip the trailing artist name only for the safe "[marker] Artist" tail
+    # shape detected above, and never empty the result (guards self-titled
+    # albums like "Dua Lipa" / "Dua Lipa").
+    if trailing_artist:
+        suffix = re.compile(r"\s*[-–]?\s*" + re.escape(artist) + r"\s*$", re.IGNORECASE)
+        stripped = suffix.sub("", t).strip()
+        if stripped:
+            t = stripped
     return t.strip()
 
 
