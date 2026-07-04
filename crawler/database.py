@@ -1144,6 +1144,7 @@ def fetch_albums_needing_translation(conn, min_listeners: int = 500_000, limit: 
             SELECT id, lastfm_wiki_en FROM "Disco"
             WHERE lastfm_listeners >= %s
               AND lastfm_wiki_en IS NOT NULL
+              AND length(trim(lastfm_wiki_en)) >= 40
               AND lastfm_wiki_pt IS NULL
             ORDER BY lastfm_listeners DESC
             LIMIT %s

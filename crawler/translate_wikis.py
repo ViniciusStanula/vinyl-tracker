@@ -20,6 +20,26 @@ log = logging.getLogger(__name__)
 MIN_LISTENERS = 0
 
 _MAX_INPUT_CHARS = 4000
+# Wiki source shorter than this (after strip) is a Last.fm placeholder like "."
+# and only makes Claude emit a "send me the text" meta-response — skip it.
+_MIN_INPUT_CHARS = 40
+
+# Claude sometimes refuses or asks for input instead of translating (empty/junk
+# source). Reject those so meta-responses never reach the DB. Anchored at start,
+# case- and accent-insensitive.
+_META_PREFIXES = (
+    "desculp", "estou pronto", "fico pronto", "ficaria feliz", "ficarei feliz",
+    "pronto para", "nao ha texto", "nao ha informac", "nao consigo", "nao recebi",
+    "voce enviou", "voce forneceu", "voce compartilhou", "aguard", "por favor",
+    "preciso do texto", "infelizmente",
+)
+_ACCENTS = str.maketrans("áàâãäéèêëíìîïóòôõöúùûüç", "aaaaaeeeeiiiiooooouuuuc")
+
+
+def _looks_like_meta(text: str) -> bool:
+    """True if the translation is a refusal / request-for-input, not a real bio."""
+    head = text.strip().lower().translate(_ACCENTS)
+    return any(head.startswith(p) for p in _META_PREFIXES)
 
 _SYSTEM_PROMPT = """\
 Você escreve textos sobre álbuns para o Garimpa Vinil, site brasileiro de rastreamento \
@@ -43,6 +63,8 @@ def translate_to_pt_br(text: str, client: anthropic.Anthropic, delay: float = 0.
     Translates Last.fm wiki text from English to Brazilian Portuguese using Claude.
     Returns None on failure — never falls back to English.
     """
+    if len(text.strip()) < _MIN_INPUT_CHARS:
+        return None
     try:
         message = client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -56,7 +78,9 @@ def translate_to_pt_br(text: str, client: anthropic.Anthropic, delay: float = 0.
             ],
         )
         result = message.content[0].text.strip()
-        return result or None
+        if not result or _looks_like_meta(result):
+            return None
+        return result
     except Exception as exc:
         log.debug("Claude translation failed: %s", exc)
         return None
