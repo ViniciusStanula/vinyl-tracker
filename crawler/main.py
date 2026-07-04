@@ -3439,7 +3439,9 @@ def main():
                 conn,
                 api_key=os.environ.get("LASTFM_API_KEY"),
                 deadline=deadline,
-                limit=200,
+                # High cap to drain the enrichment backlog; the deadline still
+                # bounds actual runtime, so a run never overruns its budget.
+                limit=1000,
             )
             log.info("Phase 5 Last.fm album enrichment: %.0fs — %d albums updated",
                      time.monotonic() - t0, _enriched)
@@ -3453,6 +3455,7 @@ def main():
             _translated = _translate_wikis(
                 conn,
                 deadline=deadline,
+                limit=300,
             )
             log.info("Phase 6 wiki translation: %.0fs — %d wikis translated",
                      time.monotonic() - t0, _translated)
