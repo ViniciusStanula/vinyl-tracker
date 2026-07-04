@@ -154,9 +154,25 @@ def enrich_new_artists(
 # ── Album enrichment ──────────────────────────────────────────────────────────
 
 _VINYL_WORDS = re.compile(
-    r"\b(vinyl|vinil|\d*x?lp|gram|colored|colou?red|remaster(?:ed)?|reissue|gatefold|"
-    r"splatter|exclusive|amazon|180|140|clear|gold|green|silver|blue|red|black|"
-    r"white|orange|purple|pink|yellow|repress|anniversary|deluxe|edition|explicit)\b",
+    r"\b(vinyl|vinil|\d*x?lp|gram|\d+\s*g|colored|colou?red|colorid[oa]|"
+    r"remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|150|200|220|"
+    r"clear|gold|green|silver|blue|red|black|white|orange|purple|pink|yellow|"
+    r"translucent|opaque|marbled?|repress|anniversary|deluxe|edition|explicit|"
+    r"nacional|importad[oa]|duplo|triplo|lacrado|selado|seminovo|promo|digipak|"
+    r"boxset|box\s?set|picture\s+disc)\b",
+    re.IGNORECASE,
+)
+
+# Bare trailing junk Amazon leaves without brackets, e.g. "8 Letters vinyl",
+# "posh LP", "MELTDOWN 18cm". HARD format tokens only — never colours — so real
+# titles ending in a colour word ("Back to Black", "Purple Rain") are preserved.
+_TRAILING_JUNK = re.compile(
+    r"(?:\s*[-:–|/]?\s*\b(?:"
+    r"vinyl|vinil|\d*x?lp|picture\s+disc|box\s?set|boxset|digipak|gatefold|"
+    r"\d+\s*g|\d+\s*gram(?:s|as)?|\d+\s*cm|\d+\s*rpm|\d+\s*\"|"
+    r"nacional|importad[oa]|duplo|triplo|colorid[oa]|lacrado|selado|seminovo|"
+    r"promo|reissue|repress|remaster(?:ed)?|deluxe|exclusive|limited"
+    r")\b\s*)+$",
     re.IGNORECASE,
 )
 
@@ -167,10 +183,11 @@ _TRAILING_ANNIVERSARY = re.compile(
     re.IGNORECASE,
 )
 
-# Leading format noise Amazon prepends, e.g. "LP VINIL Foals - What Went Down".
-# Only media/format words — no colours — so a real title word is never eaten.
+# Leading format noise Amazon prepends, e.g. "LP VINIL Foals - What Went Down"
+# or "- Vinil Disney - ...". Only media/format words — no colours — so a real
+# title word is never eaten. Leading separators/spaces allowed before the token.
 _LEADING_FORMAT = re.compile(
-    r"^(?:(?:disco\s+de\s+vin(?:il|yl)|vinyl|vinil|\d*x?lp|cd)\b[\s\-]*)+",
+    r"^[\s\-]*(?:(?:disco\s+de\s+vin(?:il|yl)|vinyl|vinil|\d*x?lp|cd)\b[\s\-]*)+",
     re.IGNORECASE,
 )
 
@@ -189,7 +206,7 @@ def clean_album_title(title: str, artist: str) -> str:
     t = title
     # Strip leading format noise ("LP VINIL ...") before the artist-prefix pass.
     t = _LEADING_FORMAT.sub("", t)
-    prefix = re.compile(r"^" + re.escape(artist) + r"\s*-\s*", re.IGNORECASE)
+    prefix = re.compile(r"^" + re.escape(artist) + r"\s*[-/]\s*", re.IGNORECASE)
     t = prefix.sub("", t)
     # Amazon sometimes appends the artist name after a bracketed edition/format
     # marker, e.g. "... [Vinyl] Dolly Parton". Only that exact tail shape is a
@@ -215,7 +232,12 @@ def clean_album_title(title: str, artist: str) -> str:
         stripped = suffix.sub("", t).strip()
         if stripped:
             t = stripped
-    return t.strip()
+    # Drop bare trailing format tokens ("8 Letters vinyl", "posh LP", "... 45 rpm").
+    # If this would empty the title (e.g. "MONO", "EP"), keep the pre-strip value.
+    stripped = _TRAILING_JUNK.sub("", t).strip()
+    t = stripped or t
+    # Final guard: never return empty — fall back to the original title.
+    return t.strip() or title.strip()
 
 
 _PUNCT_RE = re.compile(r"[^\w\s]")
