@@ -18,7 +18,7 @@ import { slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
-import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, type RelatedDeal } from "@/lib/db/disco";
+import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, type RelatedDeal } from "@/lib/db/disco";
 import { getEstilosList } from "@/lib/db/estilo";
 import { getHreflangRecord } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
@@ -197,6 +197,11 @@ export default async function DiscoPage({
     .slice(0, 5);
 
   const relatedDeals = await getRelatedDeals(disco.id, styleTags);
+  // Rank of this album among the artist's tracked vinyls, by Last.fm listeners.
+  const popularity =
+    (meta?.lastfmListeners ?? 0) > 0
+      ? await getArtistPopularity(disco.artista, slug)
+      : null;
   // Peer-site album URL for MusicAlbum.sameAs (same pressing, other market).
   const peerSlug = await getHreflangRecord(disco.asin).catch(() => null);
 
@@ -273,7 +278,6 @@ export default async function DiscoPage({
     : "—";
 
   const rating = disco.rating ? Number(disco.rating) : null;
-  const stars = rating ? Math.round(rating) : 0;
 
   const chartPrecos = disco.precos.map((p) => ({
     data: p.capturadoEm.toLocaleDateString("pt-BR", {
@@ -323,6 +327,32 @@ export default async function DiscoPage({
 
   const siteUrl = SITE_URL;
 
+  // Blend the Amazon and MusicBrainz ratings into one weighted aggregate. When
+  // only one source exists, the "blend" is just that source. Shared by the
+  // Product and MusicAlbum schemas so the page never exposes two conflicting
+  // aggregateRatings for the same item.
+  const ratingParts: { label: string; value: number; count: number }[] = [
+    ...(rating && disco.reviewCount ? [{ label: "Amazon", value: rating, count: disco.reviewCount }] : []),
+    ...(mbInfo?.rating ? [{ label: "MusicBrainz", value: mbInfo.rating.value, count: mbInfo.rating.votes }] : []),
+  ];
+  const totalVotes = ratingParts.reduce((n, r) => n + r.count, 0);
+  const blendedRating =
+    totalVotes > 0
+      ? ratingParts.reduce((n, r) => n + r.value * r.count, 0) / totalVotes
+      : null;
+  // ratingCount (not reviewCount): the aggregate mixes Amazon reviews with
+  // MusicBrainz community ratings, so "ratings" is the accurate umbrella term.
+  const aggregateRatingLd =
+    blendedRating != null
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: Number(blendedRating.toFixed(1)),
+          ratingCount: totalVotes,
+          bestRating: "5",
+          worstRating: "1",
+        }
+      : null;
+
   const productJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "Product",
@@ -346,18 +376,17 @@ export default async function DiscoPage({
         : "https://schema.org/OutOfStock",
       seller: { "@type": "Organization", name: disco.marketplace === "mercadolivre" ? "Mercado Livre Brasil" : "Amazon Brasil" },
     },
-    ...(rating && disco.reviewCount && disco.reviewCount > 0
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: rating.toFixed(1),
-            reviewCount: disco.reviewCount,
-            bestRating: "5",
-            worstRating: "1",
-          },
-        }
-      : {}),
+    ...(aggregateRatingLd ? { aggregateRating: aggregateRatingLd } : {}),
   });
+
+  // ISO 8601 track duration from MusicBrainz millisecond lengths, e.g. PT4M29S.
+  const msToIso = (ms: number): string => {
+    const s = Math.round(ms / 1000);
+    return `PT${Math.floor(s / 60)}M${s % 60}S`;
+  };
+  const albumGenres = (mbInfo?.genres.map((g) => g.name) ?? []).length
+    ? mbInfo!.genres.map((g) => g.name)
+    : styleTags;
 
   const musicAlbumJsonLd = toJsonLd({
     "@context": "https://schema.org",
@@ -372,6 +401,20 @@ export default async function DiscoPage({
       name: disco.artista,
       url: `${siteUrl}/artista/${slugifyArtist(disco.artista)}`,
     },
+    ...(meta?.mbFirstReleaseDate ? { datePublished: meta.mbFirstReleaseDate } : {}),
+    ...(albumGenres.length ? { genre: albumGenres } : {}),
+    ...(mbInfo && mbInfo.tracklist.length
+      ? {
+          numTracks: mbInfo.tracklist.length,
+          track: mbInfo.tracklist.map((t, i) => ({
+            "@type": "MusicRecording",
+            "@id": `${siteUrl}/disco/${slug}#track-${i + 1}`,
+            name: t.title,
+            ...(t.length ? { duration: msToIso(t.length) } : {}),
+          })),
+        }
+      : {}),
+    ...(aggregateRatingLd ? { aggregateRating: aggregateRatingLd } : {}),
   });
 
   const breadcrumbJsonLd = toJsonLd({
@@ -523,16 +566,16 @@ export default async function DiscoPage({
             <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-black text-cream leading-tight mb-3 [text-wrap:balance]">
               {disco.titulo}
             </h1>
-            {rating && (
+            {blendedRating != null && (
               <div
                 className="flex items-center gap-0.5"
                 role="img"
-                aria-label={`Avaliação: ${rating.toFixed(1)} de 5`}
+                aria-label={`Avaliação: ${blendedRating.toFixed(1)} de 5${ratingParts.length >= 2 ? " (Amazon + MusicBrainz)" : ""}`}
               >
                 {Array.from({ length: 5 }, (_, i) => (
                   <svg
                     key={i}
-                    className={`w-4 h-4 ${i < stars ? "fill-gold text-gold" : "fill-none text-groove"}`}
+                    className={`w-4 h-4 ${i < Math.round(blendedRating) ? "fill-gold text-gold" : "fill-none text-groove"}`}
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                     strokeWidth="1.5"
@@ -543,7 +586,8 @@ export default async function DiscoPage({
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                   </svg>
                 ))}
-                <span className="text-dust text-sm ml-1">{rating.toFixed(1)}</span>
+                <span className="text-dust text-sm ml-1 tabular-nums">{blendedRating.toFixed(1).replace(".", ",")}</span>
+                <span className="text-dust text-xs ml-1">· {totalVotes} avaliações</span>
               </div>
             )}
           </div>
@@ -667,37 +711,107 @@ export default async function DiscoPage({
           const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
           return (
             <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
-                {hasLastfm && (
-                  <a
-                    href={lastfmUrl}
-                    target="_blank"
-                    rel="nofollow noopener noreferrer"
-                    className="text-xs text-dust hover:text-parchment transition-colors flex items-center gap-1"
-                    aria-label={`Ver ${disco.titulo} no Last.fm`}
-                  >
-                    Dados: Last.fm ↗
-                  </a>
-                )}
-              </div>
+              <h2 className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
 
-              {hasLastfm && albumInfo && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-sleeve rounded-xl border border-groove p-4">
-                    <p className="text-xs text-dust mb-1">Ouvintes</p>
-                    <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.listeners)}</p>
-                  </div>
-                  <div className="bg-sleeve rounded-xl border border-groove p-4">
-                    <p className="text-xs text-dust mb-1">Reproduções</p>
-                    <p className="font-display font-bold text-cream text-2xl">{fmtCount(albumInfo.playcount)}</p>
-                  </div>
+              {(hasLastfm || blendedRating != null) && (
+                <div
+                  className={`grid gap-3 ${
+                    hasLastfm && blendedRating != null ? "sm:grid-cols-2" : "grid-cols-1"
+                  }`}
+                >
+                  {hasLastfm && albumInfo && (
+                    <div className="bg-sleeve rounded-xl border border-groove p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-[10px] font-bold text-dust uppercase tracking-wide">Popularidade</h3>
+                        <a
+                          href={lastfmUrl}
+                          target="_blank"
+                          rel="nofollow noopener noreferrer"
+                          className="text-xs text-dust hover:text-parchment transition-colors"
+                          aria-label={`Ver ${disco.titulo} no Last.fm`}
+                        >
+                          Dados: Last.fm ↗
+                        </a>
+                      </div>
+                      {popularity && popularity.total >= 3 && (
+                        <>
+                          <p className="font-display font-black text-cream text-3xl leading-none">#{popularity.rank}</p>
+                          <p className="text-xs text-dust mt-1 mb-3">
+                            {popularity.rank === 1 ? "disco mais ouvido" : "mais ouvido"} de {disco.artista}
+                          </p>
+                        </>
+                      )}
+                      <p className="text-sm text-parchment leading-relaxed">
+                        <span className="text-cream font-bold tabular-nums">{fmtCount(albumInfo.listeners)}</span> ouvintes
+                        {" · "}
+                        <span className="text-cream font-bold tabular-nums">{fmtCount(albumInfo.playcount)}</span> execuções
+                      </p>
+                    </div>
+                  )}
+                  {blendedRating != null && (
+                    <div className="bg-sleeve rounded-xl border border-groove p-4">
+                      <h3 className="text-[10px] font-bold text-dust uppercase tracking-wide mb-2">
+                        {ratingParts.length >= 2 ? "Avaliação combinada" : "Avaliação"}
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <span className="font-display font-black text-cream text-3xl leading-none tabular-nums">
+                          {blendedRating.toFixed(1).replace(".", ",")}
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-0.5" role="img" aria-label={`${blendedRating.toFixed(1)} de 5`}>
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <svg
+                                key={i}
+                                className={`w-3.5 h-3.5 ${i < Math.round(blendedRating) ? "fill-gold text-gold" : "fill-none text-groove"}`}
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                aria-hidden="true"
+                              >
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                            ))}
+                          </div>
+                          <p className="text-xs text-dust mt-0.5">
+                            {ratingParts.length >= 2
+                              ? `média ponderada de ${totalVotes} votos`
+                              : `${totalVotes.toLocaleString("pt-BR")} ${
+                                  ratingParts[0].label === "Amazon" ? "avaliações" : "votos"
+                                } · ${ratingParts[0].label}`}
+                          </p>
+                        </div>
+                      </div>
+                      {ratingParts.length >= 2 && (
+                        <div className="flex gap-2 mt-3">
+                          {ratingParts.map((pt) => (
+                            <div key={pt.label} className="flex-1 border border-groove rounded-lg px-3 py-2">
+                              <p className="font-bold text-cream tabular-nums">{pt.value.toFixed(1).replace(".", ",")}</p>
+                              <p className="text-[10px] text-dust uppercase tracking-wide">
+                                {pt.label} · {pt.count}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
               {wikiSummary && (
                 <div className="bg-sleeve rounded-xl border border-groove p-4">
                   <WikiExpander text={wikiSummary} />
+                  <div className="mt-3 text-right">
+                    <a
+                      href={lastfmUrl}
+                      target="_blank"
+                      rel="nofollow noopener noreferrer"
+                      className="text-xs text-dust hover:text-parchment transition-colors"
+                      aria-label={`Ver ${disco.titulo} no Last.fm`}
+                    >
+                      Dados: Last.fm ↗
+                    </a>
+                  </div>
                 </div>
               )}
 
@@ -750,49 +864,12 @@ export default async function DiscoPage({
                         </dd>
                       </div>
                     )}
-                    {mbInfo.rating && (
-                      <div className="flex justify-between items-baseline">
-                        <dt className="text-dust">Avaliação</dt>
-                        <dd className="text-cream font-medium flex items-baseline gap-1.5">
-                          <svg className="w-3.5 h-3.5 fill-gold text-gold self-center" viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                          {mbInfo.rating.value.toFixed(1)}<span className="text-dust">/5</span>
-                          <span className="text-dust text-xs">· {mbInfo.rating.votes} votos</span>
-                        </dd>
-                      </div>
-                    )}
                   </dl>
 
                   {mbInfo.tracklist.length > 0 && <Tracklist tracks={mbInfo.tracklist} />}
                 </div>
               )}
 
-              {rating && disco.reviewCount && disco.reviewCount > 0 && (
-                <div className="bg-sleeve rounded-xl border border-groove p-4">
-                  <h3 className="text-xs font-semibold text-dust uppercase tracking-wide mb-3">Avaliação na Amazon</h3>
-                  <div className="flex items-center gap-3">
-                    <span className="font-display font-black text-gold text-3xl">{rating.toFixed(1)}</span>
-                    <div>
-                      <div className="flex items-center gap-0.5 mb-0.5">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <svg
-                            key={i}
-                            className={`w-3.5 h-3.5 ${i < stars ? "fill-gold text-gold" : "fill-none text-groove"}`}
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            aria-hidden="true"
-                          >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                        ))}
-                      </div>
-                      <p className="text-xs text-dust">{disco.reviewCount.toLocaleString("pt-BR")} avaliações</p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </section>
           );
         })();

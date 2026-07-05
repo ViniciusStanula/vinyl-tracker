@@ -102,6 +102,30 @@ export const getDiscoMeta = unstable_cache(
   { tags: ["prices"], revalidate: 14400 },
 );
 
+export const getArtistPopularity = unstable_cache(
+  async (
+    artista: string,
+    slug: string,
+  ): Promise<{ rank: number; total: number } | null> => {
+    const rows = await prisma.$queryRaw<{ rank: bigint; total: bigint }[]>`
+      WITH ranked AS (
+        SELECT slug,
+               RANK() OVER (ORDER BY lastfm_listeners DESC) AS rank,
+               COUNT(*) OVER ()                             AS total
+        FROM "Disco"
+        WHERE artista = ${artista}
+          AND (format IS NULL OR format = 'vinyl')
+          AND lastfm_listeners > 0
+      )
+      SELECT rank, total FROM ranked WHERE slug = ${slug} LIMIT 1
+    `;
+    const r = rows[0];
+    return r ? { rank: Number(r.rank), total: Number(r.total) } : null;
+  },
+  ["artist-popularity"],
+  { tags: ["prices"], revalidate: 14400 },
+);
+
 export const getRelatedDeals = unstable_cache(
   async (discoId: string, tags: string[]): Promise<RelatedDeal[]> => {
     // Lowercase tags to match the GIN index expression: string_to_array(lower(lastfm_tags), ', ')
