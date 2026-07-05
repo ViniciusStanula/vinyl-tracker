@@ -737,7 +737,13 @@ export default async function DiscoPage({
                         <>
                           <p className="font-display font-black text-cream text-3xl leading-none">#{popularity.rank}</p>
                           <p className="text-xs text-dust mt-1 mb-3">
-                            {popularity.rank === 1 ? "disco mais ouvido" : "mais ouvido"} de {disco.artista}
+                            {popularity.rank === 1 ? "disco mais ouvido" : "mais ouvido"} de{" "}
+                            <Link
+                              href={`/artista/${slugifyArtist(disco.artista)}`}
+                              className="text-parchment hover:text-cream underline decoration-dotted decoration-dust/40 underline-offset-2 transition-colors"
+                            >
+                              {disco.artista}
+                            </Link>
                           </p>
                         </>
                       )}
