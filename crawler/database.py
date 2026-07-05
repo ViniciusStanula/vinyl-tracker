@@ -485,7 +485,7 @@ def fetch_stale_records(
         # run, not throttled to once per `floor_minutes`.
         floor_clause = (
             " AND (deal_score IS NOT NULL"
-            " OR last_flagged_at > NOW() - INTERVAL '30 days'"
+            " OR last_flagged_at > NOW() - INTERVAL '7 days'"
             " OR last_crawled_at IS NULL"
             " OR last_crawled_at < NOW() - (%s * INTERVAL '1 minute'))"
         )
@@ -495,16 +495,16 @@ def fetch_stale_records(
     with _cursor(conn) as cur:
         cur.execute(
             f"""
-            SELECT asin, id, COALESCE(titulo, '') AS titulo
+            SELECT asin, id, COALESCE(titulo, '') AS titulo, last_crawled_at
             FROM "Disco"
             WHERE asin != ALL(%s){floor_clause}
               AND (format IS NULL OR format = 'vinyl')
               AND marketplace = 'amazon'   -- fence: ML rows are priced by ml_crawler, never scraped on Amazon
             ORDER BY
                 CASE
-                    WHEN deal_score IS NOT NULL                        THEN 0
-                    WHEN last_flagged_at > NOW() - INTERVAL '30 days' THEN 1
-                    ELSE                                                    2
+                    WHEN deal_score IS NOT NULL                       THEN 0
+                    WHEN last_flagged_at > NOW() - INTERVAL '7 days'  THEN 1
+                    ELSE                                                   2
                 END,
                 last_crawled_at ASC NULLS FIRST
             LIMIT %s
@@ -513,7 +513,7 @@ def fetch_stale_records(
         )
         rows = cur.fetchall()
     return [
-        {"asin": row[0], "id": row[1], "titulo": row[2]}
+        {"asin": row[0], "id": row[1], "titulo": row[2], "last_crawled_at": row[3]}
         for row in rows
     ]
 

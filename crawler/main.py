@@ -25,7 +25,7 @@ import argparse
 import threading as _threading
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # Load crawler/.env into os.environ before any module-level config is read,
 # so local runs match CI. No-op in GitHub Actions (real env vars win).
@@ -2697,6 +2697,10 @@ def _flush_api_budget(conn) -> None:
 
 # Availability types the API reports for a definitively out-of-stock offer.
 _API_OOS_TYPES = {"OUT_OF_STOCK", "UNAVAILABLE"}
+# A record the Creators API has not returned for this many days is treated as
+# delisted (not a transient miss) and marked unavailable so it stops showing a
+# stale price on the site.
+_API_MISS_STALE_DAYS = int(os.environ.get("API_MISS_STALE_DAYS", "7") or "7")
 
 
 def crawl_stale_records_api(
@@ -2742,7 +2746,17 @@ def crawl_stale_records_api(
             disco_id = by_asin[asin]["id"]
             res = results.get(asin)
             if res is None:
-                counts["errors"] += 1  # transient miss — do NOT mark unavailable
+                # A single miss is treated as transient (no write). But an ASIN the
+                # API has failed to return for many days is a delisted listing, not
+                # a blip — leaving it live shows a stale price forever. Escalate to
+                # unavailable once the record is >_API_MISS_STALE_DAYS days stale.
+                lc = by_asin[asin].get("last_crawled_at")
+                if lc is not None and lc < now - timedelta(days=_API_MISS_STALE_DAYS):
+                    if not dry_run:
+                        mark_unavailable(conn, disco_id)
+                    counts["unavailable"] += 1
+                else:
+                    counts["errors"] += 1  # transient miss — do NOT mark unavailable
                 continue
             oos = (res.in_stock is False) or (
                 isinstance(res.availability_type, str)
