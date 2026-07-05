@@ -24,6 +24,7 @@ Requires DATABASE_URL in environment (or .env file).
 import os
 import sys
 import json
+import re
 import time
 import argparse
 import logging
@@ -70,22 +71,51 @@ def _mb_get(path: str) -> dict | None:
         return None
 
 
+def _tokens(s: str) -> set[str]:
+    """Lowercase alphanumeric token set, for title-overlap validation."""
+    return set(re.sub(r"[^\w\s]", " ", s.lower()).split())
+
+
+# Lucene special chars that break a MusicBrainz query if left unescaped.
+_LUCENE_SPECIALS = re.compile(r'[+\-&|!(){}\[\]^"~*?:\\/]')
+
+
+def _mb_search_groups(artist: str, album: str, quoted: bool) -> list[dict]:
+    """One release-group search. quoted=exact phrase (precise);
+    quoted=False=token AND (tolerant of leftover edition/colour junk)."""
+    if quoted:
+        rg = f'"{album}"'
+    else:
+        rg = "(" + _LUCENE_SPECIALS.sub(" ", album).strip() + ")"
+    query = urllib.parse.urlencode({
+        "query": f'artist:"{artist}" AND releasegroup:{rg}',
+        "fmt":   "json",
+        "limit": "6",
+    })
+    data = _mb_get("release-group/?" + query)
+    return (data.get("release-groups") or []) if data else []
+
+
 def search_release_group(artist: str, album: str) -> dict | None:
     """
     Returns {mbid, first_release_date, primary_type, genres} for the best
     release-group match, or None if nothing clears MB_SCORE_THRESHOLD.
     """
-    query = urllib.parse.urlencode({
-        "query": f'artist:"{artist}" AND releasegroup:"{album}"',
-        "fmt":   "json",
-        "limit": "6",
-    })
-    data = _mb_get("release-group/?" + query)
-    if not data:
-        return None
-
-    groups = [g for g in (data.get("release-groups") or [])
+    groups = [g for g in _mb_search_groups(artist, album, quoted=True)
               if int(g.get("score", 0)) >= MB_SCORE_THRESHOLD]
+    if not groups:
+        # Fallback: unquoted token AND. The exact-phrase query returns ZERO when
+        # the Amazon title still carries edition/colour junk ("Pearl Jam: Ten",
+        # "24K Magic Gold", "Back To Black (Half-Speed Master)"). Unquoted lets
+        # MB relevance-rank past the junk. Guard against false positives: the
+        # matched title's tokens must be a subset of the (junk-carrying) query.
+        qtok = _tokens(album)
+        groups = [
+            g for g in _mb_search_groups(artist, album, quoted=False)
+            if int(g.get("score", 0)) >= MB_SCORE_THRESHOLD
+            and g.get("title")
+            and _tokens(g["title"]) <= qtok
+        ]
     if not groups:
         return None
 

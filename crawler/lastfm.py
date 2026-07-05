@@ -179,7 +179,7 @@ _TRAILING_JUNK = re.compile(
 # Trailing anniversary-edition marker Amazon leaves bare (no brackets), e.g.
 # "Stars Of CCTV: 20th Anniversary". Real albums almost never end this way.
 _TRAILING_ANNIVERSARY = re.compile(
-    r"\s*[-:–]?\s*(?:the\s+)?\d+(?:st|nd|rd|th)\s+anniversary(?:\s+edition)?\s*$",
+    r"\s*[-:–]?\s*(?:the\s+)?\d+(?:st|nd|rd|th)\s+ann?iversary(?:\s+edition)?\s*$",
     re.IGNORECASE,
 )
 
@@ -206,7 +206,7 @@ def clean_album_title(title: str, artist: str) -> str:
     t = title
     # Strip leading format noise ("LP VINIL ...") before the artist-prefix pass.
     t = _LEADING_FORMAT.sub("", t)
-    prefix = re.compile(r"^" + re.escape(artist) + r"\s*[-/]\s*", re.IGNORECASE)
+    prefix = re.compile(r"^" + re.escape(artist) + r"\s*[-/:]\s*", re.IGNORECASE)
     t = prefix.sub("", t)
     # Amazon sometimes appends the artist name after a bracketed edition/format
     # marker, e.g. "... [Vinyl] Dolly Parton". Only that exact tail shape is a
@@ -226,6 +226,9 @@ def clean_album_title(title: str, artist: str) -> str:
     if dash > 0 and _VINYL_WORDS.search(t[dash + 3:]):
         t = t[:dash]
     t = _TRAILING_ANNIVERSARY.sub("", t)
+    # Amazon glues an "explicit_lyrics" flag onto the title with no space,
+    # e.g. "After Hoursexplicit_lyrics" → "After Hours".
+    t = re.sub(r"explicit[_\s]*lyrics\s*$", "", t, flags=re.IGNORECASE)
     # Strip the trailing artist name only for the safe "[marker] Artist" tail
     # shape detected above, and never empty the result (guards self-titled
     # albums like "Dua Lipa" / "Dua Lipa").
