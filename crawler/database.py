@@ -451,6 +451,7 @@ def fetch_stale_records(
     limit: int = 500,
     claim: bool = False,
     floor_minutes: int | None = None,
+    hotset_floor_minutes: int | None = None,
 ) -> list[dict]:
     """
     Returns Disco rows whose ASINs were NOT encountered during this crawl run.
@@ -480,16 +481,31 @@ def fetch_stale_records(
     floor_clause = ""
     params: list = [list(seen_asins) if seen_asins else ["__none__"]]
     if floor_minutes and floor_minutes > 0:
-        # HOT-SET carve-out: active deals (Rule Zero) AND recently-flagged rows
-        # (flagged within 30d) bypass the floor so the hot set is re-priced every
-        # run, not throttled to once per `floor_minutes`.
-        floor_clause = (
-            " AND (deal_score IS NOT NULL"
-            " OR last_flagged_at > NOW() - INTERVAL '7 days'"
-            " OR last_crawled_at IS NULL"
-            " OR last_crawled_at < NOW() - (%s * INTERVAL '1 minute'))"
-        )
-        params.append(floor_minutes)
+        if hotset_floor_minutes and hotset_floor_minutes > 0:
+            # Recently-flagged rows get their OWN (wider) floor instead of an
+            # unconditional bypass: re-priced at most once per hotset_floor
+            # window rather than every run, so they stop eating the API budget
+            # that the cold tail needs. Active deals still bypass entirely —
+            # Phase 0 re-validates them every run regardless (Rule Zero).
+            floor_clause = (
+                " AND (deal_score IS NOT NULL"
+                " OR last_crawled_at IS NULL"
+                " OR (last_flagged_at > NOW() - INTERVAL '7 days'"
+                "     AND last_crawled_at < NOW() - (%s * INTERVAL '1 minute'))"
+                " OR last_crawled_at < NOW() - (%s * INTERVAL '1 minute'))"
+            )
+            params.append(hotset_floor_minutes)
+            params.append(floor_minutes)
+        else:
+            # HOT-SET carve-out: active deals (Rule Zero) AND recently-flagged rows
+            # bypass the floor so the hot set is re-priced every run.
+            floor_clause = (
+                " AND (deal_score IS NOT NULL"
+                " OR last_flagged_at > NOW() - INTERVAL '7 days'"
+                " OR last_crawled_at IS NULL"
+                " OR last_crawled_at < NOW() - (%s * INTERVAL '1 minute'))"
+            )
+            params.append(floor_minutes)
     params.append(limit)
 
     with _cursor(conn) as cur:

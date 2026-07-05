@@ -65,6 +65,7 @@ jobs:
           CREATORS_TPD_PER_RUN: "1000"  # per-run cap; 8 runs * 1000 < day cap, so Phase-0 deals never starve
           CREATORS_API_WORKERS: "8"     # parallel getItems; shared TPS bucket still caps real rate at <= TPS
           FRESHNESS_FLOOR_MINUTES: "180"
+          HOTSET_FLOOR_MINUTES: "720"   # re-price flagged hot-set ~2x/day (not every run) so the cold tail gets budget
           AMAZON_MAX_CONCURRENCY: "4"
           # ── Alert emails ──
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

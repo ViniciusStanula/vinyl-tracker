@@ -71,6 +71,11 @@ CREATORS_REFRESH_ENABLED = os.environ.get("CREATORS_REFRESH_ENABLED", "").strip(
 # Skip Phase-3 backlog records refreshed more recently than this (Step C).
 # Active deals bypass it (Rule Zero carve-out lives in fetch_stale_records). 0 = off.
 FRESHNESS_FLOOR_MINUTES = int(os.environ.get("FRESHNESS_FLOOR_MINUTES", "0") or "0")
+# Wider floor for the recently-flagged hot-set: re-price these at most once per
+# this window instead of every run, freeing API budget for the cold tail. Active
+# deals still bypass (Phase 0 re-validates them every run). 0 = old behaviour
+# (flagged rows re-priced every run).
+HOTSET_FLOOR_MINUTES = int(os.environ.get("HOTSET_FLOOR_MINUTES", "720") or "720")
 # Global cap on simultaneous storefront (scraper) requests across ALL threads
 # (Step D). Category workers + stale workers can otherwise burst well past this;
 # the semaphore bounds true per-host concurrency regardless of worker counts.
@@ -3350,6 +3355,7 @@ def main():
                 batch = fetch_stale_records(
                     conn, seen_asins, limit=_PHASE3_BATCH_SIZE,
                     claim=args.stale_only, floor_minutes=FRESHNESS_FLOOR_MINUTES,
+                    hotset_floor_minutes=HOTSET_FLOOR_MINUTES,
                 )
                 if not batch:
                     log.info("Phase 3: no more stale records after %d records.", phase3_total)
