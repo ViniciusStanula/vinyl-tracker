@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 
 export const PAGE_SIZE = 24;
 
-export type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "az" | "deals";
+export type Sort = "desconto" | "menor-preco" | "maior-preco" | "avaliados" | "ouvidos" | "az" | "deals";
 
 /** Escape LIKE meta-characters in user-supplied text. */
 function likePct(term: string): string {
@@ -44,7 +44,10 @@ export function buildOrderBy(sort: string): Prisma.Sql {
   switch (sort as Sort) {
     case "menor-preco": return Prisma.sql`"precoAtual" ASC`;
     case "maior-preco": return Prisma.sql`"precoAtual" DESC`;
-    case "avaliados":   return Prisma.sql`COALESCE(rating::numeric, 0) DESC`;
+    case "avaliados":   return Prisma.sql`
+      (COALESCE(rating * "reviewCount", 0) + COALESCE("mbRating" * "mbRatingVotes", 0))
+        / NULLIF(COALESCE("reviewCount", 0) + COALESCE("mbRatingVotes", 0), 0) DESC NULLS LAST`;
+    case "ouvidos":     return Prisma.sql`"lastfmListeners" DESC NULLS LAST`;
     case "az":          return Prisma.sql`titulo ASC`;
     case "deals":       return Prisma.sql`deal_score DESC NULLS LAST, desconto DESC NULLS LAST`;
     case "desconto":
@@ -110,13 +113,18 @@ export async function queryDiscos(params: {
   artista?: string;
   precoMax: number | null;
   page: number;
+  decade?: number | null;
 }): Promise<{ items: ProcessedDisco[]; total: number; totalPages: number }> {
-  const { searchTerm, sort, artista, precoMax, page } = params;
+  const { searchTerm, sort, artista, precoMax, page, decade } = params;
 
   const whereSearch = buildSearchWhere(searchTerm);
   const whereArtista = artista
     ? Prisma.sql`AND d.artista = ${artista}`
     : Prisma.sql``;
+  const whereDecade =
+    decade != null
+      ? Prisma.sql`AND substring(d.mb_first_release_date from '^[0-9]{4}')::int BETWEEN ${decade} AND ${decade + 9}`
+      : Prisma.sql``;
   const wherePrecoMax =
     precoMax !== null && !isNaN(precoMax)
       ? Prisma.sql`AND hp_latest."precoBrl" <= ${precoMax}`
@@ -142,7 +150,7 @@ export async function queryDiscos(params: {
           WHERE  d.disponivel = TRUE
           AND  (d.format IS NULL OR d.format = 'vinyl')
             AND  d.price_count >= 5
-            ${whereSearch} ${whereArtista}
+            ${whereSearch} ${whereArtista} ${whereDecade}
             AND hp_latest."precoBrl" <= ${precoMax}
         `
       : prisma.$queryRaw<[{ total: bigint }]>`
@@ -151,7 +159,7 @@ export async function queryDiscos(params: {
           WHERE  d.disponivel = TRUE
           AND  (d.format IS NULL OR d.format = 'vinyl')
             AND  d.price_count >= 5
-            ${whereSearch} ${whereArtista}
+            ${whereSearch} ${whereArtista} ${whereDecade}
         `;
 
   const [countResult, rows] = await Promise.all([
@@ -170,6 +178,9 @@ export async function queryDiscos(params: {
           d.marketplace,
           d.rating,
           d."reviewCount",
+          d.lastfm_listeners  AS "lastfmListeners",
+          d.mb_rating         AS "mbRating",
+          d.mb_rating_votes   AS "mbRatingVotes",
           d.deal_score        AS "dealScore",
           d.confidence_level  AS "confidenceLevel",
           d.history_days      AS "historyDays",
@@ -205,7 +216,7 @@ export async function queryDiscos(params: {
         WHERE d.disponivel = TRUE
         AND  (d.format IS NULL OR d.format = 'vinyl')
           AND d.price_count >= 5
-          ${whereSearch} ${whereArtista} ${wherePrecoMax}
+          ${whereSearch} ${whereArtista} ${wherePrecoMax} ${whereDecade}
       )
       SELECT
         *,

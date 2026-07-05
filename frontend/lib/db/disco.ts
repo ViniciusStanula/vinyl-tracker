@@ -193,3 +193,53 @@ export const getRelatedDeals = unstable_cache(
   ["disco-related-deals"],
   { tags: ["prices"], revalidate: 14400 }
 );
+
+export const getArtistTopAlbums = unstable_cache(
+  async (artista: string, discoId: string): Promise<RelatedDeal[]> => {
+    return prisma.$queryRaw<RelatedDeal[]>`
+      WITH candidates AS (
+        SELECT id, titulo, artista, slug, "imgUrl", url, marketplace, estilo, rating,
+               deal_score, confidence_level, avg_30d
+        FROM "Disco"
+        WHERE artista = ${artista}
+          AND id != ${discoId}
+          AND disponivel = TRUE
+          AND (format IS NULL OR format = 'vinyl')
+          AND price_count >= 5
+        ORDER BY lastfm_listeners DESC NULLS LAST, RANDOM()
+        LIMIT 4
+      )
+      SELECT
+        c.id, c.titulo, c.artista, c.slug, c."imgUrl", c.url, c.marketplace, c.estilo, c.rating,
+        c.deal_score                                         AS "dealScore",
+        c.confidence_level                                   AS "confidenceLevel",
+        l.preco                                              AS "precoAtual",
+        COALESCE(c.avg_30d::float, l.preco)                  AS "mediaPreco",
+        CASE
+          WHEN COALESCE(c.avg_30d::float, 0) > 0
+          THEN (COALESCE(c.avg_30d::float, l.preco) - l.preco) / COALESCE(c.avg_30d::float, l.preco)
+          ELSE 0
+        END                                                  AS desconto,
+        (
+          SELECT COALESCE(json_agg(sp."precoBrl"::float ORDER BY sp."capturadoEm"), '[]'::json)
+          FROM (
+            SELECT "precoBrl", "capturadoEm"
+            FROM   "HistoricoPreco"
+            WHERE  "discoId" = c.id AND "capturadoEm" >= NOW() - INTERVAL '30 days'
+            ORDER  BY "capturadoEm" ASC LIMIT 10
+          ) sp
+        ) AS sparkline
+      FROM candidates c
+      JOIN LATERAL (
+        SELECT "precoBrl"::float AS preco
+        FROM "HistoricoPreco"
+        WHERE "discoId" = c.id
+        ORDER BY "capturadoEm" DESC LIMIT 1
+      ) l ON TRUE
+    `;
+  },
+  ["disco-artist-top-albums"],
+  { tags: ["prices"], revalidate: 14400 }
+);
+
+

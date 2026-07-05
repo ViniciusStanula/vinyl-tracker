@@ -53,6 +53,12 @@ export default async function sitemap(props: {
         changeFrequency: "monthly" as const,
         priority: 0.7,
       })),
+      ...[1960, 1970, 1980, 1990, 2000, 2010, 2020].map((d) => ({
+        url: `${SITEMAP_BASE}/decada/${d}`,
+        lastModified: latestUpdate,
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+      })),
     ];
   }
 

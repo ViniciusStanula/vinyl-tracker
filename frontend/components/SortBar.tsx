@@ -5,9 +5,10 @@ import { useTransition } from "react";
 
 const SORT_OPTIONS = [
   { label: "Maior Desconto",    value: "desconto"     },
+  { label: "Mais Ouvidos",      value: "ouvidos"      },
+  { label: "Melhor Avaliação",  value: "avaliados"    },
   { label: "Menor Preço",       value: "menor-preco"  },
   { label: "Maior Preço",       value: "maior-preco"  },
-  { label: "Melhor Avaliação",  value: "avaliados"    },
   { label: "A–Z",               value: "az"           },
 ];
 

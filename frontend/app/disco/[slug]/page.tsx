@@ -18,7 +18,7 @@ import { slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
-import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, type RelatedDeal } from "@/lib/db/disco";
+import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, type RelatedDeal } from "@/lib/db/disco";
 import { getEstilosList } from "@/lib/db/estilo";
 import { getHreflangRecord } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
@@ -202,6 +202,11 @@ export default async function DiscoPage({
     (meta?.lastfmListeners ?? 0) > 0
       ? await getArtistPopularity(disco.artista, slug)
       : null;
+  // Other vinyls by the same artist (most-listened first) for a dedicated rail.
+  const artistAlbums =
+    disco.artista.toLowerCase() === "artista não identificado"
+      ? []
+      : await getArtistTopAlbums(disco.artista, disco.id);
   // Peer-site album URL for MusicAlbum.sameAs (same pressing, other market).
   const peerSlug = await getHreflangRecord(disco.asin).catch(() => null);
 
@@ -303,8 +308,8 @@ export default async function DiscoPage({
       ? `${Math.round(n / 1_000).toLocaleString("pt-BR")}K`
       : n.toLocaleString("pt-BR");
 
-  // Process related deals into DiscoCard-compatible shape
-  const processedDeals = relatedDeals.map((deal) => {
+  // Shape a RelatedDeal row into the DiscoCard-compatible object.
+  const toCard = (deal: RelatedDeal) => {
     let sparkline: number[] = [];
     if (Array.isArray(deal.sparkline)) {
       sparkline = (deal.sparkline as unknown[]).map(Number).filter((n) => !isNaN(n));
@@ -315,15 +320,18 @@ export default async function DiscoPage({
         sparkline = [];
       }
     }
+    const dealScore = deal.dealScore !== null && deal.dealScore !== undefined ? Number(deal.dealScore) : null;
     return {
       ...deal,
       rating:          deal.rating ? Number(deal.rating) : null,
-      emPromocao:      true, // query already filters deal_score IS NOT NULL
-      dealScore:       deal.dealScore !== null && deal.dealScore !== undefined ? Number(deal.dealScore) : null,
+      emPromocao:      dealScore !== null,
+      dealScore,
       confidenceLevel: deal.confidenceLevel ?? null,
       sparkline,
     };
-  });
+  };
+  const processedDeals = relatedDeals.map(toCard);
+  const processedArtistAlbums = artistAlbums.map(toCard);
 
   const siteUrl = SITE_URL;
 
@@ -839,7 +847,22 @@ export default async function DiscoPage({
                     {mbInfo.releaseYear && (
                       <div className="flex justify-between">
                         <dt className="text-dust">Lançamento</dt>
-                        <dd className="text-cream font-medium">{mbInfo.releaseYear}</dd>
+                        <dd className="text-cream font-medium">
+                          {(() => {
+                            const year = parseInt(mbInfo.releaseYear, 10);
+                            const decade = Math.floor(year / 10) * 10;
+                            return year && decade >= 1960 && decade <= 2020 ? (
+                              <Link
+                                href={`/decada/${decade}`}
+                                className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
+                              >
+                                {mbInfo.releaseYear}
+                              </Link>
+                            ) : (
+                              mbInfo.releaseYear
+                            );
+                          })()}
+                        </dd>
                       </div>
                     )}
                     {mbInfo.primaryType && (
@@ -912,6 +935,28 @@ export default async function DiscoPage({
               </div>
             ))}
           </dl>
+        </section>
+      )}
+
+      {/* More from this artist */}
+      {processedArtistAlbums.length > 0 && (
+        <section className="mt-6">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="font-display text-2xl font-black text-cream italic">
+              Mais de {disco.artista}
+            </h2>
+            <Link
+              href={`/artista/${slugifyArtist(disco.artista)}`}
+              className="text-[11px] font-bold uppercase tracking-widest text-dust hover:text-gold transition-colors"
+            >
+              Ver Todos
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {processedArtistAlbums.map((album) => (
+              <DiscoCard key={album.id} disco={album} />
+            ))}
+          </div>
         </section>
       )}
 
