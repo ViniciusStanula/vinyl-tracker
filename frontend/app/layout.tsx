@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { SITE_URL } from "@/lib/siteUrl";
 import Footer from "@/components/Footer";
 import NavigationProgress from "@/components/NavigationProgress";
+import WebMcpTools from "@/components/WebMcpTools";
 import { toJsonLd } from "@/lib/jsonld";
 
 /* Fraunces — optical-size variable serif; editorial, distinctive */
@@ -104,6 +105,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${fraunces.variable} ${dmSans.variable}`}>
       <head>
+        {process.env.NEXT_PUBLIC_WEBMCP_OT_TOKEN && (
+          <meta httpEquiv="origin-trial" content={process.env.NEXT_PUBLIC_WEBMCP_OT_TOKEN} />
+        )}
         <link rel="preconnect" href="https://m.media-amazon.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://images-na.ssl-images-amazon.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://image-cdn-ak.spotifycdn.com" crossOrigin="anonymous" />
@@ -140,6 +144,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           Ir para conteúdo principal
         </a>
         <NavigationProgress />
+        <WebMcpTools />
         <Navbar />
         {children}
         <Footer />

@@ -22,6 +22,8 @@ Available tools:
 - get_price_history: full 1-year price history for one record — current price, 30-day average, all-time low, timestamped price points
 - get_artist_albums: all records by an artist with current prices and deal scores
 
+The same four tools are also exposed in-page via WebMCP (document.modelContext) for browser-based agents.
+
 ## Deal Scoring
 
 deal_score field:
