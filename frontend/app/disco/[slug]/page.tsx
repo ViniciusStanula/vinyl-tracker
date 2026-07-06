@@ -520,8 +520,9 @@ export default async function DiscoPage({
         </span>
       </nav>
 
+      <article>
       {/* Hero — sticky album art left, details right on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 mb-6">
+      <header className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 mb-6">
 
         {disco.imgUrl && (
           <div className="lg:col-span-5">
@@ -700,7 +701,7 @@ export default async function DiscoPage({
             )}
           </div>
         </div>
-      </div>
+      </header>
 
       {(() => {
         const sobreSection = (() => {
@@ -718,8 +719,8 @@ export default async function DiscoPage({
           const cleanTitle = cleanAlbumTitle(disco.titulo, disco.artista);
           const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
           return (
-            <section className="space-y-4">
-              <h2 className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
+            <section aria-labelledby="sobre-album-heading" className="space-y-4">
+              <h2 id="sobre-album-heading" className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
 
               {(hasLastfm || blendedRating != null) && (
                 <div
@@ -925,8 +926,8 @@ export default async function DiscoPage({
 
       {/* Price FAQ — visible counterpart of the FAQPage JSON-LD */}
       {faqItems.length > 0 && (
-        <section className="mt-6 bg-sleeve rounded-xl border border-groove p-4">
-          <h2 className="font-display text-2xl font-black text-cream italic mb-3">
+        <section aria-labelledby="faq-heading" className="mt-6 bg-sleeve rounded-xl border border-groove p-4">
+          <h2 id="faq-heading" className="font-display text-2xl font-black text-cream italic mb-3">
             Perguntas frequentes sobre o preço
           </h2>
           <dl className="space-y-3">
@@ -940,11 +941,13 @@ export default async function DiscoPage({
         </section>
       )}
 
+      </article>
+
       {/* More from this artist */}
       {processedArtistAlbums.length > 0 && (
-        <section className="mt-6">
+        <aside aria-labelledby="mais-artista-heading" className="mt-6">
           <div className="flex items-baseline justify-between mb-3">
-            <h2 className="font-display text-2xl font-black text-cream italic">
+            <h2 id="mais-artista-heading" className="font-display text-2xl font-black text-cream italic">
               Mais de {disco.artista}
             </h2>
             <Link
@@ -961,14 +964,14 @@ export default async function DiscoPage({
               </li>
             ))}
           </ul>
-        </section>
+        </aside>
       )}
 
       {/* Related deals */}
       {processedDeals.length > 0 && (
-        <section className="mt-6">
+        <aside aria-labelledby="outros-discos-heading" className="mt-6">
           <div className="flex items-baseline justify-between mb-3">
-            <h2 className="font-display text-2xl font-black text-cream italic">
+            <h2 id="outros-discos-heading" className="font-display text-2xl font-black text-cream italic">
               Outros discos em oferta
             </h2>
             <Link
@@ -985,7 +988,7 @@ export default async function DiscoPage({
               </li>
             ))}
           </ul>
-        </section>
+        </aside>
       )}
 
       <BackToTop />

@@ -44,11 +44,12 @@ export default function PriceHistoryTable({ rows }: Props) {
       {open && (
         <div id="price-history-table" className="mt-3 max-h-52 overflow-y-auto">
           <table className="w-full text-xs text-left">
+            <caption className="sr-only">Histórico de preços registrados, do mais recente ao mais antigo</caption>
             <thead>
               <tr className="text-dust border-b border-groove">
-                <th className="pb-2 font-medium">Data</th>
-                <th className="pb-2 font-medium text-right">Preço</th>
-                <th className="pb-2 font-medium text-right">Variação</th>
+                <th scope="col" className="pb-2 font-medium">Data</th>
+                <th scope="col" className="pb-2 font-medium text-right">Preço</th>
+                <th scope="col" className="pb-2 font-medium text-right">Variação</th>
               </tr>
             </thead>
             <tbody>

@@ -218,8 +218,8 @@ export default async function EstiloPage({
 
       {/* Top artists in this genre — internal link equity to artist pages */}
       {topArtists.length > 0 && (
-        <div className="mb-5">
-          <p className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
+        <nav aria-labelledby="artistas-genero-heading" className="mb-5">
+          <p id="artistas-genero-heading" className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
             Artistas em {displayName}
           </p>
           <ul className="flex flex-wrap gap-1.5">
@@ -234,13 +234,13 @@ export default async function EstiloPage({
               </li>
             ))}
           </ul>
-        </div>
+        </nav>
       )}
 
       {/* Related genres — above the grid for topical graph signals */}
       {relatedEstilos.length > 0 && (
-        <div className="mb-5">
-          <p className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
+        <nav aria-labelledby="estilos-relacionados-heading" className="mb-5">
+          <p id="estilos-relacionados-heading" className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
             Estilos relacionados
           </p>
           <ul className="flex flex-wrap gap-1.5">
@@ -255,7 +255,7 @@ export default async function EstiloPage({
               </li>
             ))}
           </ul>
-        </div>
+        </nav>
       )}
 
       <div className="mb-4">
@@ -265,7 +265,8 @@ export default async function EstiloPage({
       </div>
 
       {discosProcessados.length > 0 ? (
-        <>
+        <section aria-labelledby="discos-estilo-heading">
+          <h2 id="discos-estilo-heading" className="sr-only">Discos de {displayName} em vinil</h2>
           <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {discosProcessados.map((disco, index) => (
               <li key={disco.id}>
@@ -281,9 +282,9 @@ export default async function EstiloPage({
               basePath={`/estilo/${slug}`}
             />
           )}
-        </>
+        </section>
       ) : (
-        <div className="text-center py-24 text-dust">
+        <section aria-label="Sem resultados" className="text-center py-24 text-dust">
           <div className="inline-block mb-5 opacity-40">
             <svg viewBox="0 0 64 64" fill="none" className="w-16 h-16 mx-auto">
               <circle cx="32" cy="32" r="30" className="fill-gold" opacity="0.3" />
@@ -296,12 +297,12 @@ export default async function EstiloPage({
             Nenhum disco encontrado
           </p>
           <p className="text-dust text-sm">Tente ajustar os filtros.</p>
-        </div>
+        </section>
       )}
 
       {bioPt && (
-        <section className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
-          <h2 className="font-display text-xl font-bold text-cream mb-3">Sobre o estilo {displayName}</h2>
+        <section aria-labelledby="sobre-estilo-heading" className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
+          <h2 id="sobre-estilo-heading" className="font-display text-xl font-bold text-cream mb-3">Sobre o estilo {displayName}</h2>
           {bioPt.split("\n\n").map((p, i) => (
             <p key={i} className="text-parchment text-sm leading-relaxed mb-3 last:mb-0">{p}</p>
           ))}

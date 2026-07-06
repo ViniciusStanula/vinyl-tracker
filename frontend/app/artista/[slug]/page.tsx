@@ -191,14 +191,17 @@ export default async function ArtistaPage({
       ) : null}
 
       {items.length > 0 ? (
-        <ArtistaRecords items={items} slug={slug} />
+        <section aria-labelledby="discos-artista-heading">
+          <h2 id="discos-artista-heading" className="sr-only">Discos de {artista} disponíveis</h2>
+          <ArtistaRecords items={items} slug={slug} />
+        </section>
       ) : (
         <p className="text-dust text-sm py-12 text-center">Nenhum disco disponível no momento.</p>
       )}
 
       {unavailableItems.length > 0 && (
-        <section aria-label="Discos indisponíveis" className="mt-10">
-          <h2 className="font-display text-lg font-bold text-dust mb-3">
+        <section aria-labelledby="indisponiveis-heading" className="mt-10">
+          <h2 id="indisponiveis-heading" className="font-display text-lg font-bold text-dust mb-3">
             Indisponível no momento
           </h2>
           <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -212,8 +215,8 @@ export default async function ArtistaPage({
       )}
 
       {bioPt && (
-        <section className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
-          <h2 className="font-display text-xl font-black text-cream mb-3">Sobre {artista}</h2>
+        <section aria-labelledby="sobre-artista-heading" className="mt-10 bg-sleeve border border-groove rounded-xl p-6">
+          <h2 id="sobre-artista-heading" className="font-display text-xl font-black text-cream mb-3">Sobre {artista}</h2>
           {bioPt.split("\n\n").map((p, i) => (
             <p key={i} className="text-parchment text-sm leading-relaxed mb-3 last:mb-0">{p}</p>
           ))}
@@ -221,14 +224,14 @@ export default async function ArtistaPage({
       )}
 
       {!isUnknownArtist && total > 0 && (
-        <section aria-label="Guias relacionados" className="mt-10 pt-6 border-t border-groove flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        <nav aria-label="Guias relacionados" className="mt-10 pt-6 border-t border-groove flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <Link href="/guias/como-cuidar-de-discos-de-vinil" className="text-dust hover:text-gold transition-colors">
             Como cuidar dos seus discos de vinil
           </Link>
           <Link href="/guias/vinil-180g-vale-a-pena" className="text-dust hover:text-gold transition-colors">
             Vinil 180g vale a pena?
           </Link>
-        </section>
+        </nav>
       )}
 
       <BackToTop />
