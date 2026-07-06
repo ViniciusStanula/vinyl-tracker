@@ -104,8 +104,10 @@ export default memo(function DiscoCard({
   // Score-3 gets a subtle gold ring — suppressed when price history is hidden
   const cardRing = (!HIDE_PRICE_HISTORY && dealScore === 3) ? " ring-1 ring-gold/40" : "";
 
+  const titleId = `disco-title-${disco.id}`;
+
   return (
-    <div className={`relative group bg-sleeve rounded-xl overflow-hidden flex flex-col border border-groove hover:border-wax transition-colors duration-200${cardRing}${isUnavailable ? " opacity-60 grayscale" : ""}`}>
+    <article aria-labelledby={titleId} className={`relative group bg-sleeve rounded-xl overflow-hidden flex flex-col border border-groove hover:border-wax transition-colors duration-200${cardRing}${isUnavailable ? " opacity-60 grayscale" : ""}`}>
       {/* Full-card link */}
       <Link
         href={`/disco/${disco.slug}`}
@@ -118,7 +120,7 @@ export default memo(function DiscoCard({
         {imgUrl ? (
           <Image
             src={imgUrl}
-            alt={`${disco.titulo} por ${disco.artista} — capa do álbum`}
+            alt={`${disco.titulo} por ${disco.artista}, capa do álbum`}
             fill
             sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, (max-width: 1279px) 25vw, (max-width: 1535px) 20vw, 17vw"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
@@ -199,6 +201,7 @@ export default memo(function DiscoCard({
         {/* Title — Fraunces for editorial character. <p>, not a heading:
             dozens of cards per page would flood the document outline. */}
         <p
+          id={titleId}
           className="font-display text-cream text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] mt-0.5"
           title={disco.titulo}
         >
@@ -228,6 +231,6 @@ export default memo(function DiscoCard({
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
 });

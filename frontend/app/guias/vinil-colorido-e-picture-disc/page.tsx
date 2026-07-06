@@ -745,8 +745,8 @@ export default function VinilColoridoPage() {
   );
 
   return (
-    <main id="main-content" className="vinil-sidebar-layout mx-auto px-4 py-8">
+    <div className="vinil-sidebar-layout mx-auto px-4 py-8">
       {content}
-    </main>
+    </div>
   );
 }

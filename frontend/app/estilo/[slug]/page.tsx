@@ -104,12 +104,12 @@ export default async function EstiloPage({
     console.error("[EstiloPage] getEstiloPageData failed for slug=%s", slug);
     if (process.env.NODE_ENV === "development") console.error(err);
     return (
-      <main className="max-w-7xl mx-auto px-4 py-24 text-center">
+      <div className="max-w-7xl mx-auto px-4 py-24 text-center">
         <p className="font-display text-parchment text-lg font-semibold mb-2">
           Erro ao carregar página de estilo
         </p>
         <p className="text-dust text-sm">Tente novamente em alguns instantes.</p>
-      </main>
+      </div>
     );
   }
   if (!data) notFound();
@@ -179,7 +179,7 @@ export default async function EstiloPage({
 
   return (
     <>
-      <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -266,11 +266,13 @@ export default async function EstiloPage({
 
       {discosProcessados.length > 0 ? (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {discosProcessados.map((disco, index) => (
-              <DiscoCard key={disco.id} disco={disco} priority={index < 4} />
+              <li key={disco.id}>
+                <DiscoCard disco={disco} priority={index < 4} />
+              </li>
             ))}
-          </div>
+          </ul>
           {totalPages > 1 && (
             <Pagination
               currentPage={currentPage}
@@ -307,7 +309,7 @@ export default async function EstiloPage({
       )}
 
       <BackToTop />
-    </main>
+    </div>
     </>
   );
 }

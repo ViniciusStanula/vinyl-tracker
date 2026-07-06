@@ -88,7 +88,7 @@ export default async function DiscosAbaixo200Page({
   });
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -112,11 +112,13 @@ export default async function DiscosAbaixo200Page({
 
       {pageItems.length > 0 && (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {pageItems.map((disco, i) => (
-              <DiscoCard key={disco.id} disco={disco} priority={i < 10} />
+              <li key={disco.id}>
+                <DiscoCard disco={disco} priority={i < 10} />
+              </li>
             ))}
-          </div>
+          </ul>
 
           {totalPages > 1 && (
             <Pagination
@@ -128,6 +130,6 @@ export default async function DiscosAbaixo200Page({
           )}
         </>
       )}
-    </main>
+    </div>
   );
 }

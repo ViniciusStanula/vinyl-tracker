@@ -76,7 +76,7 @@ export default async function RockPage() {
   });
 
   return (
-    <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumb }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -170,6 +170,6 @@ export default async function RockPage() {
           Como avaliar o estado antes de comprar
         </Link>
       </footer>
-    </main>
+    </div>
   );
 }

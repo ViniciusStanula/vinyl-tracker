@@ -70,7 +70,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-record/95 backdrop-blur-md border-b border-groove/60">
+      <header className="sticky top-0 z-50 bg-record/95 backdrop-blur-md border-b border-groove/60">
         <div className="max-w-7xl mx-auto px-4 h-[62px] flex items-center gap-2 sm:gap-4">
 
           {/* ── Brand ── */}
@@ -98,7 +98,7 @@ export default function Navbar() {
           </div>
 
           {/* ── Desktop nav links ── */}
-          <div className="hidden sm:flex items-center gap-0.5 shrink-0">
+          <nav aria-label="Navegação principal" className="hidden sm:flex items-center gap-0.5 shrink-0">
             {NAV_LINKS.map(({ href, label }) => (
               <Link
                 key={href}
@@ -113,7 +113,7 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
-          </div>
+          </nav>
 
           {/* ── Mobile hamburger ── */}
           <button
@@ -136,7 +136,7 @@ export default function Navbar() {
           </button>
 
         </div>
-      </nav>
+      </header>
 
       {/* ── Mobile drawer ── */}
       {open && (

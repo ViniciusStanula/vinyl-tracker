@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { resizeAmazonImage } from "@/lib/utils/amazonImage";
@@ -8,7 +8,17 @@ import type { SearchSuggestion } from "@/lib/db/search";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
+// useSearchParams needs a Suspense boundary now that the shared loading.tsx
+// (which used to provide one) is gone.
 export default function AlertasPage() {
+  return (
+    <Suspense fallback={<div className="max-w-xl mx-auto px-4 py-8" />}>
+      <AlertasForm />
+    </Suspense>
+  );
+}
+
+function AlertasForm() {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -145,7 +155,7 @@ export default function AlertasPage() {
 
   if (formState === "success") {
     return (
-      <main id="main-content" className="max-w-xl mx-auto px-4 py-16 text-center">
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
         <div className="bg-sleeve border border-groove rounded-xl p-8">
           <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gold/10 border border-gold/30 mx-auto mb-4">
             <svg className="w-6 h-6 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -166,12 +176,12 @@ export default function AlertasPage() {
             Voltar ao início
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main id="main-content" className="max-w-xl mx-auto px-4 py-8">
+    <div className="max-w-xl mx-auto px-4 py-8">
       <nav className="mb-6 text-sm text-dust flex gap-2">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
         <span>›</span>
@@ -346,6 +356,6 @@ export default function AlertasPage() {
           ) : "Criar alerta"}
         </button>
       </form>
-    </main>
+    </div>
   );
 }

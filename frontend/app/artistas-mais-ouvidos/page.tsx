@@ -45,15 +45,11 @@ export default async function ArtistasPage({
   const sort     = sortParam ?? "desconto";
   const precoMax = precoMaxParam ? Number(precoMaxParam) : null;
 
-  let items: Awaited<ReturnType<typeof queryTopArtistAllDealsWithCache>>["items"] = [];
-  let total = 0;
-  try {
-    ({ items, total } = await queryTopArtistAllDealsWithCache(page, sort, precoMax));
-  } catch {
-    // DB unavailable
-  }
-
-  const totalPages = Math.ceil(total / PER_PAGE);
+  // Kick off the (cached) query without awaiting, so the h1 + intro ship in the
+  // shell. The header count and the grid both await this one promise — a single
+  // DB call — and stream in via <Suspense>.
+  const dataPromise = queryTopArtistAllDealsWithCache(page, sort, precoMax)
+    .catch(() => ({ items: [], total: 0 } as Awaited<ReturnType<typeof queryTopArtistAllDealsWithCache>>));
 
   const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
@@ -65,7 +61,7 @@ export default async function ArtistasPage({
   });
 
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       <header className="mb-4">
@@ -80,9 +76,9 @@ export default async function ArtistasPage({
         </h1>
         <p className="mt-2 text-parchment text-sm max-w-md">
           Todos os discos dos artistas do top mundial, ordenados por oferta.
-          {total > 0 && (
-            <span className="ml-1 text-dust">({total} discos)</span>
-          )}
+          <Suspense fallback={null}>
+            <ArtistDiscosCount data={dataPromise} />
+          </Suspense>
         </p>
       </header>
 
@@ -92,26 +88,81 @@ export default async function ArtistasPage({
         </Suspense>
       </div>
 
-      {items.length === 0 ? (
-        <p className="text-dust text-sm">Nenhum resultado disponível no momento.</p>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {items.map((disco, i) => (
-              <DiscoCard key={disco.id} disco={disco} priority={i < 10} />
-            ))}
-          </div>
+      <Suspense fallback={<ArtistDiscosSkeleton />}>
+        <ArtistDiscosResults
+          data={dataPromise}
+          page={page}
+          sortParam={sortParam}
+          precoMaxParam={precoMaxParam}
+        />
+      </Suspense>
+    </div>
+  );
+}
 
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              searchParams={{ sort: sortParam, precoMax: precoMaxParam }}
-              basePath="/artistas-mais-ouvidos"
-            />
-          )}
-        </>
+type ArtistDeals = Awaited<ReturnType<typeof queryTopArtistAllDealsWithCache>>;
+
+async function ArtistDiscosCount({ data }: { data: Promise<ArtistDeals> }) {
+  const { total } = await data;
+  if (total <= 0) return null;
+  return <span className="ml-1 text-dust">({total} discos)</span>;
+}
+
+async function ArtistDiscosResults({
+  data, page, sortParam, precoMaxParam,
+}: {
+  data: Promise<ArtistDeals>;
+  page: number;
+  sortParam?: string;
+  precoMaxParam?: string;
+}) {
+  const { items, total } = await data;
+  const totalPages = Math.ceil(total / PER_PAGE);
+
+  if (items.length === 0) {
+    return <p className="text-dust text-sm">Nenhum resultado disponível no momento.</p>;
+  }
+
+  return (
+    <>
+      <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {items.map((disco, i) => (
+          <li key={disco.id}>
+            <DiscoCard disco={disco} priority={i < 10} />
+          </li>
+        ))}
+      </ul>
+
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          searchParams={{ sort: sortParam, precoMax: precoMaxParam }}
+          basePath="/artistas-mais-ouvidos"
+        />
       )}
-    </main>
+    </>
+  );
+}
+
+/* Fallback shown while the grid streams — mirrors the old loading.tsx grid. */
+function ArtistDiscosSkeleton() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      {Array.from({ length: 15 }).map((_, i) => (
+        <div
+          key={i}
+          className="bg-sleeve border border-groove rounded-xl overflow-hidden animate-pulse"
+        >
+          <div className="aspect-square bg-label" />
+          <div className="p-4 space-y-2">
+            <div className="h-2.5 bg-groove rounded w-1/2" />
+            <div className="h-3.5 bg-groove rounded" />
+            <div className="h-3.5 bg-groove rounded w-3/4" />
+            <div className="h-5 bg-wax/40 rounded w-1/3 mt-2" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

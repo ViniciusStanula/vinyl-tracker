@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Breadcrumb skeleton */}
       <div className="h-4 w-32 bg-groove rounded animate-pulse mb-6" />
 
@@ -32,6 +32,6 @@ export default function Loading() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

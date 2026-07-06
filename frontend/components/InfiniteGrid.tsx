@@ -37,7 +37,7 @@ export default function InfiniteGrid({
   const [fetchError, setFetchError] = useState(false);
 
   const sentinelRef   = useRef<HTMLDivElement>(null);
-  const gridRef       = useRef<HTMLDivElement>(null);
+  const gridRef       = useRef<HTMLUListElement>(null);
   const prevAnimKey   = useRef(animationKey);
 
   // Read scroll mode preference from localStorage after mount
@@ -130,14 +130,16 @@ export default function InfiniteGrid({
       </div>
 
       {/* Card grid — 4 cols desktop, 3 tablet, 2 mobile */}
-      <div
+      <ul
         ref={gridRef}
         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4"
       >
         {items.map((disco, index) => (
-          <DiscoCard key={disco.id} disco={disco} priority={index < 2} />
+          <li key={disco.id}>
+            <DiscoCard disco={disco} priority={index < 2} />
+          </li>
         ))}
-      </div>
+      </ul>
 
       {/* Infinite scroll: sentinel + status */}
       {mode === "infinite" && (

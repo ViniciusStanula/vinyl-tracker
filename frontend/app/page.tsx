@@ -111,28 +111,24 @@ export default async function HomePage({
   const searchTerm = q?.trim() ?? "";
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
-  // Fetch grid, count, and carousel in parallel. Carousel is awaited inline
-  // (no Suspense) so its HTML ships in the initial flush — no skeleton swap,
-  // and the first slides' priority images are discovered immediately.
+  // Hero count + carousel are awaited in the shell so the hero, its LCP image,
+  // and the carousel (with head-preloaded priority images) ship inside <main>
+  // before the footer — both cheap, cached queries. The heavy grid query streams
+  // via <Suspense> below, so it never blocks the shell (TTFB stays low).
   // Cache misses are absorbed by the crawler's post-purge warm-up GETs.
-  let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
-  let total = 0, totalPages = 0;
   let count = 0;
   let carouselItems: Awaited<ReturnType<typeof queryCarouselDiscosWithCache>> = [];
   try {
-    ([{ items, total, totalPages }, count, carouselItems] = await Promise.all([
-      queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }),
+    ([count, carouselItems] = await Promise.all([
       getDiscoCount(),
       searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscosWithCache(),
     ]));
   } catch {
-    // DB unavailable — render empty state
+    // DB unavailable — render hero without count, empty carousel
   }
 
-  const currentPage = Math.min(page, totalPages);
-
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
 
       {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test) ── */}
       {SHOW_HERO && (
@@ -196,7 +192,7 @@ export default async function HomePage({
 
       {/* ── Genre quick-links ────────────────────────────────────── */}
       {!searchTerm && !artista && (
-        <nav aria-label="Explorar por estilo" className="flex flex-wrap gap-2 mb-6">
+        <nav aria-label="Estilos em destaque" className="flex flex-wrap gap-2 mb-6">
           {GENRE_LINKS.map(({ label, slug }) => (
             <Link
               key={slug}
@@ -233,6 +229,77 @@ export default async function HomePage({
         </p>
       )}
 
+      {/* ── Result count + grid stream in; everything above ships in the
+             shell so the hero, h1, carousel, and links land inside <main>
+             before the footer in the server-rendered HTML. */}
+      <Suspense fallback={<HomeResultsSkeleton />}>
+        <HomeResults
+          searchTerm={searchTerm}
+          sort={sort}
+          artista={artista}
+          precoMax={precoMax}
+          page={page}
+          q={q}
+          precoMaxStr={precoMaxStr}
+        />
+      </Suspense>
+
+      {/* ── Guias quick-links — discovery footer ─────────────────── */}
+      {!searchTerm && !artista && (
+        <section aria-labelledby="guias-heading" className="mt-12 pt-8 border-t border-groove">
+          <h2 id="guias-heading" className="font-display text-lg font-bold text-cream mb-3">Guias de Vinil</h2>
+          <nav aria-label="Guias de vinil" className="flex flex-wrap gap-2">
+            {[
+              { href: "/guias/como-cuidar-de-discos-de-vinil", label: "Como cuidar do vinil" },
+              { href: "/guias/vinil-180g-vale-a-pena",         label: "Vinil 180g vale a pena?" },
+              { href: "/guias/vinil-colorido-e-picture-disc",  label: "Colorido e picture disc" },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+              >
+                {label}
+              </Link>
+            ))}
+            <Link
+              href="/guias"
+              className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+            >
+              Todos os guias →
+            </Link>
+          </nav>
+        </section>
+      )}
+
+      <BackToTop />
+    </div>
+  );
+}
+
+async function HomeResults({
+  searchTerm, sort, artista, precoMax, page, q, precoMaxStr,
+}: {
+  searchTerm: string;
+  sort: string;
+  artista?: string;
+  precoMax: number | null;
+  page: number;
+  q?: string;
+  precoMaxStr?: string;
+}) {
+  let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
+  let total = 0, totalPages = 0;
+  try {
+    ({ items, total, totalPages } = await queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }));
+  } catch {
+    // DB unavailable — render empty state
+  }
+
+  const currentPage = Math.min(page, totalPages);
+
+  return (
+    <>
       {/* ── Result count + active artist badge ──────────────────── */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <p className="text-dust text-sm">
@@ -292,36 +359,33 @@ export default async function HomePage({
           </Link>
         </section>
       )}
+    </>
+  );
+}
 
-      {/* ── Guias quick-links — discovery footer ─────────────────── */}
-      {!searchTerm && !artista && (
-        <section aria-label="Guias de vinil" className="mt-12 pt-8 border-t border-groove">
-          <h2 className="font-display text-lg font-bold text-cream mb-3">Guias de Vinil</h2>
-          <nav className="flex flex-wrap gap-2">
-            {[
-              { href: "/guias/como-cuidar-de-discos-de-vinil", label: "Como cuidar do vinil" },
-              { href: "/guias/vinil-180g-vale-a-pena",         label: "Vinil 180g vale a pena?" },
-              { href: "/guias/vinil-colorido-e-picture-disc",  label: "Colorido e picture disc" },
-            ].map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-              >
-                {label}
-              </Link>
-            ))}
-            <Link
-              href="/guias"
-              className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-            >
-              Todos os guias →
-            </Link>
-          </nav>
-        </section>
-      )}
-
-      <BackToTop />
-    </main>
+/* Fallback shown while HomeResults streams — mirrors the old loading.tsx grid. */
+function HomeResultsSkeleton() {
+  return (
+    <>
+      <div className="h-4 w-36 bg-groove rounded animate-pulse mb-5" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className="bg-sleeve border border-groove rounded-xl overflow-hidden animate-pulse"
+          >
+            <div className="aspect-square bg-label" />
+            <div className="p-3 space-y-2">
+              <div className="h-3 bg-groove rounded w-1/2" />
+              <div className="h-4 bg-groove rounded" />
+              <div className="h-4 bg-groove rounded w-3/4" />
+              <div className="h-3 bg-groove rounded w-2/5 mt-1" />
+              <div className="h-6 bg-wax/40 rounded w-1/3 mt-2" />
+              <div className="h-7 bg-groove rounded mt-3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

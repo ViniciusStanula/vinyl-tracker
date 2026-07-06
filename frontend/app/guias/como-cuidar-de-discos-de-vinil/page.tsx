@@ -163,7 +163,7 @@ export default function ComoGuardarPage() {
   });
 
   return (
-    <main id="main-content" className="vinil-sidebar-layout mx-auto px-4 py-8">
+    <div className="vinil-sidebar-layout mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: articleLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -1341,6 +1341,6 @@ export default function ComoGuardarPage() {
         </section>
 
       </div>
-    </main>
+    </div>
   );
 }

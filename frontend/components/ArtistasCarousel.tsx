@@ -8,7 +8,7 @@ import type { ProcessedDisco } from "@/lib/queryDiscos";
 const SCROLL_AMOUNT = 640;
 
 export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] }) {
-  const ref                       = useRef<HTMLDivElement>(null);
+  const ref                       = useRef<HTMLUListElement>(null);
   const [canLeft,  setCanLeft ]   = useState(false);
   const [canRight, setCanRight]   = useState(false);
 
@@ -35,11 +35,11 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
   if (items.length === 0) return null;
 
   return (
-    <section className="mb-10">
+    <section aria-labelledby="carousel-heading" className="mb-10">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-baseline gap-3">
           <div>
-            <h2 className="font-display text-xl font-black text-cream">
+            <h2 id="carousel-heading" className="font-display text-xl font-black text-cream">
               Discos em Destaque
             </h2>
             <div className="mt-1 h-0.5 w-10 bg-gold rounded-full" aria-hidden="true" />
@@ -71,16 +71,16 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
         </div>
       </div>
 
-      <div
+      <ul
         ref={ref}
         className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 no-scrollbar"
       >
         {items.map((disco, i) => (
-          <div key={disco.id} className="snap-start shrink-0 w-44 sm:w-52">
+          <li key={disco.id} className="snap-start shrink-0 w-44 sm:w-52">
             <DiscoCard disco={disco} priority={i < 3} />
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

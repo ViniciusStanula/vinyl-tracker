@@ -82,7 +82,7 @@ export default function TopArtistasSptPage() {
   });
 
   return (
-    <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -124,7 +124,7 @@ export default function TopArtistasSptPage() {
         {data?.last_updated && (
           <p className="mt-4 text-xs text-parchment opacity-80">
             Última atualização:{" "}
-            <span className="text-gold font-medium opacity-100">
+            <time dateTime={new Date(data.last_updated).toISOString()} className="text-gold font-medium opacity-100">
               {new Date(data.last_updated).toLocaleDateString("pt-BR", {
                 day: "2-digit",
                 month: "long",
@@ -133,7 +133,7 @@ export default function TopArtistasSptPage() {
                 minute: "2-digit",
                 timeZone: "America/Sao_Paulo",
               })}
-            </span>{" "}
+            </time>{" "}
             (horário de Brasília)
           </p>
         )}
@@ -243,6 +243,6 @@ export default function TopArtistasSptPage() {
           </p>
         </section>
       </div>
-    </main>
+    </div>
   );
 }

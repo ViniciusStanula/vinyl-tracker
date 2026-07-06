@@ -8,10 +8,7 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <main
-      id="main-content"
-      className="min-h-[calc(100dvh-62px)] flex items-center justify-center px-6 py-16"
-    >
+    <div className="min-h-[calc(100dvh-62px)] flex items-center justify-center px-6 py-16">
       <div className="w-full max-w-5xl flex flex-col-reverse sm:flex-row items-center gap-10 sm:gap-16">
 
         {/* ── Left: text + links ── */}
@@ -127,6 +124,6 @@ export default function NotFound() {
         </div>
 
       </div>
-    </main>
+    </div>
   );
 }

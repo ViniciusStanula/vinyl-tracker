@@ -135,7 +135,7 @@ export default function Vinil180gPage() {
   });
 
   return (
-    <main id="main-content" className="vinil-sidebar-layout mx-auto px-4 py-8">
+    <div className="vinil-sidebar-layout mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: articleLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -821,6 +821,6 @@ export default function Vinil180gPage() {
         </section>
 
       </div>
-    </main>
+    </div>
   );
 }
