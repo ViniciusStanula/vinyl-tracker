@@ -67,7 +67,7 @@ export default async function SitemapPage() {
   const grouped = groupByLetter(artists);
 
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* ── Breadcrumbs ─────────────────────────────────────────── */}
       <nav className="mb-6 text-sm text-dust flex gap-2">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
@@ -184,6 +184,6 @@ export default async function SitemapPage() {
           </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Heading skeleton */}
       <div className="h-9 w-56 bg-groove rounded-lg mb-4 animate-pulse" />
 
@@ -29,6 +29,6 @@ export default function Loading() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

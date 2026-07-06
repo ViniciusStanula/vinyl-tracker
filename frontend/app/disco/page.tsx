@@ -110,7 +110,7 @@ export default async function DiscosPage({
   const currentPage = Math.min(page, totalPages);
 
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
 
       <h1 className="font-display text-3xl font-black text-cream mb-2 [text-wrap:balance]">
         Catálogo de Discos de Vinil
@@ -208,6 +208,6 @@ export default async function DiscosPage({
       )}
 
       <BackToTop />
-    </main>
+    </div>
   );
 }

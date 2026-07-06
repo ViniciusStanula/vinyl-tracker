@@ -50,7 +50,7 @@ export default function GerenciarAlertaPage() {
 
   if (loading) {
     return (
-      <main id="main-content" className="max-w-xl mx-auto px-4 py-8">
+      <div className="max-w-xl mx-auto px-4 py-8">
         <div className="h-5 w-32 bg-groove rounded animate-pulse mb-6" />
         <div className="bg-sleeve border border-groove rounded-xl p-6 space-y-4">
           <div className="h-6 w-48 bg-groove rounded animate-pulse" />
@@ -64,13 +64,13 @@ export default function GerenciarAlertaPage() {
           </div>
           <div className="h-12 w-full bg-groove rounded-xl animate-pulse mt-4" />
         </div>
-      </main>
+      </div>
     );
   }
 
   if (notFound || !sub) {
     return (
-      <main id="main-content" className="max-w-xl mx-auto px-4 py-16 text-center">
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
         <div className="bg-sleeve border border-groove rounded-xl p-8">
           <h1 className="font-display text-xl font-black text-cream mb-3">
             Alerta não encontrado
@@ -85,13 +85,13 @@ export default function GerenciarAlertaPage() {
             Criar novo alerta
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (deleted) {
     return (
-      <main id="main-content" className="max-w-xl mx-auto px-4 py-16 text-center">
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
         <div className="bg-sleeve border border-groove rounded-xl p-8">
           <div className="flex items-center justify-center w-12 h-12 rounded-full bg-deallit/10 border border-deallit/30 mx-auto mb-4">
             <svg className="w-6 h-6 text-deallit" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -111,7 +111,7 @@ export default function GerenciarAlertaPage() {
             Voltar ao início
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -121,7 +121,7 @@ export default function GerenciarAlertaPage() {
   });
 
   return (
-    <main id="main-content" className="max-w-xl mx-auto px-4 py-8">
+    <div className="max-w-xl mx-auto px-4 py-8">
       <nav className="mb-6 text-sm text-dust flex gap-2">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
         <span>›</span>
@@ -198,6 +198,6 @@ export default function GerenciarAlertaPage() {
           </>
         )}
       </div>
-    </main>
+    </div>
   );
 }

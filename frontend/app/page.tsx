@@ -132,7 +132,7 @@ export default async function HomePage({
   const currentPage = Math.min(page, totalPages);
 
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
 
       {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test) ── */}
       {SHOW_HERO && (
@@ -196,7 +196,7 @@ export default async function HomePage({
 
       {/* ── Genre quick-links ────────────────────────────────────── */}
       {!searchTerm && !artista && (
-        <nav aria-label="Explorar por estilo" className="flex flex-wrap gap-2 mb-6">
+        <nav aria-label="Estilos em destaque" className="flex flex-wrap gap-2 mb-6">
           {GENRE_LINKS.map(({ label, slug }) => (
             <Link
               key={slug}
@@ -295,9 +295,9 @@ export default async function HomePage({
 
       {/* ── Guias quick-links — discovery footer ─────────────────── */}
       {!searchTerm && !artista && (
-        <section aria-label="Guias de vinil" className="mt-12 pt-8 border-t border-groove">
-          <h2 className="font-display text-lg font-bold text-cream mb-3">Guias de Vinil</h2>
-          <nav className="flex flex-wrap gap-2">
+        <section aria-labelledby="guias-heading" className="mt-12 pt-8 border-t border-groove">
+          <h2 id="guias-heading" className="font-display text-lg font-bold text-cream mb-3">Guias de Vinil</h2>
+          <nav aria-label="Guias de vinil" className="flex flex-wrap gap-2">
             {[
               { href: "/guias/como-cuidar-de-discos-de-vinil", label: "Como cuidar do vinil" },
               { href: "/guias/vinil-180g-vale-a-pena",         label: "Vinil 180g vale a pena?" },
@@ -322,6 +322,6 @@ export default async function HomePage({
       )}
 
       <BackToTop />
-    </main>
+    </div>
   );
 }

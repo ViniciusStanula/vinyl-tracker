@@ -124,11 +124,13 @@ export default function ArtistaRecords({
 
       {pageItems.length > 0 ? (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {pageItems.map((disco, index) => (
-              <DiscoCard key={disco.id} disco={disco} priority={index < 4} />
+              <li key={disco.id}>
+                <DiscoCard disco={disco} priority={index < 4} />
+              </li>
             ))}
-          </div>
+          </ul>
 
           {totalPages > 1 && (
             <nav aria-label="Paginação" className="flex items-center justify-center gap-2 mt-6">

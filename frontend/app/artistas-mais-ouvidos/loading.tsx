@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Back link + heading skeleton */}
       <div className="mb-4">
         <div className="h-4 w-16 bg-groove rounded animate-pulse mb-4" />
@@ -30,6 +30,6 @@ export default function Loading() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

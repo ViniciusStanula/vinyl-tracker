@@ -1,7 +1,7 @@
 /** Shown by Next.js App Router while the homepage is loading. */
 export default function Loading() {
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Hero skeleton */}
       <div className="mb-8 bg-sleeve border border-groove rounded-2xl px-6 py-7 animate-pulse">
         <div className="h-3 w-40 bg-groove rounded mb-3" />
@@ -34,6 +34,6 @@ export default function Loading() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

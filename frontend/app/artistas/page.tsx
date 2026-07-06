@@ -52,7 +52,7 @@ export default async function ArtistasIndexPage() {
   });
 
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
 
@@ -121,6 +121,6 @@ export default async function ArtistasIndexPage() {
           })}
         </div>
       )}
-    </main>
+    </div>
   );
 }

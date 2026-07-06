@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function PoliticaDePrivacidadePage() {
   return (
-    <main id="main-content" className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8">
       <nav className="mb-6 text-sm text-dust flex gap-2">
         <Link href="/" className="hover:text-gold transition-colors">Início</Link>
         <span>›</span>
@@ -19,7 +19,7 @@ export default function PoliticaDePrivacidadePage() {
         <h1 className="font-display text-3xl font-black text-cream leading-tight">
           Política de Privacidade
         </h1>
-        <p className="mt-2 text-dust text-sm">Última atualização: maio de 2026</p>
+        <p className="mt-2 text-dust text-sm">Última atualização: <time dateTime="2026-05">maio de 2026</time></p>
       </header>
 
       <div className="flex flex-col gap-6 text-sm text-parchment leading-relaxed">
@@ -130,6 +130,6 @@ export default function PoliticaDePrivacidadePage() {
         </section>
 
       </div>
-    </main>
+    </div>
   );
 }

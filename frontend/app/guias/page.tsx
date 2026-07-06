@@ -118,7 +118,7 @@ export default function GuiasPage() {
   });
 
   return (
-    <main id="main-content" className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumb }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -180,6 +180,6 @@ export default function GuiasPage() {
           </Link>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

@@ -491,7 +491,7 @@ export default async function DiscoPage({
 
   return (
     <>
-      <main id="main-content" className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: productJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -532,7 +532,7 @@ export default async function DiscoPage({
                 <div className="relative aspect-square bg-label rounded-2xl overflow-hidden">
                   <Image
                     src={disco.imgUrl}
-                    alt={`${disco.titulo} por ${disco.artista} — capa do álbum`}
+                    alt={`${disco.titulo} por ${disco.artista}, capa do álbum`}
                     fill
                     sizes="(max-width: 1024px) 100vw, 480px"
                     className="object-cover"
@@ -662,7 +662,7 @@ export default async function DiscoPage({
                     Indisponível {lojaComPrep}
                   </div>
                   {dataAtual && (
-                    <p className="text-xs text-dust pl-1">Último registro em {dataAtualLabel}</p>
+                    <p className="text-xs text-dust pl-1">Último registro em {dataAtual ? <time dateTime={dataAtual.toISOString()}>{dataAtualLabel}</time> : dataAtualLabel}</p>
                   )}
                   <AlertaTrigger {...alertProps} variant="primary" label="Avise-me quando voltar" />
                   <div className="flex justify-end">
@@ -678,7 +678,7 @@ export default async function DiscoPage({
                 <div className="flex-1 px-3 py-3 min-w-0">
                   <dt className="text-[9px] text-dust uppercase tracking-wide mb-1">Atual</dt>
                   <dd className="font-bold text-gold tabular-nums text-xs sm:text-sm">{fmt(precoAtual)}</dd>
-                  <dd className="text-[9px] text-dust mt-0.5 truncate">{dataAtualLabel}</dd>
+                  <dd className="text-[9px] text-dust mt-0.5 truncate">{dataAtual ? <time dateTime={dataAtual.toISOString()}>{dataAtualLabel}</time> : dataAtualLabel}</dd>
                 </div>
                 <div className="w-px bg-groove self-stretch" aria-hidden="true" />
                 <div className="flex-1 px-3 py-3 min-w-0">
@@ -686,7 +686,7 @@ export default async function DiscoPage({
                     Mín. <span className="text-deallit">↓</span>
                   </dt>
                   <dd className="font-bold text-deallit tabular-nums text-xs sm:text-sm">{fmt(precoMin)}</dd>
-                  {minRecord && <dd className="text-[9px] text-dust mt-0.5">{fmtDate(minRecord.capturadoEm)}</dd>}
+                  {minRecord && <dd className="text-[9px] text-dust mt-0.5"><time dateTime={minRecord.capturadoEm.toISOString()}>{fmtDate(minRecord.capturadoEm)}</time></dd>}
                 </div>
                 <div className="w-px bg-groove self-stretch" aria-hidden="true" />
                 <div className="flex-1 px-3 py-3 min-w-0">
@@ -694,7 +694,7 @@ export default async function DiscoPage({
                     Máx. <span className="text-cut">↑</span>
                   </dt>
                   <dd className="font-bold text-cut tabular-nums text-xs sm:text-sm">{fmt(precoMax)}</dd>
-                  {maxRecord && <dd className="text-[9px] text-dust mt-0.5">{fmtDate(maxRecord.capturadoEm)}</dd>}
+                  {maxRecord && <dd className="text-[9px] text-dust mt-0.5"><time dateTime={maxRecord.capturadoEm.toISOString()}>{fmtDate(maxRecord.capturadoEm)}</time></dd>}
                 </div>
               </dl>
             )}
@@ -848,6 +848,7 @@ export default async function DiscoPage({
                       <div className="flex justify-between">
                         <dt className="text-dust">Lançamento</dt>
                         <dd className="text-cream font-medium">
+                          <time dateTime={mbInfo.releaseYear}>
                           {(() => {
                             const year = parseInt(mbInfo.releaseYear, 10);
                             const decade = Math.floor(year / 10) * 10;
@@ -862,6 +863,7 @@ export default async function DiscoPage({
                               mbInfo.releaseYear
                             );
                           })()}
+                          </time>
                         </dd>
                       </div>
                     )}
@@ -952,11 +954,13 @@ export default async function DiscoPage({
               Ver Todos
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <ul className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {processedArtistAlbums.map((album) => (
-              <DiscoCard key={album.id} disco={album} />
+              <li key={album.id}>
+                <DiscoCard disco={album} />
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 
@@ -974,16 +978,18 @@ export default async function DiscoPage({
               Ver Todos
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <ul className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {processedDeals.map((deal) => (
-              <DiscoCard key={deal.id} disco={deal} />
+              <li key={deal.id}>
+                <DiscoCard disco={deal} />
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 
       <BackToTop />
-    </main>
+    </div>
     </>
   );
 }

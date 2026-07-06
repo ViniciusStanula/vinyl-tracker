@@ -112,7 +112,7 @@ export default async function OfertasPage() {
   });
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
 
@@ -157,13 +157,15 @@ export default async function OfertasPage() {
               {section.items.length.toLocaleString("pt-BR")}
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {section.items.map((disco, i) => (
-              <DiscoCard key={disco.id} disco={disco} priority={section.offset + i < 10} />
+              <li key={disco.id}>
+                <DiscoCard disco={disco} priority={section.offset + i < 10} />
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       ))}
-    </main>
+    </div>
   );
 }

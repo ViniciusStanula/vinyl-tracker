@@ -85,7 +85,7 @@ export default async function DecadaPage({
   });
 
   return (
-    <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
 
@@ -131,11 +131,13 @@ export default async function DecadaPage({
         <p className="text-dust text-sm py-12 text-center">Nenhum disco encontrado nesta década com os filtros atuais.</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {items.map((disco, i) => (
-              <DiscoCard key={disco.id} disco={disco} priority={i < 10} />
+              <li key={disco.id}>
+                <DiscoCard disco={disco} priority={i < 10} />
+              </li>
             ))}
-          </div>
+          </ul>
           {totalPages > 1 && (
             <Pagination
               currentPage={currentPage}
@@ -146,6 +148,6 @@ export default async function DecadaPage({
           )}
         </>
       )}
-    </main>
+    </div>
   );
 }

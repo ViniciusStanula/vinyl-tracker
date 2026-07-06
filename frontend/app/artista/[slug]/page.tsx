@@ -151,7 +151,7 @@ export default async function ArtistaPage({
 
   return (
     <>
-      <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -201,11 +201,13 @@ export default async function ArtistaPage({
           <h2 className="font-display text-lg font-bold text-dust mb-3">
             Indisponível no momento
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {unavailableItems.map((disco) => (
-              <DiscoCard key={disco.id} disco={disco} />
+              <li key={disco.id}>
+                <DiscoCard disco={disco} />
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 
@@ -230,7 +232,7 @@ export default async function ArtistaPage({
       )}
 
       <BackToTop />
-    </main>
+    </div>
     </>
   );
 }
