@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "garimpa-vinil",
+      "type": "skill-md",
+      "description": "Query vinyl record prices, deals, price history, and artist catalogs on Amazon Brasil via the Garimpa Vinil MCP server. All data public, no authentication required.",
+      "url": "https://www.garimpavinil.com.br/.well-known/agent-skills/garimpa-vinil/SKILL.md",
+      "digest": "sha256:2b201f670e37667949bf8b2289e84d4c59367de85ea17444ef133e30ee207dbc"
+    }
+  ]
+}

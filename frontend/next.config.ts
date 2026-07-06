@@ -59,6 +59,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.mlstatic.com" },
     ],
   },
+  async rewrites() {
+    return [
+      // RFC 9727 — route handler needed for application/linkset+json content type
+      { source: "/.well-known/api-catalog", destination: "/api/well-known/api-catalog" },
+    ];
+  },
   async headers() {
     return [
       {

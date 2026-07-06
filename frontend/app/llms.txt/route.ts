@@ -24,6 +24,11 @@ Available tools:
 
 The same four tools are also exposed in-page via WebMCP (document.modelContext) for browser-based agents.
 
+Agent discovery:
+- API catalog (RFC 9727): ${SITE}/.well-known/api-catalog
+- Agent skills index: ${SITE}/.well-known/agent-skills/index.json
+- Authentication: none required — see ${SITE}/auth.md
+
 ## Deal Scoring
 
 deal_score field:
