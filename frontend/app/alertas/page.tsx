@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { resizeAmazonImage } from "@/lib/utils/amazonImage";
@@ -8,7 +8,17 @@ import type { SearchSuggestion } from "@/lib/db/search";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
+// useSearchParams needs a Suspense boundary now that the shared loading.tsx
+// (which used to provide one) is gone.
 export default function AlertasPage() {
+  return (
+    <Suspense fallback={<div className="max-w-xl mx-auto px-4 py-8" />}>
+      <AlertasForm />
+    </Suspense>
+  );
+}
+
+function AlertasForm() {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);

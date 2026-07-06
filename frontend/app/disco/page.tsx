@@ -99,16 +99,6 @@ export default async function DiscosPage({
   const searchTerm = q?.trim() ?? "";
   const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
 
-  let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
-  let total = 0, totalPages = 0;
-  try {
-    ({ items, total, totalPages } = await queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }));
-  } catch {
-    // DB unavailable — render empty state
-  }
-
-  const currentPage = Math.min(page, totalPages);
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
 
@@ -148,6 +138,48 @@ export default async function DiscosPage({
         </p>
       )}
 
+      {/* ── Result count + grid stream in; static chrome above ships in the
+             shell so the h1 and intro land inside <main> before the footer. */}
+      <Suspense fallback={<DiscosResultsSkeleton />}>
+        <DiscosResults
+          searchTerm={searchTerm}
+          sort={sort}
+          artista={artista}
+          precoMax={precoMax}
+          page={page}
+          q={q}
+          precoMaxStr={precoMaxStr}
+        />
+      </Suspense>
+
+      <BackToTop />
+    </div>
+  );
+}
+
+async function DiscosResults({
+  searchTerm, sort, artista, precoMax, page, q, precoMaxStr,
+}: {
+  searchTerm: string;
+  sort: string;
+  artista?: string;
+  precoMax: number | null;
+  page: number;
+  q?: string;
+  precoMaxStr?: string;
+}) {
+  let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
+  let total = 0, totalPages = 0;
+  try {
+    ({ items, total, totalPages } = await queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }));
+  } catch {
+    // DB unavailable — render empty state
+  }
+
+  const currentPage = Math.min(page, totalPages);
+
+  return (
+    <>
       {/* ── Result count + active filters ───────────────────────── */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <p className="text-dust text-sm">
@@ -206,8 +238,31 @@ export default async function DiscosPage({
           </Link>
         </section>
       )}
+    </>
+  );
+}
 
-      <BackToTop />
-    </div>
+/* Fallback shown while DiscosResults streams — mirrors the loading.tsx grid. */
+function DiscosResultsSkeleton() {
+  return (
+    <>
+      <div className="h-4 w-36 bg-groove rounded animate-pulse mb-5" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div
+            key={i}
+            className="bg-sleeve border border-groove rounded-xl overflow-hidden animate-pulse"
+          >
+            <div className="aspect-square bg-label" />
+            <div className="p-4 space-y-2">
+              <div className="h-2.5 bg-groove rounded w-1/2" />
+              <div className="h-3.5 bg-groove rounded" />
+              <div className="h-3.5 bg-groove rounded w-3/4" />
+              <div className="h-5 bg-wax/40 rounded w-1/3 mt-3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
