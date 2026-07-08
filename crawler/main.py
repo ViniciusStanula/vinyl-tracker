@@ -52,6 +52,11 @@ from database import (
     get_api_budget_used,
     add_api_budget_used,
 )
+from crawl_tiering import (
+    ensure_tier_columns,
+    tier_interval_case_sql,
+    rescore_catalog,
+)
 from bs4 import BeautifulSoup
 from deal_scorer import score_deals
 from utils import gerar_slug
@@ -76,6 +81,15 @@ FRESHNESS_FLOOR_MINUTES = int(os.environ.get("FRESHNESS_FLOOR_MINUTES", "0") or 
 # deals still bypass (Phase 0 re-validates them every run). 0 = old behaviour
 # (flagged rows re-priced every run).
 HOTSET_FLOOR_MINUTES = int(os.environ.get("HOTSET_FLOOR_MINUTES", "720") or "720")
+# Popularity-weighted crawl scheduling. While OFF (default), Phase 3 uses the
+# uniform most-neglected-first backlog exactly as before. When ON, each record's
+# Phase-3 freshness interval is derived from its popularity tier (crawl_tier), so
+# popular records refresh more often and obscure ones less often — within the same
+# Creators API day budget. Requires crawl_tier populated (weekly rescore below).
+TIER_SCHEDULE_ENABLED = os.environ.get("TIER_SCHEDULE_ENABLED", "").strip().lower() in ("1", "true", "yes")
+# Rescore the popularity tiers at most once per this many hours (Last.fm reach
+# moves slowly). Checked at startup; a fresh score is skipped if still within window.
+TIER_RESCORE_HOURS = int(os.environ.get("TIER_RESCORE_HOURS", "168") or "168")  # weekly
 # Global cap on simultaneous storefront (scraper) requests across ALL threads
 # (Step D). Category workers + stale workers can otherwise burst well past this;
 # the semaphore bounds true per-host concurrency regardless of worker counts.
@@ -3048,6 +3062,35 @@ def main():
             ensure_api_budget_ledger(conn)
         except Exception as exc:
             log.warning("ensure_api_budget_ledger failed (day cap falls back to per-run): %s", exc)
+    # Popularity-tier schema + weekly rescore (best-effort; never blocks the crawl).
+    # Runs even when TIER_SCHEDULE_ENABLED is off so tiers are ready/observable
+    # before the schedule is flipped live.
+    try:
+        ensure_tier_columns(conn)
+        with conn.cursor() as _cur:
+            _cur.execute("SET LOCAL statement_timeout = 0")
+            _cur.execute(
+                """SELECT COALESCE(
+                       EXTRACT(EPOCH FROM (NOW() - MAX(popularity_scored_at))) / 3600,
+                       1e9)
+                   FROM "Disco"
+                   WHERE marketplace = 'amazon' AND popularity_scored_at IS NOT NULL"""
+            )
+            hours_since = float(_cur.fetchone()[0])
+        if hours_since >= TIER_RESCORE_HOURS:
+            log.info("Tier rescore: %.0fh since last score (>= %dh) — rescoring catalog.",
+                     hours_since, TIER_RESCORE_HOURS)
+            hist = rescore_catalog(conn)
+            log.info("Tier rescore done. Histogram: %s", hist)
+        else:
+            log.info("Tier rescore skipped: %.0fh since last score (< %dh window).",
+                     hours_since, TIER_RESCORE_HOURS)
+    except Exception as exc:
+        log.warning("Tier scheduling setup failed (Phase 3 falls back to uniform): %s", exc)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
     try:
 
         # ── Phase 0: Re-validate active deals (highest priority) ──────────
@@ -3356,6 +3399,7 @@ def main():
                     conn, seen_asins, limit=_PHASE3_BATCH_SIZE,
                     claim=args.stale_only, floor_minutes=FRESHNESS_FLOOR_MINUTES,
                     hotset_floor_minutes=HOTSET_FLOOR_MINUTES,
+                    tier_interval_sql=(tier_interval_case_sql() if TIER_SCHEDULE_ENABLED else None),
                 )
                 if not batch:
                     log.info("Phase 3: no more stale records after %d records.", phase3_total)
