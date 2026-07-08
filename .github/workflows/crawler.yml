@@ -66,6 +66,10 @@ jobs:
           CREATORS_API_WORKERS: "8"     # parallel getItems; shared TPS bucket still caps real rate at <= TPS
           FRESHNESS_FLOOR_MINUTES: "180"
           HOTSET_FLOOR_MINUTES: "720"   # re-price flagged hot-set ~2x/day (not every run) so the cold tail gets budget
+          # ── Popularity-weighted Phase-3 scheduling ──
+          # Tier freshness by Last.fm reach: S=8h A=24h B=36h C=48h F=72h. Projected
+          # backlog ~1.5k API/day vs 8640 cap. Rollback = set "0" (instant, clean, → FIFO).
+          TIER_SCHEDULE_ENABLED: "1"
           AMAZON_MAX_CONCURRENCY: "4"
           # ── Alert emails ──
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
