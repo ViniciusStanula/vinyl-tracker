@@ -452,6 +452,7 @@ def fetch_stale_records(
     claim: bool = False,
     floor_minutes: int | None = None,
     hotset_floor_minutes: int | None = None,
+    tier_interval_sql: str | None = None,
 ) -> list[dict]:
     """
     Returns Disco rows whose ASINs were NOT encountered during this crawl run.
@@ -473,11 +474,60 @@ def fetch_stale_records(
     re-validates them separately via fetch_active_deals regardless; this carve-out
     keeps them eligible in the Phase-3 backlog path too.)
 
+    TIER SCHEDULE: when tier_interval_sql is provided (a SQL CASE mapping
+    crawl_tier to an INTERVAL, built by crawl_tiering.tier_interval_case_sql),
+    the generic freshness floor is replaced by a per-record interval derived from
+    the record's popularity tier, and results are ordered by tier so the highest-
+    demand records drain the budget first. Deals and the recently-flagged hot set
+    keep their carve-outs (Rule Zero). tier_interval_sql is an internal literal,
+    never user input.
+
     The `claim` parameter is retained for call-site compatibility but is no
     longer used.
 
     Each returned dict has: asin, id, titulo.
     """
+    # ── Tier-scheduled branch ────────────────────────────────────────────
+    if tier_interval_sql:
+        params: list = [list(seen_asins) if seen_asins else ["__none__"]]
+        hot_min = hotset_floor_minutes if (hotset_floor_minutes and hotset_floor_minutes > 0) else 720
+        # Eligible when: active deal (Rule Zero), never crawled, recently-flagged
+        # past its hotset floor, OR crawled longer ago than its tier interval.
+        floor_clause = (
+            " AND (deal_score IS NOT NULL"
+            " OR last_crawled_at IS NULL"
+            " OR (last_flagged_at > NOW() - INTERVAL '7 days'"
+            "     AND last_crawled_at < NOW() - (%s * INTERVAL '1 minute'))"
+            f" OR last_crawled_at < NOW() - ({tier_interval_sql}))"
+        )
+        params.append(hot_min)
+        params.append(limit)
+        with _cursor(conn) as cur:
+            cur.execute(
+                f"""
+                SELECT asin, id, COALESCE(titulo, '') AS titulo, last_crawled_at
+                FROM "Disco"
+                WHERE asin != ALL(%s){floor_clause}
+                  AND (format IS NULL OR format = 'vinyl')
+                  AND marketplace = 'amazon'
+                ORDER BY
+                    CASE
+                        WHEN deal_score IS NOT NULL                       THEN 0
+                        WHEN last_flagged_at > NOW() - INTERVAL '7 days'  THEN 1
+                        ELSE                                                   2
+                    END,
+                    crawl_tier ASC NULLS LAST,
+                    last_crawled_at ASC NULLS FIRST
+                LIMIT %s
+                """,
+                tuple(params),
+            )
+            rows = cur.fetchall()
+        return [
+            {"asin": row[0], "id": row[1], "titulo": row[2], "last_crawled_at": row[3]}
+            for row in rows
+        ]
+
     floor_clause = ""
     params: list = [list(seen_asins) if seen_asins else ["__none__"]]
     if floor_minutes and floor_minutes > 0:
