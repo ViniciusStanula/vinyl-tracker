@@ -121,10 +121,18 @@ def search_release_group(artist: str, album: str) -> dict | None:
 
     # Prefer the album over same-titled singles/EPs — a title like "Off the
     # Wall" returns both a Single and the Album at score 100, and limit=1 would
-    # grab whichever MB lists first. Rank: Album > EP > other; then higher
-    # score; then earliest release (original over reissue/compilation).
+    # grab whichever MB lists first. Rank: studio release > compilation/live;
+    # then Album > EP > other; then higher score; then earliest release
+    # (original over reissue). A compilation carries primary-type "Album", so
+    # without the secondary-type demotion a same-titled best-of (e.g. Iron
+    # Maiden's 2004 comp vs. the 1980 debut) ties on type+score and can win.
     _TYPE_RANK = {"Album": 0, "EP": 1}
+    _DEMOTE_SECONDARY = {"Compilation", "Live", "Interview", "Remix",
+                         "DJ-mix", "Mixtape/Street", "Demo"}
+    def _is_demoted(g: dict) -> bool:
+        return bool(set(g.get("secondary-types") or []) & _DEMOTE_SECONDARY)
     groups.sort(key=lambda g: (
+        1 if _is_demoted(g) else 0,
         _TYPE_RANK.get(g.get("primary-type"), 2),
         -int(g.get("score", 0)),
         g.get("first-release-date") or "9999",
