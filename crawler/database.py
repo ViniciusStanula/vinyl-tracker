@@ -181,7 +181,18 @@ def upsert_batch(conn, items: list[dict]) -> int:
                                       THEN COALESCE("Disco".format, 'vinyl')
                                       ELSE "Disco".format
                                   END,
-                "updatedAt"     = NOW(),
+                -- updatedAt feeds sitemap <lastmod>; only advance it when a
+                -- displayed field actually changes (title, cover, buy link, or
+                -- an artist getting identified). reviewCount/rating drift alone
+                -- must not signal a content change to crawlers. last_crawled_at
+                -- still bumps every crawl.
+                "updatedAt"     = CASE WHEN (
+                        "Disco".titulo   IS DISTINCT FROM EXCLUDED.titulo
+                     OR "Disco"."imgUrl" IS DISTINCT FROM EXCLUDED."imgUrl"
+                     OR "Disco".url      IS DISTINCT FROM EXCLUDED.url
+                     OR ("Disco".artista = 'Artista não identificado'
+                         AND EXCLUDED.artista IS DISTINCT FROM 'Artista não identificado')
+                    ) THEN NOW() ELSE "Disco"."updatedAt" END,
                 last_crawled_at = NOW()
             """,
             disco_rows,
@@ -616,11 +627,25 @@ def mark_stale_price(
             SET disponivel      = TRUE,
                 price_count     = price_count + 1,
                 "reviewCount"   = COALESCE(%s, "reviewCount"),
-                "updatedAt"     = NOW(),
-                last_crawled_at = NOW()
+                last_crawled_at = NOW(),
+                -- Only advance updatedAt (which feeds sitemap <lastmod>) when the
+                -- displayed content actually changes: a new price, or the item
+                -- coming back in stock. Re-recording an unchanged price must not
+                -- signal freshness to crawlers. last_crawled_at still bumps every
+                -- check; HistoricoPreco still gets every point for the chart.
+                "updatedAt"     = CASE
+                    WHEN disponivel = FALSE THEN NOW()
+                    WHEN %s IS DISTINCT FROM (
+                        SELECT "precoBrl" FROM "HistoricoPreco"
+                        WHERE "discoId" = %s
+                        ORDER BY "capturadoEm" DESC
+                        OFFSET 1 LIMIT 1
+                    ) THEN NOW()
+                    ELSE "updatedAt"
+                END
             WHERE id = %s
             """,
-            (review_count, disco_id),
+            (review_count, price_brl, disco_id, disco_id),
         )
     conn.commit()
     check_alert_crossings(conn, disco_id, price_brl)

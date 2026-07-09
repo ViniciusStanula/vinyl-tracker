@@ -377,8 +377,11 @@ export default async function DiscoPage({
       priceCurrency: "BRL",
       price: precoAtual.toFixed(2),
       itemCondition: "https://schema.org/NewCondition",
-      // Crawler refreshes several times daily; +24h is a conservative horizon.
-      priceValidUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      // +30d horizon: the crawler refreshes prices daily, but a short window
+      // forced Google to re-crawl every product just to keep the offer's
+      // priceValidUntil from lapsing. The price is still current (revalidated on
+      // change); this only bounds the schema's validity claim conservatively.
+      priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       availability: disponivel
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
