@@ -180,7 +180,7 @@ export default async function ArtistaPage({
 
       {bioShortPt ? (
         <div className="mb-5 bg-sleeve border border-groove rounded-xl px-5 py-4">
-          <p className="text-parchment text-sm leading-relaxed">{bioShortPt}</p>
+          <p className="text-parchment text-sm leading-relaxed line-clamp-3 sm:line-clamp-none">{bioShortPt}</p>
         </div>
       ) : !isUnknownArtist && total > 0 ? (
         <p className="mb-5 text-dust text-sm">

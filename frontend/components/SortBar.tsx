@@ -55,8 +55,9 @@ export default function SortBar() {
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5 sm:flex-wrap">
 
-        {/* ── Price chips ── */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+        {/* ── Price chips ── wrap so every chip stays visible on mobile
+            instead of scrolling off behind a hidden scrollbar. */}
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0">
             Filtrar por Preço
           </span>

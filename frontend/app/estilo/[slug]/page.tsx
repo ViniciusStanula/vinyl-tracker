@@ -212,50 +212,8 @@ export default async function EstiloPage({
 
       {bioShortPt && (
         <div className="mb-5 bg-sleeve border border-groove rounded-xl px-5 py-4">
-          <p className="text-parchment text-sm leading-relaxed">{bioShortPt}</p>
+          <p className="text-parchment text-sm leading-relaxed line-clamp-3 sm:line-clamp-none">{bioShortPt}</p>
         </div>
-      )}
-
-      {/* Top artists in this genre — internal link equity to artist pages */}
-      {topArtists.length > 0 && (
-        <nav aria-labelledby="artistas-genero-heading" className="mb-5">
-          <p id="artistas-genero-heading" className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
-            Artistas em {displayName}
-          </p>
-          <ul className="flex flex-wrap gap-1.5">
-            {topArtists.map((a) => (
-              <li key={a.slug}>
-                <Link
-                  href={`/artista/${a.slug}`}
-                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-                >
-                  {a.artista}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
-
-      {/* Related genres — above the grid for topical graph signals */}
-      {relatedEstilos.length > 0 && (
-        <nav aria-labelledby="estilos-relacionados-heading" className="mb-5">
-          <p id="estilos-relacionados-heading" className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
-            Estilos relacionados
-          </p>
-          <ul className="flex flex-wrap gap-1.5">
-            {relatedEstilos.map((e) => (
-              <li key={e.slug}>
-                <Link
-                  href={`/estilo/${e.slug}`}
-                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-                >
-                  {e.tag.replace(/\b\w/g, (c) => c.toUpperCase())}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
       )}
 
       <div className="mb-4">
@@ -298,6 +256,49 @@ export default async function EstiloPage({
           </p>
           <p className="text-dust text-sm">Tente ajustar os filtros.</p>
         </section>
+      )}
+
+      {/* Top artists in this genre — internal link equity to artist pages.
+          Kept below the grid so the product list leads on mobile. */}
+      {topArtists.length > 0 && (
+        <nav aria-labelledby="artistas-genero-heading" className="mt-8">
+          <p id="artistas-genero-heading" className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
+            Artistas em {displayName}
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {topArtists.map((a) => (
+              <li key={a.slug}>
+                <Link
+                  href={`/artista/${a.slug}`}
+                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+                >
+                  {a.artista}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
+      {/* Related genres — topical graph signals */}
+      {relatedEstilos.length > 0 && (
+        <nav aria-labelledby="estilos-relacionados-heading" className="mt-5">
+          <p id="estilos-relacionados-heading" className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
+            Estilos relacionados
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {relatedEstilos.map((e) => (
+              <li key={e.slug}>
+                <Link
+                  href={`/estilo/${e.slug}`}
+                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+                >
+                  {e.tag.replace(/\b\w/g, (c) => c.toUpperCase())}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       )}
 
       {bioPt && (

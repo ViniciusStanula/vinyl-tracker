@@ -13,7 +13,7 @@ interface Props {
 }
 
 const W = 500;
-const H = 95;
+const H = 120;
 const PAD = { top: 8, right: 16, bottom: 24, left: 70 };
 const cW = W - PAD.left - PAD.right;
 const cH = H - PAD.top - PAD.bottom;
@@ -250,7 +250,7 @@ export default function GraficoPreco({ precos }: Props) {
             <span className="text-parchment">{hovered.dataFull}</span>
           </>
         ) : (
-          <span className="text-dust">Toque ou passe o mouse para ver o valor</span>
+          <span className="text-dust">Toque no gráfico para ver o valor</span>
         )}
       </div>
     </div>

@@ -74,8 +74,9 @@ export default function SearchBar() {
         className="flex flex-1 min-w-0"
         onSubmit={(e) => { e.preventDefault(); handleBuscar(); }}
       >
-        {/* Search icon / pending spinner */}
-        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+        {/* Search icon / pending spinner — desktop only; on mobile the submit
+            button carries the magnifier so the input reclaims the width. */}
+        <div className="hidden sm:block absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10">
           {isPending ? (
             <svg className="w-4 h-4 text-gold animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -102,17 +103,21 @@ export default function SearchBar() {
           defaultValue={searchParams.get("q") ?? ""}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          className={`flex-1 min-w-0 appearance-none bg-sleeve border border-groove rounded-l-full pl-10 pr-4 py-2 text-sm text-cream placeholder-dust focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all ${
+          className={`flex-1 min-w-0 appearance-none bg-sleeve border border-groove rounded-l-full pl-4 sm:pl-10 pr-4 py-2 text-sm text-cream placeholder-dust focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all ${
             isPending ? "opacity-60" : ""
           }`}
         />
 
         <button
           type="submit"
-          className="shrink-0 bg-gold hover:bg-goldlit text-record font-bold text-sm px-3 sm:px-5 rounded-r-full transition-colors cursor-pointer"
+          className="shrink-0 flex items-center justify-center bg-gold hover:bg-goldlit text-record font-bold text-sm px-3 sm:px-5 rounded-r-full transition-colors cursor-pointer"
           aria-label="Buscar"
         >
-          Buscar
+          <span className="hidden sm:inline">Buscar</span>
+          <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
         </button>
       </form>
 
