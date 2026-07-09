@@ -130,8 +130,20 @@ export default async function HomePage({
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
 
-      {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test) ── */}
-      {SHOW_HERO && (
+      {/* ── Search/filter header — replaces the hero when the user is looking
+             for something specific, so results lead instead of sitting a
+             screen below the marketing banner. Keeps a page <h1>. ── */}
+      {(searchTerm || artista) && (
+        <header className="mb-6">
+          <h1 className="font-display text-2xl sm:text-3xl font-black text-cream [text-wrap:balance]">
+            {searchTerm ? <>Resultados para &ldquo;{q}&rdquo;</> : artista}
+          </h1>
+        </header>
+      )}
+
+      {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test).
+             Hidden during search/artist filtering (see header above). ── */}
+      {SHOW_HERO && !searchTerm && !artista && (
       <header className="relative mb-8 overflow-hidden rounded-2xl border border-groove min-h-[300px] sm:min-h-[360px] flex items-center">
         {/* Background photo */}
         <Image
@@ -304,12 +316,6 @@ async function HomeResults({
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <p className="text-dust text-sm">
           {formatDiscoCount(total)}
-          {searchTerm && (
-            <span className="text-parchment">
-              {" "}para{" "}
-              <span className="text-cream">&ldquo;{q}&rdquo;</span>
-            </span>
-          )}
         </p>
         {artista && (
           <span className="inline-flex items-center gap-1.5 bg-groove border border-wax/60 text-parchment text-xs px-3 py-1 rounded-full">

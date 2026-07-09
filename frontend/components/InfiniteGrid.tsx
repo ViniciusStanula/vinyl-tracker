@@ -118,14 +118,17 @@ export default function InfiniteGrid({
       <div className="flex justify-end mb-3">
         <button
           onClick={toggleMode}
-          className="text-[11px] text-dust hover:text-parchment border border-groove hover:border-wax rounded-lg px-2.5 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20"
+          className="inline-flex items-center gap-1.5 text-[11px] text-dust hover:text-parchment border border-groove hover:border-wax rounded-lg px-2.5 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20 cursor-pointer"
           aria-label={
             mode === "paginate"
               ? "Alternar para scroll infinito"
               : "Alternar para paginação"
           }
         >
-          {mode === "paginate" ? "Paginação" : "Scroll infinito"}
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          <span>Exibição: {mode === "paginate" ? "Paginação" : "Scroll"}</span>
         </button>
       </div>
 
