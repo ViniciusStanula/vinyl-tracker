@@ -14,14 +14,16 @@ function likePct(term: string): string {
 /**
  * Build a prefix tsquery string for FTS.
  * Each word gets ':*' so "beatl" matches "beatles".
- * Non-alphanumeric/non-accented chars are stripped to keep tsquery syntax valid.
+ * Punctuation becomes a word boundary (not stripped), mirroring Postgres'
+ * text-search parser which splits "Workingman's" into "workingman" + "s" —
+ * stripping the apostrophe to "Workingmans:*" matched neither lexeme.
  * Returns null when no usable words remain (caller falls back to ILIKE).
  */
 function buildTsQuery(term: string): string | null {
   const words = term
     .trim()
+    .replace(/[^a-zA-Z0-9À-ɏ]+/g, " ")
     .split(/\s+/)
-    .map(w => w.replace(/[^a-zA-Z0-9À-ɏ]/g, ""))
     .filter(w => w.length > 0);
   if (words.length === 0) return null;
   return words.map(w => `${w}:*`).join(" & ");
@@ -35,7 +37,7 @@ function buildSearchWhere(term: string): Prisma.Sql {
   if (!term.trim()) return Prisma.sql``;
   const tsq = buildTsQuery(term);
   if (tsq) {
-    return Prisma.sql`AND d.search_vector @@ to_tsquery('simple', ${tsq})`;
+    return Prisma.sql`AND d.search_vector @@ to_tsquery('simple', disco_unaccent(${tsq}))`;
   }
   return Prisma.sql`AND (d.titulo ILIKE ${likePct(term)} OR d.artista ILIKE ${likePct(term)})`;
 }

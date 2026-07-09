@@ -11,10 +11,13 @@ export type SearchSuggestion = {
 };
 
 function buildTsQuery(term: string): string | null {
+  // Replace punctuation with a space (word boundary) rather than deleting it:
+  // Postgres' text-search parser splits "Workingman's" into "workingman" + "s",
+  // so stripping the apostrophe to "Workingmans:*" matched neither lexeme.
   const words = term
     .trim()
+    .replace(/[^a-zA-Z0-9À-ɏ]+/g, " ")
     .split(/\s+/)
-    .map(w => w.replace(/[^a-zA-Z0-9À-ɏ]/g, ""))
     .filter(w => w.length > 0);
   if (words.length === 0) return null;
   return words.map(w => `${w}:*`).join(" & ");
@@ -44,9 +47,9 @@ async function fetchSuggestions(q: string): Promise<SearchSuggestion[]> {
       WHERE disponivel = TRUE
       AND  (format IS NULL OR format = 'vinyl')
         AND price_count >= 5
-        AND search_vector @@ to_tsquery('simple', ${tsq})
+        AND search_vector @@ to_tsquery('simple', disco_unaccent(${tsq}))
       ORDER BY
-        ts_rank(search_vector, to_tsquery('simple', ${tsq})) DESC,
+        ts_rank(search_vector, to_tsquery('simple', disco_unaccent(${tsq}))) DESC,
         avg_30d DESC NULLS LAST
       LIMIT 8
     `;
