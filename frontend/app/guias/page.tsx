@@ -43,6 +43,14 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "pre-amplificador-phono",
+    title: "Pré-Amplificador Phono: Você Precisa de Um?",
+    description:
+      "Som fino, baixo e sem grave ao ligar o toca-discos? Falta um pré-phono. O que ele faz, como saber se você já tem um, o erro dos dois prés e os modelos que resolvem na Amazon Brasil.",
+    date: "2026-07-10",
+    tag: "guia",
+  },
+  {
     slug: "toca-discos-para-iniciantes",
     title: "Toca-Discos para Iniciantes: Como Escolher",
     description:

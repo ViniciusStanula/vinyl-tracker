@@ -10,9 +10,9 @@ import Link from "next/link";
 // muddies the page's intent for buyers and for Google.
 const CARE_GUIDES = [
   { href: "/guias/toca-discos-para-iniciantes",     label: "Toca-discos para iniciantes" },
+  { href: "/guias/pre-amplificador-phono",          label: "Pré-amplificador phono" },
   { href: "/guias/como-cuidar-de-discos-de-vinil",  label: "Como cuidar do vinil" },
   { href: "/guias/vinil-180g-vale-a-pena",          label: "Vinil 180g vale a pena?" },
-  { href: "/guias/vinil-colorido-e-picture-disc",   label: "Colorido e picture disc" },
 ] as const;
 
 export default function GuiasRelacionados({ className = "" }: { className?: string }) {

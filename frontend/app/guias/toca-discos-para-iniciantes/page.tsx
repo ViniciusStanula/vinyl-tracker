@@ -361,6 +361,14 @@ export default function TocaDiscosIniciantesPage() {
               As vitrolas com cápsula cerâmica não precisam de nada disso, porque o sinal já sai forte.
               É a conveniência que você paga com o sulco.
             </p>
+            <p>
+              O assunto tem detalhe que não cabe aqui: como identificar se o seu sistema já tem um pré,
+              o erro comum de ligar dois em série e o ganho que a cápsula exige. Está tudo no{" "}
+              <Link href="/guias/pre-amplificador-phono" className="text-gold hover:underline">
+                guia sobre pré-amplificador phono
+              </Link>
+              .
+            </p>
           </div>
         </section>
 
