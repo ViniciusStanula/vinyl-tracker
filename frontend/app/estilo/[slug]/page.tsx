@@ -1,4 +1,5 @@
 import DiscoCard from "@/components/DiscoCard";
+import GuiasRelacionados from "@/components/GuiasRelacionados";
 import SortBar from "@/components/SortBar";
 import BackToTop from "@/components/BackToTop";
 import Pagination from "@/components/Pagination";
@@ -300,6 +301,8 @@ export default async function EstiloPage({
           </ul>
         </nav>
       )}
+
+      <GuiasRelacionados className="mt-8" />
 
       {bioPt && (
         <section aria-labelledby="sobre-estilo-heading" className="mt-10 bg-sleeve border border-groove rounded-xl p-6">

@@ -29,6 +29,16 @@ const LEGAL_LINKS = [
   { label: "Mapa do Site",            href: "/sitemap" },
 ];
 
+// Top guides linked site-wide from the footer so they aren't reachable only via
+// home + the /guias index (they were barely crawled). Complements the in-page
+// GuiasRelacionados block on disco/estilo.
+const GUIA_LINKS = [
+  { label: "Como cuidar do vinil",     href: "/guias/como-cuidar-de-discos-de-vinil" },
+  { label: "Vinil 180g vale a pena?",  href: "/guias/vinil-180g-vale-a-pena" },
+  { label: "Como avaliar o estado",    href: "/guias/como-avaliar-estado-disco-vinil" },
+  { label: "Colorido e picture disc",  href: "/guias/vinil-colorido-e-picture-disc" },
+];
+
 const TOP_ESTILOS = [
   { nome: "Rock",       slug: "rock" },
   { nome: "Jazz",       slug: "jazz" },
@@ -105,6 +115,17 @@ export default function Footer() {
                 </li>
               ))}
             </ul>
+
+            <div className="mt-5">
+              <FooterHeading>Guias</FooterHeading>
+              <ul className="flex flex-col gap-2">
+                {GUIA_LINKS.map(({ label, href }) => (
+                  <li key={href}>
+                    <FooterLink href={href}>{label}</FooterLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </nav>
 
           {/* ── Explorar por Estilo ───────────────────── */}

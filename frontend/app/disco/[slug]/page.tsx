@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import GraficoPreco from "@/components/GraficoPreco";
 import DiscoCard from "@/components/DiscoCard";
 import BackToTop from "@/components/BackToTop";
+import GuiasRelacionados from "@/components/GuiasRelacionados";
 import PriceHistoryTable from "@/components/PriceHistoryTable";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import AlertaTrigger from "@/components/AlertaTrigger";
@@ -969,6 +970,8 @@ export default async function DiscoPage({
           </ul>
         </aside>
       )}
+
+      <GuiasRelacionados className="mt-10 pt-6 border-t border-groove" />
 
       <BackToTop />
     </div>
