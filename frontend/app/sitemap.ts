@@ -46,6 +46,7 @@ export default async function sitemap(props: {
       { url: `${SITEMAP_BASE}/guias/vinil-colorido-e-picture-disc`,    lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },
       { url: `${SITEMAP_BASE}/guias/vinil-180g-vale-a-pena`,           lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },
       { url: `${SITEMAP_BASE}/guias/como-avaliar-estado-disco-vinil`,  lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },
+      { url: `${SITEMAP_BASE}/guias/toca-discos-para-iniciantes`,      lastModified: new Date("2026-07-10"), changeFrequency: "monthly", priority: 0.8 },
       { url: `${SITEMAP_BASE}/guias/rock`,                              lastModified: ROCK_GUIDE_DATE,    changeFrequency: "monthly", priority: 0.8 },
       ...rockSubgenres.map((sg) => ({
         url: `${SITEMAP_BASE}/guias/rock/${sg.slug}`,

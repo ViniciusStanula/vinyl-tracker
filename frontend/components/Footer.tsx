@@ -35,6 +35,7 @@ const LEGAL_LINKS = [
 // Excludes the used-record grading guide: the footer renders on product pages,
 // and the catalog lists NEW records. It stays reachable via the /guias index.
 const GUIA_LINKS = [
+  { label: "Toca-discos para iniciantes", href: "/guias/toca-discos-para-iniciantes" },
   { label: "Como cuidar do vinil",     href: "/guias/como-cuidar-de-discos-de-vinil" },
   { label: "Vinil 180g vale a pena?",  href: "/guias/vinil-180g-vale-a-pena" },
   { label: "Colorido e picture disc",  href: "/guias/vinil-colorido-e-picture-disc" },

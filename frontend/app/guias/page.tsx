@@ -43,6 +43,14 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "toca-discos-para-iniciantes",
+    title: "Toca-Discos para Iniciantes: Como Escolher",
+    description:
+      "Vitrola de maleta ou toca-discos de verdade? Cápsula cerâmica vs. magnética, contrapeso, anti-skating e pré-phono explicados — e por que a peça mais barata do aparelho decide o destino da sua coleção.",
+    date: "2026-07-10",
+    tag: "guia",
+  },
+  {
     slug: "vinil-colorido-e-picture-disc",
     title: "Vinil Colorido e Picture Disc Valem a Pena?",
     description:

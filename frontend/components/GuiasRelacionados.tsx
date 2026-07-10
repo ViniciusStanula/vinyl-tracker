@@ -9,6 +9,7 @@ import Link from "next/link";
 // catalog lists NEW records; linking a used-condition guide from product pages
 // muddies the page's intent for buyers and for Google.
 const CARE_GUIDES = [
+  { href: "/guias/toca-discos-para-iniciantes",     label: "Toca-discos para iniciantes" },
   { href: "/guias/como-cuidar-de-discos-de-vinil",  label: "Como cuidar do vinil" },
   { href: "/guias/vinil-180g-vale-a-pena",          label: "Vinil 180g vale a pena?" },
   { href: "/guias/vinil-colorido-e-picture-disc",   label: "Colorido e picture disc" },
