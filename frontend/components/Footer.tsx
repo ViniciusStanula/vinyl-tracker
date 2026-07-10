@@ -30,12 +30,13 @@ const LEGAL_LINKS = [
 ];
 
 // Top guides linked site-wide from the footer so they aren't reachable only via
-// home + the /guias index (they were barely crawled). Complements the in-page
-// GuiasRelacionados block on disco/estilo.
+// home + the /guias index (they were barely crawled).
+//
+// Excludes the used-record grading guide: the footer renders on product pages,
+// and the catalog lists NEW records. It stays reachable via the /guias index.
 const GUIA_LINKS = [
   { label: "Como cuidar do vinil",     href: "/guias/como-cuidar-de-discos-de-vinil" },
   { label: "Vinil 180g vale a pena?",  href: "/guias/vinil-180g-vale-a-pena" },
-  { label: "Como avaliar o estado",    href: "/guias/como-avaliar-estado-disco-vinil" },
   { label: "Colorido e picture disc",  href: "/guias/vinil-colorido-e-picture-disc" },
 ];
 

@@ -4,9 +4,12 @@ import Link from "next/link";
 // product surfaces (disco, estilo) so Googlebot — which hammers those pages —
 // has a path to the guides, which were otherwise orphaned (only reachable via
 // home + the /guias index) and barely crawled.
+//
+// Deliberately EXCLUDES the used-record grading guide (Goldmine / sebo). The
+// catalog lists NEW records; linking a used-condition guide from product pages
+// muddies the page's intent for buyers and for Google.
 const CARE_GUIDES = [
   { href: "/guias/como-cuidar-de-discos-de-vinil",  label: "Como cuidar do vinil" },
-  { href: "/guias/como-avaliar-estado-disco-vinil", label: "Como avaliar o estado" },
   { href: "/guias/vinil-180g-vale-a-pena",          label: "Vinil 180g vale a pena?" },
   { href: "/guias/vinil-colorido-e-picture-disc",   label: "Colorido e picture disc" },
 ] as const;
