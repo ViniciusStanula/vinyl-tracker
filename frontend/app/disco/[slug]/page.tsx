@@ -374,7 +374,10 @@ export default async function DiscoPage({
     url: `${siteUrl}/disco/${slug}`,
     offers: {
       "@type": "Offer",
-      url: disco.url,
+      // Route through affiliateUrl() like the buy button does: the stored
+      // Disco.url can carry a stale/wrong Associates tag, and the raw value
+      // would leak it into the schema.
+      url: affiliateUrl(disco.url, disco.marketplace),
       priceCurrency: "BRL",
       price: precoAtual.toFixed(2),
       itemCondition: "https://schema.org/NewCondition",
