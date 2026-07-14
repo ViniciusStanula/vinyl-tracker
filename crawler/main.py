@@ -2399,9 +2399,10 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
             price, in_stock, review_count = parse_product_page(active_soup)
             if not in_stock:
                 result["outcome"] = "unavailable"
-            elif price is None:
+            elif price is None or price < MIN_PRICE_BRL:
                 # Full page received (passed #ppd check) but price extraction still
-                # returned None — genuine parse failure: unqualified buy-box, vinyl OOS
+                # returned None (or an implausible near-zero value from a parse
+                # failure) — genuine parse failure: unqualified buy-box, vinyl OOS
                 # on a multi-format page, or wrong swatch selected with no TMM price.
                 # The scraped price in our DB is likely for a different format (e.g. CD),
                 # so mark unavailable to hide stale/wrong data until the category crawl
@@ -2409,8 +2410,8 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
                 log.warning(
                     "[DEAL-CLEARED] ASIN %s — full page received but vinyl price "
                     "could not be confirmed (unqualified buy-box / vinyl OOS / "
-                    "wrong swatch). Marking unavailable.",
-                    record["asin"],
+                    "wrong swatch / implausible price %s). Marking unavailable.",
+                    record["asin"], price,
                 )
                 result["outcome"] = "deal_cleared"
             else:
@@ -2785,14 +2786,15 @@ def crawl_stale_records_api(
                 if not dry_run:
                     mark_unavailable(conn, disco_id)
                 counts["unavailable"] += 1
-            elif res.price is not None:
+            elif res.price is not None and res.price >= MIN_PRICE_BRL:
                 if not dry_run:
                     # review_count omitted → COALESCE preserves stored value.
                     mark_stale_price(conn, disco_id, res.price, now, review_count=None)
                 counts["updated"] += 1
                 _metrics.record_useful(1)
             else:
-                # In stock signal but no purchasable price → clear like the scraper.
+                # In stock signal but no purchasable price (or an implausible
+                # near-zero value from a bad API response) → clear like the scraper.
                 if not dry_run:
                     mark_unavailable(conn, disco_id)
                 counts["deals_cleared"] += 1
