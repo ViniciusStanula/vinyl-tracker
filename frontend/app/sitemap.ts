@@ -9,6 +9,7 @@ import {
   type DiscoShard,
 } from "@/lib/db/sitemap";
 import { getRockSubgenres } from "@/lib/guias/rock-data";
+import { BEST_OF_ARTISTS } from "@/lib/guias/best-of-artist-data";
 
 export const revalidate = 86400; // regenerate every 24 hours — sitemap staleness is fine for SEO
 
@@ -52,6 +53,12 @@ export default async function sitemap(props: {
       ...rockSubgenres.map((sg) => ({
         url: `${SITEMAP_BASE}/guias/rock/${sg.slug}`,
         lastModified: ROCK_GUIDE_DATE,
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      })),
+      ...BEST_OF_ARTISTS.map((a) => ({
+        url: `${SITEMAP_BASE}/guias/melhores-discos/${a.slug}`,
+        lastModified: new Date("2026-07-14"),
         changeFrequency: "monthly" as const,
         priority: 0.7,
       })),

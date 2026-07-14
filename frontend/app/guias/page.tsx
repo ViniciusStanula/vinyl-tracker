@@ -43,6 +43,30 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "melhores-discos/megadeth",
+    title: "Os Melhores Discos do Megadeth",
+    description:
+      "Ranking dos álbuns de estúdio do Megadeth em vinil, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+    date: "2026-07-14",
+    tag: "ranking",
+  },
+  {
+    slug: "melhores-discos/iron-maiden",
+    title: "Os Melhores Discos do Iron Maiden",
+    description:
+      "Ranking dos álbuns de estúdio do Iron Maiden em vinil, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+    date: "2026-07-14",
+    tag: "ranking",
+  },
+  {
+    slug: "melhores-discos/metallica",
+    title: "Os Melhores Discos do Metallica",
+    description:
+      "Ranking dos álbuns de estúdio do Metallica em vinil, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+    date: "2026-07-14",
+    tag: "ranking",
+  },
+  {
     slug: "pre-amplificador-phono",
     title: "Pré-Amplificador Phono: Você Precisa de Um?",
     description:

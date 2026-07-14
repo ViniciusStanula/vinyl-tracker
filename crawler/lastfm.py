@@ -191,6 +191,13 @@ _LEADING_FORMAT = re.compile(
     re.IGNORECASE,
 )
 
+# Amazon bonus-track callout, e.g. '- Features "Fly Me To The Moon" & "Beautiful
+# World"'. Anywhere in the title, not just at the end (other junk can follow it).
+_FEATURES_CALLOUT = re.compile(
+    r'\s*[-–]\s*Features\s+"[^"]*"(?:\s*[,&]\s*"[^"]*")*',
+    re.IGNORECASE,
+)
+
 
 def clean_album_title(title: str, artist: str) -> str:
     """
@@ -206,6 +213,7 @@ def clean_album_title(title: str, artist: str) -> str:
     t = title
     # Strip leading format noise ("LP VINIL ...") before the artist-prefix pass.
     t = _LEADING_FORMAT.sub("", t)
+    t = _FEATURES_CALLOUT.sub("", t)
     prefix = re.compile(r"^" + re.escape(artist) + r"\s*[-/:]\s*", re.IGNORECASE)
     t = prefix.sub("", t)
     # Amazon sometimes appends the artist name after a bracketed edition/format

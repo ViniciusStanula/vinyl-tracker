@@ -20,7 +20,7 @@ const SECURITY_HEADERS = [
       "img-src 'self' https: data:",
       "font-src 'self'",
       `connect-src 'self'${isDev ? " http://localhost:8400" : ""} https://*.supabase.co https://ws.audioscrobbler.com https://www.google-analytics.com https://www.googletagmanager.com`,
-      "frame-src https://www.googletagmanager.com",
+      "frame-src https://www.googletagmanager.com https://www.youtube-nocookie.com",
       "object-src 'none'",
       "base-uri 'self'",
     ].join("; "),
