@@ -49,6 +49,7 @@ jobs:
           REMAINING=$(psql "$DATABASE_URL" -t -c "
             SELECT COUNT(*) FROM \"Disco\"
             WHERE lastfm_listeners IS NULL AND disponivel = TRUE
+              AND (format IS NULL OR format = 'vinyl')
               AND artista !~* 'artista n[ãa]o identificad'
           " | tr -d ' ')
           echo "Remaining NULL-listener rows: $REMAINING"
