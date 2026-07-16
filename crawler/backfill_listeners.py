@@ -62,6 +62,7 @@ def main():
         cur.execute(
             """SELECT count(*) FROM "Disco"
                WHERE lastfm_listeners IS NULL AND disponivel = TRUE
+                 AND (format IS NULL OR format = 'vinyl')
                  AND artista !~* 'artista n[ãa]o identificad'"""
         )
         start_null = cur.fetchone()[0]
