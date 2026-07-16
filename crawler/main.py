@@ -48,7 +48,6 @@ from database import (
     update_disco_metadata,
     fetch_pending_discovered,
     delete_discovered_vinyls,
-    park_non_vinyl,
     ensure_api_budget_ledger,
     get_api_budget_used,
     add_api_budget_used,
@@ -1332,38 +1331,6 @@ def _extract_byline_artist(soup) -> str:
     return _UNKNOWN_ARTIST
 
 
-def parse_non_vinyl_reject(soup, asin: str) -> dict | None:
-    """
-    Builds a park_non_vinyl row for an ASIN whose product page CONFIRMS it is not
-    vinyl. Call only after parse_product_page_discovery has returned None.
-
-    Returns None unless the format is positively identified as non-vinyl:
-    "unknown" means the page gave no usable signal, so the ASIN must stay
-    re-checkable rather than be parked forever. A "vinyl" format here means the
-    record was dropped for some other reason (out of stock, no price) — also not
-    parkable.
-    """
-    title_el = soup.select_one("#productTitle")
-    if not title_el:
-        return None
-    title = title_el.get_text(strip=True)
-    if not title or len(title) < 3:
-        return None
-
-    fmt = detect_format(title, soup, asin=asin)
-    if fmt in ("vinyl", "unknown"):
-        return None
-
-    return {
-        "asin":    asin,
-        "titulo":  title,
-        "artista": _extract_byline_artist(soup),
-        "slug":    gerar_slug(title, asin),
-        "url":     affiliate_link(asin),
-        "format":  fmt,
-    }
-
-
 def parse_product_page_discovery(soup, asin: str) -> dict | None:
     """
     Extracts a full record from a product detail page for ASINs newly discovered
@@ -2472,15 +2439,13 @@ def _fetch_one_discovery(asin: str, delay: float, worker_idx: int,
     as _fetch_one_stale.
 
     Called from a ThreadPoolExecutor — must not touch the DB connection.
-    Returns {"asin": asin, "record": record_or_none, "reject": reject_or_none,
-    "skipped": bool}. "reject" is set only when the page confirms a non-vinyl
-    format; the caller parks it so future runs skip the ASIN without a fetch.
+    Returns {"asin": asin, "record": record_or_none, "skipped": bool}.
     """
     if deadline is not None and time.monotonic() >= deadline:
-        return {"asin": asin, "record": None, "reject": None, "skipped": True}
+        return {"asin": asin, "record": None, "skipped": True}
 
     if _stale_abort.is_set():
-        return {"asin": asin, "record": None, "reject": None, "skipped": True}
+        return {"asin": asin, "record": None, "skipped": True}
 
     time.sleep(worker_idx * random.uniform(1.0, 2.0))
 
@@ -2501,13 +2466,10 @@ def _fetch_one_discovery(asin: str, delay: float, worker_idx: int,
     _tl.proxy   = proxy
 
     record = None
-    reject = None
     if soup is not None:
         _tl.hit_count = getattr(_tl, "hit_count", 0) + 1
         _tl.consecutive_failures = 0
         record = parse_product_page_discovery(soup, asin)
-        if record is None:
-            reject = parse_non_vinyl_reject(soup, asin)
         if record is not None:
             vinyl_asin = _extract_vinyl_variant_asin(soup, asin)
             if vinyl_asin:
@@ -2551,7 +2513,7 @@ def _fetch_one_discovery(asin: str, delay: float, worker_idx: int,
             _stale_abort.set()
 
     time.sleep(delay + random.uniform(0.5, 1.5))
-    return {"asin": asin, "record": record, "reject": reject, "skipped": False}
+    return {"asin": asin, "record": record, "skipped": False}
 
 
 def crawl_stale_records(
@@ -3340,7 +3302,6 @@ def main():
                 if pending:
                     _stale_abort.clear()
                     accepted: list[dict] = []
-                    parked: list[dict] = []
                     processed: list[str] = []
                     with ThreadPoolExecutor(max_workers=args.stale_workers) as pool:
                         futs = {
@@ -3389,23 +3350,15 @@ def main():
                                     res["asin"], res["record"]["titulo"][:50],
                                 )
                             else:
-                                if res.get("reject"):
-                                    parked.append(res["reject"])
                                 log.debug("  [rejected] %s", res["asin"])
                     if accepted:
                         upsert_batch(conn, accepted)
                         log.info("Phase 2.8: upserted %d new vinyl record(s).", len(accepted))
-                    # Park confirmed non-vinyl ASINs so the next discovery run
-                    # dedupes them out at queue-insert time instead of spending
-                    # another product-page fetch to reach the same verdict.
-                    if parked:
-                        park_non_vinyl(conn, parked)
                     rejected = len(processed) - len(accepted)
                     if rejected:
                         log.info(
-                            "Phase 2.8: %d ASIN(s) rejected (not vinyl / no price) — "
-                            "%d parked as confirmed non-vinyl.",
-                            rejected, len(parked),
+                            "Phase 2.8: %d ASIN(s) rejected (not vinyl / no price).",
+                            rejected,
                         )
                     if processed:
                         delete_discovered_vinyls(conn, processed)

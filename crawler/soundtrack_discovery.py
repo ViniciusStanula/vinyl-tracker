@@ -517,8 +517,8 @@ def apply_pending_tags(conn) -> tuple[int, int]:
     up with the previous run's finds. Self-healing — a candidate missed today is
     retried tomorrow.
 
-    Non-vinyl rows are marked and never tagged: a parked Funko must not carry a
-    genre. Returns (tagged, marked_non_vinyl).
+    Non-vinyl rows are marked and never tagged: a Funko that reached Disco by
+    some other path must not carry a genre. Returns (tagged, marked_non_vinyl).
     """
     with _cursor(conn) as cur:
         cur.execute("""
@@ -796,8 +796,7 @@ def main() -> None:
         newly_inserted, already_known = upsert_discovered(conn, unique)
 
         # Only genuinely new ASINs count as candidates and as seed yield —
-        # upsert_discovered drops what Disco already has, including ASINs parked
-        # as non-vinyl by a previous run's Phase 2.8.
+        # upsert_discovered drops what Disco already has.
         known_before: set[str] = set()
         with _cursor(conn) as cur:
             asins = [r["asin"] for r in unique]
@@ -831,7 +830,7 @@ def main() -> None:
     ) or "none"
     log.info(
         "%s — seeds_searched=%d  seeds_blocked=%d  vinyl_asins_found=%d  "
-        "newly_queued=%d  duplicates_skipped=%d  non_vinyl_parked_earlier=%d  "
+        "newly_queued=%d  duplicates_skipped=%d  candidates_non_vinyl=%d  "
         "conflicts=%d",
         run_label,
         len(per_seed_rows),
