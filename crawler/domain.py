@@ -26,7 +26,13 @@ _CD_RE = re.compile(
 _MERCH_TITLE_RE = re.compile(
     r"\bcamiseta[s]?\b|\bcamisa[s]?\b|\bregata[s]?\b|\bmoletom\b|\bmoletons\b"
     r"|\bmochila[s]?\b|\balmofada[s]?\b|\bcaneca[s]?\b|\bpulseira[s]?\b"
-    r"|\badesivo[s]?\b|\bchaveiro[s]?\b|\bboné[s]?\b|\bposter[s]?\b",
+    r"|\badesivo[s]?\b|\bchaveiro[s]?\b|\bboné[s]?\b|\bposter[s]?\b"
+    # English merch terms — soundtrack searches surface these far more than
+    # artist searches do (franchise storefronts sell records next to swag).
+    # "figure" is only matched with a qualifier: bare "figure" appears in real
+    # album titles, and "vinyl figure" is already handled by _VINYL_FIGURE_RE.
+    r"|\bt-?shirt[s]?\b|\bmug[s]?\b|\bkeychain[s]?\b|\bkey\s+chain[s]?\b"
+    r"|\bboneco[s]?\b|\bbonecas?\b|\baction\s+figure[s]?\b|\bfigure\s+set\b",
     re.IGNORECASE,
 )
 # Funko Pop / collectible figures — "Vinyl" means plastic material, not music.

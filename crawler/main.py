@@ -1312,6 +1312,25 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
     return price, in_stock, review_count
 
 
+def _extract_byline_artist(soup) -> str:
+    """
+    Reads the artist from a product page's byline, or UNKNOWN_ARTIST when no
+    plausible name is there.
+    """
+    for sel in (
+        "#bylineInfo .author a.a-link-normal",
+        "#bylineInfo a.a-link-normal",
+        ".author.notFaded a",
+    ):
+        el = soup.select_one(sel)
+        if el:
+            text = re.sub(r"^(por|by|de)\s+", "", el.get_text(strip=True), flags=re.IGNORECASE).strip()
+            text = text.lstrip(":·•–—,;").rstrip(":·•–—,;").strip()
+            if _is_plausible_artist(text):
+                return normalize_artist(text)
+    return _UNKNOWN_ARTIST
+
+
 def parse_product_page_discovery(soup, asin: str) -> dict | None:
     """
     Extracts a full record from a product detail page for ASINs newly discovered
@@ -1341,19 +1360,7 @@ def parse_product_page_discovery(soup, asin: str) -> dict | None:
     if not in_stock or price is None:
         return None
 
-    artist = _UNKNOWN_ARTIST
-    for sel in (
-        "#bylineInfo .author a.a-link-normal",
-        "#bylineInfo a.a-link-normal",
-        ".author.notFaded a",
-    ):
-        el = soup.select_one(sel)
-        if el:
-            text = re.sub(r"^(por|by|de)\s+", "", el.get_text(strip=True), flags=re.IGNORECASE).strip()
-            text = text.lstrip(":·•–—,;").rstrip(":·•–—,;").strip()
-            if _is_plausible_artist(text):
-                artist = normalize_artist(text)
-                break
+    artist = _extract_byline_artist(soup)
 
     img_url = ""
     for sel in ("#landingImage", "#imgBlkFront", "#main-image"):
@@ -3349,7 +3356,10 @@ def main():
                         log.info("Phase 2.8: upserted %d new vinyl record(s).", len(accepted))
                     rejected = len(processed) - len(accepted)
                     if rejected:
-                        log.info("Phase 2.8: %d ASIN(s) rejected (not vinyl / no price).", rejected)
+                        log.info(
+                            "Phase 2.8: %d ASIN(s) rejected (not vinyl / no price).",
+                            rejected,
+                        )
                     if processed:
                         delete_discovered_vinyls(conn, processed)
                     log.info("Phase 2.8 done: %.0fs", time.monotonic() - t0)
