@@ -1,0 +1,58 @@
+name: Soundtrack Discovery
+
+on:
+  schedule:
+    - cron: '0 0 * * *'    # 00:00 UTC (21:00 BRT) — offset 12h from discovery.yml
+  workflow_dispatch:        # manual trigger from the GitHub Actions UI
+
+# Same group as the Last.fm run: the two queue instead of overlapping. Two live
+# Amazon sessions compound CAPTCHA and rate limits. ScrapeLock guards this at
+# runtime too (it also covers the every-3h main crawler, which no GHA
+# concurrency group can see).
+concurrency:
+  group: discovery
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: crawler/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r crawler/requirements.txt
+
+      - name: Run soundtrack discovery
+        run: python crawler/soundtrack_discovery.py
+        env:
+          DATABASE_URL:  ${{ secrets.DATABASE_URL }}
+          ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
+
+      - name: Post-crawl data-quality check (CD incident)
+        if: always()
+        run: python crawler/post_crawl_check.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Soundtrack discovery failed — ${new Date().toISOString().slice(0, 16)} UTC`;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: `The daily soundtrack discovery workflow failed.\n\n[View run](${runUrl})`,
+              labels: ['crawler-failure'],
+            });

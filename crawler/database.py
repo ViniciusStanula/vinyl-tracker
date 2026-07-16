@@ -786,6 +786,56 @@ def delete_discovered_vinyls(conn, asins: list[str]) -> None:
         log.debug("delete_discovered_vinyls: skipping — %s", exc)
 
 
+def park_non_vinyl(conn, rows: list[dict]) -> int:
+    """
+    Records confirmed non-vinyl ASINs in Disco so future discovery runs skip them
+    without re-fetching the product page.
+
+    Each row: {asin, titulo, artista, slug, url, format}. `format` must be a
+    CONFIRMED non-vinyl value ("cd"/"other") — never "unknown" (insufficient
+    evidence; those stay re-checkable) and never "vinyl".
+
+    Parked rows are invisible everywhere: every read path filters
+    `(format IS NULL OR format = 'vinyl')`, and upsert_batch's do-not-recrawl
+    gate blocks a parked ASIN from re-entering the catalog. No HistoricoPreco
+    row is written — a parked product has no price worth tracking.
+
+    ON CONFLICT DO NOTHING: an ASIN already in Disco is either a real record
+    (must not be clobbered) or already parked.
+    Returns the number of rows offered for insert.
+    """
+    if not rows:
+        return 0
+
+    bad = [r for r in rows if r.get("format") in (None, "vinyl", "unknown")]
+    if bad:
+        raise ValueError(
+            f"park_non_vinyl: refusing to park {len(bad)} row(s) without a "
+            f"confirmed non-vinyl format: {[r.get('asin') for r in bad][:5]}"
+        )
+
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            """
+            INSERT INTO "Disco" (
+                id, asin, titulo, artista, slug, url, format,
+                "createdAt", "updatedAt", last_crawled_at
+            )
+            VALUES (gen_random_uuid(), %s, %s, %s, %s, %s, %s, NOW(), NOW(), NOW())
+            ON CONFLICT (asin) DO NOTHING
+            """,
+            [
+                (r["asin"], r["titulo"], r["artista"], r["slug"], r["url"], r["format"])
+                for r in rows
+            ],
+            page_size=200,
+        )
+    conn.commit()
+    log.info("park_non_vinyl: parked %d confirmed non-vinyl ASIN(s).", len(rows))
+    return len(rows)
+
+
 def ensure_category_tables(conn, category_seed: list[tuple[str, str]]) -> None:
     """
     Idempotently creates the Categoria and DiscoCategorias tables and seeds
