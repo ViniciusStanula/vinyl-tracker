@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { Prisma } from "@prisma/client";
 import { slugifyArtist } from "@/lib/utils/slugify";
 import { slugifyStyle } from "@/lib/utils/styleUtils";
+import { REDIRECTED_ESTILO_SLUGS } from "@/lib/db/estilo";
 import { unstable_cache } from "next/cache";
 import type { MetadataRoute } from "next";
 
@@ -214,7 +215,7 @@ export async function getSitemapEstilos(): Promise<MetadataRoute.Sitemap> {
 
   for (const row of rows) {
     const slug = slugifyStyle(row.tag);
-    if (!slug || seenSlugs.has(slug)) continue;
+    if (!slug || seenSlugs.has(slug) || REDIRECTED_ESTILO_SLUGS.has(slug)) continue;
     seenSlugs.add(slug);
     routes.push({ url: `${SITEMAP_BASE}/estilo/${slug}`, lastModified: row.lastUpdated });
   }

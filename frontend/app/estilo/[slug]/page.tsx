@@ -8,7 +8,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
-import { getEstiloPageData, getRelatedEstilos, getTopArtistsForEstilo, type SerializedEstiloData, type RelatedEstilo, type TopArtistForEstilo } from "@/lib/db/estilo";
+import { getEstiloPageData, getRelatedEstilos, getTopArtistsForEstilo, getEstiloDisplayName, REDIRECTED_ESTILO_SLUGS, type SerializedEstiloData, type RelatedEstilo, type TopArtistForEstilo } from "@/lib/db/estilo";
 import { getHreflangSlug } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -27,6 +27,7 @@ export async function generateMetadata({
   searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  if (REDIRECTED_ESTILO_SLUGS.has(slug)) return { title: "Estilo | Garimpa Vinil", robots: { index: false, follow: false } };
   const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
   const precoMax = precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
   const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
@@ -39,15 +40,16 @@ export async function generateMetadata({
   if (!data) return { title: "Estilo | Garimpa Vinil" };
 
   const { canonical, discos, total, bioShortPt } = data;
-  const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
+  const displayName = getEstiloDisplayName(canonical);
+  const displayNameLower = displayName.toLowerCase();
   const isThin = total <= 3 && !bioShortPt;
   const noindex = isThin || currentPage > 1;
 
   const title = truncateTitle(`Discos de ${displayName} em Vinil — Ofertas | Garimpa Vinil`);
   const description = truncateDesc(
     total >= 4
-      ? `${total} discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
-      : `Discos de ${canonical} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
+      ? `${total} discos de ${displayNameLower} em vinil com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
+      : `Discos de ${displayNameLower} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
   );
   const firstImage = discos.find((d) => d.imgUrl)?.imgUrl ?? null;
   const canonicalUrl = currentPage > 1
@@ -94,6 +96,7 @@ export default async function EstiloPage({
   searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
 }) {
   const { slug } = await params;
+  if (REDIRECTED_ESTILO_SLUGS.has(slug)) notFound();
   const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
   const precoMax = precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
   const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
@@ -116,7 +119,7 @@ export default async function EstiloPage({
   if (!data) notFound();
 
   const { canonical, discos, bioShortPt, bioPt, total, totalPages } = data;
-  const displayName = canonical.replace(/\b\w/g, (c) => c.toUpperCase());
+  const displayName = getEstiloDisplayName(canonical);
 
   let relatedEstilos: RelatedEstilo[] = [];
   let topArtists: TopArtistForEstilo[] = [];
@@ -294,7 +297,7 @@ export default async function EstiloPage({
                   href={`/estilo/${e.slug}`}
                   className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
                 >
-                  {e.tag.replace(/\b\w/g, (c) => c.toUpperCase())}
+                  {getEstiloDisplayName(e.tag)}
                 </Link>
               </li>
             ))}

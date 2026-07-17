@@ -65,6 +65,83 @@ const nextConfig: NextConfig = {
       { source: "/.well-known/api-catalog", destination: "/api/well-known/api-catalog" },
     ];
   },
+  async redirects() {
+    return [
+      // Thin/duplicate estilo pages merged into /estilo/game — every disco tagged
+      // valve or video-game-music that clears the price_count>=5 listing gate is
+      // already double-tagged "game", so these pages had no unique inventory.
+      { source: "/estilo/valve", destination: "/estilo/game", permanent: true },
+      { source: "/estilo/video-game-music", destination: "/estilo/game", permanent: true },
+      { source: "/estilo/game-remixes", destination: "/estilo/game", permanent: true },
+      // lastfm_tags leaked artist names in as if they were genres — an artist is
+      // not a style, so these send to the real artist page instead of a fake genre page.
+      { source: "/estilo/eric-church", destination: "/artista/eric-church", permanent: true },
+      { source: "/estilo/shania-twain", destination: "/artista/shania-twain", permanent: true },
+      { source: "/estilo/kenny-rogers", destination: "/artista/kenny-rogers", permanent: true },
+      { source: "/estilo/tim-mcgraw", destination: "/artista/tim-mcgraw", permanent: true },
+      { source: "/estilo/blake-shelton", destination: "/artista/blake-shelton", permanent: true },
+      { source: "/estilo/george-strait", destination: "/artista/george-strait", permanent: true },
+      { source: "/estilo/alan-jackson", destination: "/artista/alan-jackson", permanent: true },
+      { source: "/estilo/randy-travis", destination: "/artista/randy-travis", permanent: true },
+      { source: "/estilo/miranda-lambert", destination: "/artista/miranda-lambert", permanent: true },
+      { source: "/estilo/keith-urban", destination: "/artista/keith-urban", permanent: true },
+      { source: "/estilo/toby-keith", destination: "/artista/toby-keith", permanent: true },
+      { source: "/estilo/reba-mcentire", destination: "/artista/reba-mcentire", permanent: true },
+      { source: "/estilo/kenny-chesney", destination: "/artista/kenny-chesney", permanent: true },
+      { source: "/estilo/celine-dion", destination: "/artista/celine-dion", permanent: true },
+      { source: "/estilo/britney-spears", destination: "/artista/britney-spears", permanent: true },
+      { source: "/estilo/ariana-grande", destination: "/artista/ariana-grande", permanent: true },
+      { source: "/estilo/andrea-bocelli", destination: "/artista/andrea-bocelli", permanent: true },
+      { source: "/estilo/bts", destination: "/artista/bts", permanent: true },
+      { source: "/estilo/hannah-montana", destination: "/artista/hannah-montana", permanent: true },
+      { source: "/estilo/one-direction", destination: "/artista/one-direction", permanent: true },
+      { source: "/estilo/within-temptation", destination: "/artista/within-temptation", permanent: true },
+      { source: "/estilo/sheena-easton", destination: "/artista/sheena-easton", permanent: true },
+      { source: "/estilo/belchior", destination: "/artista/belchior", permanent: true },
+      { source: "/estilo/fagner", destination: "/artista/raimundo-fagner", permanent: true },
+      { source: "/estilo/little-big-town", destination: "/artista/little-big-town", permanent: true },
+      { source: "/estilo/spice-girls", destination: "/artista/spice-girls", permanent: true },
+      // Spelling-variant tags consolidated into one canonical form (data fixed
+      // in lastfm_tags directly — these just catch already-indexed old URLs).
+      { source: "/estilo/showtunes", destination: "/estilo/show-tunes", permanent: true },
+      { source: "/estilo/punkrock", destination: "/estilo/punk-rock", permanent: true },
+      { source: "/estilo/synth-pop", destination: "/estilo/synthpop", permanent: true },
+      { source: "/estilo/jazzpiano", destination: "/estilo/jazz-piano", permanent: true },
+      { source: "/estilo/death-rock", destination: "/estilo/deathrock", permanent: true },
+      { source: "/estilo/rockandroll", destination: "/estilo/rock-and-roll", permanent: true },
+      { source: "/estilo/folkrock", destination: "/estilo/folk-rock", permanent: true },
+      { source: "/estilo/mash-up", destination: "/estilo/mashup", permanent: true },
+      { source: "/estilo/bluesrock", destination: "/estilo/blues-rock", permanent: true },
+      { source: "/estilo/indiepop", destination: "/estilo/indie-pop", permanent: true },
+      { source: "/estilo/oldschool-hardcore", destination: "/estilo/old-school-hardcore", permanent: true },
+      { source: "/estilo/bigband", destination: "/estilo/big-band", permanent: true },
+      { source: "/estilo/girl-group", destination: "/estilo/girl-groups", permanent: true },
+      { source: "/estilo/game-music", destination: "/estilo/game", permanent: true },
+      // More artist-name tags found via a full catalog x-match (artists ≠ genres).
+      { source: "/estilo/blackpink", destination: "/artista/blackpink", permanent: true },
+      { source: "/estilo/chris-brown", destination: "/artista/chris-brown", permanent: true },
+      { source: "/estilo/cortis", destination: "/artista/cortis", permanent: true },
+      { source: "/estilo/fleetwood-mac", destination: "/artista/fleetwood-mac", permanent: true },
+      { source: "/estilo/ginuwine", destination: "/artista/ginuwine", permanent: true },
+      { source: "/estilo/helloween", destination: "/artista/helloween", permanent: true },
+      { source: "/estilo/hilary-duff", destination: "/artista/hilary-duff", permanent: true },
+      { source: "/estilo/keyshia-cole", destination: "/artista/keyshia-cole", permanent: true },
+      { source: "/estilo/raspberry-bulbs", destination: "/artista/raspberry-bulbs", permanent: true },
+      { source: "/estilo/ray-conniff", destination: "/artista/ray-conniff", permanent: true },
+      { source: "/estilo/tanya-tucker", destination: "/artista/tanya-tucker", permanent: true },
+      // More spelling-variant tags found on a rescan (data fixed in lastfm_tags directly).
+      { source: "/estilo/8bit", destination: "/estilo/8-bit", permanent: true },
+      { source: "/estilo/alternative-hip-hop", destination: "/estilo/alternative-hiphop", permanent: true },
+      { source: "/estilo/audio-book", destination: "/estilo/audiobook", permanent: true },
+      { source: "/estilo/boy-band", destination: "/estilo/boyband", permanent: true },
+      { source: "/estilo/chill-out", destination: "/estilo/chillout", permanent: true },
+      { source: "/estilo/dreampop", destination: "/estilo/dream-pop", permanent: true },
+      { source: "/estilo/german-hip-hop", destination: "/estilo/german-hiphop", permanent: true },
+      { source: "/estilo/hiphop", destination: "/estilo/hip-hop", permanent: true },
+      { source: "/estilo/lofi", destination: "/estilo/lo-fi", permanent: true },
+      { source: "/estilo/psy-trance", destination: "/estilo/psytrance", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {
