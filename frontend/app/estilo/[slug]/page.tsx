@@ -1,11 +1,8 @@
-import DiscoCard from "@/components/DiscoCard";
 import GuiasRelacionados from "@/components/GuiasRelacionados";
-import SortBar from "@/components/SortBar";
+import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
-import Pagination from "@/components/Pagination";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getEstiloPageData, getRelatedEstilos, getTopArtistsForEstilo, getEstiloDisplayName, REDIRECTED_ESTILO_SLUGS, type SerializedEstiloData, type RelatedEstilo, type TopArtistForEstilo } from "@/lib/db/estilo";
@@ -15,25 +12,36 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
-export const revalidate = 14400;
+export const revalidate = 14400; // safety-net; on-demand purge via revalidateTag("prices") fires first
+
+// Without this Next 16 renders the route dynamically (Cache-Control: no-store).
+// [] = nothing prebuilt; each style is rendered + CDN-cached on first request.
+// Sort/filter/pagination run client-side (ArtistaRecords) so no server
+// searchParams force the route dynamic. dynamicParams stays true (default).
+export function generateStaticParams() {
+  return [];
+}
+
+// Top-N cap: fetch the style's best records (default desconto sort) in one shot
+// so client-side sort/filter is instant. Big genres (rock ~5k) get truncated,
+// but deep pagination was already noindexed (page > 1) and near-zero traffic.
+const RECORDS_CAP = 240;
 
 const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
 
+// Filter-independent metadata: canonical is always the clean URL, so any
+// ?-variant a user shares consolidates to it. Reading no searchParams here is
+// part of what keeps the route static.
 export async function generateMetadata({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
   if (REDIRECTED_ESTILO_SLUGS.has(slug)) return { title: "Estilo | Garimpa Vinil", robots: { index: false, follow: false } };
-  const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
-  const precoMax = precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
-  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 
   const [data, hasPeer] = await Promise.all([
-    getEstiloPageData(slug, currentPage, sort, precoMax).catch(() => null),
+    getEstiloPageData(slug, 1, "desconto", null, RECORDS_CAP).catch(() => null),
     getHreflangSlug("genre", slug).catch(() => false as false),
   ]);
 
@@ -42,8 +50,7 @@ export async function generateMetadata({
   const { canonical, discos, total, bioShortPt } = data;
   const displayName = getEstiloDisplayName(canonical);
   const displayNameLower = displayName.toLowerCase();
-  const isThin = total <= 3 && !bioShortPt;
-  const noindex = isThin || currentPage > 1;
+  const noindex = total <= 3 && !bioShortPt;
 
   const title = truncateTitle(`Discos de ${displayName} em Vinil — Ofertas | Garimpa Vinil`);
   const description = truncateDesc(
@@ -52,9 +59,7 @@ export async function generateMetadata({
       : `Discos de ${displayNameLower} em vinil com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
   );
   const firstImage = discos.find((d) => d.imgUrl)?.imgUrl ?? null;
-  const canonicalUrl = currentPage > 1
-    ? `${SITE_URL}/estilo/${slug}?page=${currentPage}`
-    : `${SITE_URL}/estilo/${slug}`;
+  const canonicalUrl = `${SITE_URL}/estilo/${slug}`;
 
   return {
     title,
@@ -90,20 +95,17 @@ export async function generateMetadata({
 
 export default async function EstiloPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sort?: string; precoMax?: string; page?: string }>;
 }) {
   const { slug } = await params;
   if (REDIRECTED_ESTILO_SLUGS.has(slug)) notFound();
-  const { sort = "desconto", precoMax: precoMaxStr, page: pageStr } = await searchParams;
-  const precoMax = precoMaxStr !== undefined && precoMaxStr !== "" ? Number(precoMaxStr) : null;
-  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 
+  // Top records, default sort, no filter → static/cacheable; ArtistaRecords
+  // does sort/filter/pagination in the browser.
   let data: SerializedEstiloData | null = null;
   try {
-    data = await getEstiloPageData(slug, currentPage, sort, precoMax);
+    data = await getEstiloPageData(slug, 1, "desconto", null, RECORDS_CAP);
   } catch (err) {
     console.error("[EstiloPage] getEstiloPageData failed for slug=%s", slug);
     if (process.env.NODE_ENV === "development") console.error(err);
@@ -118,7 +120,7 @@ export default async function EstiloPage({
   }
   if (!data) notFound();
 
-  const { canonical, discos, bioShortPt, bioPt, total, totalPages } = data;
+  const { canonical, discos, bioShortPt, bioPt, total } = data;
   const displayName = getEstiloDisplayName(canonical);
 
   let relatedEstilos: RelatedEstilo[] = [];
@@ -134,7 +136,8 @@ export default async function EstiloPage({
     }),
   ]);
 
-  // Apply staleness check for deal badge display only (DB handles sort).
+  // Apply staleness check for deal badge display + shape rows as ProcessedDisco
+  // for the client component (fields the estilo query doesn't fetch stay null).
   const discosProcessados = discos.map((disco) => {
     const crawledAt = disco.lastCrawledAt ? new Date(disco.lastCrawledAt).getTime() : null;
     const dealIsStale = crawledAt === null || Date.now() - crawledAt > DEAL_STALE_MS;
@@ -144,6 +147,8 @@ export default async function EstiloPage({
       rating: disco.rating ? Number(disco.rating) : null,
       emPromocao: dealScore !== null,
       dealScore,
+      historyDays: null,
+      lastfmTags: null,
       disponivel: true,
     };
   });
@@ -206,12 +211,7 @@ export default async function EstiloPage({
         <h1 className="font-display text-3xl font-bold text-cream">
           {displayName}
         </h1>
-        <p className="mt-1 text-dust text-sm">
-          {formatDiscoCount(total)}
-          {precoMax !== null && !isNaN(precoMax)
-            ? ` até R$ ${precoMax.toLocaleString("pt-BR")}`
-            : ""}
-        </p>
+        <p className="mt-1 text-dust text-sm">{formatDiscoCount(total)}</p>
       </header>
 
       {bioShortPt && (
@@ -220,30 +220,10 @@ export default async function EstiloPage({
         </div>
       )}
 
-      <div className="mb-4">
-        <Suspense>
-          <SortBar />
-        </Suspense>
-      </div>
-
       {discosProcessados.length > 0 ? (
         <section aria-labelledby="discos-estilo-heading">
           <h2 id="discos-estilo-heading" className="sr-only">Discos de {displayName} em vinil</h2>
-          <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-            {discosProcessados.map((disco, index) => (
-              <li key={disco.id}>
-                <DiscoCard disco={disco} priority={index < 4} />
-              </li>
-            ))}
-          </ul>
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              searchParams={{ sort: sort !== "desconto" ? sort : undefined, precoMax: precoMaxStr }}
-              basePath={`/estilo/${slug}`}
-            />
-          )}
+          <ArtistaRecords items={discosProcessados} slug={slug} basePath="/estilo" />
         </section>
       ) : (
         <section aria-label="Sem resultados" className="text-center py-24 text-dust">

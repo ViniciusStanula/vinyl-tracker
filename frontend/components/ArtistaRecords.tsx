@@ -40,9 +40,12 @@ function comparator(sort: string): (a: ProcessedDisco, b: ProcessedDisco) => num
 export default function ArtistaRecords({
   items,
   slug,
+  basePath = "/artista",
 }: {
   items: ProcessedDisco[];
   slug: string;
+  /** Route prefix for the no-JS fallback link — "/artista" (default) or "/estilo". */
+  basePath?: string;
 }) {
   const [sort, setSort] = useState<string>("desconto");
   const [precoMax, setPrecoMax] = useState<number | null>(null);
@@ -177,7 +180,7 @@ export default function ArtistaRecords({
             </button>
           )}
           {/* Fallback link to the clean URL for crawlers/no-JS */}
-          <Link href={`/artista/${slug}`} className="sr-only">Ver todos os discos</Link>
+          <Link href={`${basePath}/${slug}`} className="sr-only">Ver todos os discos</Link>
         </section>
       )}
     </>

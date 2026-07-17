@@ -133,14 +133,17 @@ export default async function DiscoPage({
 }) {
   const { slug } = await params;
   // getDiscoWithPrecos is React-cached — generateMetadata's prior call is free.
-  const disco = await getDiscoWithPrecos(slug);
+  // getDiscoMeta only needs the slug, so it runs in the same round-trip wave;
+  // on cold long-tail renders every await here is a real DB round trip.
+  // lastfm_* columns are crawler-enriched and read directly from DB — no runtime API calls.
+  const [disco, meta] = await Promise.all([
+    getDiscoWithPrecos(slug),
+    getDiscoMeta(slug),
+  ]);
   if (!disco) notFound();
   // Excluded non-vinyl records (CD incident, 2026-06-11) return 404 —
   // never 200 with empty content, never a redirect.
   if (disco.format && disco.format !== "vinyl") notFound();
-
-  // lastfm_* columns are crawler-enriched and read directly from DB — no runtime API calls.
-  const meta = await getDiscoMeta(slug);
   const albumInfo = meta?.lastfmListeners != null
     ? {
         listeners:   meta.lastfmListeners,
@@ -149,12 +152,33 @@ export default async function DiscoPage({
       }
     : null;
 
+  const disponivel = meta?.disponivel ?? true;
+  const artistLower = disco.artista.toLowerCase();
+  const styleTags = parseStyleTags(meta?.lastfmTags ?? null)
+    .filter((t) => t.toLowerCase() !== artistLower)
+    .slice(0, 5);
+
+  // Everything below depends only on disco/meta, so it's one parallel wave —
+  // sequential awaits here cost a full DB round trip each on cold renders.
+  const [estilosList, relatedDeals, popularity, artistAlbums, peerSlug] = await Promise.all([
+    // Genres link to /estilo/[slug] only when a style page actually exists for
+    // that slug (style pages are derived from lastfm_tags, not MB genres).
+    meta?.mbMbid ? getEstilosList() : Promise.resolve([]),
+    getRelatedDeals(disco.id, styleTags),
+    // Rank of this album among the artist's tracked vinyls, by Last.fm listeners.
+    (meta?.lastfmListeners ?? 0) > 0
+      ? getArtistPopularity(disco.artista, slug)
+      : Promise.resolve(null),
+    // Other vinyls by the same artist (most-listened first) for a dedicated rail.
+    artistLower === "artista não identificado"
+      ? Promise.resolve([])
+      : getArtistTopAlbums(disco.artista, disco.id),
+    // Peer-site album URL for MusicAlbum.sameAs (same pressing, other market).
+    getHreflangRecord(disco.asin).catch(() => null),
+  ]);
+
   // MusicBrainz release-group facts (mb_mbid = "" means searched, no match).
-  // Genres link to /estilo/[slug] only when a style page actually exists for
-  // that slug (style pages are derived from lastfm_tags, not MB genres).
-  const validStyleSlugs = meta?.mbMbid
-    ? new Set((await getEstilosList()).map((e) => e.slug))
-    : new Set<string>();
+  const validStyleSlugs = new Set(estilosList.map((e) => e.slug));
   // "Single" is frequently a wrong release-group match — hide it rather than
   // surface a likely-mislabeled type. Localize the rest to pt-BR.
   const MB_TYPE_PT: Record<string, string> = { Album: "Álbum", EP: "EP", Compilation: "Coletânea" };
@@ -190,26 +214,6 @@ export default async function DiscoPage({
         url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
       }
     : null;
-
-  const disponivel = meta?.disponivel ?? true;
-  const artistLower = disco.artista.toLowerCase();
-  const styleTags = parseStyleTags(meta?.lastfmTags ?? null)
-    .filter((t) => t.toLowerCase() !== artistLower)
-    .slice(0, 5);
-
-  const relatedDeals = await getRelatedDeals(disco.id, styleTags);
-  // Rank of this album among the artist's tracked vinyls, by Last.fm listeners.
-  const popularity =
-    (meta?.lastfmListeners ?? 0) > 0
-      ? await getArtistPopularity(disco.artista, slug)
-      : null;
-  // Other vinyls by the same artist (most-listened first) for a dedicated rail.
-  const artistAlbums =
-    disco.artista.toLowerCase() === "artista não identificado"
-      ? []
-      : await getArtistTopAlbums(disco.artista, disco.id);
-  // Peer-site album URL for MusicAlbum.sameAs (same pressing, other market).
-  const peerSlug = await getHreflangRecord(disco.asin).catch(() => null);
 
   const valores = disco.precos.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;

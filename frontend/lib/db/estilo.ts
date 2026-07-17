@@ -300,6 +300,7 @@ export type SerializedEstiloData = {
     marketplace: string;
     estilo: string | null;
     rating: string | null;
+    reviewCount: number | null;
     precoAtual: number;
     mediaPreco: number;
     desconto: number;
@@ -318,6 +319,11 @@ const _getEstiloPageData = unstable_cache(
     page: number,
     sort: string,
     precoMax: number | null,
+    // Page render passes a large pageSize to fetch the style's top records in
+    // one shot so sort/filter/pagination can run client-side (keeps the route
+    // ISR-cacheable — no server searchParams). Defaults to ESTILO_PAGE_SIZE for
+    // any legacy paginated caller.
+    pageSize: number = ESTILO_PAGE_SIZE,
   ): Promise<SerializedEstiloData | null> => {
     const canonicalRow = await prisma.$queryRaw<{ tag: string }[]>`
       WITH tags AS (
@@ -345,7 +351,7 @@ const _getEstiloPageData = unstable_cache(
         : Prisma.sql``;
 
     const orderBy  = estiloOrderBy(sort);
-    const offset   = (page - 1) * ESTILO_PAGE_SIZE;
+    const offset   = (page - 1) * pageSize;
 
     const bioQuery = prisma.$queryRaw<{ bioShortPt: string | null; bioPt: string | null }[]>`
       SELECT bio_short_pt AS "bioShortPt", bio_pt AS "bioPt"
@@ -380,6 +386,7 @@ const _getEstiloPageData = unstable_cache(
       marketplace: string;
       estilo: string | null;
       rating: string | null;
+      reviewCount: string | null;
       dealScore: number | null;
       confidenceLevel: string | null;
       lastCrawledAt: Date | null;
@@ -398,6 +405,7 @@ const _getEstiloPageData = unstable_cache(
         c.marketplace,
         c.estilo,
         c.rating::text,
+        c."reviewCount",
         c.deal_score       AS "dealScore",
         c.confidence_level AS "confidenceLevel",
         c.last_crawled_at  AS "lastCrawledAt",
@@ -436,7 +444,7 @@ const _getEstiloPageData = unstable_cache(
         AND c.price_count >= 5
         ${wherePrecoMax}
       ORDER BY ${orderBy}
-      LIMIT ${ESTILO_PAGE_SIZE}
+      LIMIT ${pageSize}
       OFFSET ${offset}
     `;
 
@@ -444,7 +452,7 @@ const _getEstiloPageData = unstable_cache(
 
     const bio   = bioRows[0] ?? null;
     const total = Number(countResult[0].total);
-    const totalPages = Math.max(1, Math.ceil(total / ESTILO_PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     return {
       canonical,
@@ -475,6 +483,7 @@ const _getEstiloPageData = unstable_cache(
           marketplace: row.marketplace,
           estilo: row.estilo,
           rating: row.rating ?? null,
+          reviewCount: row.reviewCount !== null ? Number(row.reviewCount) : null,
           precoAtual: Number(row.precoAtual),
           mediaPreco: Number(row.mediaPreco),
           desconto: Number(row.desconto),
