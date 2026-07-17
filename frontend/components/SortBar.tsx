@@ -20,7 +20,14 @@ const PRICE_CHIPS = [
   { label: "Todos",  value: null },
 ];
 
-export default function SortBar() {
+export default function SortBar({
+  basePath,
+}: {
+  /** Route to navigate to on sort/filter change. Defaults to the current
+   *  pathname; static routes (like `/`) pass "/disco" so their own URL never
+   *  gains searchParams. */
+  basePath?: string;
+} = {}) {
   const router       = useRouter();
   const pathname     = usePathname();
   const searchParams = useSearchParams();
@@ -28,12 +35,13 @@ export default function SortBar() {
   const current      = searchParams.get("sort") ?? "desconto";
   const precoMaxParam = searchParams.get("precoMax");
   const activePrice  = precoMaxParam ? Number(precoMaxParam) : null;
+  const target       = basePath ?? pathname;
 
   function handleSort(value: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("sort", value);
     params.delete("page");
-    startTransition(() => router.push(`${pathname}?${params.toString()}`));
+    startTransition(() => router.push(`${target}?${params.toString()}`));
   }
 
   function handlePrice(value: number | null) {
@@ -44,7 +52,7 @@ export default function SortBar() {
       params.delete("precoMax");
     }
     params.delete("page");
-    startTransition(() => router.push(`${pathname}?${params.toString()}`));
+    startTransition(() => router.push(`${target}?${params.toString()}`));
   }
 
   return (

@@ -116,8 +116,12 @@ export async function queryDiscos(params: {
   precoMax: number | null;
   page: number;
   decade?: number | null;
+  // Static list pages pass a large pageSize to fetch their whole batch in one
+  // shot so sort/filter/pagination can run client-side (keeps those routes
+  // ISR-cacheable — no server searchParams). Defaults to PAGE_SIZE.
+  pageSize?: number;
 }): Promise<{ items: ProcessedDisco[]; total: number; totalPages: number }> {
-  const { searchTerm, sort, artista, precoMax, page, decade } = params;
+  const { searchTerm, sort, artista, precoMax, page, decade, pageSize = PAGE_SIZE } = params;
 
   const whereSearch = buildSearchWhere(searchTerm);
   const whereArtista = artista
@@ -228,13 +232,13 @@ export async function queryDiscos(params: {
         END AS desconto
       FROM  base
       ORDER BY ${order}
-      LIMIT  ${PAGE_SIZE}
-      OFFSET ${(page - 1) * PAGE_SIZE}
+      LIMIT  ${pageSize}
+      OFFSET ${(page - 1) * pageSize}
     `,
   ]);
 
   const total = Number(countResult[0].total);
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const items = rows.flatMap((row): ProcessedDisco[] => {
     const precoAtual  = Number(row.precoAtual);

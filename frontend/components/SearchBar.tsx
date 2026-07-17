@@ -29,8 +29,10 @@ export default function SearchBar() {
     if (artista)  params.set("artista", artista);
     if (precoMax) params.set("precoMax", precoMax);
     if (value)    params.set("q", value);
+    // Search results live on /disco (the catalog route) — keeping searchParams
+    // off `/` is what lets the homepage stay static/ISR-cacheable.
     startTransition(() => {
-      router.push(`/?${params.toString()}`);
+      router.push(`/disco?${params.toString()}`);
     });
   }
 

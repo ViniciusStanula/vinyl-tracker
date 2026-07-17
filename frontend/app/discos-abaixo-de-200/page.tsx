@@ -1,7 +1,6 @@
 import { queryPriceUnder200WithCache } from "@/lib/db/promos";
 import { PEER_ORIGIN } from "@/lib/hreflang";
-import DiscoCard from "@/components/DiscoCard";
-import Pagination from "@/components/Pagination";
+import ArtistaRecords from "@/components/ArtistaRecords";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { toJsonLd } from "@/lib/jsonld";
@@ -41,16 +40,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const PAGE_SIZE = 40;
-
-export default async function DiscosAbaixo200Page({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string }>;
-}) {
-  const { page: pageStr } = await searchParams;
-  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
-
+// Reading no searchParams keeps the route static/ISR-cacheable; pagination
+// (plus sort/price filter) runs client-side in ArtistaRecords.
+export default async function DiscosAbaixo200Page() {
   let items: Awaited<ReturnType<typeof queryPriceUnder200WithCache>> = [];
   try {
     items = await queryPriceUnder200WithCache();
@@ -59,10 +51,6 @@ export default async function DiscosAbaixo200Page({
   }
 
   const totalItems = items.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-  const safePage   = Math.min(currentPage, totalPages);
-  const start      = (safePage - 1) * PAGE_SIZE;
-  const pageItems  = items.slice(start, start + PAGE_SIZE);
 
   const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
@@ -110,25 +98,8 @@ export default async function DiscosAbaixo200Page({
         </p>
       </header>
 
-      {pageItems.length > 0 && (
-        <>
-          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {pageItems.map((disco, i) => (
-              <li key={disco.id}>
-                <DiscoCard disco={disco} priority={i < 10} />
-              </li>
-            ))}
-          </ul>
-
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={safePage}
-              totalPages={totalPages}
-              searchParams={{}}
-              basePath="/discos-abaixo-de-200"
-            />
-          )}
-        </>
+      {items.length > 0 && (
+        <ArtistaRecords items={items} slug="discos-abaixo-de-200" basePath="" />
       )}
     </div>
   );

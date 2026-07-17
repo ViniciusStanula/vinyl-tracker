@@ -36,62 +36,16 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const ua = request.headers.get("user-agent") ?? "";
-  const isMcp = pathname.startsWith("/api/mcp");
   const bot = detectBot(ua);
 
   // noindex for thin artista/estilo pages is handled by the page's own
   // <meta name="robots"> tag (same thresholds). No serial pre-flight needed.
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return NextResponse.next(); // misconfig must never break pages
-
-  // Snapshot request data now — the request object should not be touched
-  // after the response is sent.
-  const row = {
-    path: pathname,
-    query: request.nextUrl.search || null,
-    user_agent: ua.slice(0, 512),
-    bot_name: bot?.name ?? null,
-    bot_category: bot?.category ?? null,
-    method: request.method,
-    ip:
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      null,
-    country: request.headers.get("x-vercel-ip-country"),
-    region: request.headers.get("x-vercel-ip-region"),
-    city: request.headers.get("x-vercel-ip-city"),
-    referer: request.headers.get("referer"),
-    accept_language: request.headers.get("accept-language")?.slice(0, 40) ?? null,
-  };
-
-  // Only log recognised bots — human browsers add row volume with no signal.
-  // null bot = regular visitor, skip. MCP path always has bot set (mcp_client).
-  if (bot) {
-    // Awaited, not fire-and-forget: after()/waitUntil does not flush for
-    // pass-through (NextResponse.next()) proxy responses on Vercel, so every
-    // prod bot hit was silently dropped. Bots are low-volume and don't need
-    // sub-ms TTFB; the 3 s timeout bounds the wait so a Supabase cold start
-    // drops the log rather than hanging the crawler.
-    // "Prefer: return=minimal" is required — the anon role has no SELECT on
-    // bot_hits, so asking PostgREST to return the row would fail the insert.
-    try {
-      await fetch(`${url}/rest/v1/bot_hits`, {
-        method: "POST",
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify(row),
-        signal: AbortSignal.timeout(3000),
-      });
-    } catch (err) {
-      console.error("[bot-log] insert failed:", err);
-    }
-  }
+  // Bot logging moved to the Vercel Log Drain → /api/log-drain path, which
+  // captures ALL traffic (this proxy was never invoked in prod anyway). The
+  // old synchronous bot_hits insert here — awaited, 3 s timeout — would have
+  // added its full latency to every bot request, including edge-cache HITs,
+  // if Vercel ever started invoking the proxy. Removed for that reason.
 
   const res = addCanonical(NextResponse.next(), pathname, request.nextUrl.searchParams);
   // TEMP diagnostic — confirms the proxy executes in prod and what it detected.
@@ -103,9 +57,9 @@ export const config = {
   matcher: [
     {
       // All page routes + robots.txt, sitemap.xml, /sitemap/*.xml, llms.txt,
-      // llms-full.txt. Excludes: all /api/* (except /api/mcp below), _next
-      // internals, and static assets. The "missing" conditions skip proxy
-      // invocations for Next.js client prefetches — bots don't prefetch.
+      // llms-full.txt. Excludes: all /api/*, _next internals, and static
+      // assets. The "missing" conditions skip proxy invocations for Next.js
+      // client prefetches — bots don't prefetch.
       source:
         "/((?!api/|_next/|.*\\.(?:jpg|jpeg|png|gif|webp|avif|svg|ico|css|js|mjs|map|woff2?|ttf|otf)$).*)",
       missing: [
@@ -113,7 +67,5 @@ export const config = {
         { type: "header", key: "purpose", value: "prefetch" },
       ],
     },
-    // MCP agent traffic is logged regardless of user-agent.
-    { source: "/api/mcp/:path*" },
   ],
 };

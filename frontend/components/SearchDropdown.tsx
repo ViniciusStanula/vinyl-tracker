@@ -131,7 +131,7 @@ export default function SearchDropdown({ query, onClose }: Props) {
       {results.length >= 8 && (
         <Link
           role="menuitem"
-          href={`/?q=${encodeURIComponent(query)}`}
+          href={`/disco?q=${encodeURIComponent(query)}`}
           onClick={onClose}
           className="flex items-center justify-center gap-1 px-4 py-2.5 text-dust text-xs hover:text-cream hover:bg-groove transition-colors border-t border-groove/50"
         >

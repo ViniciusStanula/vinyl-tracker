@@ -224,12 +224,15 @@ async function queryTopArtistAllDeals(
   page: number,
   sort: string,
   precoMax: number | null,
+  // Static page render passes a large pageSize so sort/filter/pagination can
+  // run client-side (keeps the route ISR-cacheable — no server searchParams).
+  pageSize: number = PER_PAGE,
 ): Promise<{ items: ProcessedDisco[]; total: number }> {
   try {
     const matchedArtistas = await getMatchedTopArtistNamesWithCache();
     if (matchedArtistas.length === 0) return { items: [], total: 0 };
 
-    const offset      = (page - 1) * PER_PAGE;
+    const offset      = (page - 1) * pageSize;
     const orderBy     = buildOrderBy(sort);
     const precoFilter = precoMax !== null
       ? Prisma.sql`AND hp_latest."precoBrl"::float <= ${precoMax}`
@@ -284,7 +287,7 @@ async function queryTopArtistAllDeals(
         AND  d.artista = ANY(${matchedArtistas})
         ${precoFilter}
       ORDER  BY ${orderBy}
-      LIMIT  ${PER_PAGE} OFFSET ${offset}
+      LIMIT  ${pageSize} OFFSET ${offset}
     `;
 
     const total = rows.length > 0 ? Number(rows[0].totalCount) : 0;

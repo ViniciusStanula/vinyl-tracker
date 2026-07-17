@@ -21,28 +21,11 @@ const SHOW_HERO = process.env.HIDE_HERO !== "1";
 
 export const revalidate = 14400;
 
-export async function generateMetadata({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; sort?: string; artista?: string; page?: string; precoMax?: string }>;
-}) {
-  const { q, page } = await searchParams;
+// Reading no searchParams keeps `/` static/ISR-cacheable. Search, sort/filter
+// variants, and pagination all live on /disco now (SearchBar + SortBar push
+// there), so the homepage renders one canonical view for everyone.
+export async function generateMetadata() {
   const HOME_TITLE = "Garimpa Vinil — Histórico de Preços de Discos de Vinil";
-  // Search results: noindex. robots.txt also disallows ?q= as belt-and-suspenders.
-  if (q?.trim()) {
-    return { title: HOME_TITLE, robots: { index: false, follow: true } };
-  }
-  // Pagination: noindex + self-canonical. Page N is not a duplicate of page 1,
-  // so canonical must not point to page 1. sort/artista/precoMax variants are
-  // indexable and consolidate to base via proxy's cross-URL canonical header.
-  const pageNum = page !== undefined ? parseInt(page, 10) : 1;
-  if (pageNum > 1) {
-    return {
-      title: HOME_TITLE,
-      robots: { index: false, follow: true },
-      alternates: { canonical: `${SITE_URL}/?page=${pageNum}` },
-    };
-  }
   let count = 0;
   try {
     count = await getDiscoCount();
@@ -88,29 +71,7 @@ const GENRE_LINKS = [
   { label: "Reggae",     slug: "reggae" },
 ] as const;
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    q?: string;
-    sort?: string;
-    artista?: string;
-    page?: string;
-    precoMax?: string;
-  }>;
-}) {
-  const {
-    q,
-    sort = "desconto",
-    artista,
-    page: pageStr,
-    precoMax: precoMaxStr,
-  } = await searchParams;
-
-  const page       = Math.max(1, parseInt(pageStr ?? "1", 10));
-  const searchTerm = q?.trim() ?? "";
-  const precoMax   = precoMaxStr ? Number(precoMaxStr) : null;
-
+export default async function HomePage() {
   // Hero count + carousel are awaited in the shell so the hero, its LCP image,
   // and the carousel (with head-preloaded priority images) ship inside <main>
   // before the footer — both cheap, cached queries. The heavy grid query streams
@@ -121,7 +82,7 @@ export default async function HomePage({
   try {
     ([count, carouselItems] = await Promise.all([
       getDiscoCount(),
-      searchTerm || artista ? Promise.resolve([]) : queryCarouselDiscosWithCache(),
+      queryCarouselDiscosWithCache(),
     ]));
   } catch {
     // DB unavailable — render hero without count, empty carousel
@@ -130,20 +91,8 @@ export default async function HomePage({
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
 
-      {/* ── Search/filter header — replaces the hero when the user is looking
-             for something specific, so results lead instead of sitting a
-             screen below the marketing banner. Keeps a page <h1>. ── */}
-      {(searchTerm || artista) && (
-        <header className="mb-6">
-          <h1 className="font-display text-2xl sm:text-3xl font-black text-cream [text-wrap:balance]">
-            {searchTerm ? <>Resultados para &ldquo;{q}&rdquo;</> : artista}
-          </h1>
-        </header>
-      )}
-
-      {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test).
-             Hidden during search/artist filtering (see header above). ── */}
-      {SHOW_HERO && !searchTerm && !artista && (
+      {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test). ── */}
+      {SHOW_HERO && (
       <header className="relative mb-8 overflow-hidden rounded-2xl border border-groove min-h-[300px] sm:min-h-[360px] flex items-center">
         {/* Background photo */}
         <Image
@@ -203,8 +152,7 @@ export default async function HomePage({
       <ArtistasCarousel items={carouselItems} />
 
       {/* ── Genre quick-links ────────────────────────────────────── */}
-      {!searchTerm && !artista && (
-        <nav aria-label="Estilos em destaque" className="flex flex-wrap gap-2 mb-6">
+      <nav aria-label="Estilos em destaque" className="flex flex-wrap gap-2 mb-6">
           {GENRE_LINKS.map(({ label, slug }) => (
             <Link
               key={slug}
@@ -221,12 +169,11 @@ export default async function HomePage({
             Ver todos os artistas →
           </Link>
         </nav>
-      )}
 
-      {/* ── Sort bar ────────────────────────────────────────────── */}
+      {/* ── Sort bar — navigates to /disco so `/` stays param-free ── */}
       <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
         <Suspense>
-          <SortBar />
+          <SortBar basePath="/disco" />
         </Suspense>
       </div>
 
@@ -245,20 +192,11 @@ export default async function HomePage({
              shell so the hero, h1, carousel, and links land inside <main>
              before the footer in the server-rendered HTML. */}
       <Suspense fallback={<HomeResultsSkeleton />}>
-        <HomeResults
-          searchTerm={searchTerm}
-          sort={sort}
-          artista={artista}
-          precoMax={precoMax}
-          page={page}
-          q={q}
-          precoMaxStr={precoMaxStr}
-        />
+        <HomeResults />
       </Suspense>
 
       {/* ── Guias quick-links — discovery footer ─────────────────── */}
-      {!searchTerm && !artista && (
-        <section aria-labelledby="guias-heading" className="mt-12 pt-8 border-t border-groove">
+      <section aria-labelledby="guias-heading" className="mt-12 pt-8 border-t border-groove">
           <h2 id="guias-heading" className="font-display text-lg font-bold text-cream mb-3">Guias de Vinil</h2>
           <nav aria-label="Guias de vinil" className="flex flex-wrap gap-2">
             {[
@@ -282,63 +220,43 @@ export default async function HomePage({
             </Link>
           </nav>
         </section>
-      )}
 
       <BackToTop />
     </div>
   );
 }
 
-async function HomeResults({
-  searchTerm, sort, artista, precoMax, page, q, precoMaxStr,
-}: {
-  searchTerm: string;
-  sort: string;
-  artista?: string;
-  precoMax: number | null;
-  page: number;
-  q?: string;
-  precoMaxStr?: string;
-}) {
+async function HomeResults() {
   let items: Awaited<ReturnType<typeof queryDiscosWithCache>>["items"] = [];
   let total = 0, totalPages = 0;
   try {
-    ({ items, total, totalPages } = await queryDiscosWithCache({ searchTerm, sort, artista, precoMax, page }));
+    ({ items, total, totalPages } = await queryDiscosWithCache({
+      searchTerm: "",
+      sort: "desconto",
+      precoMax: null,
+      page: 1,
+    }));
   } catch {
     // DB unavailable — render empty state
   }
 
-  const currentPage = Math.min(page, totalPages);
-
   return (
     <>
-      {/* ── Result count + active artist badge ──────────────────── */}
+      {/* ── Result count ────────────────────────────────────────── */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <p className="text-dust text-sm">
           {formatDiscoCount(total)}
         </p>
-        {artista && (
-          <span className="inline-flex items-center gap-1.5 bg-groove border border-wax/60 text-parchment text-xs px-3 py-1 rounded-full">
-            {artista}
-            <Link
-              href="/"
-              className="text-dust hover:text-cream transition-colors leading-none"
-              aria-label="Remover filtro de artista"
-            >
-              ×
-            </Link>
-          </span>
-        )}
       </div>
 
-      {/* ── Grid + Pagination ───────────────────────────────────── */}
+      {/* ── Grid + Pagination (page 2+ links continue on /disco) ── */}
       {items.length > 0 ? (
         <InfiniteGrid
           initialItems={items}
-          currentPage={currentPage}
+          currentPage={1}
           totalPages={totalPages}
-          searchParams={{ q, sort, artista, precoMax: precoMaxStr }}
-          animationKey={`${sort}-${q ?? ""}-${artista ?? ""}-${currentPage}`}
+          searchParams={{}}
+          animationKey="home-default"
           basePath="/disco"
         />
       ) : (

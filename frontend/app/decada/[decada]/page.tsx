@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
-import DiscoCard from "@/components/DiscoCard";
-import SortBar from "@/components/SortBar";
-import Pagination from "@/components/Pagination";
+import ArtistaRecords from "@/components/ArtistaRecords";
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
 import { toJsonLd } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
 
 export const revalidate = 14400;
+
+// Top-N cap: fetch the decade's best records (default desconto sort) in one
+// shot so client-side sort/filter/pagination (ArtistaRecords) is instant and
+// the route stays ISR-cacheable — no server searchParams.
+const RECORDS_CAP = 240;
 
 // Decades we surface as hubs. Slug is the start year; label reads "anos 80".
 const DECADES = [1960, 1970, 1980, 1990, 2000, 2010, 2020] as const;
@@ -45,30 +47,24 @@ export async function generateMetadata({
 
 export default async function DecadaPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ decada: string }>;
-  searchParams: Promise<{ page?: string; sort?: string; precoMax?: string }>;
 }) {
   const { decada } = await params;
   const start = parseDecade(decada);
   if (start === null) notFound();
 
-  const { page: pageParam, sort: sortParam, precoMax: precoMaxParam } = await searchParams;
-  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
-  const sort = sortParam ?? "desconto";
-  const precoMax = precoMaxParam ? Number(precoMaxParam) : null;
-
-  const { items, total, totalPages } = await queryDiscosWithCache({
+  // Top records, default sort, no filter → static/cacheable; ArtistaRecords
+  // does sort/filter/pagination in the browser.
+  const { items, total } = await queryDiscosWithCache({
     searchTerm: "",
-    sort,
-    precoMax,
-    page,
+    sort: "desconto",
+    precoMax: null,
+    page: 1,
     decade: start,
+    pageSize: RECORDS_CAP,
   });
-  if (total === 0 && page === 1) notFound();
-
-  const currentPage = Math.min(page, totalPages);
+  if (total === 0) notFound();
 
   const jsonLd = toJsonLd({
     "@context": "https://schema.org",
@@ -121,32 +117,10 @@ export default async function DecadaPage({
         ))}
       </nav>
 
-      <div className="sticky top-[62px] z-40 mb-4 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
-        <Suspense>
-          <SortBar />
-        </Suspense>
-      </div>
-
       {items.length === 0 ? (
         <p className="text-dust text-sm py-12 text-center">Nenhum disco encontrado nesta década com os filtros atuais.</p>
       ) : (
-        <>
-          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {items.map((disco, i) => (
-              <li key={disco.id}>
-                <DiscoCard disco={disco} priority={i < 10} />
-              </li>
-            ))}
-          </ul>
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              searchParams={{ sort: sortParam, precoMax: precoMaxParam }}
-              basePath={`/decada/${start}`}
-            />
-          )}
-        </>
+        <ArtistaRecords items={items} slug={String(start)} basePath="/decada" />
       )}
     </div>
   );
