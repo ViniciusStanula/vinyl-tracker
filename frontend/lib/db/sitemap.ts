@@ -30,9 +30,9 @@ export const getSitemapData = unstable_cache(
           AND  price_count >= 5
         ORDER  BY artista
       `,
-      prisma.$queryRaw<{ slug: string; nome: string }[]>`
+      prisma.$queryRaw<{ slug: string; nome: string; cnt: bigint }[]>`
         WITH tags AS (
-          SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
+          SELECT unnest(string_to_array(lastfm_tags, ', ')) AS tag
           FROM   "Disco"
           WHERE  lastfm_tags IS NOT NULL
             AND  lastfm_tags != ''
@@ -52,10 +52,11 @@ export const getSitemapData = unstable_cache(
             ) AS slug
           FROM tags
         )
-        SELECT slug, min(tag) AS nome
+        SELECT slug, min(tag) AS nome, COUNT(*) AS cnt
         FROM   slugged
         WHERE  slug != ''
         GROUP  BY slug
+        HAVING COUNT(*) > 3
         ORDER  BY slug
       `,
     ]);
@@ -69,10 +70,11 @@ export const getSitemapData = unstable_cache(
       artists.push({ nome: artista, slug });
     }
 
-    return {
-      artists,
-      styles: styleRows.map(({ slug, nome }) => ({ slug, nome })),
-    };
+    const styles = styleRows
+      .filter(({ slug }) => !REDIRECTED_ESTILO_SLUGS.has(slug))
+      .map(({ slug, nome }) => ({ slug, nome }));
+
+    return { artists, styles };
   },
   ["sitemap-page"],
   { tags: ["prices"], revalidate: 3600 },

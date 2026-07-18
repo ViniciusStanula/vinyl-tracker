@@ -271,6 +271,38 @@ export const REDIRECTED_ESTILO_SLUGS = new Set([
   "woodstock",
   "zac-brown-band",
   "zz-top",
+  // Already redirected in next.config.ts but missing from this Set (out of
+  // sync — Set drives getEstilosList/getRelatedEstilos, redirects drive the
+  // HTTP 301; both need the slug or internal links keep pointing at a page
+  // that just bounces).
+  "blackpink",
+  "chris-brown",
+  "cortis",
+  "fleetwood-mac",
+  "ginuwine",
+  "helloween",
+  "hilary-duff",
+  "keyshia-cole",
+  "raspberry-bulbs",
+  "ray-conniff",
+  "tanya-tucker",
+  // New artist-name leaks found via thin-tag (<=3 discs) x-match against
+  // Disco.artista, 2026-07-18 pass. Paired next.config.ts redirects added.
+  "bauhaus",
+  "doctor-who",
+  "future",
+  "jim-hall",
+  "middle-of-the-road",
+  "queen",
+  // Duplicate-meaning tags (singular/plural, pt/en) merged into the tag with
+  // real inventory — user-reported, 2026-07-18. See matching next.config.ts redirects.
+  "boyband",
+  "brazil",
+  // Decade tags — /decada pages are the canonical decade-browsing surface.
+  "60s",
+  "70s",
+  "80s",
+  "90s",
 ]);
 
 function estiloOrderBy(sort: string): Prisma.Sql {

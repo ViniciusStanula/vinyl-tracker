@@ -129,11 +129,29 @@ const nextConfig: NextConfig = {
       { source: "/estilo/raspberry-bulbs", destination: "/artista/raspberry-bulbs", permanent: true },
       { source: "/estilo/ray-conniff", destination: "/artista/ray-conniff", permanent: true },
       { source: "/estilo/tanya-tucker", destination: "/artista/tanya-tucker", permanent: true },
+      // More artist-name tags found via thin-tag (<=3 discs) x-match, 2026-07-18 pass.
+      { source: "/estilo/bauhaus", destination: "/artista/bauhaus", permanent: true },
+      { source: "/estilo/doctor-who", destination: "/artista/doctor-who", permanent: true },
+      { source: "/estilo/future", destination: "/artista/future", permanent: true },
+      { source: "/estilo/jim-hall", destination: "/artista/jim-hall", permanent: true },
+      { source: "/estilo/middle-of-the-road", destination: "/artista/middle-of-the-road", permanent: true },
+      { source: "/estilo/queen", destination: "/artista/queen", permanent: true },
+      // Duplicate-meaning tags found from a user report, 2026-07-18: singular/
+      // plural and pt/en variants of the same genre splitting inventory across
+      // two pages. Redirect the thinner one into the one with real inventory.
+      { source: "/estilo/boyband", destination: "/estilo/boybands", permanent: true },
+      { source: "/estilo/brazil", destination: "/estilo/brasil", permanent: true },
+      // Decade tags duplicate the dedicated /decada pages — keep one canonical
+      // decade-browsing surface instead of splitting inventory/links across two.
+      { source: "/estilo/60s", destination: "/decada/1960", permanent: true },
+      { source: "/estilo/70s", destination: "/decada/1970", permanent: true },
+      { source: "/estilo/80s", destination: "/decada/1980", permanent: true },
+      { source: "/estilo/90s", destination: "/decada/1990", permanent: true },
       // More spelling-variant tags found on a rescan (data fixed in lastfm_tags directly).
       { source: "/estilo/8bit", destination: "/estilo/8-bit", permanent: true },
       { source: "/estilo/alternative-hip-hop", destination: "/estilo/alternative-hiphop", permanent: true },
       { source: "/estilo/audio-book", destination: "/estilo/audiobook", permanent: true },
-      { source: "/estilo/boy-band", destination: "/estilo/boyband", permanent: true },
+      { source: "/estilo/boy-band", destination: "/estilo/boybands", permanent: true },
       { source: "/estilo/chill-out", destination: "/estilo/chillout", permanent: true },
       { source: "/estilo/dreampop", destination: "/estilo/dream-pop", permanent: true },
       { source: "/estilo/german-hip-hop", destination: "/estilo/german-hiphop", permanent: true },
