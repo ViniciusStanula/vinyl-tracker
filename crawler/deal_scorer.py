@@ -203,6 +203,15 @@ def _compute_raw_score(
     return score
 
 
+# Scoring passes abandoned to a statement timeout in this process.
+# A timeout must never pass silently: deal scores simply stop updating while the
+# crawl still reports success, which is invisible until the site goes stale.
+# main() reads this at the very end of the run and exits non-zero, so the
+# workflow's failure step opens a GitHub issue — after all crawled data has been
+# committed and published, so the visibility costs nothing.
+TIMED_OUT_PASSES = 0
+
+
 def score_deals(conn) -> dict:
     """
     Compute deal scores for all products with sufficient price history
@@ -248,8 +257,9 @@ def score_deals(conn) -> dict:
         # records (inserted before the price floor was raised) never pollute benchmark
         # averages or appear as the "current price".  Products whose entire price history
         # is below the threshold are absent from the join and won't receive a deal score.
-        cur.execute(
-            """
+        try:
+            cur.execute(
+                """
             WITH stats AS (
                 SELECT
                     h."discoId",
@@ -322,10 +332,25 @@ def score_deals(conn) -> dict:
                 ORDER BY "capturadoEm" DESC
                 LIMIT 1
             ) l ON TRUE
-            """,
-            (MIN_DEAL_PRICE_BRL, MIN_DEAL_PRICE_BRL),
-        )
-        products = cur.fetchall()
+                """,
+                (MIN_DEAL_PRICE_BRL, MIN_DEAL_PRICE_BRL),
+            )
+            products = cur.fetchall()
+        except psycopg2.errors.QueryCanceled:
+            # The benchmark aggregate exceeded its timeout.  Deal scoring is
+            # best-effort and re-runs later in this crawl and on the next one, so
+            # a slow read must not abort the run — everything crawled up to here
+            # is already committed.  The run is still marked failed at the end
+            # (see TIMED_OUT_PASSES) so this surfaces instead of rotting quietly.
+            global TIMED_OUT_PASSES
+            TIMED_OUT_PASSES += 1
+            log.error(
+                "score_deals: benchmark query exceeded the statement timeout — "
+                "skipping this scoring pass. Deal scores are now STALE; the crawl "
+                "continues and the run will be marked failed at the end."
+            )
+            conn.rollback()
+            return _EMPTY
 
     log.info("score_deals: evaluating %d products", len(products))
 

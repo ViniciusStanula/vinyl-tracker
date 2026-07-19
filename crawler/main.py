@@ -17,6 +17,7 @@ Dependencies:
 """
 import os
 import re
+import sys
 import json
 import time
 import random
@@ -58,6 +59,7 @@ from crawl_tiering import (
     rescore_catalog,
 )
 from bs4 import BeautifulSoup
+import deal_scorer
 from deal_scorer import score_deals
 from utils import gerar_slug
 from metrics import collector as _metrics, ensure_metrics_table, blocked_kind, log_run_summary
@@ -3566,6 +3568,19 @@ def main():
             " | ".join(f"{k}={v}" for k, v in _final.items() if v > 0),
         )
     log.info("Done. ✓")
+
+    # Deal scoring timed out at least once: the crawl itself succeeded and every
+    # page above has been published, but deal_score / avg_30d / low_30d are stale
+    # for this run. Fail the job AFTER that publishing so the workflow's failure
+    # step opens an issue — a silently-degrading deals feature is the one outcome
+    # worse than a loud crash.
+    if deal_scorer.TIMED_OUT_PASSES:
+        log.error(
+            "Run marked FAILED: %d deal-scoring pass(es) timed out — deal scores "
+            "are stale. Crawled data was still committed and published.",
+            deal_scorer.TIMED_OUT_PASSES,
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":

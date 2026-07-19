@@ -2,10 +2,19 @@
 """
 post_crawl_check.py - post-run data-quality monitor (CD incident, 2026-06-11).
 
-Fails loudly (exit 1, which fails the GitHub Actions job) if any row inserted
-during the check window is not positively marked vinyl or has a CD-like title.
-With the ingestion + DB gates in place this should never fire; if it does, a
-gate has a hole and the run must be investigated.
+Two severities:
+
+  FATAL (exit 1, fails the GitHub Actions job) — a row inserted in the window
+    that is NOT positively marked vinyl (format IS DISTINCT FROM 'vinyl'). This
+    is the real leak class from the June incident: the ingestion allowlist must
+    never let a non-vinyl format through.
+
+  WARNING (logged, exit 0) — a format='vinyl' row whose TITLE looks like a CD
+    with no vinyl keyword. This is almost always Amazon's injected distributor
+    title ("The Orchard - Album [CD]") on a page whose selected format swatch is
+    vinyl; detect_format reads that swatch and is authoritative, so these are
+    legitimate vinyl. The title alone cannot distinguish them from a true CD
+    leak, so it must not gate CI — it is surfaced for human review instead.
 """
 import os
 import sys
@@ -38,7 +47,12 @@ def main() -> None:
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT asin, titulo, format
+            SELECT
+                asin,
+                titulo,
+                format,
+                -- fatal: not positively marked vinyl (real leak class).
+                (format IS DISTINCT FROM 'vinyl') AS is_fatal
             FROM "Disco"
             WHERE "createdAt" > NOW() - (%s * INTERVAL '1 hour')
               AND "createdAt" > %s::timestamptz
@@ -46,7 +60,7 @@ def main() -> None:
                 format IS DISTINCT FROM 'vinyl'
                 OR (
                   -- vinyl row with CD title signal but NO vinyl title signal:
-                  -- true false insertion (not a bundle).
+                  -- injected distributor title, swatch-confirmed vinyl. Warn only.
                   titulo ~* %s AND NOT titulo ~* %s
                 )
               )
@@ -57,12 +71,24 @@ def main() -> None:
         rows = cur.fetchall()
     conn.close()
 
-    if rows:
+    fatal = [(a, t, f) for a, t, f, is_fatal in rows if is_fatal]
+    warn = [(a, t, f) for a, t, f, is_fatal in rows if not is_fatal]
+
+    if warn:
         print(
-            f"POST-CRAWL CHECK FAILED: {len(rows)} suspicious insertion(s) "
+            f"post-crawl WARNING: {len(warn)} vinyl row(s) with a CD-like title "
+            f"in the last {WINDOW_HOURS:.0f}h (likely injected distributor titles "
+            f"— format swatch already vetted these as vinyl):"
+        )
+        for asin, titulo, fmt in warn[:50]:
+            print(f"  {asin}  format={fmt}  {(titulo or '')[:70]}")
+
+    if fatal:
+        print(
+            f"POST-CRAWL CHECK FAILED: {len(fatal)} non-vinyl insertion(s) "
             f"in the last {WINDOW_HOURS:.0f}h:"
         )
-        for asin, titulo, fmt in rows[:50]:
+        for asin, titulo, fmt in fatal[:50]:
             print(f"  {asin}  format={fmt}  {(titulo or '')[:70]}")
         sys.exit(1)
 
