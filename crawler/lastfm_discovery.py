@@ -67,6 +67,18 @@ DELAY_PAGE_MAX   = 5.0
 DELAY_ARTIST_MIN = 8.0   # seconds between artists
 DELAY_ARTIST_MAX = 15.0
 
+# Soft-block circuit breaker (shared with artist_discovery). Amazon sometimes
+# answers a scraper with HTTP 200 and zero product cards — a silent soft block.
+# A short streak is usually session-level and a fresh session recovers; a long
+# streak is the runner IP being flagged, where continuing only wastes requests
+# and deepens the block. Rotate + back off on the short streak; abort the run on
+# the long one — the respectful response to being turned away.
+_CARD_SELECTOR          = 'div[data-component-type="s-search-result"][data-asin]'
+SOFTBLOCK_ROTATE_STREAK = 3     # consecutive turn-aways → rotate session + back off
+SOFTBLOCK_ABORT_STREAK  = 8     # consecutive turn-aways → stop the run
+SOFTBLOCK_BACKOFF_MIN   = 30.0  # seconds
+SOFTBLOCK_BACKOFF_MAX   = 60.0
+
 # Stop processing artists this many seconds before the GHA job timeout so we
 # can still write results and exit cleanly.  Override via env var if needed.
 SOFT_TIMEOUT_SECONDS = int(os.environ.get("SOFT_TIMEOUT_SECONDS", str(105 * 60)))
@@ -185,10 +197,13 @@ def ensure_discovery_tables(conn) -> None:
                 titulo        TEXT,
                 artist_name   TEXT,
                 price_brl     DECIMAL(10,2),
+                img_url       TEXT,
                 source        TEXT          NOT NULL DEFAULT 'lastfm_artist_search',
                 discovered_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
             )
         """)
+        # Backfill the column on tables created before img capture existed.
+        cur.execute("ALTER TABLE discovered_vinyls ADD COLUMN IF NOT EXISTS img_url TEXT")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS discovery_run_state (
                 id          INTEGER     PRIMARY KEY DEFAULT 1,
@@ -260,6 +275,7 @@ def upsert_discovered(conn, rows: list[dict]) -> tuple[int, int]:
                 r.get("titulo") or None,
                 r.get("artist_name") or None,
                 r.get("price_brl") or None,
+                r.get("img_url") or None,
                 r.get("source", "lastfm_artist_search"),
             )
             for r in to_insert
@@ -268,8 +284,8 @@ def upsert_discovered(conn, rows: list[dict]) -> tuple[int, int]:
             cur,
             """
             INSERT INTO discovered_vinyls
-                (asin, titulo, artist_name, price_brl, source, discovered_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
+                (asin, titulo, artist_name, price_brl, img_url, source, discovered_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
             ON CONFLICT (asin) DO NOTHING
             """,
             data,
@@ -422,20 +438,39 @@ def _parse_page(soup) -> list[dict]:
             if price:
                 break
 
-        results.append({"asin": vinyl_asin, "titulo": title, "price_brl": price})
+        # ── Image ─────────────────────────────────────────────────────────────
+        # The card thumbnail belongs to card_asin. Only trust it when the vinyl
+        # variant IS the card's own ASIN; on sibling / "outro formato" cards the
+        # thumbnail is the CD's cover, not the vinyl's, so leave it empty and let
+        # a later enrichment fill it.
+        img_url = ""
+        if vinyl_asin == card_asin:
+            img_el = card.select_one("img.s-image")
+            if img_el:
+                src = (img_el.get("src") or "").strip()
+                if src and not src.startswith("data:"):
+                    img_url = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SL1500_.", src)
+
+        results.append({
+            "asin": vinyl_asin, "titulo": title, "price_brl": price, "img_url": img_url,
+        })
 
     return results
 
 
-def search_artist(session, artist_name: str) -> tuple[list[dict], bool]:
+def search_artist(session, artist_name: str) -> tuple[list[dict], bool, bool]:
     """
     Search Amazon Brazil for an artist's vinyl records (up to MAX_SEARCH_PAGES).
 
-    Returns (results, captcha_blocked).
-    On CAPTCHA or HTTP error: logs the artist, returns ([], True) — no retry.
+    Returns (results, blocked, inconclusive).
+      blocked      → CAPTCHA / HTTP error (no retry).
+      inconclusive → HTTP 200 but the page rendered zero product cards (a silent
+                     soft block), so an empty result is Amazon declining to
+                     answer, not evidence the artist has no vinyl.
     """
     found: dict[str, dict] = {}
     encoded = urllib.parse.quote(artist_name)
+    saw_cards = False
 
     for page in range(1, MAX_SEARCH_PAGES + 1):
         if page == 1:
@@ -447,36 +482,45 @@ def search_artist(session, artist_name: str) -> tuple[list[dict], bool]:
             resp = session.get(url, timeout=25)
         except Exception as exc:
             log.warning("[search] %r page %d: request error — %s", artist_name, page, exc)
-            return list(found.values()), True
+            return list(found.values()), True, not saw_cards
 
         if resp.status_code != 200:
             log.warning(
                 "[search] %r page %d: HTTP %d — skipping artist",
                 artist_name, page, resp.status_code,
             )
-            return list(found.values()), True
+            return list(found.values()), True, not saw_cards
 
         if _BOT_RE.search(resp.text):
             log.warning("[search] %r page %d: CAPTCHA — skipping artist", artist_name, page)
-            return list(found.values()), True
+            return list(found.values()), True, not saw_cards
 
         soup = BeautifulSoup(resp.content, "lxml")
-        page_results = _parse_page(soup)
+        cards = len(soup.select(_CARD_SELECTOR))
+        if cards:
+            saw_cards = True
+        elif page == 1:
+            # Page 1 with no cards at all: soft block, not an empty catalog.
+            log.warning("[search] %r page 1: HTTP 200 but zero product cards — soft block.",
+                        artist_name)
+            return [], False, True
 
+        page_results = _parse_page(soup)
         for r in page_results:
             if r["asin"] not in found:
                 found[r["asin"]] = r
 
-        log.debug("[search] %r page %d: %d vinyl result(s)", artist_name, page, len(page_results))
+        log.debug("[search] %r page %d: %d card(s), %d vinyl result(s)",
+                  artist_name, page, cards, len(page_results))
 
-        # No results on this page → end of search results, stop paging.
-        if not page_results:
+        # No cards on a later page → end of results, not a block.
+        if not cards:
             break
 
         if page < MAX_SEARCH_PAGES:
             time.sleep(random.uniform(DELAY_PAGE_MIN, DELAY_PAGE_MAX))
 
-    return list(found.values()), False
+    return list(found.values()), False, False
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Entry point
@@ -540,8 +584,11 @@ def main() -> None:
     artists_with_results = 0
     artists_no_results   = 0
     artists_blocked      = 0
+    artists_soft_blocked = 0
     blocked_names: list[str] = []
     soft_timeout_hit     = False
+    softblock_streak     = 0     # consecutive turn-aways (block or soft block)
+    aborted_blocked      = False
 
     run_start = time.monotonic()
 
@@ -557,12 +604,41 @@ def main() -> None:
 
         log.info("[%d/%d] %r", idx, len(artists), artist)
 
-        vinyls, blocked = search_artist(session, artist)
+        vinyls, blocked, inconclusive = search_artist(session, artist)
 
         # Track block separately — keep any partial results from completed pages.
         if blocked:
             artists_blocked += 1
             blocked_names.append(artist)
+        elif inconclusive:
+            artists_soft_blocked += 1
+
+        # ── Circuit breaker ────────────────────────────────────────────────────
+        # A run of turn-aways (CAPTCHA/HTTP block or empty-card soft block) means
+        # Amazon is refusing this session or IP. Rotate + back off to recover a
+        # session-level throttle; abort if a fresh session keeps getting turned
+        # away — continuing only wastes requests and deepens the block.
+        if blocked or inconclusive:
+            softblock_streak += 1
+            if softblock_streak >= SOFTBLOCK_ABORT_STREAK:
+                log.warning(
+                    "[circuit-breaker] %d consecutive turn-aways — aborting run at "
+                    "artist [%d/%d]; the IP looks flagged.",
+                    softblock_streak, idx, len(artists),
+                )
+                aborted_blocked = True
+                break
+            if softblock_streak % SOFTBLOCK_ROTATE_STREAK == 0:
+                backoff = random.uniform(SOFTBLOCK_BACKOFF_MIN, SOFTBLOCK_BACKOFF_MAX)
+                log.warning(
+                    "[circuit-breaker] %d consecutive turn-aways — rotating session "
+                    "and backing off %.0fs.", softblock_streak, backoff,
+                )
+                time.sleep(backoff)
+                session = make_session()
+                warm_up(session)
+        else:
+            softblock_streak = 0
 
         if vinyls:
             artists_with_results += 1
@@ -571,7 +647,7 @@ def main() -> None:
                 v["artist_name"] = artist
                 v["source"]      = "lastfm_artist_search"
             all_vinyls.extend(vinyls)
-        elif not blocked:
+        elif not blocked and not inconclusive:
             artists_no_results += 1
             log.debug("  → no vinyl found")
 
@@ -607,15 +683,21 @@ def main() -> None:
         )
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    run_label = "Partial run (soft timeout)" if soft_timeout_hit else "Run complete"
+    if aborted_blocked:
+        run_label = "Partial run (blocked — circuit breaker)"
+    elif soft_timeout_hit:
+        run_label = "Partial run (soft timeout)"
+    else:
+        run_label = "Run complete"
     log.info(
         "%s — "
         "artists_processed=%d  artists_no_vinyl=%d  artists_blocked=%d  "
-        "vinyl_asins_found=%d  newly_inserted=%d  already_known=%d",
+        "artists_soft_blocked=%d  vinyl_asins_found=%d  newly_inserted=%d  already_known=%d",
         run_label,
         artists_with_results + artists_no_results,
         artists_no_results,
         artists_blocked,
+        artists_soft_blocked,
         len(unique_vinyls),
         newly_inserted,
         already_known,

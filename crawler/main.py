@@ -703,6 +703,19 @@ _proxy_pool: ProxyPool | None = None
 #  Circuit breaker + bot-detection stats
 # ─────────────────────────────────────────────────────────────
 _CIRCUIT_BREAKER_THRESHOLD = 10  # consecutive per-thread bot-detection failures → abort
+# When no proxies are configured, every worker shares the one runner IP. Once
+# Amazon flags it there is no clean IP to rotate to, so each further blocked
+# request (plus the 3-hit re-warm on session rebuild) only deepens the flag.
+# Bail much sooner in that case instead of grinding the whole batch.
+_CIRCUIT_BREAKER_THRESHOLD_NOPROXY = 4
+
+
+def _circuit_breaker_threshold() -> int:
+    """Consecutive-block count that trips the phase abort. Lower without proxies:
+    a flagged runner IP has no recovery path, so tolerating fewer blocks stops
+    the crawler from escalating its own detection."""
+    return (_CIRCUIT_BREAKER_THRESHOLD if get_proxy_pool().has_proxies
+            else _CIRCUIT_BREAKER_THRESHOLD_NOPROXY)
 
 # Set by _fetch_one_stale when a worker hits the threshold; cleared at the start
 # of each crawl_stale_records call so Phase 0 and Phase 3 each get a clean slate.
@@ -2335,7 +2348,7 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
         # task gets a fresh warmed one.
         _invalidate_worker_session()
         _tl.consecutive_failures = getattr(_tl, "consecutive_failures", 0) + 1
-        if _tl.consecutive_failures >= _CIRCUIT_BREAKER_THRESHOLD:
+        if _tl.consecutive_failures >= _circuit_breaker_threshold():
             log.warning(
                 "[circuit-breaker] Worker %d: %d consecutive bot-detection failures"
                 " — aborting stale phase.",
@@ -2506,7 +2519,7 @@ def _fetch_one_discovery(asin: str, delay: float, worker_idx: int,
     elif status is None:
         _invalidate_worker_session()
         _tl.consecutive_failures = getattr(_tl, "consecutive_failures", 0) + 1
-        if _tl.consecutive_failures >= _CIRCUIT_BREAKER_THRESHOLD:
+        if _tl.consecutive_failures >= _circuit_breaker_threshold():
             log.warning(
                 "[circuit-breaker] Discovery worker %d: %d consecutive bot-detection"
                 " failures — aborting discovery phase.",
@@ -2857,6 +2870,100 @@ def crawl_stale_records_api(
         " | BUDGET CAP HIT" if budget_hit else "",
     )
     return counts["updated"], counts["unavailable"], counts["errors"]
+
+
+def crawl_discovery_api(
+    rows: list[dict],
+    conn,
+    deadline: float | None = None,
+) -> tuple[list[dict], list[str], list[str]]:
+    """
+    Creators-API path for Phase 2.8 discovery — replaces per-ASIN /dp/ scraping.
+
+    Queued rows come from lastfm_discovery.py, which already confirmed the format
+    is vinyl from the search card (sibling-ASIN safe) and captured title, artist,
+    price, and cover image. Here we only re-validate fresh price + availability
+    via getItems and build the catalog record from queue metadata + API price —
+    no product page is fetched, so Amazon's skeleton bot-wall never applies.
+
+    rows: [{asin, titulo, artist_name, price_brl, img_url}, ...]
+
+    Returns (accepted_records, to_delete, kept):
+      accepted_records → upsert into Disco
+      to_delete        → remove from the queue (entered catalog OR definitively
+                         not a live purchasable vinyl: OOS / no price)
+      kept             → transient API misses; left in the queue to retry next run
+    Chunks never reached (budget/deadline) are simply left queued.
+    """
+    client = _get_creators_client(conn)
+    now = datetime.now(timezone.utc)
+    by_asin = {r["asin"]: r for r in rows}
+    asins = list(by_asin.keys())
+    chunks = [asins[i:i + 10] for i in range(0, len(asins), 10)]
+
+    accepted: list[dict] = []
+    to_delete: list[str] = []
+    kept: list[str] = []
+
+    from creators_api import BudgetExhausted
+
+    with ThreadPoolExecutor(max_workers=CREATORS_API_WORKERS) as pool:
+        futures = {pool.submit(client.get_items, c): c for c in chunks}
+        for fut in as_completed(futures):
+            if deadline is not None and time.monotonic() >= deadline:
+                for f in futures:
+                    f.cancel()
+                log.warning("Phase 2.8 (API): time limit — leaving unprocessed ASINs queued.")
+                break
+            chunk = futures[fut]
+            try:
+                results = {r.asin: r for r in fut.result()}
+            except BudgetExhausted as exc:
+                for f in futures:
+                    f.cancel()
+                log.warning("Phase 2.8 (API): %s — leaving unprocessed ASINs queued.", exc)
+                break
+            except Exception as exc:
+                log.warning("Phase 2.8 (API): getItems failed for a chunk: %s", exc)
+                continue
+
+            for asin in chunk:
+                q = by_asin[asin]
+                res = results.get(asin)
+                if res is None:
+                    kept.append(asin)  # transient miss — retry next run
+                    continue
+                oos = (res.in_stock is False) or (
+                    isinstance(res.availability_type, str)
+                    and res.availability_type.upper() in _API_OOS_TYPES
+                )
+                price = res.price
+                if price is None and q.get("price_brl") is not None:
+                    try:
+                        price = float(q["price_brl"])  # fall back to discovery-time price
+                    except (TypeError, ValueError):
+                        price = None
+                titulo = (res.title or q.get("titulo") or "").strip()
+                if oos or price is None or price < MIN_PRICE_BRL or not titulo:
+                    to_delete.append(asin)  # not a live purchasable vinyl
+                    continue
+                accepted.append({
+                    "asin":        asin,
+                    "titulo":      titulo,
+                    "artista":     q.get("artist_name"),
+                    "slug":        gerar_slug(titulo, asin),
+                    "imgUrl":      q.get("img_url") or "",
+                    "url":         affiliate_link(asin),
+                    "rating":      res.star_rating,
+                    "reviewCount": res.review_count,
+                    "precoBrl":    price,
+                    "capturadoEm": now,
+                    "format":      "vinyl",  # trusted from the discovery-time vinyl filter
+                })
+                to_delete.append(asin)
+
+    _flush_api_budget(conn)
+    return accepted, to_delete, kept
 
 
 # In-loop deal refresh cadence (B2): during the long Phase-3 sweep, re-price ALL
@@ -3295,15 +3402,32 @@ def main():
                 log.info("═" * 60)
                 t0 = time.monotonic()
                 disc_limit = args.discovery_max if args.discovery_max > 0 else 999_999
-                pending = fetch_pending_discovered(conn, limit=disc_limit)
+                pending_rows = fetch_pending_discovered(conn, limit=disc_limit)
                 log.info(
                     "Phase 2.8 discovery queue — %d pending ASIN(s) (limit %s).",
-                    len(pending),
+                    len(pending_rows),
                     disc_limit if args.discovery_max > 0 else "unlimited",
                 )
-                if pending:
+                if pending_rows and CREATORS_REFRESH_ENABLED:
+                    # ── API path: validate via getItems, build record from queue
+                    #    metadata + API price. No product-page scrape → no bot-wall.
+                    accepted, to_delete, kept = crawl_discovery_api(
+                        pending_rows, conn, deadline,
+                    )
+                    if accepted and not args.dry_run:
+                        upsert_batch(conn, accepted)
+                    if to_delete and not args.dry_run:
+                        delete_discovered_vinyls(conn, to_delete)
+                    log.info(
+                        "Phase 2.8 (API): %d upserted | %d rejected | %d kept for retry.",
+                        len(accepted), len(to_delete) - len(accepted), len(kept),
+                    )
+                    log.info("Phase 2.8 done: %.0fs", time.monotonic() - t0)
+                elif pending_rows:
+                    # ── Scraper fallback (Creators API disabled, e.g. local run) ──
+                    pending = [r["asin"] for r in pending_rows]
                     _stale_abort.clear()
-                    accepted: list[dict] = []
+                    accepted = []
                     processed: list[str] = []
                     with ThreadPoolExecutor(max_workers=args.stale_workers) as pool:
                         futs = {

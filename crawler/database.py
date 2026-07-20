@@ -745,24 +745,39 @@ def delete_record(conn, disco_id: str, asin: str) -> None:
     conn.commit()
 
 
-def fetch_pending_discovered(conn, limit: int = 50) -> list[str]:
+def fetch_pending_discovered(conn, limit: int = 50) -> list[dict]:
     """
-    Returns up to `limit` ASINs from discovered_vinyls that are not yet in Disco.
-    Returns [] if the discovered_vinyls table doesn't exist yet (first run before
-    the discovery script has ever executed).
+    Returns up to `limit` queued rows from discovered_vinyls not yet in Disco,
+    each as {asin, titulo, artist_name, price_brl, img_url}. The metadata lets
+    the discovery phase build a catalog record without re-scraping the product
+    page. Returns [] if the discovered_vinyls table doesn't exist yet (first run
+    before the discovery script has ever executed).
     """
     try:
         with _cursor(conn) as cur:
+            # Idempotent guard for tables created before img capture existed, so
+            # the SELECT below never fails on a missing column.
+            cur.execute("ALTER TABLE discovered_vinyls ADD COLUMN IF NOT EXISTS img_url TEXT")
             cur.execute(
                 """
-                SELECT asin FROM discovered_vinyls
+                SELECT asin, titulo, artist_name, price_brl, img_url
+                FROM discovered_vinyls
                 WHERE asin NOT IN (SELECT asin FROM "Disco")
                 ORDER BY discovered_at ASC
                 LIMIT %s
                 """,
                 (limit,),
             )
-            return [row[0] for row in cur.fetchall()]
+            return [
+                {
+                    "asin": row[0],
+                    "titulo": row[1],
+                    "artist_name": row[2],
+                    "price_brl": row[3],
+                    "img_url": row[4],
+                }
+                for row in cur.fetchall()
+            ]
     except Exception as exc:
         # Table doesn't exist yet — swallow, rollback, return empty.
         conn.rollback()
