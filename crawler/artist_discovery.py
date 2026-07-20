@@ -55,6 +55,10 @@ from lastfm_discovery import (
     MAX_SEARCH_PAGES,
     DELAY_PAGE_MIN,
     DELAY_PAGE_MAX,
+    SOFTBLOCK_ROTATE_STREAK,
+    SOFTBLOCK_ABORT_STREAK,
+    SOFTBLOCK_BACKOFF_MIN,
+    SOFTBLOCK_BACKOFF_MAX,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -452,6 +456,8 @@ def main() -> None:
     blocked_names: list[str] = []
     softblocked_names: list[str] = []
     soft_timeout_hit = False
+    softblock_streak = 0     # consecutive turn-aways (block or soft block)
+    aborted_blocked  = False
 
     run_start = time.monotonic()
 
@@ -487,6 +493,33 @@ def main() -> None:
             softblocked_names.append(artist)
         else:
             scored.append((artist, results))
+
+        # ── Circuit breaker ────────────────────────────────────────────────────
+        # A run of turn-aways (CAPTCHA/HTTP block or empty-card soft block) means
+        # Amazon is refusing this session or IP. Rotate + back off to recover a
+        # session-level throttle; abort if a fresh session keeps getting turned
+        # away — continuing only wastes requests and deepens the block.
+        if blocked or inconclusive:
+            softblock_streak += 1
+            if softblock_streak >= SOFTBLOCK_ABORT_STREAK:
+                log.warning(
+                    "[circuit-breaker] %d consecutive turn-aways — aborting run at "
+                    "artist [%d/%d]; the IP looks flagged.",
+                    softblock_streak, idx, len(due),
+                )
+                aborted_blocked = True
+                break
+            if softblock_streak % SOFTBLOCK_ROTATE_STREAK == 0:
+                backoff = random.uniform(SOFTBLOCK_BACKOFF_MIN, SOFTBLOCK_BACKOFF_MAX)
+                log.warning(
+                    "[circuit-breaker] %d consecutive turn-aways — rotating session "
+                    "and backing off %.0fs.", softblock_streak, backoff,
+                )
+                time.sleep(backoff)
+                session = make_session()
+                warm_up(session)
+        else:
+            softblock_streak = 0
 
         if idx < len(due):
             time.sleep(random.uniform(DELAY_ARTIST_MIN, DELAY_ARTIST_MAX))
@@ -542,7 +575,12 @@ def main() -> None:
                  "  ".join(f"{t}={n}" for t, n in sorted(tier_counts.items())) or "none")
 
     # ── Summary ──────────────────────────────────────────────────────────────
-    run_label = "Partial run (soft timeout)" if soft_timeout_hit else "Run complete"
+    if aborted_blocked:
+        run_label = "Partial run (blocked — circuit breaker)"
+    elif soft_timeout_hit:
+        run_label = "Partial run (soft timeout)"
+    else:
+        run_label = "Run complete"
     log.info(
         "%s — artists_searched=%d  artists_scored=%d  artists_blocked=%d  "
         "artists_soft_blocked=%d  vinyl_asins_found=%d  newly_queued=%d  already_known=%d",
