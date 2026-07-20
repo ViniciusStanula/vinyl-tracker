@@ -226,10 +226,25 @@ def score_deals(conn) -> dict:
 
     Returns a summary dict: {total, scored, flagged, cleared, skipped}
     """
+    global TIMED_OUT_PASSES
+
     _EMPTY = {
         "total": 0, "scored": 0, "flagged": 0,
         "cleared": 0, "skipped": 0, "stale_cleared": 0, "orphans_cleared": 0,
     }
+
+    # If a scoring pass already timed out this process, the benchmark query is too
+    # slow for the current HistoricoPreco size and the table does not shrink within
+    # a run — every later pass (Phase 3.5, in-loop refreshes) would just burn
+    # another full statement_timeout to the same result. Skip them: the run is
+    # already destined to be marked failed, and the reclaimed minutes go back to
+    # the crawl instead of three dead 10-minute scans.
+    if TIMED_OUT_PASSES > 0:
+        log.warning(
+            "score_deals: a prior pass timed out this run — skipping "
+            "(deal scores stay stale until the benchmark query is faster)."
+        )
+        return _EMPTY
 
     now = datetime.now(timezone.utc)
 
@@ -342,7 +357,6 @@ def score_deals(conn) -> dict:
             # a slow read must not abort the run — everything crawled up to here
             # is already committed.  The run is still marked failed at the end
             # (see TIMED_OUT_PASSES) so this surfaces instead of rotting quietly.
-            global TIMED_OUT_PASSES
             TIMED_OUT_PASSES += 1
             log.error(
                 "score_deals: benchmark query exceeded the statement timeout — "
