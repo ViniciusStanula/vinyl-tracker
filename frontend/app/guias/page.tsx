@@ -43,6 +43,22 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "melhores-discos/alice-in-chains",
+    title: "Os Melhores Discos do Alice in Chains",
+    description:
+      "Ranking dos álbuns do Alice in Chains em vinil, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+    date: "2026-07-21",
+    tag: "ranking",
+  },
+  {
+    slug: "melhores-discos/nirvana",
+    title: "Os Melhores Discos do Nirvana",
+    description:
+      "Ranking dos três álbuns de estúdio do Nirvana em vinil, mais a coletânea Incesticide, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+    date: "2026-07-21",
+    tag: "ranking",
+  },
+  {
     slug: "melhores-discos/megadeth",
     title: "Os Melhores Discos do Megadeth",
     description:

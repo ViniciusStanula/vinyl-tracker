@@ -19,6 +19,18 @@ Este ranking usa a nota do MusicBrainz, ponderada pelo número de avaliações, 
 A carreira teve dois desvios de rota marcantes. Em meados dos anos 1990 o som ficou mais melódico e comercial, recebido com desconfiança por boa parte da base thrash. E em janeiro de 2002 um dano no nervo do braço esquerdo de Mustaine quase acabou com a banda: os médicos disseram que ele nunca mais tocaria guitarra. Ele provou o contrário depois de mais de um ano de fisioterapia e voltou em 2004.
 
 Este ranking usa a nota do MusicBrainz, ponderada pelo número de avaliações, combinada com o número de ouvintes no Last.fm. Abaixo de cada disco, um vídeo oficial de uma faixa representativa.`,
+
+  nirvana: `Kurt Cobain e Krist Novoselic formaram o Nirvana em Aberdeen, no estado de Washington, em 1987. A banda trocou de baterista várias vezes até Dave Grohl entrar em 1990, vindo do hardcore Scream. Aaron Burckhard, Dale Crover e Chad Channing passaram pela cadeira antes dele, e é Channing quem toca em Bleach.
+
+A carreira durou pouco mais de seis anos e resultou em três discos de estúdio. Kurt Cobain morreu em 5 de abril de 1994, aos 27 anos, cerca de seis meses depois do lançamento de In Utero, e o Nirvana nunca voltou a gravar. Incesticide, coletânea de raridades e lados B lançada em 1992 pela Geffen, entra neste ranking ao lado dos três álbuns oficiais.
+
+Este ranking usa a nota do MusicBrainz, ponderada pelo número de avaliações, combinada com o número de ouvintes no Last.fm. Abaixo de cada disco, um vídeo oficial de uma faixa representativa.`,
+
+  "alice-in-chains": `Jerry Cantrell e Layne Staley formaram o Alice in Chains em Seattle em 1987, completando a formação original com o baixista Mike Starr e o baterista Sean Kinney. A banda assinou com a Columbia ainda em 1989, entre as primeiras da cena de Seattle a fechar com uma gravadora grande. Mike Starr saiu em 1993, por causa do próprio vício em heroína, substituído por Mike Inez, que segue na banda até hoje.
+
+O vício de Layne Staley em heroína piorou ao longo dos anos 1990, e ele foi se afastando dos palcos e do resto da banda. Depois do especial MTV Unplugged de 1996, o grupo praticamente parou de se apresentar ao vivo. Staley morreu em 5 de abril de 2002, sozinho no próprio apartamento, de overdose. O Alice in Chains voltou aos palcos em 2005, em shows beneficentes, e ganhou um novo vocalista em 2006: William DuVall, que divide os vocais com Cantrell desde então.
+
+Este ranking usa a nota do MusicBrainz, ponderada pelo número de avaliações, combinada com o número de ouvintes no Last.fm. Abaixo de cada disco, um vídeo oficial de uma faixa representativa.`,
 };
 
 export const ALBUM_BLURBS: Record<string, Record<string, string>> = {
@@ -118,5 +130,31 @@ export const ALBUM_BLURBS: Record<string, Record<string, string>> = {
     "the sick, the dying. and the dead!": `Atrasado por anos de turbulência na formação, incluindo a saída conturbada de David Ellefson em 2021 após um escândalo público, o disco chegou com James LoMenzo de volta ao baixo. "We'll Be Back" é a primeira parte de uma trilogia de faixas que a banda promete concluir nos discos seguintes.`,
 
     megadeth: `O disco de despedida, lançado em janeiro de 2026 como o décimo sétimo e último álbum de estúdio da banda, segundo o próprio Mustaine. Estreou em primeiro lugar na Billboard 200, a única vez que o Megadeth chegou ao topo da parada. Traz uma regravação de "Ride the Lightning", canção que Mustaine coescreveu com James Hetfield, Cliff Burton e Lars Ulrich ainda nos tempos de Metallica, antes de ser expulso da banda.`,
+  },
+
+  nirvana: {
+    bleach: `Gravado em pouco mais de 30 horas de estúdio com Jack Endino na produção, orçamento de US$ 606,17 bancado em boa parte por Jason Everman, creditado como segundo guitarrista na capa sem tocar uma nota no disco: ele entrou na banda só depois, para a turnê, e saiu meses adiante. Chad Channing assina a bateria; Dave Grohl ainda não fazia parte do Nirvana. Lançado pela Sub Pop, selo indie de Seattle, é o disco mais cru da banda, mais perto do sludge da cena local do que qualquer coisa que viria depois.`,
+
+    nevermind: `Butch Vig produziu o disco de estreia do Nirvana pela DGC/Geffen, já com Dave Grohl na bateria. "Smells Like Teen Spirit" tirou o Dangerous, de Michael Jackson, do topo da Billboard 200 em janeiro de 1992 e mudou o que MTV e rádio americana tocavam nos anos seguintes. A capa com o bebê Spencer Elden nadando atrás de uma nota de dólar virou uma das imagens mais reconhecíveis do rock; Elden processou a banda décadas depois alegando exploração sexual infantil, e a Justiça americana rejeitou o caso em definitivo em 30 de setembro de 2025.`,
+
+    incesticide: `Coletânea de raridades, lados B, sessões para a rádio BBC e faixas do primeiro EP, lançada pela Geffen em 1992 para atender a demanda que surgiu depois do sucesso repentino de Nevermind. Kurt Cobain escreveu o encarte, um texto que ataca abertamente os fãs homofóbicos, racistas e machistas que passaram a acompanhar a banda sem entender do que ela tratava. Entra neste ranking ao lado dos três álbuns de estúdio porque reúne faixas como "Sliver" e "Been a Son", parte do repertório essencial do Nirvana mesmo fora da discografia oficial.`,
+
+    "vinyl style in utero": `Steve Albini gravou o disco em cerca de duas semanas no Pachyderm Studio, em Cannon Falls, Minnesota, buscando o som cru que Kurt Cobain queria como reação à produção polida de Nevermind. A Geffen pressionou por um resultado mais comercial, e a banda cedeu em parte: Scott Litt remixou "Heart-Shaped Box" e "All Apologies" para a versão de rádio, mantendo o resto do disco como Albini tinha entregue. Foi o último álbum de estúdio lançado em vida por Cobain.`,
+  },
+
+  "alice-in-chains": {
+    facelift: `Primeiro álbum de estúdio da banda, gravado no London Bridge Studio, em Seattle. Jerry Cantrell escreveu "Man in the Box" numa única noite, inspirado por um documentário de TV sobre a criação de vitelos trancados no escuro. A MTV rejeitou o clipe como aposta principal no começo, mas ele virou um dos mais exibidos do canal em 1991 e ajudou o disco a bater platina.`,
+
+    dirt: `Gravado enquanto vários integrantes da banda usavam heroína ativamente, um processo que Cantrell e Staley descreveriam anos depois em entrevistas e no documentário "Music Bank". "Would?", escrita por Cantrell em homenagem a Andrew Wood, vocalista do Mother Love Bone morto de overdose em 1990, tinha aparecido primeiro na trilha do filme "Singles", de Cameron Crowe, antes de fechar o repertório de Dirt. "Rooster" fala do pai de Cantrell, que serviu na Guerra do Vietnã, e é um dos hinos mais pedidos nos shows da banda.`,
+
+    "jar of flies": `Gravado às pressas no início de 1994, quase como um intervalo de estúdio entre turnês, tornou-se o primeiro EP da história a estrear em primeiro lugar na Billboard 200. A banda não fez turnê nem clipes de época para divulgar as faixas; o vídeo de "No Excuses" que circula hoje é uma montagem de material de arquivo lançada muito depois. A MusicBrainz classifica o disco como EP, mas ele entra neste ranking porque faz parte do repertório essencial da banda tanto quanto qualquer álbum de estúdio.`,
+
+    "alice in chains - (30th anniversary reissue) (translucent highlighter yellow vinyl)": `Terceiro álbum de estúdio, o último gravado pela formação completa com Layne Staley antes do hiato que o vício dele impôs à banda. A capa, com um cachorro de três patas, deu ao disco o apelido informal de "Tripod" entre os fãs, já que o título oficial repete o nome da banda. Mais pesado e sombrio que os dois primeiros discos, não teve turnê de divulgação: os problemas de saúde de Staley já impediam apresentações ao vivo regulares.`,
+
+    "black gives way to blue": `Primeiro disco com William DuVall dividindo os vocais com Cantrell, gravado treze anos depois do álbum anterior e dedicado à memória de Layne Staley. Elton John toca piano na faixa-título, convite feito pela banda como tributo direto a Staley. "Check My Brain" foi o single de apresentação e a prova de que o Alice in Chains conseguia soar como Alice in Chains sem o vocalista original.`,
+
+    "the devil put dinosaurs here": `Segundo disco de estúdio com William DuVall nos vocais, e o mais pesado da fase pós-Staley, puxando para o doom metal em faixas como a própria faixa-título. "Stone", o single de apresentação, tem letra de Cantrell sobre isolamento e desconfiança.`,
+
+    "rainier fog": `O título homenageia o Monte Rainier, o vulcão que domina a paisagem de Seattle, e o cenário musical que a cidade criou nos anos 1990. Parte do disco foi gravada no mesmo London Bridge Studio de Facelift, quase três décadas depois. As sessões pararam por um tempo quando o baterista Sean Kinney enfrentou um problema de saúde sério; ele se recuperou e voltou a tempo de terminar o disco.`,
   },
 };

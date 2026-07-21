@@ -26,6 +26,30 @@ export const ARTIST_EXCLUDE: Record<string, Set<string>> = {
   megadeth: new Set([
     "unplugged in boston", // real Alice in Chains release, wrongly tagged artista='Megadeth' in our catalog
   ]),
+  nirvana: new Set([
+    "the story of simon simopath", // 1967 psych-pop LP by the UK band Nirvana (Campbell-Lyon/Spyropoulos) — wrong Nirvana entirely
+    "orange and blue",             // unrelated release wrongly tagged artista='Nirvana' in our catalog
+    "secrets",                     // unrelated release wrongly tagged artista='Nirvana' in our catalog
+    "mtv unplugged in new york",   // live album, not a studio LP
+    "live at reading",             // live album, not a studio LP
+    "live at the paramount",       // live album, not a studio LP
+    "greatest hits live",          // live compilation, not a studio LP
+    "best of nirvana",             // hits compilation, redundant with the studio albums it draws from
+  ]),
+  "alice-in-chains": new Set([
+    "freak show: california broadcasts 1990 & 1992", // MB secondary-type "Live" — radio broadcast bootleg reissue, not a studio LP
+  ]),
+};
+
+// Real catalog rows (real price, real cover) that would otherwise fail the
+// popularity threshold in fetchRankedAlbums because our MB rating / Last.fm
+// enrichment hasn't landed for that specific mb_mbid yet. Force them in
+// rather than let a real, purchasable album silently disappear from the
+// ranking. Keyed by [artist slug][dedup key].
+export const ARTIST_FORCE_INCLUDE: Record<string, Set<string>> = {
+  "alice-in-chains": new Set([
+    "alice in chains - (30th anniversary reissue) (translucent highlighter yellow vinyl)", // the self-titled 1995 album — zero votes/listeners in our DB, but it's real and in stock
+  ]),
 };
 
 // Hand-picked official YouTube video per album, one flagship track each.
@@ -84,5 +108,20 @@ export const ARTIST_VIDEOS: Record<string, Record<string, string>> = {
     dystopia: "mEkXyEIu3OU",                       // Post American World
     "the sick, the dying. and the dead!": "LkJ5jJuraLQ", // We'll Be Back
     megadeth: "ECXg-a7XZQI",                       // Tipping Point
+  },
+
+  nirvana: {
+    nevermind: "hTWKbfoikeg",              // Smells Like Teen Spirit
+    "vinyl style in utero": "n6P0SitRwy8", // Heart-Shaped Box
+  },
+
+  "alice-in-chains": {
+    facelift: "TAqZb52sgpU",                     // Man in the Box
+    dirt: "Nco_kh8xJDs",                          // Would?
+    "jar of flies": "r80HF68KM8g",                // No Excuses
+    "alice in chains - (30th anniversary reissue) (translucent highlighter yellow vinyl)": "83gddxVpitc", // Grind
+    "black gives way to blue": "y6B1dgKQh34",     // Check My Brain
+    "the devil put dinosaurs here": "9KmYFY5oOvM", // Stone
+    "rainier fog": "irNTqjI7A8E",                  // Rainier Fog
   },
 };
