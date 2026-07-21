@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
-import { ARTIST_VIDEOS, ARTIST_ALIASES, ARTIST_EXCLUDE } from "./best-of-artist-videos";
+import { ARTIST_VIDEOS, ARTIST_ALIASES, ARTIST_EXCLUDE, ARTIST_FORCE_INCLUDE } from "./best-of-artist-videos";
 import { ALBUM_BLURBS } from "./best-of-artist-content";
 
 // Overrides for titles too messy to clean automatically (e.g. a marketplace
@@ -13,6 +13,45 @@ const ARTIST_DISPLAY_NAMES: Record<string, Record<string, string>> = {
   megadeth: {
     "so far so good: so what": "So Far, So Good... So What!",
     megadeth: "Megadeth",
+  },
+  nirvana: {
+    "vinyl style in utero": "In Utero",
+  },
+  "alice-in-chains": {
+    "alice in chains - (30th anniversary reissue) (translucent highlighter yellow vinyl)": "Alice in Chains",
+  },
+};
+
+// Corrects mb_first_release_date for catalog rows whose matched MusicBrainz
+// release-group carries the wrong date (reissue date instead of the
+// original release), so the page doesn't display a misleading year.
+// Keyed by [artist slug][dedup key] -> correct year.
+const ARTIST_YEAR_OVERRIDES: Record<string, Record<string, number>> = {
+  "alice-in-chains": {
+    // MusicBrainz release-group 5918ad2b carries "1989" for the self-titled
+    // 1995 album (upstream MB data error, not ours).
+    "alice in chains - (30th anniversary reissue) (translucent highlighter yellow vinyl)": 1995,
+    // Our catalog matched the 2016 "Jar of Flies / Sap" vinyl reissue
+    // release-group; the EP itself came out in 1994.
+    "jar of flies": 1994,
+  },
+};
+
+// Manual score nudges for a specific artist/album, added to the computed
+// composite score before the final sort. Not a general fix — use only when
+// the formula's neutral-data fallback demonstrably misranks a specific
+// album and a shared-formula change would be too risky to validate across
+// every other artist page. Keyed by [artist slug][dedup key] -> delta.
+const ARTIST_SCORE_BOOST: Record<string, Record<string, number>> = {
+  "alice-in-chains": {
+    // Facelift has the 2nd-highest real listener count in the whole
+    // ranking (1.48M, behind only Jar of Flies' 1.52M) but scored last:
+    // its one real weak signal (lowest MB rating, 3.95) got compounded by
+    // several other albums getting a "neutral" listener score close to
+    // Facelift's own real one just for lacking Last.fm data at all. This
+    // nudges it back above the no-data albums it's demonstrably more
+    // popular than, landing at #2 behind Dirt.
+    facelift: 0.07,
   },
 };
 
@@ -44,6 +83,10 @@ const ARTIST_EXTRA_ALBUMS: Record<string, ExtraAlbum[]> = {
     { mbid: "e165f024-3fab-4002-aad9-18da9c515d2a", title: "Endgame", year: 2009, mbRating: 3.7, mbRatingVotes: 10 },
     { mbid: "41acf292-76c0-4c00-bd69-c3c5ebb7c593", title: "Th1rt3en", year: 2011, mbRating: 3.35, mbRatingVotes: 9 },
   ],
+  "alice-in-chains": [
+    { mbid: "7f925584-7f01-4965-addf-e5d254f875d1", title: "The Devil Put Dinosaurs Here", year: 2013, mbRating: 4.0, mbRatingVotes: 7 },
+    { mbid: "66a00e64-afa2-409f-a5b0-8b5eaaa3f14b", title: "Rainier Fog", year: 2018, mbRating: 4.15, mbRatingVotes: 6 },
+  ],
 };
 
 function caaCoverUrl(mbid: string): string {
@@ -65,6 +108,8 @@ export const BEST_OF_ARTISTS: ArtistProfile[] = [
   { slug: "metallica", name: "Metallica", artistaLike: "%Metallica%", article: "do" },
   { slug: "iron-maiden", name: "Iron Maiden", artistaLike: "%Iron Maiden%", article: "do" },
   { slug: "megadeth", name: "Megadeth", artistaLike: "%Megadeth%", article: "do" },
+  { slug: "nirvana", name: "Nirvana", artistaLike: "%Nirvana%", article: "do" },
+  { slug: "alice-in-chains", name: "Alice in Chains", artistaLike: "%Alice in Chains%", article: "do" },
 ];
 
 export function getArtistProfile(slug: string): ArtistProfile | undefined {
@@ -182,9 +227,15 @@ async function fetchRankedAlbums(artist: ArtistProfile): Promise<RankedAlbum[]> 
   }
 
   const excluded = ARTIST_EXCLUDE[artist.slug] ?? new Set<string>();
-  const fromCatalog = [...byKey.values()].filter(
-    (r) => ((r.votes ?? 0) > 0 || (r.listeners ?? 0) >= 1000) && !excluded.has(dedupKey(r.best_titulo, artist.name))
-  );
+  // Force-include: real catalog rows (real price, real cover) whose MB
+  // rating/Last.fm enrichment hasn't landed yet, so they'd otherwise fail
+  // the popularity threshold below and vanish instead of just ranking low.
+  const forceInclude = ARTIST_FORCE_INCLUDE[artist.slug] ?? new Set<string>();
+  const fromCatalog = [...byKey.values()].filter((r) => {
+    const key = dedupKey(r.best_titulo, artist.name);
+    if (excluded.has(key)) return false;
+    return (r.votes ?? 0) > 0 || (r.listeners ?? 0) >= 1000 || forceInclude.has(key);
+  });
 
   // Add real albums we don't have a vinyl listing for, skipping any that
   // somehow already matched from the catalog (avoids a double entry).
@@ -236,17 +287,19 @@ async function fetchRankedAlbums(artist: ArtistProfile): Promise<RankedAlbum[]> 
   const videoMap = ARTIST_VIDEOS[artist.slug] ?? {};
   const blurbMap = ALBUM_BLURBS[artist.slug] ?? {};
   const displayNameMap = ARTIST_DISPLAY_NAMES[artist.slug] ?? {};
+  const yearOverrideMap = ARTIST_YEAR_OVERRIDES[artist.slug] ?? {};
+  const scoreBoostMap = ARTIST_SCORE_BOOST[artist.slug] ?? {};
 
   const ranked: RankedAlbum[] = candidates.map((r) => {
     const hasRating = (r.votes ?? 0) > 0 && (r.rating ?? -1) > 0;
     const ratingComponent = hasRating ? bayesian(r.votes!, r.rating!, m, C) : C;
     const listenerComponent = r.listeners === null ? neutralListenerScore : listenerScore(r.listeners);
-    const score = 0.6 * ratingComponent + 0.4 * listenerComponent;
     const key = dedupKey(r.best_titulo, artist.name);
+    const score = 0.6 * ratingComponent + 0.4 * listenerComponent + (scoreBoostMap[key] ?? 0);
     return {
       mbid: r.mb_mbid,
       title: displayNameMap[key] ?? cleanDisplayTitle(r.best_titulo, artist.name),
-      year: r.year ? Number(r.year.slice(0, 4)) : null,
+      year: yearOverrideMap[key] ?? (r.year ? Number(r.year.slice(0, 4)) : null),
       score,
       mbRating: r.rating && r.rating > 0 ? r.rating : null,
       mbRatingVotes: r.votes ?? 0,
