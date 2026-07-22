@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { slugifyArtist } from "@/lib/utils/slugify";
 import { slugifyStyle } from "@/lib/utils/styleUtils";
 import { REDIRECTED_ESTILO_SLUGS } from "@/lib/db/estilo";
-import { PAIS_PT, ISO2_TO_SLUG } from "@/lib/paises";
+import { PAIS_PT, ISO2_TO_SLUG, COUNTRY_TAG_TO_PAIS_SLUG } from "@/lib/paises";
 import { unstable_cache } from "next/cache";
 import type { MetadataRoute } from "next";
 
@@ -72,7 +72,7 @@ export const getSitemapData = unstable_cache(
     }
 
     const styles = styleRows
-      .filter(({ slug }) => !REDIRECTED_ESTILO_SLUGS.has(slug))
+      .filter(({ slug }) => !REDIRECTED_ESTILO_SLUGS.has(slug) && !COUNTRY_TAG_TO_PAIS_SLUG[slug])
       .map(({ slug, nome }) => ({ slug, nome }));
 
     return { artists, styles };
@@ -218,7 +218,7 @@ export async function getSitemapEstilos(): Promise<MetadataRoute.Sitemap> {
 
   for (const row of rows) {
     const slug = slugifyStyle(row.tag);
-    if (!slug || seenSlugs.has(slug) || REDIRECTED_ESTILO_SLUGS.has(slug)) continue;
+    if (!slug || seenSlugs.has(slug) || REDIRECTED_ESTILO_SLUGS.has(slug) || COUNTRY_TAG_TO_PAIS_SLUG[slug]) continue;
     seenSlugs.add(slug);
     routes.push({ url: `${SITEMAP_BASE}/estilo/${slug}`, lastModified: row.lastUpdated });
   }

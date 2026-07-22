@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
 import path from "path";
+import { COUNTRY_TAG_TO_PAIS_SLUG } from "./lib/paises";
 
 const isDev = process.env.NODE_ENV === "development";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.garimpavinil.com.br";
@@ -140,7 +141,14 @@ const nextConfig: NextConfig = {
       // plural and pt/en variants of the same genre splitting inventory across
       // two pages. Redirect the thinner one into the one with real inventory.
       { source: "/estilo/boyband", destination: "/estilo/boybands", permanent: true },
-      { source: "/estilo/brazil", destination: "/estilo/brasil", permanent: true },
+      // Country/nationality tags aren't genres — send them to the canonical
+      // /pais page for the artist's origin. brazil/brasil redirect here now
+      // instead of chaining brazil → brasil → /pais/brasil.
+      ...Object.entries(COUNTRY_TAG_TO_PAIS_SLUG).map(([tag, pais]) => ({
+        source: `/estilo/${tag}`,
+        destination: `/pais/${pais}`,
+        permanent: true,
+      })),
       // Decade tags duplicate the dedicated /decada pages — keep one canonical
       // decade-browsing surface instead of splitting inventory/links across two.
       { source: "/estilo/60s", destination: "/decada/1960", permanent: true },

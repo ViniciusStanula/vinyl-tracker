@@ -4,6 +4,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { slugifyStyle } from "@/lib/utils/styleUtils";
 import { slugifyArtist } from "@/lib/utils/slugify";
+import { COUNTRY_TAG_TO_PAIS_SLUG } from "@/lib/paises";
 
 // Same accent-normalization constants as the artist page SQL slug matching
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
@@ -580,7 +581,7 @@ const _getRelatedEstilos = unstable_cache(
     `;
     return rows
       .map((r) => ({ tag: r.tag, slug: slugifyStyle(r.tag) }))
-      .filter((r) => !REDIRECTED_ESTILO_SLUGS.has(r.slug));
+      .filter((r) => !REDIRECTED_ESTILO_SLUGS.has(r.slug) && !COUNTRY_TAG_TO_PAIS_SLUG[r.slug]);
   },
   ["estilo-related"],
   { tags: ["prices"], revalidate: 14400 }
@@ -637,7 +638,7 @@ const _getEstilosList = unstable_cache(
     const result: EstiloListItem[] = [];
     for (const r of rows) {
       const slug = slugifyStyle(r.tag);
-      if (!slug || seenSlugs.has(slug) || REDIRECTED_ESTILO_SLUGS.has(slug)) continue;
+      if (!slug || seenSlugs.has(slug) || REDIRECTED_ESTILO_SLUGS.has(slug) || COUNTRY_TAG_TO_PAIS_SLUG[slug]) continue;
       seenSlugs.add(slug);
       result.push({ tag: r.tag, slug, discoCount: Number(r.disco_count) });
     }
