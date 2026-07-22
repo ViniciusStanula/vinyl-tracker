@@ -16,6 +16,7 @@ export type DiscoMeta = {
   mbTracklist: string | null;
   mbRating: number | null;
   mbRatingVotes: number | null;
+  artistCountry: string | null;
 };
 
 export type RelatedDeal = {
@@ -93,8 +94,11 @@ export const getDiscoMeta = unstable_cache(
         mb_genres              AS "mbGenres",
         mb_tracklist           AS "mbTracklist",
         mb_rating              AS "mbRating",
-        mb_rating_votes        AS "mbRatingVotes"
-      FROM "Disco" WHERE slug = ${slug}
+        mb_rating_votes        AS "mbRatingVotes",
+        am.country             AS "artistCountry"
+      FROM "Disco" d
+      LEFT JOIN "ArtistMeta" am ON am.artista = d.artista
+      WHERE d.slug = ${slug}
     `;
     return rows[0] ?? null;
   },

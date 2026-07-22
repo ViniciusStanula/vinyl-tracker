@@ -50,12 +50,17 @@ USER_AGENT = os.environ.get(
 
 def fetch_tracklist(mbid: str) -> list[dict] | None:
     """
-    Returns ordered tracks for one release of the release-group, each as
+    Returns ordered tracks for the fullest release of the release-group, each as
     {"title": str, "length": int|None} where length is milliseconds.
     Returns None on error, [] when no release/tracks exist.
+
+    A release-group can hold promo singles/samplers alongside the full album,
+    and MusicBrainz returns its releases in no particular order — grabbing the
+    first one (limit=1) left albums with a bogus 1-2 track tracklist. We fetch
+    up to 25 releases and keep the one with the most tracks.
     """
     url = (f"{MB_BASE}release?release-group={urllib_quote(mbid)}"
-           f"&inc=recordings&limit=1&fmt=json")
+           f"&inc=recordings&limit=25&fmt=json")
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
@@ -67,11 +72,17 @@ def fetch_tracklist(mbid: str) -> list[dict] | None:
     releases = data.get("releases") or []
     if not releases:
         return []
-    media = releases[0].get("media", [])
-    return [
-        {"title": tr["title"], "length": tr.get("length")}
-        for m in media for tr in m.get("tracks", []) if tr.get("title")
-    ]
+
+    best: list[dict] = []
+    for rel in releases:
+        tracks = [
+            {"title": tr["title"], "length": tr.get("length")}
+            for m in rel.get("media", []) for tr in m.get("tracks", [])
+            if tr.get("title")
+        ]
+        if len(tracks) > len(best):
+            best = tracks
+    return best
 
 
 def urllib_quote(s: str) -> str:

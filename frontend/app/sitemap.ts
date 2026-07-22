@@ -4,6 +4,7 @@ import {
   getSitemapArtists,
   getSitemapDiscosForShard,
   getSitemapEstilos,
+  getSitemapPaises,
   getLatestDiscoUpdate,
   DISCO_SHARDS,
   type DiscoShard,
@@ -15,7 +16,7 @@ export const revalidate = 86400; // regenerate every 24 hours — sitemap stalen
 
 export async function generateSitemaps() {
   const discoShards = DISCO_SHARDS.map((shard) => ({ id: `discos-${shard}` }));
-  return [{ id: "estatico" }, { id: "artistas" }, ...discoShards, { id: "estilos" }];
+  return [{ id: "estatico" }, { id: "artistas" }, ...discoShards, { id: "estilos" }, { id: "paises" }];
 }
 
 export default async function sitemap(props: {
@@ -39,6 +40,7 @@ export default async function sitemap(props: {
       { url: `${SITEMAP_BASE}/discos-abaixo-de-200`,                    lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.7 },
       { url: `${SITEMAP_BASE}/artistas-mais-ouvidos`,                   lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/estilos`,                                 lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.7 },
+      { url: `${SITEMAP_BASE}/paises`,                                  lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/artistas`,                                lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/sobre`,                                   lastModified: new Date("2026-01-01"), changeFrequency: "yearly", priority: 0.3 },
       { url: `${SITEMAP_BASE}/guias`,                                   lastModified: ARTICLES_MODIFIED,  changeFrequency: "weekly",  priority: 0.8 },
@@ -92,6 +94,14 @@ export default async function sitemap(props: {
   if (id === "estilos") {
     try {
       return await getSitemapEstilos();
+    } catch {
+      return [];
+    }
+  }
+
+  if (id === "paises") {
+    try {
+      return await getSitemapPaises();
     } catch {
       return [];
     }
