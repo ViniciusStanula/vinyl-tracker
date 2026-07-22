@@ -58,7 +58,7 @@ log = logging.getLogger(__name__)
 AVG_LENGTH_THRESHOLD_MS = 360_000  # 6 minutes
 
 
-def pick_representative(releases: list[dict], old_count: int) -> dict | None:
+def pick_representative(releases: list[dict], old_count: int, two_sided: bool = False) -> dict | None:
     """
     Decide whether the stored tracklist is a wrong-release pick, and if so return
     the release that best represents THIS record.
@@ -86,22 +86,42 @@ def pick_representative(releases: list[dict], old_count: int) -> dict | None:
         return None
 
     target = statistics.median(sorted(r["track_count"] for r in candidates))
-    # Stored count already matches the reference pressing — leave it alone.
-    if old_count >= target * 0.6:
+
+    if two_sided:
+        # Audit mode: the stored tracklist can also be too LONG — a CD deluxe
+        # picked where the vinyl pressing is shorter. Flag either direction.
+        if target * 0.6 <= old_count <= target * 1.4:
+            return None
+    elif old_count >= target * 0.6:
+        # Stored count already matches the reference pressing — leave it alone.
         return None
+
     return min(candidates, key=lambda r: (abs(r["track_count"] - target), -r["track_count"]))
 
 
-def fetch_suspects(conn, max_tracks: int):
+def fetch_suspects(conn, max_tracks: int, ids: list[str] | None = None):
+    """
+    Candidate rows to re-check. Normally Album rows with few tracks and a short
+    average length; with `ids`, exactly those rows regardless of either gate —
+    used to re-audit rows written by an earlier, wronger heuristic.
+    """
     with conn.cursor() as cur:
-        cur.execute(
-            """SELECT id, artista, titulo, mb_mbid, mb_tracklist
-               FROM "Disco"
-               WHERE jsonb_array_length(mb_tracklist::jsonb) BETWEEN 1 AND %s
-                 AND mb_primary_type = 'Album'
-                 AND disponivel = TRUE""",
-            (max_tracks,),
-        )
+        if ids:
+            cur.execute(
+                """SELECT id, artista, titulo, mb_mbid, mb_tracklist
+                   FROM "Disco"
+                   WHERE id = ANY(%s) AND mb_tracklist IS NOT NULL""",
+                (ids,),
+            )
+        else:
+            cur.execute(
+                """SELECT id, artista, titulo, mb_mbid, mb_tracklist
+                   FROM "Disco"
+                   WHERE jsonb_array_length(mb_tracklist::jsonb) BETWEEN 1 AND %s
+                     AND mb_primary_type = 'Album'
+                     AND disponivel = TRUE""",
+                (max_tracks,),
+            )
         rows = cur.fetchall()
 
     suspects = []
@@ -109,7 +129,7 @@ def fetch_suspects(conn, max_tracks: int):
         tracks = json.loads(tracklist_raw)
         lengths = [t.get("length") or 0 for t in tracks]
         avg = sum(lengths) / len(lengths) if lengths else 0
-        if avg < AVG_LENGTH_THRESHOLD_MS:
+        if ids or avg < AVG_LENGTH_THRESHOLD_MS:
             suspects.append({
                 "id": id_, "artista": artista, "titulo": titulo,
                 "mbid": mbid, "old_tracklist": tracks, "old_count": len(tracks),
@@ -179,17 +199,36 @@ def parse_args():
     p.add_argument("--delay", type=float, default=1.1, metavar="S")
     p.add_argument("--max-tracks", type=int, default=6, metavar="N",
                    help="Inspect Album rows with up to N tracks (default: 6)")
+    p.add_argument("--ids-file", metavar="PATH",
+                   help="Re-audit exactly these Disco ids (CSV with an 'id' column, or "
+                        "one id per line), ignoring the track-count/length gates and "
+                        "flagging tracklists that are too long as well as too short")
     p.add_argument("--out", default="short_tracklist_proposals.csv")
     return p.parse_args()
+
+
+def read_ids(path: str) -> list[str]:
+    """Accepts a CSV with an 'id' column, or a plain one-id-per-line file."""
+    with open(path, newline="", encoding="utf-8") as f:
+        head = f.readline()
+        f.seek(0)
+        if "id" in head.split(","):
+            return [r["id"].strip() for r in csv.DictReader(f) if r.get("id", "").strip()]
+        return [ln.strip() for ln in f if ln.strip()]
 
 
 def main():
     args = parse_args()
     conn = get_connection()
 
-    suspects = fetch_suspects(conn, args.max_tracks)
-    log.info("Found %d suspect rows (Album type, <=%d tracks, short avg length).",
-             len(suspects), args.max_tracks)
+    ids = read_ids(args.ids_file) if args.ids_file else None
+    suspects = fetch_suspects(conn, args.max_tracks, ids)
+    if ids:
+        log.info("Re-auditing %d rows from %s (two-sided: too long or too short).",
+                 len(suspects), args.ids_file)
+    else:
+        log.info("Found %d suspect rows (Album type, <=%d tracks, short avg length).",
+                 len(suspects), args.max_tracks)
 
     proposals = []
     updates = []
@@ -200,13 +239,13 @@ def main():
         if not releases:
             continue
 
-        best = pick_representative(releases, s["old_count"])
+        best = pick_representative(releases, s["old_count"], two_sided=bool(ids))
         if best is None:
-            continue  # stored tracklist matches the group's typical release
+            continue  # stored tracklist matches the reference pressing
 
         new_tracks = fetch_tracklist_for_release(best["release_id"])
         time.sleep(args.delay)
-        if len(new_tracks) <= s["old_count"]:
+        if not new_tracks or len(new_tracks) == s["old_count"]:
             continue
 
         proposals.append({
