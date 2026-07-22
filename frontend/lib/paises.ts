@@ -73,3 +73,44 @@ export const ISO2_TO_SLUG: Record<string, string> = Object.fromEntries(
 export function getPaisDisplayName(iso2: string): string | null {
   return PAIS_PT[iso2] ?? null;
 }
+
+// Last.fm style tags that are really a country or nationality, mapped to the
+// canonical /pais/<slug>. These tags described the artist's origin, not a
+// musical genre, so they belong on the country pages — mirrors the
+// artist-name → /artista redirects in REDIRECTED_ESTILO_SLUGS.
+//
+// ONLY countries with a populated /pais page are listed: /pais/[slug] 404s when
+// a country has no MB-origin records, so redirecting such a tag would 301 into
+// a 404. Re-check MB-origin counts (ArtistMeta.country) before adding more —
+// e.g. cuba/china/austria/india/portugal were empty at creation and omitted.
+export const COUNTRY_TAG_TO_PAIS_SLUG: Record<string, string> = {
+  usa: "estados-unidos", america: "estados-unidos", american: "estados-unidos",
+  "united-states": "estados-unidos",
+  uk: "reino-unido", britain: "reino-unido", british: "reino-unido",
+  "great-britain": "reino-unido", england: "reino-unido", english: "reino-unido",
+  scotland: "reino-unido", scottish: "reino-unido", wales: "reino-unido", welsh: "reino-unido",
+  canada: "canada", canadian: "canada",
+  brazil: "brasil", brasil: "brasil", brazilian: "brasil",
+  australia: "australia", australian: "australia",
+  germany: "alemanha", german: "alemanha",
+  sweden: "suecia", swedish: "suecia",
+  ireland: "irlanda", irish: "irlanda",
+  france: "franca", french: "franca",
+  italy: "italia", italian: "italia",
+  norway: "noruega", norwegian: "noruega",
+  iceland: "islandia", icelandic: "islandia",
+  japan: "japao", japanese: "japao",
+  jamaica: "jamaica", jamaican: "jamaica",
+  korea: "coreia-do-sul", korean: "coreia-do-sul", "south-korea": "coreia-do-sul",
+  finland: "finlandia", finnish: "finlandia",
+  netherlands: "paises-baixos", dutch: "paises-baixos", holland: "paises-baixos",
+  argentina: "argentina", argentine: "argentina", argentinian: "argentina",
+  mexico: "mexico", mexican: "mexico",
+  spain: "espanha", spanish: "espanha",
+  denmark: "dinamarca", danish: "dinamarca",
+  switzerland: "suica", swiss: "suica",
+  greece: "grecia", greek: "grecia",
+  poland: "polonia", polish: "polonia",
+  belgium: "belgica", belgian: "belgica",
+  russia: "russia", russian: "russia",
+};
