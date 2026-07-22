@@ -61,26 +61,35 @@ AVG_LENGTH_THRESHOLD_MS = 360_000  # 6 minutes
 def pick_representative(releases: list[dict], old_count: int) -> dict | None:
     """
     Decide whether the stored tracklist is a wrong-release pick, and if so return
-    the release that best represents the album.
+    the release that best represents THIS record.
 
-    Comparing against the release-group's LONGEST release is wrong: a genuinely
-    short album (Rainbow's 6-track "Rising") sits in a group that also holds a
-    19-track deluxe reissue, and "take the longest" would swap the real LP for
-    the boxset. The typical release is a far better reference — a mistakenly
-    stored promo single sits well below it, while a short album IS it.
+    We catalogue vinyl, so the vinyl pressing is the right reference — not the
+    longest release, and not the median across every format. Both of those get
+    it wrong in opposite directions:
 
-    So: take the median track count across the group's releases; only act when
-    the stored count is well under that, and then return the release closest to
-    the median rather than the fattest one.
+      Rainbow "Rising" — all six 12" Vinyl releases carry 6 tracks; the 19-track
+      versions are CD/Digital deluxe editions. "Longest" would swap the real LP
+      for a boxset, and the all-format median (6..19) would too.
+
+      No-Man "Schoolyard Ghosts" — the 2LP vinyl is 11 tracks while CD deluxes
+      run to 27, so the all-format median (15.5) overshoots the actual record.
+
+    So: restrict to vinyl releases when the group has any, else fall back to the
+    median across all formats (e.g. Ne-Yo's "In My Own Words" has no vinyl
+    release in MusicBrainz at all). Only act when the stored count sits well
+    below that reference, then return the release closest to it.
     """
-    counts = sorted(r["track_count"] for r in releases if r["track_count"] > 0)
-    if not counts:
+    candidates = [r for r in releases if r["is_vinyl"] and r["track_count"] > 0]
+    if not candidates:
+        candidates = [r for r in releases if r["track_count"] > 0]
+    if not candidates:
         return None
-    median = statistics.median(counts)
-    # Stored count is representative of this release-group — leave it alone.
-    if old_count >= median * 0.6:
+
+    target = statistics.median(sorted(r["track_count"] for r in candidates))
+    # Stored count already matches the reference pressing — leave it alone.
+    if old_count >= target * 0.6:
         return None
-    return min(releases, key=lambda r: (abs(r["track_count"] - median), -r["track_count"]))
+    return min(candidates, key=lambda r: (abs(r["track_count"] - target), -r["track_count"]))
 
 
 def fetch_suspects(conn, max_tracks: int):
@@ -109,7 +118,7 @@ def fetch_suspects(conn, max_tracks: int):
 
 
 def fetch_release_track_counts(mbid: str) -> list[dict]:
-    """Returns [{'release_id', 'track_count'}] for every release in the group."""
+    """Returns [{'release_id', 'track_count', 'is_vinyl'}] for every release in the group."""
     url = (f"{MB_BASE}release?release-group={urllib_quote(mbid)}"
            f"&inc=media&limit=100&fmt=json")
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
@@ -122,8 +131,15 @@ def fetch_release_track_counts(mbid: str) -> list[dict]:
 
     results = []
     for rel in data.get("releases", []):
-        track_count = sum(m.get("track-count", 0) for m in rel.get("media", []))
-        results.append({"release_id": rel["id"], "track_count": track_count})
+        media = rel.get("media", [])
+        track_count = sum(m.get("track-count", 0) for m in media)
+        # MB spells vinyl formats as '12" Vinyl', '7" Vinyl', 'Vinyl', 'LP'.
+        is_vinyl = any(
+            "vinyl" in str(m.get("format") or "").lower()
+            or str(m.get("format") or "").upper() == "LP"
+            for m in media
+        )
+        results.append({"release_id": rel["id"], "track_count": track_count, "is_vinyl": is_vinyl})
     return results
 
 
