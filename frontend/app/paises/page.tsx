@@ -49,6 +49,9 @@ export default async function PaisesIndexPage() {
       </nav>
 
       <header className="mb-8">
+        <span className="text-gold text-[11px] font-bold uppercase tracking-[0.2em] block mb-3">
+          Por Origem
+        </span>
         <h1 className="font-display text-3xl font-black text-cream [text-wrap:balance]">
           Países de Origem
         </h1>
@@ -67,10 +70,10 @@ export default async function PaisesIndexPage() {
             <li key={p.slug}>
               <Link
                 href={`/pais/${p.slug}`}
-                className="inline-flex flex-col items-start px-3 py-2 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove transition-colors"
+                className="group inline-flex flex-col items-start px-3 py-2 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove hover:-translate-y-0.5 transition-all"
               >
                 <span className="text-parchment text-sm font-medium">{p.nome}</span>
-                <span className="text-dust text-xs tabular-nums">
+                <span className="text-dust text-xs tabular-nums group-hover:text-gold transition-colors">
                   {p.discoCount.toLocaleString("pt-BR")} discos
                 </span>
               </Link>

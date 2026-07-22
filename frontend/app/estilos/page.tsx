@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getEstilosList } from "@/lib/db/estilo";
+import { getEstilosList, getEstiloDisplayName } from "@/lib/db/estilo";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
@@ -50,6 +50,9 @@ export default async function EstilosIndexPage() {
       </nav>
 
       <header className="mb-8">
+        <span className="text-gold text-[11px] font-bold uppercase tracking-[0.2em] block mb-3">
+          Por Gênero
+        </span>
         <h1 className="font-display text-3xl font-black text-cream [text-wrap:balance]">
           Estilos Musicais
         </h1>
@@ -65,15 +68,15 @@ export default async function EstilosIndexPage() {
       ) : (
         <ul className="flex flex-wrap gap-2">
           {estilos.map((e) => {
-            const displayName = e.tag.replace(/\b\w/g, (c) => c.toUpperCase());
+            const displayName = getEstiloDisplayName(e.tag);
             return (
               <li key={e.slug}>
                 <Link
                   href={`/estilo/${e.slug}`}
-                  className="inline-flex flex-col items-start px-3 py-2 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove transition-colors"
+                  className="group inline-flex flex-col items-start px-3 py-2 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove hover:-translate-y-0.5 transition-all"
                 >
                   <span className="text-parchment text-sm font-medium">{displayName}</span>
-                  <span className="text-dust text-xs tabular-nums">
+                  <span className="text-dust text-xs tabular-nums group-hover:text-gold transition-colors">
                     {e.discoCount.toLocaleString("pt-BR")} discos
                   </span>
                 </Link>

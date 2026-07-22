@@ -26,6 +26,7 @@ const STATIC_PAGES = [
   { nome: "Discos Abaixo de R$200",  href: "/discos-abaixo-de-200" },
   { nome: "Estilos Musicais",        href: "/estilos" },
   { nome: "Países de Origem",        href: "/paises" },
+  { nome: "Discos por Década",       href: "/decadas" },
   { nome: "Artistas Mais Ouvidos",   href: "/artistas-mais-ouvidos" },
   { nome: "Mapa do Site",            href: "/sitemap" },
   { nome: "Sobre",                   href: "/sobre" },

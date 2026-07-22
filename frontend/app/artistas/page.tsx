@@ -63,6 +63,9 @@ export default async function ArtistasIndexPage() {
       </nav>
 
       <header className="mb-8">
+        <span className="text-gold text-[11px] font-bold uppercase tracking-[0.2em] block mb-3">
+          Catálogo A–Z
+        </span>
         <h1 className="font-display text-3xl font-black text-cream [text-wrap:balance]">
           Artistas de Vinil
         </h1>
@@ -75,12 +78,15 @@ export default async function ArtistasIndexPage() {
 
       {/* Letter jump-nav */}
       {letters.length > 0 && (
-        <nav aria-label="Navegar por letra" className="flex flex-wrap gap-1 mb-8">
+        <nav
+          aria-label="Navegar por letra"
+          className="flex flex-wrap gap-1 mb-8 sticky top-0 z-10 -mx-4 px-4 py-3 bg-record/90 backdrop-blur-sm border-b border-groove"
+        >
           {letters.map((l) => (
             <a
               key={l}
               href={`#letra-${l}`}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 text-sm font-bold transition-colors"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-groove border border-wax/40 text-dust hover:text-record hover:bg-gold hover:border-gold text-sm font-bold transition-colors"
             >
               {l}
             </a>
@@ -104,12 +110,12 @@ export default async function ArtistasIndexPage() {
                     <li key={item.slug}>
                       <Link
                         href={`/artista/${item.slug}`}
-                        className="flex flex-col justify-between h-[72px] px-3 py-2.5 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove transition-colors"
+                        className="group flex flex-col justify-between h-[72px] px-3 py-2.5 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove hover:-translate-y-0.5 transition-all"
                       >
                         <span className="text-parchment text-sm font-medium leading-tight line-clamp-2">
                           {item.artista}
                         </span>
-                        <span className="text-dust text-xs tabular-nums mt-1">
+                        <span className="text-dust text-xs tabular-nums mt-1 group-hover:text-gold transition-colors">
                           {item.discoCount} {item.discoCount === 1 ? "disco" : "discos"}
                         </span>
                       </Link>

@@ -5,6 +5,7 @@ import ArtistaRecords from "@/components/ArtistaRecords";
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
 import { toJsonLd } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
+import { DECADES, decadaLabel as label, parseDecade } from "@/lib/decadas";
 
 export const revalidate = 14400;
 
@@ -12,16 +13,6 @@ export const revalidate = 14400;
 // shot so client-side sort/filter/pagination (ArtistaRecords) is instant and
 // the route stays ISR-cacheable — no server searchParams.
 const RECORDS_CAP = 240;
-
-// Decades we surface as hubs. Slug is the start year; label reads "anos 80".
-const DECADES = [1960, 1970, 1980, 1990, 2000, 2010, 2020] as const;
-
-const label = (start: number) => `anos ${String(start).slice(2)}`;
-
-function parseDecade(slug: string): number | null {
-  const n = Number(slug);
-  return DECADES.includes(n as (typeof DECADES)[number]) ? n : null;
-}
 
 export function generateStaticParams() {
   return DECADES.map((d) => ({ decada: String(d) }));
