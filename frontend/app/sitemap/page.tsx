@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getSitemapData } from "@/lib/db/sitemap";
+import { getPaisesList } from "@/lib/db/pais";
+import { BEST_OF_ARTISTS } from "@/lib/guias/best-of-artist-data";
 
 export const metadata: Metadata = {
   title: "Mapa do Site — Garimpa Vinil",
@@ -20,7 +22,10 @@ export const metadata: Metadata = {
 const STATIC_PAGES = [
   { nome: "Início",                  href: "/" },
   { nome: "Todos os Discos",         href: "/disco" },
+  { nome: "Ofertas",                 href: "/ofertas" },
   { nome: "Discos Abaixo de R$200",  href: "/discos-abaixo-de-200" },
+  { nome: "Estilos Musicais",        href: "/estilos" },
+  { nome: "Países de Origem",        href: "/paises" },
   { nome: "Artistas Mais Ouvidos",   href: "/artistas-mais-ouvidos" },
   { nome: "Mapa do Site",            href: "/sitemap" },
   { nome: "Sobre",                   href: "/sobre" },
@@ -34,8 +39,15 @@ const GUIAS_PAGES = [
   { nome: "Vinil Colorido e Picture Disc",            href: "/guias/vinil-colorido-e-picture-disc" },
   { nome: "Vinil 180g Vale a Pena?",                 href: "/guias/vinil-180g-vale-a-pena" },
   { nome: "Como Avaliar o Estado de um Disco",       href: "/guias/como-avaliar-estado-disco-vinil" },
+  { nome: "Toca-Discos para Iniciantes",             href: "/guias/toca-discos-para-iniciantes" },
+  { nome: "Pré-Amplificador Phono",                  href: "/guias/pre-amplificador-phono" },
   { nome: "Melhores Discos de Rock por Subgênero",   href: "/guias/rock" },
   { nome: "Top Artistas do Spotify por País",        href: "/guias/top-artistas-spotify" },
+  // Best-of-artist rankings — kept in sync with the XML sitemap via BEST_OF_ARTISTS.
+  ...BEST_OF_ARTISTS.map((a) => ({
+    nome: `Melhores Discos ${a.article} ${a.name}`,
+    href: `/guias/melhores-discos/${a.slug}`,
+  })),
 ];
 
 // Group artists alphabetically by first letter
@@ -57,9 +69,13 @@ function groupByLetter(artists: { nome: string; slug: string }[]) {
 export default async function SitemapPage() {
   let artists: { nome: string; slug: string }[] = [];
   let styles: { nome: string; slug: string }[] = [];
+  let paises: Awaited<ReturnType<typeof getPaisesList>> = [];
 
   try {
-    ({ artists, styles } = await getSitemapData());
+    [{ artists, styles }, paises] = await Promise.all([
+      getSitemapData(),
+      getPaisesList(),
+    ]);
   } catch {
     // DB unavailable — render with only static pages
   }
@@ -128,6 +144,30 @@ export default async function SitemapPage() {
                 <Link
                   href={`/estilo/${slug}`}
                   className="text-dust hover:text-cream transition-colors text-sm capitalize"
+                >
+                  {nome}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ── Países ──────────────────────────────────────────────── */}
+      {paises.length > 0 && (
+        <section className="mb-8 bg-sleeve border border-groove rounded-xl p-6">
+          <h2 className="font-display text-xl font-bold text-cream mb-4">
+            Países{" "}
+            <span className="text-dust text-sm font-normal font-sans ml-1">
+              ({paises.length})
+            </span>
+          </h2>
+          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2">
+            {paises.map(({ nome, slug }) => (
+              <li key={slug}>
+                <Link
+                  href={`/pais/${slug}`}
+                  className="text-dust hover:text-cream transition-colors text-sm"
                 >
                   {nome}
                 </Link>

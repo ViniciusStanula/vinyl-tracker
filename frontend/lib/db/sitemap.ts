@@ -72,7 +72,7 @@ export const getSitemapData = unstable_cache(
     }
 
     const styles = styleRows
-      .filter(({ slug }) => !REDIRECTED_ESTILO_SLUGS.has(slug))
+      .filter(({ slug }) => !REDIRECTED_ESTILO_SLUGS.has(slug) && !COUNTRY_TAG_TO_PAIS_SLUG[slug])
       .map(({ slug, nome }) => ({ slug, nome }));
 
     return { artists, styles };
