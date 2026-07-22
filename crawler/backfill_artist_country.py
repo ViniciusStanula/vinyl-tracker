@@ -116,12 +116,59 @@ def expand_new(conn, min_discos: int, limit: int) -> int:
     return filled
 
 
+def retry_unmatched(conn, min_discos: int, limit: int) -> int:
+    """
+    Phase C: artists that have an ArtistMeta row but a NULL mbid — an earlier
+    lookup failed and nothing ever retries them, so phase A (which requires an
+    mbid) can never give them a country. Re-run find_mbid, then fetch country.
+    """
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT am.artista, COUNT(c.id) AS n
+            FROM "ArtistMeta" am
+            JOIN "Disco" c ON c.artista = am.artista
+            WHERE am.mbid IS NULL AND am.country IS NULL
+              AND c.disponivel = TRUE
+              AND (c.format IS NULL OR c.format = 'vinyl')
+              AND c.price_count >= 5
+            GROUP BY am.artista
+            HAVING COUNT(c.id) >= %s
+            ORDER BY n DESC
+            LIMIT %s
+        """, (min_discos, limit))
+        rows = cur.fetchall()
+
+    log.info("Phase C — %d artists with an ArtistMeta row but no mbid.", len(rows))
+    filled = 0
+    for i, (artista, _n) in enumerate(rows, 1):
+        mbid = find_mbid(artista)
+        time.sleep(RATE_LIMIT)
+        country = fetch_country(mbid) if mbid else None
+        if mbid:
+            time.sleep(RATE_LIMIT)
+        if mbid or country:
+            with conn.cursor() as cur:
+                cur.execute(
+                    'UPDATE "ArtistMeta" SET mbid = %s, country = %s WHERE artista = %s',
+                    (mbid, country, artista),
+                )
+            conn.commit()
+        if country:
+            filled += 1
+        if i % 50 == 0:
+            log.info("  C: %d/%d retried, %d with country.", i, len(rows), filled)
+    log.info("Phase C done — %d artists got a country.", filled)
+    return filled
+
+
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)-7s  %(message)s",
                         datefmt="%H:%M:%S")
     p = argparse.ArgumentParser(description="Backfill ArtistMeta.country from MusicBrainz")
     p.add_argument("--expand", action="store_true",
                    help="Also resolve artists with no ArtistMeta row yet (phase B)")
+    p.add_argument("--retry-unmatched", action="store_true",
+                   help="Also retry artists whose ArtistMeta row has a NULL mbid (phase C)")
     p.add_argument("--min-discos", type=int, default=3)
     p.add_argument("--expand-limit", type=int, default=4000)
     args = p.parse_args()
@@ -131,6 +178,8 @@ def main():
         refresh_existing(conn)
         if args.expand:
             expand_new(conn, min_discos=args.min_discos, limit=args.expand_limit)
+        if args.retry_unmatched:
+            retry_unmatched(conn, min_discos=args.min_discos, limit=args.expand_limit)
     finally:
         conn.close()
 

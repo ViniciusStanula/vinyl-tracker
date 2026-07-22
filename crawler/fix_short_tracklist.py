@@ -36,6 +36,7 @@ import json
 import time
 import argparse
 import logging
+import statistics
 import urllib.request
 
 try:
@@ -57,14 +58,40 @@ log = logging.getLogger(__name__)
 AVG_LENGTH_THRESHOLD_MS = 360_000  # 6 minutes
 
 
-def fetch_suspects(conn):
+def pick_representative(releases: list[dict], old_count: int) -> dict | None:
+    """
+    Decide whether the stored tracklist is a wrong-release pick, and if so return
+    the release that best represents the album.
+
+    Comparing against the release-group's LONGEST release is wrong: a genuinely
+    short album (Rainbow's 6-track "Rising") sits in a group that also holds a
+    19-track deluxe reissue, and "take the longest" would swap the real LP for
+    the boxset. The typical release is a far better reference — a mistakenly
+    stored promo single sits well below it, while a short album IS it.
+
+    So: take the median track count across the group's releases; only act when
+    the stored count is well under that, and then return the release closest to
+    the median rather than the fattest one.
+    """
+    counts = sorted(r["track_count"] for r in releases if r["track_count"] > 0)
+    if not counts:
+        return None
+    median = statistics.median(counts)
+    # Stored count is representative of this release-group — leave it alone.
+    if old_count >= median * 0.6:
+        return None
+    return min(releases, key=lambda r: (abs(r["track_count"] - median), -r["track_count"]))
+
+
+def fetch_suspects(conn, max_tracks: int):
     with conn.cursor() as cur:
         cur.execute(
             """SELECT id, artista, titulo, mb_mbid, mb_tracklist
                FROM "Disco"
-               WHERE jsonb_array_length(mb_tracklist::jsonb) IN (1, 2)
+               WHERE jsonb_array_length(mb_tracklist::jsonb) BETWEEN 1 AND %s
                  AND mb_primary_type = 'Album'
-                 AND disponivel = TRUE"""
+                 AND disponivel = TRUE""",
+            (max_tracks,),
         )
         rows = cur.fetchall()
 
@@ -134,6 +161,8 @@ def parse_args():
     p = argparse.ArgumentParser(description="Fix Disco rows with a too-short mb_tracklist")
     p.add_argument("--apply", action="store_true", help="Write fixes (default: dry-run CSV only)")
     p.add_argument("--delay", type=float, default=1.1, metavar="S")
+    p.add_argument("--max-tracks", type=int, default=6, metavar="N",
+                   help="Inspect Album rows with up to N tracks (default: 6)")
     p.add_argument("--out", default="short_tracklist_proposals.csv")
     return p.parse_args()
 
@@ -142,8 +171,9 @@ def main():
     args = parse_args()
     conn = get_connection()
 
-    suspects = fetch_suspects(conn)
-    log.info("Found %d suspect rows (Album type, 1-2 tracks, short avg length).", len(suspects))
+    suspects = fetch_suspects(conn, args.max_tracks)
+    log.info("Found %d suspect rows (Album type, <=%d tracks, short avg length).",
+             len(suspects), args.max_tracks)
 
     proposals = []
     updates = []
@@ -154,9 +184,9 @@ def main():
         if not releases:
             continue
 
-        best = max(releases, key=lambda r: r["track_count"])
-        if best["track_count"] <= s["old_count"]:
-            continue  # no better release available in this group
+        best = pick_representative(releases, s["old_count"])
+        if best is None:
+            continue  # stored tracklist matches the group's typical release
 
         new_tracks = fetch_tracklist_for_release(best["release_id"])
         time.sleep(args.delay)
