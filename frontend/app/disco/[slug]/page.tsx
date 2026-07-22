@@ -21,6 +21,7 @@ import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, type RelatedDeal } from "@/lib/db/disco";
 import { getEstilosList } from "@/lib/db/estilo";
+import { getPaisDisplayName, ISO2_TO_SLUG } from "@/lib/paises";
 import { getHreflangRecord } from "@/lib/db/hreflang";
 import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -214,6 +215,14 @@ export default async function DiscoPage({
         url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
       }
     : null;
+
+  // Artist country of origin (from MusicBrainz via ArtistMeta), rendered as a
+  // PT-BR-named link to the /pais/<slug> listing. Independent of the release
+  // match — only shown when both the ISO code and a known PT name resolve.
+  const artistPais =
+    meta?.artistCountry && getPaisDisplayName(meta.artistCountry)
+      ? { nome: getPaisDisplayName(meta.artistCountry)!, slug: ISO2_TO_SLUG[meta.artistCountry] }
+      : null;
 
   const valores = disco.precos.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;
@@ -859,6 +868,19 @@ export default async function DiscoPage({
                       <div className="flex justify-between">
                         <dt className="text-dust">Tipo</dt>
                         <dd className="text-cream font-medium">{mbInfo.primaryType}</dd>
+                      </div>
+                    )}
+                    {artistPais && (
+                      <div className="flex justify-between">
+                        <dt className="text-dust">Origem</dt>
+                        <dd className="text-cream font-medium">
+                          <Link
+                            href={`/pais/${artistPais.slug}`}
+                            className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
+                          >
+                            {artistPais.nome}
+                          </Link>
+                        </dd>
                       </div>
                     )}
                     {mbInfo.genres.length > 0 && (

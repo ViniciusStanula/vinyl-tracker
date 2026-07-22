@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { slugifyArtist } from "@/lib/utils/slugify";
 import { slugifyStyle } from "@/lib/utils/styleUtils";
 import { REDIRECTED_ESTILO_SLUGS } from "@/lib/db/estilo";
+import { PAIS_PT, ISO2_TO_SLUG } from "@/lib/paises";
 import { unstable_cache } from "next/cache";
 import type { MetadataRoute } from "next";
 
@@ -222,5 +223,29 @@ export async function getSitemapEstilos(): Promise<MetadataRoute.Sitemap> {
     routes.push({ url: `${SITEMAP_BASE}/estilo/${slug}`, lastModified: row.lastUpdated });
   }
 
+  return routes;
+}
+
+export async function getSitemapPaises(): Promise<MetadataRoute.Sitemap> {
+  // Mirror the thin-content noindex gate in pais/[slug]/page.tsx (noindex when
+  // total <= 3): only include countries with >3 records and a known PT name.
+  const rows = await prisma.$queryRaw<{ country: string; lastUpdated: Date }[]>`
+    SELECT am.country, MAX(c."updatedAt") AS "lastUpdated"
+    FROM "Disco" c
+    INNER JOIN "ArtistMeta" am ON am.artista = c.artista
+    WHERE am.country IS NOT NULL
+      AND c.disponivel = TRUE
+      AND (c.format IS NULL OR c.format = 'vinyl')
+      AND c.price_count >= 5
+    GROUP BY am.country
+    HAVING COUNT(*) > 3
+  `;
+
+  const routes: MetadataRoute.Sitemap = [];
+  for (const row of rows) {
+    const slug = ISO2_TO_SLUG[row.country];
+    if (!PAIS_PT[row.country] || !slug) continue;
+    routes.push({ url: `${SITEMAP_BASE}/pais/${slug}`, lastModified: row.lastUpdated });
+  }
   return routes;
 }

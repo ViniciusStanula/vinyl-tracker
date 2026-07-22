@@ -92,6 +92,11 @@ def fetch_url_rels(mbid: str) -> dict:
     wikipedia_pt: str | None = None
     wikipedia_en: str | None = None
 
+    # ISO-3166 country code (e.g. "US", "GB", "BR"). MB puts it at the top level
+    # of the artist entity; prefer it over `area` since `area` can be a
+    # subdivision (e.g. Pink Floyd's area is "England", country is "GB").
+    country: str | None = data.get("country")
+
     for rel in data.get("relations", []):
         url = rel.get("url", {}).get("resource", "")
         rel_type = rel.get("type", "")
@@ -115,6 +120,8 @@ def fetch_url_rels(mbid: str) -> dict:
             result[key] = url
         else:
             log.debug("  %s returned dead — dropping %s", key, url)
+    if country:
+        result["country"] = country
     return result
 
 
@@ -143,13 +150,14 @@ def fetch_pending_artists(conn, limit: int, min_discos: int) -> list[dict]:
 def upsert_artist_meta(conn, artista: str, mbid: str | None, urls: dict) -> None:
     with conn.cursor() as cur:
         cur.execute("""
-            INSERT INTO "ArtistMeta" (artista, mbid, wikidata_url, wikipedia_url, spotify_url, enriched_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
+            INSERT INTO "ArtistMeta" (artista, mbid, wikidata_url, wikipedia_url, spotify_url, country, enriched_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
             ON CONFLICT (artista) DO UPDATE SET
                 mbid         = EXCLUDED.mbid,
                 wikidata_url = EXCLUDED.wikidata_url,
                 wikipedia_url = EXCLUDED.wikipedia_url,
                 spotify_url  = EXCLUDED.spotify_url,
+                country      = EXCLUDED.country,
                 enriched_at  = EXCLUDED.enriched_at
         """, (
             artista,
@@ -157,6 +165,7 @@ def upsert_artist_meta(conn, artista: str, mbid: str | None, urls: dict) -> None
             urls.get("wikidata_url"),
             urls.get("wikipedia_url"),
             urls.get("spotify_url"),
+            urls.get("country"),
         ))
     conn.commit()
 

@@ -42,6 +42,8 @@ model ArtistMeta {
   wikidataUrl  String?  @map("wikidata_url")
   wikipediaUrl String?  @map("wikipedia_url")
   spotifyUrl   String?  @map("spotify_url")
+  // ISO 3166-1 alpha-2 country code of the artist's origin, from MusicBrainz.
+  country      String?
   enrichedAt   DateTime @default(now()) @map("enriched_at")
 
   @@map("ArtistMeta")
