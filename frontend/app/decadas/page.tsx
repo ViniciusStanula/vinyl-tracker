@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HubHeader, HubTile } from "@/components/hub/HubUI";
 import { getDecadasList } from "@/lib/db/decada";
 import { decadaLabel } from "@/lib/decadas";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -29,6 +30,10 @@ export default async function DecadasIndexPage() {
     // DB unavailable
   }
 
+  const topDecada = decadas.length
+    ? decadas.reduce((best, d) => (d.discoCount > best.discoCount ? d : best)).start
+    : null;
+
   const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -49,30 +54,26 @@ export default async function DecadasIndexPage() {
         <span className="text-parchment">Décadas</span>
       </nav>
 
-      <header className="mb-8">
-        <span className="text-gold text-[11px] font-bold uppercase tracking-[0.2em] block mb-3">
-          Por Década
-        </span>
-        <h1 className="font-display text-3xl font-black text-cream [text-wrap:balance]">
-          Discos por Década
-        </h1>
-        <p className="mt-1 text-dust text-sm">
-          Discos de vinil agrupados pela década de lançamento na Amazon Brasil
-        </p>
-      </header>
+      <HubHeader
+        eyebrow="Por década"
+        title="Discos por Década"
+        description={`Discos de vinil agrupados pela década de lançamento${
+          decadas.length > 0 ? `, das mais antigas às mais recentes — ${decadas.length} décadas monitoradas` : ""
+        } na Amazon Brasil.`}
+      />
 
-      <ul className="flex flex-wrap gap-2">
+      {/* Only seven decades, so the mosaic is the whole page — no filter or
+          A–Z index, which would be noise at this size. Ordered newest first;
+          the decade with the most records carries the badge. */}
+      <ul className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {decadas.map((d) => (
           <li key={d.start}>
-            <Link
+            <HubTile
               href={`/decada/${d.start}`}
-              className="group inline-flex flex-col items-start px-3 py-2 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove hover:-translate-y-0.5 transition-all"
-            >
-              <span className="text-parchment text-sm font-medium capitalize">{decadaLabel(d.start)}</span>
-              <span className="text-dust text-xs tabular-nums group-hover:text-gold transition-colors">
-                {d.discoCount.toLocaleString("pt-BR")} discos
-              </span>
-            </Link>
+              label={decadaLabel(d.start)}
+              count={d.discoCount}
+              badge={d.start === topDecada ? "Mais discos" : undefined}
+            />
           </li>
         ))}
       </ul>
