@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-22T10:28:45.327550+00:00",
+  "last_updated": "2026-07-23T10:26:46.350767+00:00",
   "countries": {
     "US": {
       "country_name": "United States",
@@ -7,7 +7,7 @@
         {
           "rank": 1,
           "name": "Olivia Rodrigo",
-          "chart_streams": 6478659,
+          "chart_streams": 6510645,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1McMsnEElThX1knmY4oliG",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b14eb4dcfd2f3858bed06e44",
@@ -16,7 +16,7 @@
         {
           "rank": 2,
           "name": "Ella Langley",
-          "chart_streams": 4232300,
+          "chart_streams": 4199702,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6BRxQ8cD3eqnrVj6WKDok8",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c4670378a4188c3174ef2ca9",
@@ -24,35 +24,35 @@
         },
         {
           "rank": 3,
-          "name": "Morgan Wallen",
-          "chart_streams": 3741785,
+          "name": "Noah Kahan",
+          "chart_streams": 3343798,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4oUHIQIBe0LHzYfvXNW4QM",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517498a9ee5f9cac5e3efa057f30",
-          "spotify_id": "4oUHIQIBe0LHzYfvXNW4QM"
+          "spotify_url": "https://open.spotify.com/artist/2RQXRUsr4IW1f3mKyKsy4B",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745b141d30d14fb78458dac5ce",
+          "spotify_id": "2RQXRUsr4IW1f3mKyKsy4B"
         },
         {
           "rank": 4,
-          "name": "Noah Kahan",
-          "chart_streams": 3664740,
+          "name": "Morgan Wallen",
+          "chart_streams": 3052602,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/2RQXRUsr4IW1f3mKyKsy4B",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745b141d30d14fb78458dac5ce",
-          "spotify_id": "2RQXRUsr4IW1f3mKyKsy4B"
+          "spotify_url": "https://open.spotify.com/artist/4oUHIQIBe0LHzYfvXNW4QM",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517498a9ee5f9cac5e3efa057f30",
+          "spotify_id": "4oUHIQIBe0LHzYfvXNW4QM"
         },
         {
           "rank": 5,
           "name": "Drake",
-          "chart_streams": 2646915,
+          "chart_streams": 2698802,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051744293385d324db8558179afd9",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051744293385d324db8558179afd9",
           "spotify_id": "3TVXtAsR1Inumwj472S9r4"
         },
         {
           "rank": 6,
           "name": "Michael Jackson",
-          "chart_streams": 2600382,
+          "chart_streams": 2589214,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3fMbdgg4jU18AjLCKBhRSm",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174997cc9a4aec335d46c9481fd",
@@ -61,7 +61,7 @@
         {
           "rank": 7,
           "name": "Malcolm Todd",
-          "chart_streams": 1944060,
+          "chart_streams": 1902793,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/7eKkW1zo5uzW8kUntiiBvz",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051749f6f7c2d12975d2a4b3a0fd8",
@@ -70,7 +70,7 @@
         {
           "rank": 8,
           "name": "Bad Bunny",
-          "chart_streams": 1908706,
+          "chart_streams": 1879886,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517481f47f44084e0a09b5f0fa13",
@@ -78,21 +78,21 @@
         },
         {
           "rank": 9,
-          "name": "Gracie Abrams",
-          "chart_streams": 1595318,
+          "name": "sombr",
+          "chart_streams": 1580595,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4tuJ0bMpJh08umKkEXKUI5",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517418e3675ebfda9c29cfb2b57e",
-          "spotify_id": "4tuJ0bMpJh08umKkEXKUI5"
+          "spotify_url": "https://open.spotify.com/artist/4G9NDjRyZFDlJKMRL8hx3S",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
+          "spotify_id": "4G9NDjRyZFDlJKMRL8hx3S"
         },
         {
           "rank": 10,
-          "name": "sombr",
-          "chart_streams": 1593580,
+          "name": "Bruno Mars",
+          "chart_streams": 1421186,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4G9NDjRyZFDlJKMRL8hx3S",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
-          "spotify_id": "4G9NDjRyZFDlJKMRL8hx3S"
+          "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c7688aad1bf03986934d7e26",
+          "spotify_id": "0du5cEVh5yTK9QJze8zA0C"
         }
       ]
     },
@@ -102,7 +102,7 @@
         {
           "rank": 1,
           "name": "Olivia Rodrigo",
-          "chart_streams": 1473417,
+          "chart_streams": 1468846,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1McMsnEElThX1knmY4oliG",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b14eb4dcfd2f3858bed06e44",
@@ -111,7 +111,7 @@
         {
           "rank": 2,
           "name": "Olivia Dean",
-          "chart_streams": 1027345,
+          "chart_streams": 1127882,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/00x1fYSGhdqScXBRpSj3DW",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745c7577ad44daeb7ce4b941a1",
@@ -120,7 +120,7 @@
         {
           "rank": 3,
           "name": "Michael Jackson",
-          "chart_streams": 906913,
+          "chart_streams": 902219,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3fMbdgg4jU18AjLCKBhRSm",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174997cc9a4aec335d46c9481fd",
@@ -129,61 +129,61 @@
         {
           "rank": 4,
           "name": "sombr",
-          "chart_streams": 680967,
+          "chart_streams": 690524,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4G9NDjRyZFDlJKMRL8hx3S",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
           "spotify_id": "4G9NDjRyZFDlJKMRL8hx3S"
         },
         {
           "rank": 5,
           "name": "Bruno Mars",
-          "chart_streams": 628706,
+          "chart_streams": 639092,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c7688aad1bf03986934d7e26",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c7688aad1bf03986934d7e26",
           "spotify_id": "0du5cEVh5yTK9QJze8zA0C"
         },
         {
           "rank": 6,
           "name": "SIENNA SPIRO",
-          "chart_streams": 537598,
+          "chart_streams": 636625,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/02gSuSAWEdWa5UOvqzjX6v",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174fb0ab819bbd4502028cd1feb",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174fb0ab819bbd4502028cd1feb",
           "spotify_id": "02gSuSAWEdWa5UOvqzjX6v"
         },
         {
           "rank": 7,
           "name": "Fleetwood Mac",
-          "chart_streams": 530537,
+          "chart_streams": 538021,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/08GQAI4eElDnROBrJRGE0X",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c8752dd511cda8c31e9daee8",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c8752dd511cda8c31e9daee8",
           "spotify_id": "08GQAI4eElDnROBrJRGE0X"
         },
         {
           "rank": 8,
-          "name": "Sam Fender",
-          "chart_streams": 451014,
+          "name": "Drake",
+          "chart_streams": 459905,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/6zlR5ttMfMNmwf2lecU9Cc",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051744a3dfbf28e00c02d9d9494e8",
-          "spotify_id": "6zlR5ttMfMNmwf2lecU9Cc"
+          "spotify_url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051744293385d324db8558179afd9",
+          "spotify_id": "3TVXtAsR1Inumwj472S9r4"
         },
         {
           "rank": 9,
-          "name": "Drake",
-          "chart_streams": 450279,
+          "name": "Sam Fender",
+          "chart_streams": 451723,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051744293385d324db8558179afd9",
-          "spotify_id": "3TVXtAsR1Inumwj472S9r4"
+          "spotify_url": "https://open.spotify.com/artist/6zlR5ttMfMNmwf2lecU9Cc",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051744a3dfbf28e00c02d9d9494e8",
+          "spotify_id": "6zlR5ttMfMNmwf2lecU9Cc"
         },
         {
           "rank": 10,
           "name": "Shakira",
-          "chart_streams": 425618,
+          "chart_streams": 419503,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0EmeFodog0BfCgMzAIvKQp",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517417f15f351cba70561ad8bcac",
@@ -196,35 +196,35 @@
       "artists": [
         {
           "rank": 1,
+          "name": "Henrique & Juliano",
+          "chart_streams": 1949452,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/3p7PcrEHaaKLJnPUGOtRlT",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517430f0dc81183daaee971c2601",
+          "spotify_id": "3p7PcrEHaaKLJnPUGOtRlT"
+        },
+        {
+          "rank": 2,
           "name": "Panda",
-          "chart_streams": 2048996,
+          "chart_streams": 1883560,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5qIpstBGrGteJZg1xIvbiz",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174d773b2b38d458722594eab13",
           "spotify_id": "5qIpstBGrGteJZg1xIvbiz"
         },
         {
-          "rank": 2,
-          "name": "Henrique & Juliano",
-          "chart_streams": 1894310,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/3p7PcrEHaaKLJnPUGOtRlT",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517430f0dc81183daaee971c2601",
-          "spotify_id": "3p7PcrEHaaKLJnPUGOtRlT"
-        },
-        {
           "rank": 3,
           "name": "Murilo Huff",
-          "chart_streams": 1824662,
+          "chart_streams": 1855200,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3hq7WoPJsrRP0KMSLhUgRz",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517456a92ebac65add2ed93c5531",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517456a92ebac65add2ed93c5531",
           "spotify_id": "3hq7WoPJsrRP0KMSLhUgRz"
         },
         {
           "rank": 4,
           "name": "Mc Jacaré",
-          "chart_streams": 1641474,
+          "chart_streams": 1694518,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6qrqAYlS6lUj2BVXax7SZW",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517429915070fc94a63b974d185b",
@@ -233,16 +233,16 @@
         {
           "rank": 5,
           "name": "DJ Japa NK",
-          "chart_streams": 1412442,
+          "chart_streams": 1458618,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1bpnl8qbR9GxmiNlkEufW6",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174a5a47189fc33316c3ef73794",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174a5a47189fc33316c3ef73794",
           "spotify_id": "1bpnl8qbR9GxmiNlkEufW6"
         },
         {
           "rank": 6,
           "name": "Danilo e Davi",
-          "chart_streams": 1219021,
+          "chart_streams": 1266157,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5DaqVKaxeqDbJuxaIP9m4u",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174dc8647dbf2c0959f1aac4190",
@@ -250,38 +250,38 @@
         },
         {
           "rank": 7,
+          "name": "Zé Neto & Cristiano",
+          "chart_streams": 1177498,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/487N2T9nIPEHrlTZLL3SQs",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517463c14c754c70c754b127498e",
+          "spotify_id": "487N2T9nIPEHrlTZLL3SQs"
+        },
+        {
+          "rank": 8,
           "name": "BTS",
-          "chart_streams": 1118612,
+          "chart_streams": 1104698,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3Nrfpe0tUJi4K4DXYWgMUX",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174f80ec63ea7a0ef0fba60957d",
           "spotify_id": "3Nrfpe0tUJi4K4DXYWgMUX"
         },
         {
-          "rank": 8,
+          "rank": 9,
           "name": "Oldilla",
-          "chart_streams": 1043370,
+          "chart_streams": 1086381,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6sW5k31iA8sTy0i2goUKF9",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517421758e242a6994078af109fb",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517421758e242a6994078af109fb",
           "spotify_id": "6sW5k31iA8sTy0i2goUKF9"
-        },
-        {
-          "rank": 9,
-          "name": "Grupo Menos É Mais",
-          "chart_streams": 992876,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/6vTqEFbTtTRJsuIpzZgjxi",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517461538dadf3d27f34baf0c29e",
-          "spotify_id": "6vTqEFbTtTRJsuIpzZgjxi"
         },
         {
           "rank": 10,
           "name": "Felipe e Rodrigo",
-          "chart_streams": 986034,
+          "chart_streams": 1019445,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/7gZu6kPnY9enEi5FvgTO4F",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517486e8c04c765526d1de73116e",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517486e8c04c765526d1de73116e",
           "spotify_id": "7gZu6kPnY9enEi5FvgTO4F"
         }
       ]
@@ -292,7 +292,7 @@
         {
           "rank": 1,
           "name": "Pashanim",
-          "chart_streams": 814598,
+          "chart_streams": 805007,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/34LetYSjEuG2fBb4Z8PwPg",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051749dbe8c1b85ba8e82795076e9",
@@ -301,7 +301,7 @@
         {
           "rank": 2,
           "name": "Shakira",
-          "chart_streams": 665434,
+          "chart_streams": 657041,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0EmeFodog0BfCgMzAIvKQp",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517417f15f351cba70561ad8bcac",
@@ -310,16 +310,16 @@
         {
           "rank": 3,
           "name": "Linkin Park",
-          "chart_streams": 565600,
+          "chart_streams": 583783,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6XyY86QOPPrYVGvF9ch6wz",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174527d95dabbe8b8b527e8136f",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174527d95dabbe8b8b527e8136f",
           "spotify_id": "6XyY86QOPPrYVGvF9ch6wz"
         },
         {
           "rank": 4,
           "name": "Michael Jackson",
-          "chart_streams": 465224,
+          "chart_streams": 531367,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3fMbdgg4jU18AjLCKBhRSm",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174997cc9a4aec335d46c9481fd",
@@ -327,57 +327,57 @@
         },
         {
           "rank": 5,
-          "name": "Summer Cem",
-          "chart_streams": 422817,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/3drqpTL4sQOckmAfF9i1wg",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051748aba85c40eb3ab9a1fbe9c0c",
-          "spotify_id": "3drqpTL4sQOckmAfF9i1wg"
-        },
-        {
-          "rank": 6,
           "name": "HUGEL",
-          "chart_streams": 408230,
+          "chart_streams": 473434,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5PlfkPxwCpRRWQJBxCa0By",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174b02f6c6948dd082ff04b2a86",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b02f6c6948dd082ff04b2a86",
           "spotify_id": "5PlfkPxwCpRRWQJBxCa0By"
         },
         {
+          "rank": 6,
+          "name": "Summer Cem",
+          "chart_streams": 428653,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/3drqpTL4sQOckmAfF9i1wg",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051748aba85c40eb3ab9a1fbe9c0c",
+          "spotify_id": "3drqpTL4sQOckmAfF9i1wg"
+        },
+        {
           "rank": 7,
+          "name": "Katy Perry",
+          "chart_streams": 399249,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/6jJ0s89eD6GaHleKKya26X",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174cd50e745cf782f905769f482",
+          "spotify_id": "6jJ0s89eD6GaHleKKya26X"
+        },
+        {
+          "rank": 8,
           "name": "Bad Bunny",
-          "chart_streams": 371834,
+          "chart_streams": 384508,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517481f47f44084e0a09b5f0fa13",
           "spotify_id": "4q3ewBCX7sLwd24euuV69X"
         },
         {
-          "rank": 8,
+          "rank": 9,
+          "name": "Rihanna",
+          "chart_streams": 332999,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/5pKCCKE2ajJHZ9KAiaK11H",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174cb565a8e684e3be458d329ac",
+          "spotify_id": "5pKCCKE2ajJHZ9KAiaK11H"
+        },
+        {
+          "rank": 10,
           "name": "Capital Bra",
-          "chart_streams": 335049,
+          "chart_streams": 315941,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4WZGDpNwrC0vNQyl9QzF7d",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174fc9cbf00210113b93a91efd1",
           "spotify_id": "4WZGDpNwrC0vNQyl9QzF7d"
-        },
-        {
-          "rank": 9,
-          "name": "Katy Perry",
-          "chart_streams": 334270,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/6jJ0s89eD6GaHleKKya26X",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174cd50e745cf782f905769f482",
-          "spotify_id": "6jJ0s89eD6GaHleKKya26X"
-        },
-        {
-          "rank": 10,
-          "name": "Olivia Rodrigo",
-          "chart_streams": 284309,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/1McMsnEElThX1knmY4oliG",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b14eb4dcfd2f3858bed06e44",
-          "spotify_id": "1McMsnEElThX1knmY4oliG"
         }
       ]
     },
@@ -387,43 +387,43 @@
         {
           "rank": 1,
           "name": "Mauvais djo",
-          "chart_streams": 878841,
+          "chart_streams": 908974,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/51OKuyM4BiiYxFm8Mi6fa9",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745a30063f07efdf77410799cb",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745a30063f07efdf77410799cb",
           "spotify_id": "51OKuyM4BiiYxFm8Mi6fa9"
         },
         {
           "rank": 2,
+          "name": "GIMS",
+          "chart_streams": 838367,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/0GOx72r5AAEKRGQFn3xqXK",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517477144f838397a467e807df65",
+          "spotify_id": "0GOx72r5AAEKRGQFn3xqXK"
+        },
+        {
+          "rank": 3,
+          "name": "Ninho",
+          "chart_streams": 831757,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/6Te49r3A6f5BiIgBRxH7FH",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051747844053470fa0a138eec6662",
+          "spotify_id": "6Te49r3A6f5BiIgBRxH7FH"
+        },
+        {
+          "rank": 4,
           "name": "Werenoi",
-          "chart_streams": 872398,
+          "chart_streams": 816518,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3YBJLs7RqR0aPGBgU27nDh",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051746296c04d12f719f7ea4fe566",
           "spotify_id": "3YBJLs7RqR0aPGBgU27nDh"
         },
         {
-          "rank": 3,
-          "name": "GIMS",
-          "chart_streams": 806096,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/0GOx72r5AAEKRGQFn3xqXK",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517477144f838397a467e807df65",
-          "spotify_id": "0GOx72r5AAEKRGQFn3xqXK"
-        },
-        {
-          "rank": 4,
-          "name": "Ninho",
-          "chart_streams": 804637,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/6Te49r3A6f5BiIgBRxH7FH",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051747844053470fa0a138eec6662",
-          "spotify_id": "6Te49r3A6f5BiIgBRxH7FH"
-        },
-        {
           "rank": 5,
           "name": "Jul",
-          "chart_streams": 748018,
+          "chart_streams": 755583,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3IW7ScrzXmPvZhB27hmfgy",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174aa70253f73793a0ff061069e",
@@ -431,26 +431,26 @@
         },
         {
           "rank": 6,
-          "name": "PLK",
-          "chart_streams": 593563,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/3DCWeG2J1fZeu0Oe6i5Q6m",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c0b860256b49e3f681d491eb",
-          "spotify_id": "3DCWeG2J1fZeu0Oe6i5Q6m"
-        },
-        {
-          "rank": 7,
           "name": "La Rvfleuze",
-          "chart_streams": 575215,
+          "chart_streams": 630928,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6k9F0oaxCXxbdTFDTdZihN",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174f89df910378b7084e77a4cd2",
           "spotify_id": "6k9F0oaxCXxbdTFDTdZihN"
         },
         {
+          "rank": 7,
+          "name": "PLK",
+          "chart_streams": 596293,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/3DCWeG2J1fZeu0Oe6i5Q6m",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c0b860256b49e3f681d491eb",
+          "spotify_id": "3DCWeG2J1fZeu0Oe6i5Q6m"
+        },
+        {
           "rank": 8,
           "name": "Aya Nakamura",
-          "chart_streams": 562438,
+          "chart_streams": 564947,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/7IlRNXHjoOCgEAWN5qYksg",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051741b1d1a60a2e95efc4eea8259",
@@ -459,16 +459,16 @@
         {
           "rank": 9,
           "name": "RnBoi",
-          "chart_streams": 535770,
+          "chart_streams": 549893,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4yPFe6ZiSjH5mgjDwiYZgc",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051742c088709b2277194a0e5f144",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051742c088709b2277194a0e5f144",
           "spotify_id": "4yPFe6ZiSjH5mgjDwiYZgc"
         },
         {
           "rank": 10,
           "name": "TRIANGLE DES BERMUDES",
-          "chart_streams": 507768,
+          "chart_streams": 512429,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3HmSuQk0VaGhv9hX22h10J",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517497b09d773d6b18e962b13c72",
@@ -482,7 +482,7 @@
         {
           "rank": 1,
           "name": "back number",
-          "chart_streams": 2784889,
+          "chart_streams": 2574080,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6rs1KAoQnFalSqSU4LTh8g",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051744344b16f251fbbd9d34f3d5a",
@@ -491,7 +491,7 @@
         {
           "rank": 2,
           "name": "Mrs. GREEN APPLE",
-          "chart_streams": 2495645,
+          "chart_streams": 2295198,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4QvgGvpgzgyUOo8Yp8LDm9",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051740b6fd24c14a46a5027d65e47",
@@ -500,7 +500,7 @@
         {
           "rank": 3,
           "name": "Kenshi Yonezu",
-          "chart_streams": 1106440,
+          "chart_streams": 1022315,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1snhtMLeb2DYoMOcVbb8iB",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174a39642d6f3ba26f42d54ac98",
@@ -509,7 +509,7 @@
         {
           "rank": 4,
           "name": "M!LK",
-          "chart_streams": 936171,
+          "chart_streams": 961539,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4jhJ8cnJ9vYKyCh289nuwQ",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517488f8a66a56a8eb9340fb194c",
@@ -518,7 +518,7 @@
         {
           "rank": 5,
           "name": "Aimyon",
-          "chart_streams": 833368,
+          "chart_streams": 774540,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5kVZa4lFUmAQlBogl1fkd6",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517487c4f7794417bdb0265c4f70",
@@ -527,7 +527,7 @@
         {
           "rank": 6,
           "name": "sakanaction",
-          "chart_streams": 521546,
+          "chart_streams": 458378,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0hCWVMGGQnRVfDgmhwLIxq",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517436e29d377fba222834f257cd",
@@ -535,39 +535,39 @@
         },
         {
           "rank": 7,
-          "name": "HANA",
-          "chart_streams": 515363,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/7fmXV2O48buswss04YetaN",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174bc476542962c8cf6b4dfc8a7",
-          "spotify_id": "7fmXV2O48buswss04YetaN"
-        },
-        {
-          "rank": 8,
           "name": "Macaroni Empitsu",
-          "chart_streams": 461804,
+          "chart_streams": 434748,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1t17z3vfuc82cxSDMrvryJ",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745863d65e9f2d0c497d995a02",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745863d65e9f2d0c497d995a02",
           "spotify_id": "1t17z3vfuc82cxSDMrvryJ"
         },
         {
-          "rank": 9,
-          "name": "OFFICIAL HIGE DANDISM",
-          "chart_streams": 407233,
+          "rank": 8,
+          "name": "HANA",
+          "chart_streams": 421144,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/5Vo1hnCRmCM6M4thZCInCj",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174a603edbfe14a6bced859d7e1",
-          "spotify_id": "5Vo1hnCRmCM6M4thZCInCj"
+          "spotify_url": "https://open.spotify.com/artist/7fmXV2O48buswss04YetaN",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174bc476542962c8cf6b4dfc8a7",
+          "spotify_id": "7fmXV2O48buswss04YetaN"
+        },
+        {
+          "rank": 9,
+          "name": "BE:FIRST",
+          "chart_streams": 377089,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/4wCW8kZ8LL7QIdcE8EOKPP",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174ecb7252ab253abd1de2b636d",
+          "spotify_id": "4wCW8kZ8LL7QIdcE8EOKPP"
         },
         {
           "rank": 10,
-          "name": "Number_i",
-          "chart_streams": 403393,
+          "name": "Yorushika",
+          "chart_streams": 373337,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4XFkDALFTsSHVnRtJSsaMN",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174cf8f761f9fc22e2757ce06c2",
-          "spotify_id": "4XFkDALFTsSHVnRtJSsaMN"
+          "spotify_url": "https://open.spotify.com/artist/4UK2Lzi6fBfUi9rpDt6cik",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e62cff9c6018ae5616b01eab",
+          "spotify_id": "4UK2Lzi6fBfUi9rpDt6cik"
         }
       ]
     },
@@ -576,44 +576,44 @@
       "artists": [
         {
           "rank": 1,
-          "name": "Fuerza Regida",
-          "chart_streams": 4162843,
+          "name": "Junior H",
+          "chart_streams": 4128196,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/0ys2OFYzWYB5hRDLCsBqxt",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174ce436c411ab2436c7ab2c04d",
-          "spotify_id": "0ys2OFYzWYB5hRDLCsBqxt"
+          "spotify_url": "https://open.spotify.com/artist/7Gi6gjaWy3DxyilpF1a8Is",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745fbe9b7dc7d9a2295bd6022c",
+          "spotify_id": "7Gi6gjaWy3DxyilpF1a8Is"
         },
         {
           "rank": 2,
-          "name": "Junior H",
-          "chart_streams": 4001485,
+          "name": "Fuerza Regida",
+          "chart_streams": 3873026,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/7Gi6gjaWy3DxyilpF1a8Is",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745fbe9b7dc7d9a2295bd6022c",
-          "spotify_id": "7Gi6gjaWy3DxyilpF1a8Is"
+          "spotify_url": "https://open.spotify.com/artist/0ys2OFYzWYB5hRDLCsBqxt",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174ce436c411ab2436c7ab2c04d",
+          "spotify_id": "0ys2OFYzWYB5hRDLCsBqxt"
         },
         {
           "rank": 3,
           "name": "Neton Vega",
-          "chart_streams": 3126807,
+          "chart_streams": 3230876,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6pV5zH2LzjOUHaAvENdMMa",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051747215ccc01c6b8f0fc59adebb",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051747215ccc01c6b8f0fc59adebb",
           "spotify_id": "6pV5zH2LzjOUHaAvENdMMa"
         },
         {
           "rank": 4,
           "name": "Peso Pluma",
-          "chart_streams": 2943490,
+          "chart_streams": 3027408,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/12GqGscKJx3aE4t07u7eVZ",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174e5283f5b671cf618b82a2696",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e5283f5b671cf618b82a2696",
           "spotify_id": "12GqGscKJx3aE4t07u7eVZ"
         },
         {
           "rank": 5,
           "name": "Tito Double P",
-          "chart_streams": 2212371,
+          "chart_streams": 2265594,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5eumcnUkdmGvkvcsx1WFNG",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174153a276d15c046f4db38abde",
@@ -622,7 +622,7 @@
         {
           "rank": 6,
           "name": "Bad Bunny",
-          "chart_streams": 1793958,
+          "chart_streams": 1909046,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517481f47f44084e0a09b5f0fa13",
@@ -631,7 +631,7 @@
         {
           "rank": 7,
           "name": "Calle 24",
-          "chart_streams": 1520996,
+          "chart_streams": 1571491,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6dLuQ5qXxIuWc5urxfIiZR",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517413ec8d2390f7335cbcefdf53",
@@ -640,7 +640,7 @@
         {
           "rank": 8,
           "name": "Omar Camacho",
-          "chart_streams": 1460305,
+          "chart_streams": 1543019,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0rUu2qzqezBrCddX1RuUyJ",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174abcb79b1cfa89232bbfa3505",
@@ -649,19 +649,19 @@
         {
           "rank": 9,
           "name": "Lenin Ramírez",
-          "chart_streams": 1427617,
+          "chart_streams": 1414116,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3hTffafUYLLgO4yuPAxb5U",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051749252acf7dc9e615a728d7c21",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051749252acf7dc9e615a728d7c21",
           "spotify_id": "3hTffafUYLLgO4yuPAxb5U"
         },
         {
           "rank": 10,
           "name": "Chuyin",
-          "chart_streams": 1188117,
+          "chart_streams": 1259588,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5c8ZR64evQ00Spl73s76fo",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174bb44e496eebee8d42ba9b5c5",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174bb44e496eebee8d42ba9b5c5",
           "spotify_id": "5c8ZR64evQ00Spl73s76fo"
         }
       ]
@@ -672,7 +672,7 @@
         {
           "rank": 1,
           "name": "Ella Langley",
-          "chart_streams": 623797,
+          "chart_streams": 604868,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6BRxQ8cD3eqnrVj6WKDok8",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c4670378a4188c3174ef2ca9",
@@ -681,16 +681,16 @@
         {
           "rank": 2,
           "name": "Drake",
-          "chart_streams": 580176,
+          "chart_streams": 579996,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3TVXtAsR1Inumwj472S9r4",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051744293385d324db8558179afd9",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051744293385d324db8558179afd9",
           "spotify_id": "3TVXtAsR1Inumwj472S9r4"
         },
         {
           "rank": 3,
           "name": "Olivia Rodrigo",
-          "chart_streams": 473552,
+          "chart_streams": 472782,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1McMsnEElThX1knmY4oliG",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b14eb4dcfd2f3858bed06e44",
@@ -698,53 +698,53 @@
         },
         {
           "rank": 4,
-          "name": "sombr",
-          "chart_streams": 326193,
+          "name": "Noah Kahan",
+          "chart_streams": 328677,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4G9NDjRyZFDlJKMRL8hx3S",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
-          "spotify_id": "4G9NDjRyZFDlJKMRL8hx3S"
+          "spotify_url": "https://open.spotify.com/artist/2RQXRUsr4IW1f3mKyKsy4B",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745b141d30d14fb78458dac5ce",
+          "spotify_id": "2RQXRUsr4IW1f3mKyKsy4B"
         },
         {
           "rank": 5,
-          "name": "Noah Kahan",
-          "chart_streams": 325796,
+          "name": "sombr",
+          "chart_streams": 319380,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/2RQXRUsr4IW1f3mKyKsy4B",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745b141d30d14fb78458dac5ce",
-          "spotify_id": "2RQXRUsr4IW1f3mKyKsy4B"
+          "spotify_url": "https://open.spotify.com/artist/4G9NDjRyZFDlJKMRL8hx3S",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
+          "spotify_id": "4G9NDjRyZFDlJKMRL8hx3S"
         },
         {
           "rank": 6,
           "name": "Morgan Wallen",
-          "chart_streams": 303054,
+          "chart_streams": 297241,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4oUHIQIBe0LHzYfvXNW4QM",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517498a9ee5f9cac5e3efa057f30",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517498a9ee5f9cac5e3efa057f30",
           "spotify_id": "4oUHIQIBe0LHzYfvXNW4QM"
         },
         {
           "rank": 7,
           "name": "Luke Combs",
-          "chart_streams": 299997,
+          "chart_streams": 284226,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/718COspgdWOnwOFpJHRZHS",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174147f54ed9d9d5f98efdfddd2",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174147f54ed9d9d5f98efdfddd2",
           "spotify_id": "718COspgdWOnwOFpJHRZHS"
         },
         {
           "rank": 8,
           "name": "Bruno Mars",
-          "chart_streams": 282645,
+          "chart_streams": 274776,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c7688aad1bf03986934d7e26",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c7688aad1bf03986934d7e26",
           "spotify_id": "0du5cEVh5yTK9QJze8zA0C"
         },
         {
           "rank": 9,
           "name": "Alex Warren",
-          "chart_streams": 278926,
+          "chart_streams": 267300,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0fTSzq9jAh4c36UVb4V7CB",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e027df2e591e1a050e5235cc",
@@ -753,7 +753,7 @@
         {
           "rank": 10,
           "name": "Shakira",
-          "chart_streams": 256829,
+          "chart_streams": 246951,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0EmeFodog0BfCgMzAIvKQp",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517417f15f351cba70561ad8bcac",
@@ -767,7 +767,7 @@
         {
           "rank": 1,
           "name": "Olivia Rodrigo",
-          "chart_streams": 829773,
+          "chart_streams": 818362,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1McMsnEElThX1knmY4oliG",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b14eb4dcfd2f3858bed06e44",
@@ -776,7 +776,7 @@
         {
           "rank": 2,
           "name": "Olivia Dean",
-          "chart_streams": 655967,
+          "chart_streams": 657260,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/00x1fYSGhdqScXBRpSj3DW",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745c7577ad44daeb7ce4b941a1",
@@ -785,7 +785,7 @@
         {
           "rank": 3,
           "name": "Michael Jackson",
-          "chart_streams": 520748,
+          "chart_streams": 508233,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3fMbdgg4jU18AjLCKBhRSm",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174997cc9a4aec335d46c9481fd",
@@ -794,16 +794,16 @@
         {
           "rank": 4,
           "name": "sombr",
-          "chart_streams": 434844,
+          "chart_streams": 432542,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4G9NDjRyZFDlJKMRL8hx3S",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
           "spotify_id": "4G9NDjRyZFDlJKMRL8hx3S"
         },
         {
           "rank": 5,
           "name": "Ella Langley",
-          "chart_streams": 378172,
+          "chart_streams": 381377,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6BRxQ8cD3eqnrVj6WKDok8",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c4670378a4188c3174ef2ca9",
@@ -811,35 +811,35 @@
         },
         {
           "rank": 6,
+          "name": "Noah Kahan",
+          "chart_streams": 308716,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/2RQXRUsr4IW1f3mKyKsy4B",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745b141d30d14fb78458dac5ce",
+          "spotify_id": "2RQXRUsr4IW1f3mKyKsy4B"
+        },
+        {
+          "rank": 7,
+          "name": "Fleetwood Mac",
+          "chart_streams": 281093,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/08GQAI4eElDnROBrJRGE0X",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c8752dd511cda8c31e9daee8",
+          "spotify_id": "08GQAI4eElDnROBrJRGE0X"
+        },
+        {
+          "rank": 8,
           "name": "Gracie Abrams",
-          "chart_streams": 287321,
+          "chart_streams": 258575,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4tuJ0bMpJh08umKkEXKUI5",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517418e3675ebfda9c29cfb2b57e",
           "spotify_id": "4tuJ0bMpJh08umKkEXKUI5"
         },
         {
-          "rank": 7,
-          "name": "Fleetwood Mac",
-          "chart_streams": 272582,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/08GQAI4eElDnROBrJRGE0X",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c8752dd511cda8c31e9daee8",
-          "spotify_id": "08GQAI4eElDnROBrJRGE0X"
-        },
-        {
-          "rank": 8,
-          "name": "Noah Kahan",
-          "chart_streams": 263488,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/2RQXRUsr4IW1f3mKyKsy4B",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745b141d30d14fb78458dac5ce",
-          "spotify_id": "2RQXRUsr4IW1f3mKyKsy4B"
-        },
-        {
           "rank": 9,
           "name": "Justin Bieber",
-          "chart_streams": 246147,
+          "chart_streams": 243560,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1uNFoZAHBGtllmzznpCI3s",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174af20f7db5288bce9beede034",
@@ -848,7 +848,7 @@
         {
           "rank": 10,
           "name": "Alex Warren",
-          "chart_streams": 230214,
+          "chart_streams": 229142,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0fTSzq9jAh4c36UVb4V7CB",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e027df2e591e1a050e5235cc",
@@ -862,7 +862,7 @@
         {
           "rank": 1,
           "name": "Quevedo",
-          "chart_streams": 2798071,
+          "chart_streams": 3369173,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/52iwsT98xCoGgiGntTiR7K",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051746ba600ad0f41d8a3aa3f53b2",
@@ -871,7 +871,7 @@
         {
           "rank": 2,
           "name": "Bad Bunny",
-          "chart_streams": 1010469,
+          "chart_streams": 1218510,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517481f47f44084e0a09b5f0fa13",
@@ -880,74 +880,74 @@
         {
           "rank": 3,
           "name": "Omar Courtz",
-          "chart_streams": 907208,
+          "chart_streams": 1017710,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3E12tRURRvPfHz0hAMCFYc",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174d317f301a85fd77964d94b4d",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174d317f301a85fd77964d94b4d",
           "spotify_id": "3E12tRURRvPfHz0hAMCFYc"
         },
         {
           "rank": 4,
+          "name": "Aitana",
+          "chart_streams": 635356,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/7eLcDZDYHXZCebtQmVFL25",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174f70cb5cef7d3848570900de5",
+          "spotify_id": "7eLcDZDYHXZCebtQmVFL25"
+        },
+        {
+          "rank": 5,
+          "name": "Jay Wheeler",
+          "chart_streams": 622539,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/2cPqdH7XMvwaBJEVjheH8g",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174537338bb3fe308a1e4c36e00",
+          "spotify_id": "2cPqdH7XMvwaBJEVjheH8g"
+        },
+        {
+          "rank": 6,
           "name": "Shakira",
-          "chart_streams": 865023,
+          "chart_streams": 574893,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0EmeFodog0BfCgMzAIvKQp",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517417f15f351cba70561ad8bcac",
           "spotify_id": "0EmeFodog0BfCgMzAIvKQp"
         },
         {
-          "rank": 5,
-          "name": "Aitana",
-          "chart_streams": 558518,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/7eLcDZDYHXZCebtQmVFL25",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174f70cb5cef7d3848570900de5",
-          "spotify_id": "7eLcDZDYHXZCebtQmVFL25"
-        },
-        {
-          "rank": 6,
-          "name": "Jay Wheeler",
-          "chart_streams": 525215,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/2cPqdH7XMvwaBJEVjheH8g",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174537338bb3fe308a1e4c36e00",
-          "spotify_id": "2cPqdH7XMvwaBJEVjheH8g"
-        },
-        {
           "rank": 7,
+          "name": "mvrk",
+          "chart_streams": 419039,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/6WCTfR8dIuTqWrFrzt2yl0",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174ffc3d0acfa836722752a397d",
+          "spotify_id": "6WCTfR8dIuTqWrFrzt2yl0"
+        },
+        {
+          "rank": 8,
           "name": "Anuel AA",
-          "chart_streams": 359295,
+          "chart_streams": 413039,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2R21vXR83lH98kGeO99Y66",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174a23ceb177745632b517cb7b2",
           "spotify_id": "2R21vXR83lH98kGeO99Y66"
         },
         {
-          "rank": 8,
-          "name": "mvrk",
-          "chart_streams": 348339,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/6WCTfR8dIuTqWrFrzt2yl0",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174ffc3d0acfa836722752a397d",
-          "spotify_id": "6WCTfR8dIuTqWrFrzt2yl0"
-        },
-        {
           "rank": 9,
-          "name": "Sergio Ramos",
-          "chart_streams": 296137,
+          "name": "Ya Ice Dilan",
+          "chart_streams": 370548,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/1nbrjOvQRh3w167UZjjMv4",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174fd17d75a32fc772da4e9b812",
-          "spotify_id": "1nbrjOvQRh3w167UZjjMv4"
+          "spotify_url": "https://open.spotify.com/artist/3EumQuYai5g1235jIBaPhA",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174f6e20a27d7527059bfbbdeee",
+          "spotify_id": "3EumQuYai5g1235jIBaPhA"
         },
         {
           "rank": 10,
-          "name": "Myke Towers",
-          "chart_streams": 292947,
+          "name": "Ana Mena",
+          "chart_streams": 366411,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/7iK8PXO48WeuP03g8YR51W",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051748372345609bebaf1e948ef7f",
-          "spotify_id": "7iK8PXO48WeuP03g8YR51W"
+          "spotify_url": "https://open.spotify.com/artist/6k8mwkKJKKjBILo7ypBspl",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e0393717d166c1c41c01c778",
+          "spotify_id": "6k8mwkKJKKjBILo7ypBspl"
         }
       ]
     },
@@ -956,44 +956,44 @@
       "artists": [
         {
           "rank": 1,
-          "name": "Bad Bunny",
-          "chart_streams": 1225557,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517481f47f44084e0a09b5f0fa13",
-          "spotify_id": "4q3ewBCX7sLwd24euuV69X"
-        },
-        {
-          "rank": 2,
           "name": "Geolier",
-          "chart_streams": 1115805,
+          "chart_streams": 1317280,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/27LlKWxS3KXW7RRAxN5S8s",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051742b33eeaf4334b5f77347d2e2",
           "spotify_id": "27LlKWxS3KXW7RRAxN5S8s"
         },
         {
-          "rank": 3,
-          "name": "Artie 5ive",
-          "chart_streams": 750321,
+          "rank": 2,
+          "name": "Bad Bunny",
+          "chart_streams": 1017047,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/2R4kNOwHUUsuDYhKsESVbF",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174497c296b3d4b239cf30f458f",
-          "spotify_id": "2R4kNOwHUUsuDYhKsESVbF"
+          "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517481f47f44084e0a09b5f0fa13",
+          "spotify_id": "4q3ewBCX7sLwd24euuV69X"
         },
         {
-          "rank": 4,
+          "rank": 3,
           "name": "Shiva",
-          "chart_streams": 734520,
+          "chart_streams": 757728,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2K5nCggbhSZ00YCYP5qkZS",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174aef53e971834894d112256a6",
           "spotify_id": "2K5nCggbhSZ00YCYP5qkZS"
         },
         {
+          "rank": 4,
+          "name": "Artie 5ive",
+          "chart_streams": 711150,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/2R4kNOwHUUsuDYhKsESVbF",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174497c296b3d4b239cf30f458f",
+          "spotify_id": "2R4kNOwHUUsuDYhKsESVbF"
+        },
+        {
           "rank": 5,
           "name": "Sfera Ebbasta",
-          "chart_streams": 691458,
+          "chart_streams": 708738,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/23TFHmajVfBtlRx5MXqgoz",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051743cbc47948d74d68a94cacbbb",
@@ -1002,16 +1002,16 @@
         {
           "rank": 6,
           "name": "ANNA",
-          "chart_streams": 669677,
+          "chart_streams": 665183,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/7K80yOTC0Id95gRaOxDG5u",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174bc680dd80c54c685f885110e",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174bc680dd80c54c685f885110e",
           "spotify_id": "7K80yOTC0Id95gRaOxDG5u"
         },
         {
           "rank": 7,
           "name": "Ultimo",
-          "chart_streams": 412203,
+          "chart_streams": 467786,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3hN3iJMbbBmqBSAMx5veDa",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174314f49cce61a62a207f9a9da",
@@ -1020,7 +1020,7 @@
         {
           "rank": 8,
           "name": "Samurai Jay",
-          "chart_streams": 404388,
+          "chart_streams": 405892,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2n0Ki4A5tKTEloq3WCt1IH",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e1164794a2f4bb3266d2ecea",
@@ -1028,21 +1028,21 @@
         },
         {
           "rank": 9,
-          "name": "Bresh",
-          "chart_streams": 334027,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/7FeObngbQ0GY3SojNwKdKn",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174dcc87349ef3e39fd6a0c4b59",
-          "spotify_id": "7FeObngbQ0GY3SojNwKdKn"
-        },
-        {
-          "rank": 10,
           "name": "Olly",
-          "chart_streams": 332515,
+          "chart_streams": 355370,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/25u1DN0MwQVSav4XoJS7hl",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174018935c0633e942fb762926f",
           "spotify_id": "25u1DN0MwQVSav4XoJS7hl"
+        },
+        {
+          "rank": 10,
+          "name": "Bresh",
+          "chart_streams": 299283,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/7FeObngbQ0GY3SojNwKdKn",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174dcc87349ef3e39fd6a0c4b59",
+          "spotify_id": "7FeObngbQ0GY3SojNwKdKn"
         }
       ]
     },
@@ -1052,7 +1052,7 @@
         {
           "rank": 1,
           "name": "Shakira",
-          "chart_streams": 321911,
+          "chart_streams": 309304,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0EmeFodog0BfCgMzAIvKQp",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517417f15f351cba70561ad8bcac",
@@ -1061,7 +1061,7 @@
         {
           "rank": 2,
           "name": "Michael Jackson",
-          "chart_streams": 300775,
+          "chart_streams": 293550,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3fMbdgg4jU18AjLCKBhRSm",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174997cc9a4aec335d46c9481fd",
@@ -1069,74 +1069,74 @@
         },
         {
           "rank": 3,
+          "name": "Bruno Mars",
+          "chart_streams": 284206,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c7688aad1bf03986934d7e26",
+          "spotify_id": "0du5cEVh5yTK9QJze8zA0C"
+        },
+        {
+          "rank": 4,
           "name": "Robert van Hemert",
-          "chart_streams": 281470,
+          "chart_streams": 269824,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/79TBgzOALTo3GOcKl1Rn8k",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174ac32bacde8fed697d9f873bb",
           "spotify_id": "79TBgzOALTo3GOcKl1Rn8k"
         },
         {
-          "rank": 4,
-          "name": "Bruno Mars",
-          "chart_streams": 263185,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c7688aad1bf03986934d7e26",
-          "spotify_id": "0du5cEVh5yTK9QJze8zA0C"
-        },
-        {
           "rank": 5,
           "name": "Mauvais djo",
-          "chart_streams": 240223,
+          "chart_streams": 239589,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/51OKuyM4BiiYxFm8Mi6fa9",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745a30063f07efdf77410799cb",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745a30063f07efdf77410799cb",
           "spotify_id": "51OKuyM4BiiYxFm8Mi6fa9"
         },
         {
           "rank": 6,
+          "name": "sombr",
+          "chart_streams": 206641,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/4G9NDjRyZFDlJKMRL8hx3S",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
+          "spotify_id": "4G9NDjRyZFDlJKMRL8hx3S"
+        },
+        {
+          "rank": 7,
+          "name": "HUGEL",
+          "chart_streams": 205829,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/5PlfkPxwCpRRWQJBxCa0By",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b02f6c6948dd082ff04b2a86",
+          "spotify_id": "5PlfkPxwCpRRWQJBxCa0By"
+        },
+        {
+          "rank": 8,
           "name": "Alex Warren",
-          "chart_streams": 199251,
+          "chart_streams": 195583,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0fTSzq9jAh4c36UVb4V7CB",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e027df2e591e1a050e5235cc",
           "spotify_id": "0fTSzq9jAh4c36UVb4V7CB"
         },
         {
-          "rank": 7,
-          "name": "HUGEL",
-          "chart_streams": 195465,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/5PlfkPxwCpRRWQJBxCa0By",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174b02f6c6948dd082ff04b2a86",
-          "spotify_id": "5PlfkPxwCpRRWQJBxCa0By"
-        },
-        {
-          "rank": 8,
+          "rank": 9,
           "name": "Rutger van Barneveld",
-          "chart_streams": 184704,
+          "chart_streams": 184101,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5N0fvYueADU53qanvPfmV7",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517480aa9fa87d489b27f40beb46",
           "spotify_id": "5N0fvYueADU53qanvPfmV7"
         },
         {
-          "rank": 9,
-          "name": "sombr",
-          "chart_streams": 181433,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4G9NDjRyZFDlJKMRL8hx3S",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517478edaa6468cae153565c2c97",
-          "spotify_id": "4G9NDjRyZFDlJKMRL8hx3S"
-        },
-        {
           "rank": 10,
           "name": "KM",
-          "chart_streams": 170586,
+          "chart_streams": 165938,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0MSYpagcvnSP2o91Ji2OCw",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174c2f54145f8b9c46ec4eeb7e0",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c2f54145f8b9c46ec4eeb7e0",
           "spotify_id": "0MSYpagcvnSP2o91Ji2OCw"
         }
       ]
@@ -1147,16 +1147,16 @@
         {
           "rank": 1,
           "name": "Humlan Djojj",
-          "chart_streams": 465473,
+          "chart_streams": 452515,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/73nQT8Arf05XV666SlvrVQ",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745817afc4e3f6a057998c23ce",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745817afc4e3f6a057998c23ce",
           "spotify_id": "73nQT8Arf05XV666SlvrVQ"
         },
         {
           "rank": 2,
           "name": "Shakira",
-          "chart_streams": 200494,
+          "chart_streams": 199310,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0EmeFodog0BfCgMzAIvKQp",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517417f15f351cba70561ad8bcac",
@@ -1165,7 +1165,7 @@
         {
           "rank": 3,
           "name": "Michael Jackson",
-          "chart_streams": 142626,
+          "chart_streams": 143694,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3fMbdgg4jU18AjLCKBhRSm",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174997cc9a4aec335d46c9481fd",
@@ -1174,16 +1174,16 @@
         {
           "rank": 4,
           "name": "Bolaget",
-          "chart_streams": 129411,
+          "chart_streams": 132319,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/55ZGFvikpNjQHvtTWS5aZF",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174dae5e2b4f3e3e41df192334a",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174dae5e2b4f3e3e41df192334a",
           "spotify_id": "55ZGFvikpNjQHvtTWS5aZF"
         },
         {
           "rank": 5,
           "name": "Lovet",
-          "chart_streams": 119353,
+          "chart_streams": 123862,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2kSCHFK5uErN4BO7IkTrHK",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517444b88140fc1ea4400a53e706",
@@ -1192,7 +1192,7 @@
         {
           "rank": 6,
           "name": "Veronica Maggio",
-          "chart_streams": 112073,
+          "chart_streams": 118756,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2OIWxN9xUhgUHkeUCWCaNs",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174d42d91f04ebd160401bcd6d6",
@@ -1201,7 +1201,7 @@
         {
           "rank": 7,
           "name": "Kygo",
-          "chart_streams": 105266,
+          "chart_streams": 107069,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/23fqKkggKUBHNkbKtXEls4",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e5ea1aa1404629c12ad86658",
@@ -1210,29 +1210,29 @@
         {
           "rank": 8,
           "name": "Zara Larsson",
-          "chart_streams": 99630,
+          "chart_streams": 102442,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1Xylc3o4UrD53lo9CvFvVg",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174d519a7e349541cba8f85e965",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174d519a7e349541cba8f85e965",
           "spotify_id": "1Xylc3o4UrD53lo9CvFvVg"
         },
         {
           "rank": 9,
           "name": "Mauvais djo",
-          "chart_streams": 97533,
+          "chart_streams": 101562,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/51OKuyM4BiiYxFm8Mi6fa9",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745a30063f07efdf77410799cb",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745a30063f07efdf77410799cb",
           "spotify_id": "51OKuyM4BiiYxFm8Mi6fa9"
         },
         {
           "rank": 10,
-          "name": "Bad Bunny",
-          "chart_streams": 96324,
+          "name": "Tjuvjakt",
+          "chart_streams": 100858,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517481f47f44084e0a09b5f0fa13",
-          "spotify_id": "4q3ewBCX7sLwd24euuV69X"
+          "spotify_url": "https://open.spotify.com/artist/0XDfNJsQy7B3q0GfsMHSkp",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174839fabf68bb4567d17420766",
+          "spotify_id": "0XDfNJsQy7B3q0GfsMHSkp"
         }
       ]
     },
@@ -1242,7 +1242,7 @@
         {
           "rank": 1,
           "name": "Patricio Rey y sus Redonditos de Ricota",
-          "chart_streams": 820285,
+          "chart_streams": 835684,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6byQKddO1b34lXC2ZEjehQ",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517478f40b5153bfcbd5e7a55432",
@@ -1251,34 +1251,34 @@
         {
           "rank": 2,
           "name": "Omar Courtz",
-          "chart_streams": 624188,
+          "chart_streams": 703829,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3E12tRURRvPfHz0hAMCFYc",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174d317f301a85fd77964d94b4d",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174d317f301a85fd77964d94b4d",
           "spotify_id": "3E12tRURRvPfHz0hAMCFYc"
         },
         {
           "rank": 3,
-          "name": "Airbag",
-          "chart_streams": 497034,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/1wKDGglKV4FsFS85r2Dmpr",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051747e7ce771bde5235afd45cb43",
-          "spotify_id": "1wKDGglKV4FsFS85r2Dmpr"
-        },
-        {
-          "rank": 4,
           "name": "Bad Bunny",
-          "chart_streams": 424149,
+          "chart_streams": 468197,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517481f47f44084e0a09b5f0fa13",
           "spotify_id": "4q3ewBCX7sLwd24euuV69X"
         },
         {
+          "rank": 4,
+          "name": "Airbag",
+          "chart_streams": 464217,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/1wKDGglKV4FsFS85r2Dmpr",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051747e7ce771bde5235afd45cb43",
+          "spotify_id": "1wKDGglKV4FsFS85r2Dmpr"
+        },
+        {
           "rank": 5,
           "name": "Babasonicos",
-          "chart_streams": 394023,
+          "chart_streams": 374675,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2F9pvj94b52wGKs0OqiNi2",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745663900d842b0f0b9baec783",
@@ -1286,35 +1286,35 @@
         },
         {
           "rank": 6,
-          "name": "La T y La M",
-          "chart_streams": 320898,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/1FxPMQ9A0882eNDx3ZkD6B",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174530bec70b3ed359683549a30",
-          "spotify_id": "1FxPMQ9A0882eNDx3ZkD6B"
-        },
-        {
-          "rank": 7,
           "name": "Anuel AA",
-          "chart_streams": 320474,
+          "chart_streams": 356641,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2R21vXR83lH98kGeO99Y66",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174a23ceb177745632b517cb7b2",
           "spotify_id": "2R21vXR83lH98kGeO99Y66"
         },
         {
-          "rank": 8,
+          "rank": 7,
           "name": "Quevedo",
-          "chart_streams": 292306,
+          "chart_streams": 321138,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/52iwsT98xCoGgiGntTiR7K",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051746ba600ad0f41d8a3aa3f53b2",
           "spotify_id": "52iwsT98xCoGgiGntTiR7K"
         },
         {
+          "rank": 8,
+          "name": "Yan Block",
+          "chart_streams": 312839,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/6TKygPpVT29oGUogu4J9Ec",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051741da4b46f64bb40d556b5684f",
+          "spotify_id": "6TKygPpVT29oGUogu4J9Ec"
+        },
+        {
           "rank": 9,
           "name": "No Te Va Gustar",
-          "chart_streams": 285752,
+          "chart_streams": 296899,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4ZDoy7AWNgQVmX7T0u0B1j",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051746dbac98019544cd6c3f9235a",
@@ -1322,12 +1322,12 @@
         },
         {
           "rank": 10,
-          "name": "Callejeros",
-          "chart_streams": 206514,
+          "name": "La T y La M",
+          "chart_streams": 289918,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/2osoVujXgV0PA8lhqDKYFw",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174955fe34eada328d7c586ba31",
-          "spotify_id": "2osoVujXgV0PA8lhqDKYFw"
+          "spotify_url": "https://open.spotify.com/artist/1FxPMQ9A0882eNDx3ZkD6B",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174530bec70b3ed359683549a30",
+          "spotify_id": "1FxPMQ9A0882eNDx3ZkD6B"
         }
       ]
     },
@@ -1337,7 +1337,7 @@
         {
           "rank": 1,
           "name": "Pritam",
-          "chart_streams": 3816406,
+          "chart_streams": 4078156,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1wRPtKGflJrBx9BmLsSwlU",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174cb6926f44f620555ba444fca",
@@ -1346,16 +1346,16 @@
         {
           "rank": 2,
           "name": "Arijit Singh",
-          "chart_streams": 2729667,
+          "chart_streams": 2756349,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4YRxDV8wJFPHPTeXepOstw",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174adfb0b2df04b77e43b5f7375",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174adfb0b2df04b77e43b5f7375",
           "spotify_id": "4YRxDV8wJFPHPTeXepOstw"
         },
         {
           "rank": 3,
           "name": "Shashwat Sachdev",
-          "chart_streams": 2502677,
+          "chart_streams": 2565054,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/465OXuCU8YZNmVG1leLwQ9",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517454f120e72388f1c5c3aa3edd",
@@ -1364,7 +1364,7 @@
         {
           "rank": 4,
           "name": "Atif Aslam",
-          "chart_streams": 2421167,
+          "chart_streams": 2489064,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2oSONSC9zQ4UonDKnLqksx",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c40600e02356cc86f0debe84",
@@ -1373,16 +1373,16 @@
         {
           "rank": 5,
           "name": "Anuv Jain",
-          "chart_streams": 2150991,
+          "chart_streams": 2145218,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4gdMJYnopf2nEUcanAwstx",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174a837a6cb82dd949d5e1f9b53",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174a837a6cb82dd949d5e1f9b53",
           "spotify_id": "4gdMJYnopf2nEUcanAwstx"
         },
         {
           "rank": 6,
           "name": "Sachin-Jigar",
-          "chart_streams": 1469908,
+          "chart_streams": 1467833,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1mBydYMVBECdDmMfE2sEUO",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174bb4064bef3a825344d5eb79e",
@@ -1390,35 +1390,35 @@
         },
         {
           "rank": 7,
-          "name": "Vishal-Shekhar",
-          "chart_streams": 1406427,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/6Mv8GjQa7LKUGCAqa9qqdb",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517490b6c3d093f9b02aad628eaf",
-          "spotify_id": "6Mv8GjQa7LKUGCAqa9qqdb"
-        },
-        {
-          "rank": 8,
           "name": "Sai Abhyankkar",
-          "chart_streams": 1277245,
+          "chart_streams": 1280014,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5jJrJU7VVmxQQLcLAmmxXc",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051740a27dbc5eb270fd2e78b9cbb",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051740a27dbc5eb270fd2e78b9cbb",
           "spotify_id": "5jJrJU7VVmxQQLcLAmmxXc"
         },
         {
-          "rank": 9,
+          "rank": 8,
           "name": "Mithoon",
-          "chart_streams": 1241182,
+          "chart_streams": 1273783,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/09UmIX92EUH9hAK4bxvHx6",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051749bd641ceb72d35b63fbb314a",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051749bd641ceb72d35b63fbb314a",
           "spotify_id": "09UmIX92EUH9hAK4bxvHx6"
+        },
+        {
+          "rank": 9,
+          "name": "Vishal-Shekhar",
+          "chart_streams": 1249093,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/6Mv8GjQa7LKUGCAqa9qqdb",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517490b6c3d093f9b02aad628eaf",
+          "spotify_id": "6Mv8GjQa7LKUGCAqa9qqdb"
         },
         {
           "rank": 10,
           "name": "A.R. Rahman",
-          "chart_streams": 1143066,
+          "chart_streams": 1156287,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1mYsTxnqsietFxj1OgoGbG",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b19af0ea736c6228d6eb539c",
@@ -1432,34 +1432,34 @@
         {
           "rank": 1,
           "name": "RESCENE",
-          "chart_streams": 271439,
+          "chart_streams": 246149,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5deOsjuFTKrNMJW3rKuL8S",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517434198dac17e0f63b61c49c36",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517434198dac17e0f63b61c49c36",
           "spotify_id": "5deOsjuFTKrNMJW3rKuL8S"
         },
         {
           "rank": 2,
           "name": "CORTIS",
-          "chart_streams": 232150,
+          "chart_streams": 227751,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1ebt9HnXdyYA6KgLXr1n4P",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174267afab76836557af2bd37c8",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174267afab76836557af2bd37c8",
           "spotify_id": "1ebt9HnXdyYA6KgLXr1n4P"
         },
         {
           "rank": 3,
           "name": "Lim Young Woong",
-          "chart_streams": 184954,
+          "chart_streams": 171617,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/75MOYjGEyyH5U4ZFHOPvxR",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051743caf8ee1889c531ed908d173",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051743caf8ee1889c531ed908d173",
           "spotify_id": "75MOYjGEyyH5U4ZFHOPvxR"
         },
         {
           "rank": 4,
           "name": "Hearts2Hearts",
-          "chart_streams": 159168,
+          "chart_streams": 158796,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1ZLU77nRzQIaP23mVSYpCQ",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174595f4bc18c610ea08065bdc5",
@@ -1468,16 +1468,16 @@
         {
           "rank": 5,
           "name": "HANRORO",
-          "chart_streams": 155359,
+          "chart_streams": 155683,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5wVJpXzuKV6Xj7Yhsf2uYx",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051742b1eca3debf68d26f7f25816",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051742b1eca3debf68d26f7f25816",
           "spotify_id": "5wVJpXzuKV6Xj7Yhsf2uYx"
         },
         {
           "rank": 6,
           "name": "NewJeans",
-          "chart_streams": 142618,
+          "chart_streams": 146911,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6HvZYsbFfjnjFrWF950C9d",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051748dae71b664393f38ba91f891",
@@ -1485,17 +1485,17 @@
         },
         {
           "rank": 7,
-          "name": "HEEDAE",
-          "chart_streams": 132347,
+          "name": "BTS",
+          "chart_streams": 130435,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/6J4oB6UcxVwsI6jmjmeMGA",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174260dfeed61d891204f5c9a43",
-          "spotify_id": "6J4oB6UcxVwsI6jmjmeMGA"
+          "spotify_url": "https://open.spotify.com/artist/3Nrfpe0tUJi4K4DXYWgMUX",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174f80ec63ea7a0ef0fba60957d",
+          "spotify_id": "3Nrfpe0tUJi4K4DXYWgMUX"
         },
         {
           "rank": 8,
           "name": "ILLIT",
-          "chart_streams": 131135,
+          "chart_streams": 130222,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/36cgvBn0aadzOijnjjwqMN",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051747fabcc2491d95050faa5b710",
@@ -1503,17 +1503,17 @@
         },
         {
           "rank": 9,
-          "name": "BTS",
-          "chart_streams": 118764,
+          "name": "HEEDAE",
+          "chart_streams": 109749,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/3Nrfpe0tUJi4K4DXYWgMUX",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174f80ec63ea7a0ef0fba60957d",
-          "spotify_id": "3Nrfpe0tUJi4K4DXYWgMUX"
+          "spotify_url": "https://open.spotify.com/artist/6J4oB6UcxVwsI6jmjmeMGA",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174260dfeed61d891204f5c9a43",
+          "spotify_id": "6J4oB6UcxVwsI6jmjmeMGA"
         },
         {
           "rank": 10,
           "name": "aespa",
-          "chart_streams": 92984,
+          "chart_streams": 94763,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6YVMFz59CuY7ngCxTxjpxE",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174053bbb910dda6d4ab0618b8b",
@@ -1527,7 +1527,7 @@
         {
           "rank": 1,
           "name": "Raim Laode",
-          "chart_streams": 4771383,
+          "chart_streams": 4910811,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/5LcNPa8f8bRmZqELgoRFkN",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174f0835eb9adc7cee5169194d0",
@@ -1536,34 +1536,34 @@
         {
           "rank": 2,
           "name": "Tulus",
-          "chart_streams": 4068449,
+          "chart_streams": 4202354,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2iDVt6mFbtbDEZG5ax0dTi",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174e2569eea1e32fe495d52c9a3",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e2569eea1e32fe495d52c9a3",
           "spotify_id": "2iDVt6mFbtbDEZG5ax0dTi"
         },
         {
           "rank": 3,
-          "name": "Sal Priadi",
-          "chart_streams": 2963172,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/1NjxFrpEGZTV2Ny0OJxeWu",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c8be343422f882f309e2508e",
-          "spotify_id": "1NjxFrpEGZTV2Ny0OJxeWu"
-        },
-        {
-          "rank": 4,
           "name": "Hindia",
-          "chart_streams": 2935339,
+          "chart_streams": 2959708,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/51kyrUsAVqUBcoDEMFkX12",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b786cb6de7505caff17fe11f",
           "spotify_id": "51kyrUsAVqUBcoDEMFkX12"
         },
         {
+          "rank": 4,
+          "name": "Sal Priadi",
+          "chart_streams": 2948456,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/1NjxFrpEGZTV2Ny0OJxeWu",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c8be343422f882f309e2508e",
+          "spotify_id": "1NjxFrpEGZTV2Ny0OJxeWu"
+        },
+        {
           "rank": 5,
           "name": "eńau",
-          "chart_streams": 2062280,
+          "chart_streams": 2080942,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0agUNq8PH1QSgm88EuhM1u",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745aa62c329f3d95b7f7a142c3",
@@ -1572,7 +1572,7 @@
         {
           "rank": 6,
           "name": "Nadhif Basalamah",
-          "chart_streams": 1882789,
+          "chart_streams": 1946755,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6UgERnTHmjk3qXM9x5vzyO",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517461c119ec8c5fb2f77f1f7f43",
@@ -1581,7 +1581,7 @@
         {
           "rank": 7,
           "name": "Nadin Amizah",
-          "chart_streams": 1811218,
+          "chart_streams": 1869798,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/20zafXaLhm5IcXnSU93rNn",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174226dcfeea35e2dd268051744",
@@ -1590,7 +1590,7 @@
         {
           "rank": 8,
           "name": "For Revenge",
-          "chart_streams": 1780594,
+          "chart_streams": 1777347,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0f6TyESD8E1mD2oLJ4TGv1",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174f6ed1baf8e1c95fedcae9015",
@@ -1598,21 +1598,21 @@
         },
         {
           "rank": 9,
+          "name": "Pamungkas",
+          "chart_streams": 1747797,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/7d86ERlvO5UG44j7Va0Y0C",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051743dbdb8c7a0466c94973b747f",
+          "spotify_id": "7d86ERlvO5UG44j7Va0Y0C"
+        },
+        {
+          "rank": 10,
           "name": "Perunggu",
-          "chart_streams": 1677169,
+          "chart_streams": 1704775,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0NbKRRBuiIUwS9irPvi7wD",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174aacf892228a322f1415e168f",
           "spotify_id": "0NbKRRBuiIUwS9irPvi7wD"
-        },
-        {
-          "rank": 10,
-          "name": "Pamungkas",
-          "chart_streams": 1592798,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/7d86ERlvO5UG44j7Va0Y0C",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051743dbdb8c7a0466c94973b747f",
-          "spotify_id": "7d86ERlvO5UG44j7Va0Y0C"
         }
       ]
     },
@@ -1622,7 +1622,7 @@
         {
           "rank": 1,
           "name": "manifest",
-          "chart_streams": 4163411,
+          "chart_streams": 4047431,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2WjzL05RyqIk5n53sZc9nf",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174069f894ef5e89de31bef668e",
@@ -1631,7 +1631,7 @@
         {
           "rank": 2,
           "name": "BLOK3",
-          "chart_streams": 3038887,
+          "chart_streams": 3174154,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1GMwSpFzrLd12jUX15bHB6",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174d16982f5240c77786c699f13",
@@ -1640,16 +1640,16 @@
         {
           "rank": 3,
           "name": "UZI",
-          "chart_streams": 1423471,
+          "chart_streams": 1398273,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/51DevdOxIJin6DB1FXJpD1",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174d1dfb1abe75dfd587db55b18",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174d1dfb1abe75dfd587db55b18",
           "spotify_id": "51DevdOxIJin6DB1FXJpD1"
         },
         {
           "rank": 4,
           "name": "Motive",
-          "chart_streams": 1048658,
+          "chart_streams": 1032771,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6sBSLIunx1Je0Y2T77wpkP",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051740dba35e1aaed7f00bf890b30",
@@ -1658,7 +1658,7 @@
         {
           "rank": 5,
           "name": "Yalın",
-          "chart_streams": 884377,
+          "chart_streams": 869157,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/46zuW8tHxwahYn7VNMgYTa",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174cd415320281d1bd3a49bf44b",
@@ -1667,25 +1667,25 @@
         {
           "rank": 6,
           "name": "Poizi",
-          "chart_streams": 753572,
+          "chart_streams": 750038,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/250LLR8V4fFq1XFzAB1ZN5",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517401011465c7e498611fc4c7fd",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517401011465c7e498611fc4c7fd",
           "spotify_id": "250LLR8V4fFq1XFzAB1ZN5"
         },
         {
           "rank": 7,
           "name": "Hadise",
-          "chart_streams": 728009,
+          "chart_streams": 709749,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0wCKNMsqYasJBFVagjay49",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174bcc5968c357aa910025120a4",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174bcc5968c357aa910025120a4",
           "spotify_id": "0wCKNMsqYasJBFVagjay49"
         },
         {
           "rank": 8,
           "name": "Ati242",
-          "chart_streams": 674660,
+          "chart_streams": 671876,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6bGOmNBU1AOgttgOjh0ldf",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051747d8b0f9f428550234ce81a9f",
@@ -1694,19 +1694,19 @@
         {
           "rank": 9,
           "name": "Wegh",
-          "chart_streams": 665607,
+          "chart_streams": 642009,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/747jtvVsxwzOLCJeOOz3oT",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051741c680ad4e09b4eda4390eb01",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051741c680ad4e09b4eda4390eb01",
           "spotify_id": "747jtvVsxwzOLCJeOOz3oT"
         },
         {
           "rank": 10,
           "name": "KAVAK",
-          "chart_streams": 551143,
+          "chart_streams": 547399,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/24OGdBr3r58ksMLJkMXZZY",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab6761610000517464c1d80e2a829eabcf4b7438",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517464c1d80e2a829eabcf4b7438",
           "spotify_id": "24OGdBr3r58ksMLJkMXZZY"
         }
       ]
@@ -1717,7 +1717,7 @@
         {
           "rank": 1,
           "name": "Majki",
-          "chart_streams": 606577,
+          "chart_streams": 593162,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3e8V8NqZf6jsUjDEI6rwst",
           "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051743c5d448296941c50b52019aa",
@@ -1726,7 +1726,7 @@
         {
           "rank": 2,
           "name": "Tax Free",
-          "chart_streams": 450747,
+          "chart_streams": 428096,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1TdOWV3JFAGmZ1466aKbg5",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051746a06ae5399c253d302c6c026",
@@ -1734,53 +1734,53 @@
         },
         {
           "rank": 3,
+          "name": "White 2115",
+          "chart_streams": 405375,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/4nPxrGG7k7aEKmNLsfX4cd",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174bfca7a97d6a9449ebdd10911",
+          "spotify_id": "4nPxrGG7k7aEKmNLsfX4cd"
+        },
+        {
+          "rank": 4,
           "name": "PRO8L3M",
-          "chart_streams": 400257,
+          "chart_streams": 373891,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/7v49oVVUhvIQG5EK0jkcF7",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051747176c9c1b1deff41319c363a",
           "spotify_id": "7v49oVVUhvIQG5EK0jkcF7"
         },
         {
-          "rank": 4,
-          "name": "White 2115",
-          "chart_streams": 376302,
+          "rank": 5,
+          "name": "Otsochodzi",
+          "chart_streams": 312276,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4nPxrGG7k7aEKmNLsfX4cd",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174bfca7a97d6a9449ebdd10911",
-          "spotify_id": "4nPxrGG7k7aEKmNLsfX4cd"
+          "spotify_url": "https://open.spotify.com/artist/4zvO09rVUIVTeALhs6xLoB",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174cf58c0351bad9700e9aca2bd",
+          "spotify_id": "4zvO09rVUIVTeALhs6xLoB"
         },
         {
-          "rank": 5,
+          "rank": 6,
+          "name": "Malik Montana",
+          "chart_streams": 286613,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/1Kjs5u8GQf6zCFdTj6SI9E",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174de7885cffc35ab676e1191d7",
+          "spotify_id": "1Kjs5u8GQf6zCFdTj6SI9E"
+        },
+        {
+          "rank": 7,
           "name": "Sentino",
-          "chart_streams": 333868,
+          "chart_streams": 263354,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/6DAQjwwMGZ9QgqHhIkU7H0",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051747f0ba49b7cfc94c1097491a8",
           "spotify_id": "6DAQjwwMGZ9QgqHhIkU7H0"
         },
         {
-          "rank": 6,
-          "name": "Otsochodzi",
-          "chart_streams": 327338,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4zvO09rVUIVTeALhs6xLoB",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174cf58c0351bad9700e9aca2bd",
-          "spotify_id": "4zvO09rVUIVTeALhs6xLoB"
-        },
-        {
-          "rank": 7,
-          "name": "Malik Montana",
-          "chart_streams": 264080,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/1Kjs5u8GQf6zCFdTj6SI9E",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174de7885cffc35ab676e1191d7",
-          "spotify_id": "1Kjs5u8GQf6zCFdTj6SI9E"
-        },
-        {
           "rank": 8,
           "name": "Mata",
-          "chart_streams": 251659,
+          "chart_streams": 250524,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/0MIG6gMcQTSvFbKvUwK0id",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174cf458eb229c6b54b60e64696",
@@ -1789,20 +1789,20 @@
         {
           "rank": 9,
           "name": "MODELKI",
-          "chart_streams": 247063,
+          "chart_streams": 237747,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3cBLJizprytrMpuFbnRnaE",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051741b9d3eaf90b75a13642c5fef",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051741b9d3eaf90b75a13642c5fef",
           "spotify_id": "3cBLJizprytrMpuFbnRnaE"
         },
         {
           "rank": 10,
-          "name": "Sequento",
-          "chart_streams": 222085,
+          "name": "Shakira",
+          "chart_streams": 218405,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/3ZUkXGT2dwFiEVEV5JfD6K",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051743737e2735017015586ffa9d0",
-          "spotify_id": "3ZUkXGT2dwFiEVEV5JfD6K"
+          "spotify_url": "https://open.spotify.com/artist/0EmeFodog0BfCgMzAIvKQp",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517417f15f351cba70561ad8bcac",
+          "spotify_id": "0EmeFodog0BfCgMzAIvKQp"
         }
       ]
     },
@@ -1812,7 +1812,7 @@
         {
           "rank": 1,
           "name": "Arthur Nery",
-          "chart_streams": 1235727,
+          "chart_streams": 1245277,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/7uDdl5V5AETSFY7K3muu22",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517410d982a5505cb9b8777c7006",
@@ -1821,16 +1821,16 @@
         {
           "rank": 2,
           "name": "fitterkarma",
-          "chart_streams": 1220908,
+          "chart_streams": 1226106,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/3tWAXoP37qDPvpAOnj7Zmr",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174caaaeb433d23463344167946",
+          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab67616100005174caaaeb433d23463344167946",
           "spotify_id": "3tWAXoP37qDPvpAOnj7Zmr"
         },
         {
           "rank": 3,
           "name": "NIKI",
-          "chart_streams": 1081904,
+          "chart_streams": 1078380,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/2kxP07DLgs4xlWz8YHlvfh",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051740654e511623cba4e0e9e2f0c",
@@ -1838,26 +1838,26 @@
         },
         {
           "rank": 4,
+          "name": "Bruno Mars",
+          "chart_streams": 971634,
+          "monthly_listeners": 0,
+          "spotify_url": "https://open.spotify.com/artist/0du5cEVh5yTK9QJze8zA0C",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174c7688aad1bf03986934d7e26",
+          "spotify_id": "0du5cEVh5yTK9QJze8zA0C"
+        },
+        {
+          "rank": 5,
           "name": "Olivia Rodrigo",
-          "chart_streams": 857447,
+          "chart_streams": 838901,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1McMsnEElThX1knmY4oliG",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174b14eb4dcfd2f3858bed06e44",
           "spotify_id": "1McMsnEElThX1knmY4oliG"
         },
         {
-          "rank": 5,
-          "name": "Daniel Caesar",
-          "chart_streams": 821261,
-          "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/20wkVLutqVOYrc0kxFs7rA",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e4d94f7cbebb17504c25d419",
-          "spotify_id": "20wkVLutqVOYrc0kxFs7rA"
-        },
-        {
           "rank": 6,
           "name": "Cup of Joe",
-          "chart_streams": 806877,
+          "chart_streams": 801976,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/61nn6nOoLWjVC1ER2qFAvN",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051743be7caa0e20536b17707d172",
@@ -1866,16 +1866,16 @@
         {
           "rank": 7,
           "name": "IV OF SPADES",
-          "chart_streams": 788777,
+          "chart_streams": 780513,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/4k9wp4ipHdA1bu1T4x1ZTG",
-          "image_url": "https://image-cdn-ak.spotifycdn.com/image/ab676161000051745537941008ec8fb6add8238b",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab676161000051745537941008ec8fb6add8238b",
           "spotify_id": "4k9wp4ipHdA1bu1T4x1ZTG"
         },
         {
           "rank": 8,
           "name": "Ariana Grande",
-          "chart_streams": 736616,
+          "chart_streams": 721982,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/66CXWjxzNUsdJxJ2JdwvnR",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174766397ec42a573a53eb5fb87",
@@ -1884,7 +1884,7 @@
         {
           "rank": 9,
           "name": "La Mave",
-          "chart_streams": 688507,
+          "chart_streams": 711008,
           "monthly_listeners": 0,
           "spotify_url": "https://open.spotify.com/artist/1G1mO2mSe2pO8yIfIX7kEx",
           "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab6761610000517476141bd08b300330b96e5722",
@@ -1892,12 +1892,12 @@
         },
         {
           "rank": 10,
-          "name": "December Avenue",
-          "chart_streams": 686270,
+          "name": "Gat Putch",
+          "chart_streams": 665842,
           "monthly_listeners": 0,
-          "spotify_url": "https://open.spotify.com/artist/4qFxP3qN9GsnZDOkAE6x2m",
-          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174715e310a44afc065dca06589",
-          "spotify_id": "4qFxP3qN9GsnZDOkAE6x2m"
+          "spotify_url": "https://open.spotify.com/artist/641Pd0RfQQ81mnWu7Vlb8v",
+          "image_url": "https://image-cdn-fa.spotifycdn.com/image/ab67616100005174e480d5d424569e6ab354a8ba",
+          "spotify_id": "641Pd0RfQQ81mnWu7Vlb8v"
         }
       ]
     }
