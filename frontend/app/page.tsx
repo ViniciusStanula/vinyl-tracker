@@ -61,15 +61,67 @@ export async function generateMetadata() {
   };
 }
 
-// Top genres surfaced as quick-links below the artist carousel.
-const GENRE_LINKS = [
-  { label: "Rock",       slug: "rock" },
-  { label: "Jazz",       slug: "jazz" },
-  { label: "MPB",        slug: "mpb" },
-  { label: "Pop",        slug: "pop" },
-  { label: "Clássica",   slug: "classical" },
-  { label: "Reggae",     slug: "reggae" },
+// The four ways to browse the catalog. Until this section existed, /estilos,
+// /decadas and /paises had no inbound links outside their own breadcrumbs, so
+// the decade and country axes were unreachable for anyone who didn't guess the
+// URL. Static copy on purpose — no counts, so the homepage shell adds no queries.
+const BROWSE_LINKS = [
+  {
+    href: "/estilos",
+    label: "Estilo",
+    hint: "Rock, jazz, MPB e dezenas de gêneros",
+    icon: "M9 19V6l12-3v13M9 19a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z",
+  },
+  {
+    href: "/artistas",
+    label: "Artista",
+    hint: "Catálogo completo e os mais ouvidos",
+    icon: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z",
+  },
+  {
+    href: "/decadas",
+    label: "Década",
+    hint: "Dos anos 60 aos lançamentos recentes",
+    icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+  {
+    href: "/paises",
+    label: "País",
+    hint: "Vinis pela origem de cada artista",
+    icon: "M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9",
+  },
 ] as const;
+
+// Shared chip styling. Resting colour is `parchment`, not `dust`: dust on a
+// groove background is only 3.66:1, which fails WCAG AA for 12px text. py-2.5
+// also brings the target height up to ~40px instead of ~28px.
+const CHIP_CLASS =
+  "inline-flex items-center text-xs font-semibold px-3.5 py-2.5 rounded-full bg-groove border border-wax/40 text-parchment hover:text-cream hover:border-wax/70 transition-colors";
+
+/* Section header: mono eyebrow over a serif headline, mirroring the pattern the
+   /estilos and /decadas hubs already use. The mono label is what carries the
+   "catalogue" feel — it's the same treatment used for counts and prices. */
+function SectionHeader({
+  eyebrow,
+  title,
+  id,
+}: {
+  eyebrow: string;
+  title: string;
+  id: string;
+}) {
+  return (
+    <div className="mb-6">
+      <span className="font-mono text-gold text-[11px] font-medium uppercase tracking-[0.18em] block mb-2">
+        {eyebrow}
+      </span>
+      <h2 id={id} className="font-display text-2xl sm:text-3xl font-black text-cream leading-tight">
+        {title}
+      </h2>
+      <div className="mt-2 h-0.5 w-10 bg-gold rounded-full" aria-hidden="true" />
+    </div>
+  );
+}
 
 export default async function HomePage() {
   // Hero count + carousel are awaited in the shell so the hero, its LCP image,
@@ -93,7 +145,7 @@ export default async function HomePage() {
 
       {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test). ── */}
       {SHOW_HERO && (
-      <header className="relative mb-8 overflow-hidden rounded-2xl border border-groove min-h-[300px] sm:min-h-[360px] flex items-center">
+      <header className="relative mb-10 sm:mb-14 overflow-hidden rounded-xl border border-groove min-h-[300px] sm:min-h-[400px] flex items-center">
         {/* Background photo */}
         <Image
           src="/hero-turntable.jpg"
@@ -109,7 +161,7 @@ export default async function HomePage() {
 
         {/* Content */}
         <div className="relative z-10 px-6 py-8 sm:py-14 max-w-lg">
-          <span className="text-gold text-[11px] font-bold uppercase tracking-[0.2em] block mb-3">
+          <span className="font-mono text-gold text-[11px] font-medium uppercase tracking-[0.18em] block mb-4">
             Amazon Brasil · Curadoria Especializada
           </span>
           <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-black leading-[0.95] mb-4 [text-wrap:balance]">
@@ -121,25 +173,25 @@ export default async function HomePage() {
             Catálogo de discos de vinil na Amazon Brasil com preços atualizados. Encontre bons momentos para comprar.
           </p>
           {count > 0 && (
-            <p className="text-dust text-xs font-medium tabular-nums mb-5 flex items-center gap-2">
+            <p className="font-mono text-parchment text-[11px] font-medium tabular-nums mb-6 flex items-center gap-2 flex-wrap">
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               +{count.toLocaleString("pt-BR")} discos disponíveis
-              <span aria-hidden="true" className="opacity-40">·</span>
+              <span aria-hidden="true" className="text-wax">·</span>
               Preços atualizados regularmente
             </p>
           )}
           <div className="flex gap-3 flex-wrap">
             <Link
               href="/ofertas"
-              className="inline-flex items-center gap-2 bg-gold hover:bg-goldlit text-record font-bold text-sm px-6 py-3 rounded-xl transition-colors"
+              className="inline-flex items-center gap-2 bg-gold hover:bg-goldlit text-record font-bold text-sm px-6 py-3 rounded-lg transition-colors"
             >
               Ver Ofertas de Hoje
             </Link>
             <Link
               href="/sobre"
-              className="inline-flex items-center gap-2 border border-wax text-cream hover:bg-groove text-sm px-6 py-3 rounded-xl transition-colors font-medium"
+              className="inline-flex items-center gap-2 border border-wax hover:border-gold text-cream hover:bg-groove text-sm px-6 py-3 rounded-lg transition-colors font-medium"
             >
               Sobre o site
             </Link>
@@ -151,24 +203,54 @@ export default async function HomePage() {
       {/* ── Artistas mais Ouvidos carousel ──────────────────────── */}
       <ArtistasCarousel items={carouselItems} />
 
-      {/* ── Genre quick-links ────────────────────────────────────── */}
-      <nav aria-label="Estilos em destaque" className="flex flex-wrap gap-2 mb-6">
-          {GENRE_LINKS.map(({ label, slug }) => (
-            <Link
-              key={slug}
-              href={`/estilo/${slug}`}
-              className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-            >
-              {label}
-            </Link>
-          ))}
-          <Link
-            href="/artistas"
-            className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-          >
-            Ver todos os artistas →
-          </Link>
+      {/* ── Browse dimensions ────────────────────────────────────── */}
+      <section aria-labelledby="explorar-heading" className="mb-10 sm:mb-14">
+        <SectionHeader
+          id="explorar-heading"
+          eyebrow="Navegue por"
+          title="Explore o catálogo"
+        />
+
+        <nav aria-label="Formas de explorar o catálogo">
+          <ul className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {BROWSE_LINKS.map(({ href, label, hint, icon }) => (
+              <li key={href}>
+                <Link
+                  href={href}
+                  className="group flex h-full flex-col gap-4 p-4 sm:p-6 rounded-xl bg-sleeve border border-groove hover:border-gold hover:bg-groove transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5 shrink-0 text-gold"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
+                  </svg>
+                  <span className="min-w-0">
+                    <span className="font-mono block text-cream text-xs font-bold uppercase tracking-[0.14em] mb-2">
+                      {label}
+                    </span>
+                    <span className="block text-parchment text-xs leading-relaxed">
+                      {hint}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </nav>
+      </section>
+
+      {/* ── Catalogue — header lives in the shell (not in the streamed
+             HomeResults) so the h2 is server-rendered, and sits above the
+             sticky bar so the bar stays adjacent to the grid it filters. ── */}
+      <SectionHeader
+        id="catalogo-heading"
+        eyebrow="Catálogo completo"
+        title="Todos os discos"
+      />
 
       {/* ── Sort bar — navigates to /disco so `/` stays param-free ── */}
       <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
@@ -196,26 +278,23 @@ export default async function HomePage() {
       </Suspense>
 
       {/* ── Guias quick-links — discovery footer ─────────────────── */}
-      <section aria-labelledby="guias-heading" className="mt-12 pt-8 border-t border-groove">
-          <h2 id="guias-heading" className="font-display text-lg font-bold text-cream mb-3">Guias de Vinil</h2>
+      <section aria-labelledby="guias-heading" className="mt-10 sm:mt-14 pt-8 border-t border-groove">
+          <SectionHeader
+            id="guias-heading"
+            eyebrow="Conhecimento"
+            title="Guias de Vinil"
+          />
           <nav aria-label="Guias de vinil" className="flex flex-wrap gap-2">
             {[
               { href: "/guias/como-cuidar-de-discos-de-vinil", label: "Como cuidar do vinil" },
               { href: "/guias/vinil-180g-vale-a-pena",         label: "Vinil 180g vale a pena?" },
               { href: "/guias/vinil-colorido-e-picture-disc",  label: "Colorido e picture disc" },
             ].map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-              >
+              <Link key={href} href={href} className={CHIP_CLASS}>
                 {label}
               </Link>
             ))}
-            <Link
-              href="/guias"
-              className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
-            >
+            <Link href="/guias" className={CHIP_CLASS}>
               Todos os guias →
             </Link>
           </nav>
@@ -243,8 +322,8 @@ async function HomeResults() {
   return (
     <>
       {/* ── Result count ────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <p className="text-dust text-sm">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        <p className="font-mono text-parchment text-xs font-medium tabular-nums uppercase tracking-[0.08em]">
           {formatDiscoCount(total)}
         </p>
       </div>

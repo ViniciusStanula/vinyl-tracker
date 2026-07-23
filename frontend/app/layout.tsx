@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, DM_Sans } from "next/font/google";
+import { Fraunces, DM_Sans, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
@@ -21,6 +21,15 @@ const dmSans = DM_Sans({
   variable: "--font-dm-sans",
   subsets: ["latin"],
   display: "swap",
+});
+
+/* JetBrains Mono — eyebrow labels and catalogue metadata. Only the weights and
+   glyphs used by those labels, so it stays a small addition to the font budget. */
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  display: "optional",
 });
 
 const DEFAULT_TITLE = "Garimpa Vinil — Histórico de Preços de Discos de Vinil";
@@ -103,7 +112,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${fraunces.variable} ${dmSans.variable}`}>
+    <html lang="pt-BR" className={`${fraunces.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <head>
         {process.env.NEXT_PUBLIC_WEBMCP_OT_TOKEN && (
           <meta httpEquiv="origin-trial" content={process.env.NEXT_PUBLIC_WEBMCP_OT_TOKEN} />

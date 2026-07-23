@@ -23,6 +23,15 @@ const NAV_LINKS = [
   { label: "Sobre o Site",          href: "/sobre" },
 ];
 
+// Hub pages for each browse dimension. They were reachable only from the
+// breadcrumbs on their own children, so /decadas had no inbound links at all.
+const BROWSE_LINKS = [
+  { label: "Estilos Musicais", href: "/estilos" },
+  { label: "Décadas",          href: "/decadas" },
+  { label: "Países",           href: "/paises" },
+  { label: "Discos até R$200", href: "/discos-abaixo-de-200" },
+];
+
 const LEGAL_LINKS = [
   { label: "Política de Privacidade", href: "/politica-de-privacidade" },
   { label: "Termos de Uso",           href: "/termos-de-uso" },
@@ -130,8 +139,17 @@ export default function Footer() {
             </div>
           </nav>
 
-          {/* ── Explorar por Estilo ───────────────────── */}
-          <nav aria-label="Explorar por estilo musical" className="col-span-2 md:col-span-1 flex flex-col">
+          {/* ── Explorar ─────────────────────────────── */}
+          <nav aria-label="Explorar o catálogo" className="col-span-2 md:col-span-1 flex flex-col">
+            <FooterHeading>Explorar</FooterHeading>
+            <ul className="flex flex-col gap-2 mb-5">
+              {BROWSE_LINKS.map(({ label, href }) => (
+                <li key={href}>
+                  <FooterLink href={href}>{label}</FooterLink>
+                </li>
+              ))}
+            </ul>
+
             <FooterHeading>Explorar por Estilo</FooterHeading>
             <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
               {TOP_ESTILOS.map(({ nome, slug }) => (
