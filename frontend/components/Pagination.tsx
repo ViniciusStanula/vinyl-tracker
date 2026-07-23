@@ -16,7 +16,9 @@ function buildUrl(page: number, sp: SearchParams, basePath: string): string {
   if (sp.precoMax) params.set("precoMax", sp.precoMax);
   if (page > 1) params.set("page", String(page));
   const qs = params.toString();
-  return qs ? `${basePath}?${qs}` : basePath;
+  // #resultados lands the next page at the top of the grid, not at the bottom
+  // where the pagination sits (Next's Link keeps scroll position by default)
+  return qs ? `${basePath}?${qs}#resultados` : `${basePath}#resultados`;
 }
 
 /** Returns a mixed array of page numbers and ellipsis markers. */

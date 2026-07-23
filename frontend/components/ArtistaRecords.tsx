@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import DiscoCard from "@/components/DiscoCard";
 import type { ProcessedDisco } from "@/lib/queryDiscos";
@@ -50,6 +50,7 @@ export default function ArtistaRecords({
   const [sort, setSort] = useState<string>("desconto");
   const [precoMax, setPrecoMax] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+  const gridRef = useRef<HTMLUListElement>(null);
 
   const filtered = useMemo(() => {
     const base = precoMax !== null ? items.filter((i) => i.precoAtual <= precoMax) : items;
@@ -69,6 +70,16 @@ export default function ArtistaRecords({
   function changePrice(value: number | null) {
     setPrecoMax(value);
     setPage(1);
+  }
+  // Pagination sits below the grid, so without this the next page renders with
+  // the viewport still parked at the bottom. Jump back to the first card and
+  // move focus there so keyboard/screen-reader users land in the new results.
+  function goToPage(next: number) {
+    setPage(next);
+    const grid = gridRef.current;
+    if (!grid) return;
+    grid.scrollIntoView({ block: "start" });
+    grid.focus({ preventScroll: true });
   }
 
   return (
@@ -127,7 +138,11 @@ export default function ArtistaRecords({
 
       {pageItems.length > 0 ? (
         <>
-          <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          <ul
+            ref={gridRef}
+            tabIndex={-1}
+            className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 scroll-mt-[190px] sm:scroll-mt-[150px] outline-none"
+          >
             {pageItems.map((disco, index) => (
               <li key={disco.id}>
                 <DiscoCard disco={disco} priority={index < 4} />
@@ -138,7 +153,7 @@ export default function ArtistaRecords({
           {totalPages > 1 && (
             <nav aria-label="Paginação" className="flex items-center justify-center gap-2 mt-6">
               <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => goToPage(Math.max(1, safePage - 1))}
                 disabled={safePage <= 1}
                 className="px-4 py-2 rounded-lg border border-wax/60 bg-groove text-parchment text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-cream hover:enabled:border-wax transition-colors"
               >
@@ -148,7 +163,7 @@ export default function ArtistaRecords({
                 {safePage} / {totalPages}
               </span>
               <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
                 disabled={safePage >= totalPages}
                 className="px-4 py-2 rounded-lg border border-wax/60 bg-groove text-parchment text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:text-cream hover:enabled:border-wax transition-colors"
               >
