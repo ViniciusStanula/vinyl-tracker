@@ -149,6 +149,7 @@ def upsert_batch(conn, items: list[dict]) -> int:
                 item.get("rating"),        # float or None
                 item.get("reviewCount"),   # int or None
                 item.get("format"),        # "vinyl" from the gate, or None (refresh)
+                item.get("source"),        # discovery provenance, or None (refresh)
             )
             for item in items
         ]
@@ -158,10 +159,10 @@ def upsert_batch(conn, items: list[dict]) -> int:
             """
             INSERT INTO "Disco" (
                 id, asin, titulo, artista, slug, estilo, "imgUrl", url, rating,
-                "reviewCount", format, "createdAt", "updatedAt", last_crawled_at
+                "reviewCount", format, source, "createdAt", "updatedAt", last_crawled_at
             )
             VALUES (
-                gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 NOW(), NOW(), NOW()
             )
             ON CONFLICT (asin) DO UPDATE SET
@@ -172,6 +173,9 @@ def upsert_batch(conn, items: list[dict]) -> int:
                                       ELSE EXCLUDED.artista
                                   END,
                 estilo          = COALESCE(EXCLUDED.estilo, "Disco".estilo),
+                -- Provenance is written once, at discovery. Refresh crawls pass
+                -- source=NULL and must never erase it.
+                source          = COALESCE("Disco".source, EXCLUDED.source),
                 "imgUrl"        = EXCLUDED."imgUrl",
                 url             = EXCLUDED.url,
                 rating          = EXCLUDED.rating,
@@ -748,7 +752,7 @@ def delete_record(conn, disco_id: str, asin: str) -> None:
 def fetch_pending_discovered(conn, limit: int = 50) -> list[dict]:
     """
     Returns up to `limit` queued rows from discovered_vinyls not yet in Disco,
-    each as {asin, titulo, artist_name, price_brl, img_url}. The metadata lets
+    each as {asin, titulo, artist_name, price_brl, img_url, source}. The metadata lets
     the discovery phase build a catalog record without re-scraping the product
     page. Returns [] if the discovered_vinyls table doesn't exist yet (first run
     before the discovery script has ever executed).
@@ -760,7 +764,7 @@ def fetch_pending_discovered(conn, limit: int = 50) -> list[dict]:
             cur.execute("ALTER TABLE discovered_vinyls ADD COLUMN IF NOT EXISTS img_url TEXT")
             cur.execute(
                 """
-                SELECT asin, titulo, artist_name, price_brl, img_url
+                SELECT asin, titulo, artist_name, price_brl, img_url, source
                 FROM discovered_vinyls
                 WHERE asin NOT IN (SELECT asin FROM "Disco")
                 ORDER BY discovered_at ASC
@@ -775,6 +779,7 @@ def fetch_pending_discovered(conn, limit: int = 50) -> list[dict]:
                     "artist_name": row[2],
                     "price_brl": row[3],
                     "img_url": row[4],
+                    "source": row[5],
                 }
                 for row in cur.fetchall()
             ]

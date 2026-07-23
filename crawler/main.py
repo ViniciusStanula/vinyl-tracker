@@ -2950,7 +2950,12 @@ def crawl_discovery_api(
                 accepted.append({
                     "asin":        asin,
                     "titulo":      titulo,
-                    "artista":     q.get("artist_name"),
+                    # Discovery may legitimately have no artist for a row (a
+                    # soundtrack seed that matched no soundtrack evidence, say).
+                    # Fall back to the sentinel so it enters the existing
+                    # unknown-artist workflow instead of NULL.
+                    "artista":     q.get("artist_name") or _UNKNOWN_ARTIST,
+                    "source":      q.get("source"),
                     "slug":        gerar_slug(titulo, asin),
                     "imgUrl":      q.get("img_url") or "",
                     "url":         affiliate_link(asin),
