@@ -2,7 +2,7 @@ name: Artist Meta Enrichment
 
 on:
   schedule:
-    - cron: '0 3 * * 0'  # weekly, Sunday 03:00 UTC
+    - cron: '0 3 * * *'  # daily, 03:00 UTC
   workflow_dispatch:       # manual trigger from the GitHub Actions UI
 
 concurrency:
@@ -29,10 +29,16 @@ jobs:
         run: pip install -r crawler/requirements.txt
 
       - name: Enrich new artists via MusicBrainz
-        # Fetches Wikidata/Wikipedia/Spotify links for artists not yet enriched
-        # or enriched more than 30 days ago. Validates each URL before storing.
-        # Rate-limited to 1 req/sec per MusicBrainz policy (~200 artists/run).
-        run: python crawler/enrich_artist_meta.py --limit 200 --min-discos 3
+        # Fetches the country of origin plus Wikidata/Wikipedia/Spotify links for
+        # artists not yet enriched or enriched more than 30 days ago. Validates
+        # each URL before storing. Rate-limited to 1 req/sec per MusicBrainz
+        # policy, so ~5s/artist end to end (~33 min for 400).
+        #
+        # min-discos 1: the old gate of 3 permanently excluded ~9.4k one- and
+        # two-record artists, so their records could never show a country.
+        # Daily x400 also sustains the 30-day re-enrichment cycle for the whole
+        # ~12k-artist catalog (12k/30 ≈ 400/day).
+        run: python crawler/enrich_artist_meta.py --limit 400 --min-discos 1
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
