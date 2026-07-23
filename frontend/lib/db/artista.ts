@@ -358,6 +358,9 @@ export type ArtistaListItem = {
   slug: string;
   discoCount: number;
   imgUrl: string | null;
+  /** Max Last.fm listeners across the artist's records — popularity signal for
+   *  ranking the featured mosaic. 0 when the artist has no Last.fm match. */
+  listeners: number;
 };
 
 const _getArtistasList = unstable_cache(
@@ -366,11 +369,13 @@ const _getArtistasList = unstable_cache(
       artista: string;
       discoCount: bigint;
       imgUrl: string | null;
+      listeners: number | null;
     }[]>`
       SELECT
         artista,
         COUNT(*) AS "discoCount",
-        MIN("imgUrl") FILTER (WHERE "imgUrl" IS NOT NULL) AS "imgUrl"
+        MIN("imgUrl") FILTER (WHERE "imgUrl" IS NOT NULL) AS "imgUrl",
+        MAX(lastfm_listeners) AS listeners
       FROM "Disco"
       WHERE disponivel = TRUE
         AND (format IS NULL OR format = 'vinyl')
@@ -383,6 +388,7 @@ const _getArtistasList = unstable_cache(
       slug: slugifyArtist(r.artista),
       discoCount: Number(r.discoCount),
       imgUrl: r.imgUrl,
+      listeners: Number(r.listeners ?? 0),
     }));
   },
   ["artistas-list"],
