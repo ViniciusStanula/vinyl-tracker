@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { HubCard, HubHeader, HubTile, SectionRule } from "@/components/hub/HubUI";
 import { getPaisesList } from "@/lib/db/pais";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 export const revalidate = 14400;
+
+const FEATURED_COUNT = 5;
 
 export const metadata: Metadata = {
   title: "Discos de Vinil por País de Origem | Garimpa Vinil",
@@ -28,6 +31,10 @@ export default async function PaisesIndexPage() {
     // DB unavailable
   }
 
+  // getPaisesList already returns descending by disco count.
+  const featured = paises.slice(0, FEATURED_COUNT);
+  const rest = paises.slice(FEATURED_COUNT);
+
   const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -48,38 +55,67 @@ export default async function PaisesIndexPage() {
         <span className="text-parchment">Países</span>
       </nav>
 
-      <header className="mb-8">
-        <span className="text-gold text-[11px] font-bold uppercase tracking-[0.2em] block mb-3">
-          Por Origem
-        </span>
-        <h1 className="font-display text-3xl font-black text-cream [text-wrap:balance]">
-          Países de Origem
-        </h1>
-        <p className="mt-1 text-dust text-sm">
-          {paises.length > 0
-            ? `${paises.length.toLocaleString("pt-BR")} países com discos de vinil monitorados na Amazon Brasil`
-            : "Discos de vinil por país de origem do artista na Amazon Brasil"}
-        </p>
-      </header>
+      <HubHeader
+        eyebrow="Por origem"
+        title="Países de Origem"
+        description={
+          paises.length > 0
+            ? `${paises.length.toLocaleString("pt-BR")} países de origem com discos de vinil monitorados na Amazon Brasil, com histórico de preços de 12 meses.`
+            : "Discos de vinil por país de origem do artista na Amazon Brasil."
+        }
+      />
 
       {paises.length === 0 ? (
         <p className="text-dust text-sm">Nenhum país disponível no momento.</p>
       ) : (
-        <ul className="flex flex-wrap gap-2">
-          {paises.map((p) => (
-            <li key={p.slug}>
-              <Link
-                href={`/pais/${p.slug}`}
-                className="group inline-flex flex-col items-start px-3 py-2 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove hover:-translate-y-0.5 transition-all"
-              >
-                <span className="text-parchment text-sm font-medium">{p.nome}</span>
-                <span className="text-dust text-xs tabular-nums group-hover:text-gold transition-colors">
-                  {p.discoCount.toLocaleString("pt-BR")} discos
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <>
+          {/* Mosaic of the five deepest catalogues, then everything else as
+              cards. 42 countries fit on one screen, so no filter or A–Z index. */}
+          {featured.length === FEATURED_COUNT && (
+            <section aria-label="Países com mais discos" className="mb-10 sm:mb-14">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <HubTile
+                  href={`/pais/${featured[0].slug}`}
+                  label={featured[0].nome}
+                  count={featured[0].discoCount}
+                  badge="Mais discos"
+                  featured
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  {featured.slice(1).map((p) => (
+                    <HubTile
+                      key={p.slug}
+                      href={`/pais/${p.slug}`}
+                      label={p.nome}
+                      count={p.discoCount}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {rest.length > 0 && (
+            <section aria-labelledby="todos-paises">
+              <SectionRule
+                id="todos-paises"
+                title="Todos os países"
+                subtitle={`${paises.length} origens`}
+              />
+              <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                {rest.map((p) => (
+                  <li key={p.slug}>
+                    <HubCard
+                      href={`/pais/${p.slug}`}
+                      label={p.nome}
+                      count={p.discoCount}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
       )}
     </div>
   );

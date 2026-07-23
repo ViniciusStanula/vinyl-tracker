@@ -1,10 +1,19 @@
 import Link from "next/link";
+import { HubHeader, HubTile, SectionRule, formatDiscos } from "@/components/hub/HubUI";
+import ArtistasFilter from "@/components/hub/ArtistasFilter";
 import { getArtistasList } from "@/lib/db/artista";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 export const revalidate = 14400;
+
+const FEATURED_COUNT = 5;
+
+/** Must match the folding in components/hub/ArtistasFilter.tsx. */
+function fold(value: string): string {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
 
 export const metadata: Metadata = {
   title: "Artistas de Vinil — Catálogo Completo | Garimpa Vinil",
@@ -42,6 +51,11 @@ export default async function ArtistasIndexPage() {
     a === "#" ? 1 : b === "#" ? -1 : a.localeCompare(b)
   );
 
+  // Deepest catalogues get the mosaic; getArtistasList returns A–Z order.
+  const featured = [...artistas]
+    .sort((a, b) => b.discoCount - a.discoCount)
+    .slice(0, FEATURED_COUNT);
+
   const breadcrumbJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -62,70 +76,96 @@ export default async function ArtistasIndexPage() {
         <span className="text-parchment">Artistas</span>
       </nav>
 
-      <header className="mb-8">
-        <span className="text-gold text-[11px] font-bold uppercase tracking-[0.2em] block mb-3">
-          Catálogo A–Z
-        </span>
-        <h1 className="font-display text-3xl font-black text-cream [text-wrap:balance]">
-          Artistas de Vinil
-        </h1>
-        <p className="mt-1 text-dust text-sm">
-          {artistas.length > 0
-            ? `${artistas.length.toLocaleString("pt-BR")} artistas com discos disponíveis na Amazon Brasil`
-            : "Catálogo de artistas com discos de vinil na Amazon Brasil"}
-        </p>
-      </header>
-
-      {/* Letter jump-nav */}
-      {letters.length > 0 && (
-        <nav
-          aria-label="Navegar por letra"
-          className="flex flex-wrap gap-1 mb-8 sticky top-0 z-10 -mx-4 px-4 py-3 bg-record/90 backdrop-blur-sm border-b border-groove"
-        >
-          {letters.map((l) => (
-            <a
-              key={l}
-              href={`#letra-${l}`}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-groove border border-wax/40 text-dust hover:text-record hover:bg-gold hover:border-gold text-sm font-bold transition-colors"
-            >
-              {l}
-            </a>
-          ))}
-        </nav>
-      )}
+      <HubHeader
+        eyebrow="Catálogo A–Z"
+        title="Artistas de Vinil"
+        description={
+          artistas.length > 0
+            ? `${artistas.length.toLocaleString("pt-BR")} artistas com discos de vinil disponíveis na Amazon Brasil, com histórico de preços de 12 meses.`
+            : "Catálogo de artistas com discos de vinil na Amazon Brasil."
+        }
+        aside={artistas.length > 0 ? <ArtistasFilter total={artistas.length} /> : undefined}
+      />
 
       {artistas.length === 0 ? (
         <p className="text-dust text-sm">Nenhum artista disponível no momento.</p>
       ) : (
-        <div className="space-y-10">
+        <>
+          {/* Mosaic of the deepest catalogues. Hidden while filtering — it
+              isn't part of the A–Z index the filter narrows. */}
+          {featured.length === FEATURED_COUNT && (
+            <section
+              aria-label="Artistas com mais discos"
+              className="mb-10 sm:mb-14"
+              data-letra-section
+            >
+              <div className="grid gap-4 lg:grid-cols-2">
+                <HubTile
+                  href={`/artista/${featured[0].slug}`}
+                  label={featured[0].artista}
+                  count={featured[0].discoCount}
+                  badge="Mais discos"
+                  featured
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  {featured.slice(1).map((item) => (
+                    <HubTile
+                      key={item.slug}
+                      href={`/artista/${item.slug}`}
+                      label={item.artista}
+                      count={item.discoCount}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          <SectionRule
+            id="indice-heading"
+            title="Índice completo"
+            aside={
+              <nav aria-label="Ir para letra" className="flex flex-wrap gap-1">
+                {letters.map((l) => (
+                  <a
+                    key={l}
+                    href={`#letra-${l}`}
+                    className="font-mono flex h-8 w-8 items-center justify-center rounded border border-groove text-[11px] font-medium text-parchment hover:border-gold hover:text-cream transition-colors"
+                  >
+                    {l}
+                  </a>
+                ))}
+              </nav>
+            }
+          />
+
           {letters.map((letter) => {
             const group = grouped.get(letter)!;
             return (
-              <section key={letter} id={`letra-${letter}`}>
-                <h2 className="font-display text-2xl font-black text-gold mb-4 pb-2 border-b border-groove">
+              <div
+                key={letter}
+                id={`letra-${letter}`}
+                className="ax-letter mb-8 scroll-mt-24"
+                data-letra-section
+              >
+                <h3 className="font-mono mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-gold">
                   {letter}
-                </h2>
-                <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                </h3>
+                <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {group.map((item) => (
-                    <li key={item.slug}>
-                      <Link
-                        href={`/artista/${item.slug}`}
-                        className="group flex flex-col justify-between h-[72px] px-3 py-2.5 rounded-xl bg-sleeve border border-groove hover:border-wax/70 hover:bg-groove hover:-translate-y-0.5 transition-all"
-                      >
-                        <span className="text-parchment text-sm font-medium leading-tight line-clamp-2">
-                          {item.artista}
-                        </span>
-                        <span className="text-dust text-xs tabular-nums mt-1 group-hover:text-gold transition-colors">
-                          {item.discoCount} {item.discoCount === 1 ? "disco" : "discos"}
-                        </span>
+                    /* data-nome is the folded name the CSS filter matches on. */
+                    <li key={item.slug} data-artista-item data-nome={fold(item.artista)}>
+                      <Link href={`/artista/${item.slug}`} className="ax-card">
+                        <span className="ax-card__name">{item.artista}</span>
+                        <span className="ax-card__count">{formatDiscos(item.discoCount)}</span>
                       </Link>
                     </li>
                   ))}
                 </ul>
-              </section>
+              </div>
             );
           })}
-        </div>
+        </>
       )}
     </div>
   );
