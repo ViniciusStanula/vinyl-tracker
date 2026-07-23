@@ -35,21 +35,24 @@ export default function ArtistasCarousel({ items }: { items: ProcessedDisco[] })
   if (items.length === 0) return null;
 
   return (
-    <section aria-labelledby="carousel-heading" className="mb-10">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-baseline gap-3">
-          <div>
-            <h2 id="carousel-heading" className="font-display text-xl font-black text-cream">
+    <section aria-labelledby="carousel-heading" className="mb-10 sm:mb-14">
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div>
+          <span className="font-mono text-gold text-[11px] font-medium uppercase tracking-[0.18em] block mb-2">
+            Curadoria do dia
+          </span>
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <h2 id="carousel-heading" className="font-display text-2xl sm:text-3xl font-black text-cream leading-tight">
               Discos em Destaque
             </h2>
-            <div className="mt-1 h-0.5 w-10 bg-gold rounded-full" aria-hidden="true" />
+            <Link
+              href="/artistas-mais-ouvidos"
+              className="text-parchment hover:text-gold text-xs transition-colors"
+            >
+              Ver artistas mais ouvidos →
+            </Link>
           </div>
-          <Link
-            href="/artistas-mais-ouvidos"
-            className="text-parchment hover:text-gold text-xs transition-colors"
-          >
-            Ver artistas mais ouvidos →
-          </Link>
+          <div className="mt-2 h-0.5 w-10 bg-gold rounded-full" aria-hidden="true" />
         </div>
         <div className="flex gap-1.5">
           <button

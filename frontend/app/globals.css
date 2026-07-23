@@ -28,6 +28,7 @@
   /* ── Typography ──────────────────────────────────────────────── */
   --font-display: var(--font-fraunces, serif);
   --font-sans:    var(--font-dm-sans, system-ui, sans-serif);
+  --font-mono:    var(--font-jetbrains-mono, ui-monospace, monospace);
 }
 
 :root {
