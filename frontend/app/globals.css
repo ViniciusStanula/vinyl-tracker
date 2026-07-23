@@ -87,13 +87,6 @@ body {
   color: var(--color-gold);
 }
 
-/* Keeps the browser from laying out all 11k cards up front. Bytes are
-   unchanged; this is purely render cost. */
-.ax-letter {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 480px;
-}
-
 /* ── Warm custom scrollbar ────────────────────────────────────────── */
 ::-webkit-scrollbar          { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track    { background: var(--color-record); }

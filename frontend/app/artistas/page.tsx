@@ -15,6 +15,20 @@ function fold(value: string): string {
   return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
+/** True for compilation / placeholder artist names that shouldn't headline the
+ *  mosaic — "Various", "Various Artists", the unknown-artist sentinel, and the
+ *  title-parser junk values ("por", "Disco de Vinil"). Substring match on
+ *  "various" also catches the "… / Various" compilation titles. */
+function isCompilationArtist(artista: string): boolean {
+  const a = fold(artista);
+  return (
+    a.includes("various") ||
+    a.includes("nao identificad") ||
+    a === "por" ||
+    a === "disco de vinil"
+  );
+}
+
 export const metadata: Metadata = {
   title: "Artistas de Vinil — Catálogo Completo | Garimpa Vinil",
   description:
@@ -51,9 +65,14 @@ export default async function ArtistasIndexPage() {
     a === "#" ? 1 : b === "#" ? -1 : a.localeCompare(b)
   );
 
-  // Deepest catalogues get the mosaic; getArtistasList returns A–Z order.
+  // Most-listened artists lead the mosaic — Last.fm listeners, not disc count,
+  // so recognisable names surface instead of "Various Artists" (which has the
+  // deepest catalogue by far). Compilation and placeholder names carry a real
+  // Last.fm listener count too, so exclude them explicitly rather than trusting
+  // the ranking to bury them.
   const featured = [...artistas]
-    .sort((a, b) => b.discoCount - a.discoCount)
+    .filter((a) => a.listeners > 0 && !isCompilationArtist(a.artista))
+    .sort((a, b) => b.listeners - a.listeners)
     .slice(0, FEATURED_COUNT);
 
   const breadcrumbJsonLd = toJsonLd({
@@ -95,7 +114,7 @@ export default async function ArtistasIndexPage() {
               isn't part of the A–Z index the filter narrows. */}
           {featured.length === FEATURED_COUNT && (
             <section
-              aria-label="Artistas com mais discos"
+              aria-label="Artistas mais ouvidos"
               className="mb-10 sm:mb-14"
               data-letra-section
             >
@@ -104,7 +123,7 @@ export default async function ArtistasIndexPage() {
                   href={`/artista/${featured[0].slug}`}
                   label={featured[0].artista}
                   count={featured[0].discoCount}
-                  badge="Mais discos"
+                  badge="Mais ouvido"
                   featured
                 />
                 <div className="grid grid-cols-2 gap-4">
@@ -145,7 +164,7 @@ export default async function ArtistasIndexPage() {
               <div
                 key={letter}
                 id={`letra-${letter}`}
-                className="ax-letter mb-8 scroll-mt-24"
+                className="mb-8 scroll-mt-24"
                 data-letra-section
               >
                 <h3 className="font-mono mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-gold">
