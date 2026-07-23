@@ -742,7 +742,13 @@ def main() -> None:
             r["tags"]     = tags
             r["category"] = tags[1] if tags and len(tags) > 1 else None
             r["seed_key"] = seed.key
-            r["artist_name"] = seed.name
+            # Only claim the seed as the artist once the title actually proves
+            # this is that soundtrack. Amazon's search is fuzzy and returns
+            # records that merely resemble the query, so stamping seed.name
+            # unconditionally filed unrelated albums under a game/film name
+            # (e.g. Neil Young's "Time Fades Away" under "Night in the Woods").
+            # No evidence → leave it unset so the normal artist parsing runs.
+            r["artist_name"] = seed.name if tags else None
             r["source"] = f"soundtrack_{seed.kind}_search"
 
             if conflict:
