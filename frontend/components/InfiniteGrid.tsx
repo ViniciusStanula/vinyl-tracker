@@ -112,8 +112,14 @@ export default function InfiniteGrid({
     localStorage.setItem("garimpaScrollMode", next);
   }
 
+  // #resultados is the pagination scroll target; scroll-mt clears the sticky
+  // navbar (62px) + the sticky sort bar above the grid
   return (
-    <div>
+    <div
+      id="resultados"
+      tabIndex={-1}
+      className="scroll-mt-[190px] sm:scroll-mt-[150px] outline-none"
+    >
       {/* Paginação / Scroll infinito toggle */}
       <div className="flex justify-end mb-3">
         <button
