@@ -105,13 +105,17 @@ class TestDetectFormat:
         )
         assert detect_format("Some Album", _soup(html), asin="B000THISCD") == "cd"
 
-    def test_vinyl_swatch_own_asin_not_sibling(self):
+    # A vinyl swatch pointing at THIS ASIN means this ASIN is the vinyl edition.
+    # Expectation was "unknown" until 6c62427 (2026-06-14) deliberately made the
+    # own-ASIN swatch positive evidence, to stop real pressings being excluded;
+    # the test was not updated with it and had been failing since.
+    def test_vinyl_swatch_own_asin_is_vinyl(self):
         html = (
             '<div id="tmmSwatches">'
             '<div class="swatchElement"><a href="/dp/B000THISLP">Disco de Vinil</a></div>'
             "</div>"
         )
-        assert detect_format("Some Album", _soup(html), asin="B000THISLP") == "unknown"
+        assert detect_format("Some Album", _soup(html), asin="B000THISLP") == "vinyl"
 
     # Details "Formato" row (single-format pages)
     def test_details_row_audio_cd(self):
