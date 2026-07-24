@@ -949,6 +949,14 @@ def bulk_update_tags(conn, artista_to_tags: dict[str, str]) -> int:
     An empty-string value marks the artist as "fetched but no genre tags found"
     so it is not re-fetched on future runs.
     Returns the number of rows updated.
+
+    Only NULL rows are written. The artist is selected by fetch_untagged_artists
+    when ANY of its rows is NULL, but the write matches on artista, so without
+    this guard one new release re-wrote every row that artist has — clobbering
+    per-ASIN tags with an artist-level answer. Soundtrack discovery tags
+    individual ASINs ("soundtrack, game"), and an artist whose Last.fm lookup
+    came back empty erased them to ''. Both callers' docstrings already promise
+    NULL-only; this makes the write agree with them.
     """
     if not artista_to_tags:
         return 0
@@ -957,7 +965,8 @@ def bulk_update_tags(conn, artista_to_tags: dict[str, str]) -> int:
     with _cursor(conn) as cur:
         psycopg2.extras.execute_batch(
             cur,
-            'UPDATE "Disco" SET lastfm_tags = %s WHERE artista = %s',
+            'UPDATE "Disco" SET lastfm_tags = %s '
+            'WHERE artista = %s AND lastfm_tags IS NULL',
             rows,
             page_size=500,
         )
