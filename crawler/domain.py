@@ -149,6 +149,17 @@ _FORMAT_LABEL_RE = re.compile(
     r"(?:formato|format|tipo\s+de\s+m[íi]dia|m[íi]dia)\s*:?\s*",
     re.IGNORECASE,
 )
+
+# Book / written-word breadcrumb roots. Split out of _NON_MUSIC_BREADCRUMB_RE
+# because these alone are checked BEFORE the title, not as a last resort:
+# a book title can contain a vinyl keyword in an unrelated sense and win the
+# title short-circuit outright. "How to loose LP like a pro" is a League of
+# Legends humour paperback — LP is League Points — and shipped as vinyl.
+# A record is never filed under Livros, so the breadcrumb settles it first.
+_BOOK_BREADCRUMB_RE = re.compile(
+    r"livros\b|\bkindle\b|\baudible\b|audiolivros?\b|\bebooks?\b",
+    re.IGNORECASE,
+)
 _DP_ASIN_RE = re.compile(r"/dp/([A-Z0-9]{10})", re.IGNORECASE)
 
 
@@ -165,6 +176,15 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
     """
     if _VINYL_FIGURE_RE.search(title):
         return "other"
+
+    # Books beat every title signal. Checked before _VINYL_TITLE_RE because a
+    # book title may carry a vinyl keyword in an unrelated sense, and the title
+    # short-circuit below would end the classification then and there.
+    if soup is not None:
+        bc = soup.select_one("#wayfinding-breadcrumbs_feature_div")
+        if bc and _BOOK_BREADCRUMB_RE.search(bc.get_text(" ", strip=True)):
+            return "other"
+
     if _VINYL_TITLE_RE.search(title):
         return "vinyl"
     if _MERCH_TITLE_RE.search(title):

@@ -132,6 +132,31 @@ class TestDetectFormat:
         )
         assert detect_format("Countdown To Extinction [Remastered]", _soup(html)) == "unknown"
 
+    # Book leak (2026-07-24): "LP" in a book title meant League Points, and the
+    # title short-circuit filed a paperback as vinyl. The Livros breadcrumb now
+    # runs first.
+    def test_book_breadcrumb_beats_lp_in_title(self):
+        html = (
+            '<div id="wayfinding-breadcrumbs_feature_div">'
+            "Livros › Humor › Paródias</div>"
+        )
+        title = ("League of Legends: How to loose LP like a pro: ..and get away "
+                 "with it every time (Master Nonomura)")
+        assert detect_format(title, _soup(html)) == "other"
+
+    def test_book_breadcrumb_without_soup_still_leaks_by_title(self):
+        # Title-only path has no breadcrumb to consult; documents why Phase 2.8
+        # must always pass soup before writing a format.
+        title = "League of Legends: How to loose LP like a pro"
+        assert detect_format(title) == "vinyl"
+
+    def test_music_breadcrumb_does_not_trip_book_check(self):
+        html = (
+            '<div id="wayfinding-breadcrumbs_feature_div">'
+            "CD e Vinil › Rock › Rock Progressivo</div>"
+        )
+        assert detect_format("Dark Side Of The Moon [LP]", _soup(html)) == "vinyl"
+
 
 # ─── normalize_artist ────────────────────────────────────────────────────────
 
