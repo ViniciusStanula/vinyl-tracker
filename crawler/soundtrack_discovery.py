@@ -266,6 +266,22 @@ def categories_in_title(title: str,
     return {cat for pat, cat, _name in classifier if pat.search(title)}
 
 
+def seed_named_in_title(title: str, seed: Seed) -> bool:
+    """
+    Whether the seed's own name (or an alias) appears in the product title.
+
+    Needed because `ambiguous` seeds are held out of the classifier vocabulary,
+    so categories_in_title never reports them even when the title says the name
+    outright — "Hades Original Soundtrack 4xLP" found by the Hades seed. Held out
+    of the shared vocabulary is right (it must not label OTHER seeds' results),
+    but the seed that actually ran the search may still claim its own name.
+    """
+    for name in [seed.name] + seed.aliases:
+        if re.search(r"\b" + re.escape(name) + r"\b", title, re.IGNORECASE):
+            return True
+    return False
+
+
 def classify(title: str, seed: Seed,
              classifier: list[tuple[re.Pattern, str, str]]) -> tuple[list[str] | None, str | None]:
     """
@@ -302,10 +318,19 @@ def classify(title: str, seed: Seed,
             )
         if seed.category in found:
             return [SOUNDTRACK_TAG, seed.category], None   # franchise named outright
-        if is_ost:
-            # No franchise in the title, but the product says it is a soundtrack
-            # and this seed only searched for one: "Original Soundtrack [LP]".
+        if is_ost and seed_named_in_title(title, seed):
+            # Ambiguous seeds sit out the shared vocabulary, so `found` misses
+            # them even when the title names them. Being a proven soundtrack AND
+            # naming this seed is the same evidence the branch above accepts.
             return [SOUNDTRACK_TAG, seed.category], None
+        if is_ost:
+            # Proven soundtrack, but nothing ties it to THIS seed. Amazon's search
+            # is fuzzy and returns unrelated soundtracks for any query, so
+            # inheriting the seed's category here fabricated it: "Hades" returned
+            # "Halloween Kills", "Journey" returned "Almost Famous", and both were
+            # filed as game records. Tag it a soundtrack and let
+            # enrich_style_tags.py's LLM pass decide the kind.
+            return [SOUNDTRACK_TAG], None
         return None, None
 
     # Label seed.
