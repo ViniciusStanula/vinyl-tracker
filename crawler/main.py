@@ -2374,8 +2374,8 @@ def _fetch_one_stale(record: dict, delay: float, worker_idx: int,
             result["outcome"] = "non_vinyl"
         elif _is_used_condition(soup):
             log.warning(
-                "[DELETE] ASIN %s — #usedOnlyBuybox present, no new offer."
-                " Deleting record.",
+                "[UNAVAILABLE] ASIN %s — #usedOnlyBuybox present, no new offer."
+                " Marking unavailable.",
                 record["asin"],
             )
             result["outcome"] = "used_condition"
@@ -2663,7 +2663,15 @@ def crawl_stale_records(
                 if not dry_run:
                     mark_unavailable(conn, disco_id)
                 deals_cleared += 1
-            elif outcome in ("non_vinyl", "used_condition"):
+            elif outcome == "used_condition":
+                # Amazon page still live, just sold out of new copies — same
+                # treatment as an "unavailable" (404-on-Amazon) record: keep the
+                # page up and show it as unavailable rather than losing the page
+                # (and any accumulated SEO signal) to a hard delete.
+                if not dry_run:
+                    mark_unavailable(conn, disco_id)
+                unavailable += 1
+            elif outcome == "non_vinyl":
                 if not dry_run:
                     delete_record(conn, disco_id, asin)
                 deleted += 1
