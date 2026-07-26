@@ -1473,6 +1473,92 @@ def save_estilo_bio(conn, tag: str, intro: str, bio: str, lastfm_summary: str | 
         return False
 
 
+# ── Album-level "Sobre" (Claude-written) ────────────────────────────────────
+
+def ensure_disco_bio_columns(conn) -> None:
+    """Adds the album-level sobre columns if missing. Idempotent, raw DDL."""
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT count(*) FROM information_schema.columns
+            WHERE table_name = 'Disco'
+              AND column_name IN ('sobre_pt', 'sobre_generated_at')
+            """
+        )
+        if cur.fetchone()[0] == 2:
+            log.debug("ensure_disco_bio_columns: columns already present, skipping DDL.")
+            return
+        cur.execute("SET LOCAL lock_timeout = '10s'")
+        cur.execute(
+            """
+            ALTER TABLE "Disco"
+                ADD COLUMN IF NOT EXISTS sobre_pt           TEXT,
+                ADD COLUMN IF NOT EXISTS sobre_generated_at TIMESTAMPTZ
+            """
+        )
+    conn.commit()
+    log.debug("ensure_disco_bio_columns: sobre columns created.")
+
+
+def fetch_disco_bio_context(conn, slug: str) -> dict | None:
+    """
+    Returns grounded data for writing an album-level "Sobre" section, or None
+    if the slug isn't found. Caller (Claude Code) composes the actual prose
+    from this data — nothing here is generated.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT d.slug, d.titulo, d.artista, d.mb_tracklist, d.mb_genres,
+                   d.mb_first_release_date, d.mb_primary_type,
+                   d.lastfm_wiki_pt, d.lastfm_tags, am.bio_short_pt
+            FROM "Disco" d
+            LEFT JOIN "ArtistMeta" am ON am.artista = d.artista
+            WHERE d.slug = %s
+            """,
+            (slug,),
+        )
+        row = cur.fetchone()
+    if row is None:
+        return None
+    (slug_, titulo, artista, mb_tracklist, mb_genres,
+     mb_first_release_date, mb_primary_type,
+     lastfm_wiki_pt, lastfm_tags, artist_bio_short) = row
+    return {
+        "slug": slug_,
+        "titulo": titulo,
+        "artista": artista,
+        "mb_tracklist": mb_tracklist,
+        "mb_genres": mb_genres,
+        "mb_first_release_date": mb_first_release_date,
+        "mb_primary_type": mb_primary_type,
+        "lastfm_wiki_pt": lastfm_wiki_pt,
+        "lastfm_tags": lastfm_tags,
+        "artist_bio_short": artist_bio_short,
+    }
+
+
+def save_disco_bio(conn, slug: str, sobre_pt: str) -> bool:
+    """Upserts sobre_pt + sobre_generated_at for the given Disco slug."""
+    try:
+        with _cursor(conn) as cur:
+            cur.execute(
+                """
+                UPDATE "Disco"
+                SET sobre_pt           = %s,
+                    sobre_generated_at = NOW()
+                WHERE slug = %s
+                """,
+                (sobre_pt, slug),
+            )
+        conn.commit()
+        return True
+    except Exception as exc:
+        conn.rollback()
+        log.warning("save_disco_bio failed for %s: %s", slug, exc)
+        return False
+
+
 def check_alert_crossings(
     conn,
     disco_id: str,
