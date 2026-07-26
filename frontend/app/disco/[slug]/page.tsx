@@ -22,8 +22,6 @@ import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, type RelatedDeal } from "@/lib/db/disco";
 import { getEstilosList } from "@/lib/db/estilo";
 import { getPaisDisplayName, ISO2_TO_SLUG } from "@/lib/paises";
-import { getHreflangRecord } from "@/lib/db/hreflang";
-import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
@@ -52,8 +50,6 @@ export async function generateMetadata({
   if (!disco || (disco.format && disco.format !== "vinyl")) {
     return { title: "Disco de Vinil | Garimpa Vinil" };
   }
-
-  const peerSlug = await getHreflangRecord(disco.asin).catch(() => null);
 
   const tituloLimpo = cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
   const isUnknownArtistDisco = disco.artista.toLowerCase() === "artista não identificado";
@@ -101,15 +97,6 @@ export async function generateMetadata({
     description,
     alternates: {
       canonical: canonicalUrl,
-      ...(peerSlug
-        ? {
-            languages: {
-              "pt-BR": canonicalUrl,
-              "en-US": `${PEER_ORIGIN}/record/${peerSlug}`,
-              "x-default": `${PEER_ORIGIN}/record/${peerSlug}`,
-            },
-          }
-        : {}),
     },
     openGraph: {
       type: "music.album",
@@ -161,7 +148,7 @@ export default async function DiscoPage({
 
   // Everything below depends only on disco/meta, so it's one parallel wave —
   // sequential awaits here cost a full DB round trip each on cold renders.
-  const [estilosList, relatedDeals, popularity, artistAlbums, peerSlug] = await Promise.all([
+  const [estilosList, relatedDeals, popularity, artistAlbums] = await Promise.all([
     // Genres link to /estilo/[slug] only when a style page actually exists for
     // that slug (style pages are derived from lastfm_tags, not MB genres).
     meta?.mbMbid ? getEstilosList() : Promise.resolve([]),
@@ -174,8 +161,6 @@ export default async function DiscoPage({
     artistLower === "artista não identificado"
       ? Promise.resolve([])
       : getArtistTopAlbums(disco.artista, disco.id),
-    // Peer-site album URL for MusicAlbum.sameAs (same pressing, other market).
-    getHreflangRecord(disco.asin).catch(() => null),
   ]);
 
   // MusicBrainz release-group facts (mb_mbid = "" means searched, no match).
@@ -422,7 +407,6 @@ export default async function DiscoPage({
     "@id": `${siteUrl}/disco/${slug}#album`,
     name: disco.titulo,
     url: `${siteUrl}/disco/${slug}`,
-    ...(peerSlug ? { sameAs: [`${PEER_ORIGIN}/record/${peerSlug}`] } : {}),
     ...(disco.imgUrl ? { image: disco.imgUrl } : {}),
     byArtist: {
       "@type": "MusicGroup",

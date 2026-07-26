@@ -1,5 +1,4 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
-import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getDiscoCount } from "@/lib/db/home";
@@ -40,11 +39,6 @@ export async function generateMetadata() {
     description,
     alternates: {
       canonical: SITE_URL,
-      languages: {
-        "pt-BR": SITE_URL,
-        "en-US": `${PEER_ORIGIN}/`,
-        "x-default": `${PEER_ORIGIN}/`,
-      },
     },
     openGraph: {
       title: HOME_TITLE,

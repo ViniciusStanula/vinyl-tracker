@@ -43,8 +43,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
-    // No cross-language alternates: the US peer has no /ofertas equivalent, and
-    // hreflang must be reciprocal — a dangling en-US target would be an SEO error.
     alternates: {
       canonical: "/ofertas",
     },
