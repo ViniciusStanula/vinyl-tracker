@@ -3034,13 +3034,14 @@ def parse_args():
 
 
 def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
-                       label: str = "end-of-run", tag: str = "prices") -> None:
+                       label: str = "end-of-run", tag: str = "prices") -> bool:
     """POST to the Next.js on-demand revalidation endpoint to purge the price cache.
 
     Called multiple times per run (Rule Zero freshness): once right after Phase-0
-    deal writes land, once after Phase-3.5 rescore, and finally at end-of-run.
-    revalidateTag is idempotent, so repeated calls just trigger another
-    stale-while-revalidate regen — no double-purge race or partial state.
+    deal writes land, once after Phase-3.5 rescore, and finally at end-of-run —
+    unless Phase-3.5 already purged "prices" this run, in which case end-of-run
+    sends tag="none" (ping only, see route.ts) since Phases 4-6 never write price
+    data, so a second "prices" purge would just regen the same pages for nothing.
 
     fatal: the end-of-run call passes fatal=True so a final failure raises and the
     workflow's "Open issue on failure" step fires (dead-man's switch). The mid-run
@@ -3049,10 +3050,14 @@ def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
 
     tag: which cache tag to purge. "prices" (default) for the broad Phase-0 /
     Phase-3.5 / end-of-run purges; "deals" for the frequent in-loop deal refresh,
-    which regenerates only the deal surfaces (home, ofertas, carousel).
+    which regenerates only the deal surfaces (home, ofertas, carousel); "none" for
+    a ping-only dead-man's-switch check that skips the regen entirely.
 
     last_write_at: time.time() right after the relevant DB commit, for the
     write→revalidate gap log. If gap > 30 s, something is slow.
+
+    Returns True once the webhook call succeeds (HTTP 200), False if a non-fatal
+    call exhausts its retries without one.
     """
     import threading
     import requests as _requests
@@ -3062,10 +3067,11 @@ def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
     secret = os.environ.get("REVALIDATE_SECRET")
     if not url or not secret:
         log.warning("REVALIDATE_URL or REVALIDATE_SECRET not set — skipping cache purge")
-        return
+        return False
 
     backoffs = [5, 15, 45]
     last_error = "unknown"
+    success = False
     for attempt in range(1, len(backoffs) + 2):
         try:
             t0 = time.time()
@@ -3084,6 +3090,7 @@ def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
                         "users may see stale prices during this window",
                         gap_s,
                     )
+                success = True
                 break
             last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
             log.warning("Revalidation [%s] attempt %d failed — %s", label, attempt, last_error)
@@ -3128,6 +3135,8 @@ def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
     except Exception as exc:
         # Warm-up is best-effort — revalidation already succeeded above.
         log.warning("Cache warm-up failed (non-fatal): %s", exc)
+
+    return success
 
 
 def main():
@@ -3496,6 +3505,10 @@ def main():
                     log.info("Phase 2.8 done: %.0fs", time.monotonic() - t0)
 
         # ── Phase 3: Stale-records check ───────────────────────────────
+        # Tracks whether the post-Phase-3.5 "prices" purge below actually landed,
+        # so the end-of-run call can skip re-purging the same tag for nothing
+        # (Phases 4-6 never write price data).
+        _prices_purged_this_run = False
         if args.skip_stale:
             log.info("Stale-records check skipped (--skip-stale).")
         else:
@@ -3622,7 +3635,9 @@ def main():
                     # Phase 3 re-priced the stale backlog and Phase 3.5 re-scored;
                     # purge the price cache now so newly-flagged/cleared deals render
                     # before the end-of-run webhook. Best-effort (fatal=False).
-                    _notify_revalidate(last_write_at=time.time(), fatal=False, label="post-phase3.5")
+                    _prices_purged_this_run = _notify_revalidate(
+                        last_write_at=time.time(), fatal=False, label="post-phase3.5"
+                    )
             else:
                 log.info("No stale records — all known records appeared in this crawl.")
 
@@ -3687,7 +3702,13 @@ def main():
     # failure step opens a GitHub issue. (DB writes are committed per-phase
     # regardless; this gate is about predictable cache behavior on failure.)
     t_pipeline_end = time.time()
-    _notify_revalidate(last_write_at=t_pipeline_end)
+    if _prices_purged_this_run:
+        # Post-Phase-3.5 already purged "prices" and Phases 4-6 never write
+        # price data, so re-purging here would only regen the same pages for
+        # nothing. Ping-only: still trips the dead-man's-switch on an outage.
+        _notify_revalidate(last_write_at=t_pipeline_end, label="end-of-run", tag="none")
+    else:
+        _notify_revalidate(last_write_at=t_pipeline_end)
 
     log.info("Total runtime: %.0fs", time.monotonic() - t_start)
     _final = _bot_stats.snapshot()
