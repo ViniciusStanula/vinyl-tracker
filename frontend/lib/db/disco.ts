@@ -9,6 +9,7 @@ export type DiscoMeta = {
   lastfmListeners: number | null;
   lastfmPlaycount: number | null;
   lastfmWikiPt: string | null;
+  sobrePt: string | null;
   mbMbid: string | null;
   mbFirstReleaseDate: string | null;
   mbPrimaryType: string | null;
@@ -88,6 +89,7 @@ export const getDiscoMeta = unstable_cache(
         lastfm_listeners AS "lastfmListeners",
         lastfm_playcount AS "lastfmPlaycount",
         lastfm_wiki_pt   AS "lastfmWikiPt",
+        sobre_pt         AS "sobrePt",
         mb_mbid                AS "mbMbid",
         mb_first_release_date  AS "mbFirstReleaseDate",
         mb_primary_type        AS "mbPrimaryType",

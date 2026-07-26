@@ -705,12 +705,16 @@ export default async function DiscoPage({
           // worth showing — listener stats (>0), wiki, MB facts, or Amazon rating.
           const hasLastfm = albumInfo != null && albumInfo.listeners > 0;
           const wikiSummary = albumInfo?.wikiSummary ?? null;
+          // sobrePt is Claude-written (claude_disco_bio_helper.py), only populated
+          // where lastfm_wiki_pt was null — the two never coexist, so this is a
+          // fallback, not a merge.
+          const sobrePt = !wikiSummary ? (meta?.sobrePt ?? null) : null;
           const hasMb = mbInfo != null && Boolean(
             mbInfo.releaseYear || mbInfo.primaryType ||
             mbInfo.genres.length > 0 || mbInfo.tracklist.length > 0 || mbInfo.rating
           );
           const hasAmazon = Boolean(rating && disco.reviewCount && disco.reviewCount > 0);
-          if (!hasLastfm && !wikiSummary && !hasMb && !hasAmazon) return undefined;
+          if (!hasLastfm && !wikiSummary && !sobrePt && !hasMb && !hasAmazon) return undefined;
 
           const cleanTitle = cleanAlbumTitle(disco.titulo, disco.artista);
           const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
@@ -823,6 +827,12 @@ export default async function DiscoPage({
                       Dados: Last.fm ↗
                     </a>
                   </div>
+                </div>
+              )}
+
+              {sobrePt && (
+                <div className="bg-sleeve rounded-xl border border-groove p-4">
+                  <WikiExpander text={sobrePt} />
                 </div>
               )}
 
