@@ -110,6 +110,22 @@ export const getDiscoMeta = unstable_cache(
   { tags: ["prices"], revalidate: 14400 },
 );
 
+// Build-time only (generateStaticParams) — not wrapped in unstable_cache since
+// it runs once per deploy, not per-request. Ranks by real crawler-recorded
+// traffic (bot_hits) rather than lastfm_listeners, so it prioritizes the pages
+// Googlebot/bots actually hit, independent of a record's popularity elsewhere.
+export async function getTopBotHitSlugs(pathPrefix: string, limit: number): Promise<string[]> {
+  const rows = await prisma.$queryRaw<{ slug: string }[]>`
+    SELECT substring(path from ${pathPrefix.length + 1}) AS slug, count(*) AS hits
+    FROM bot_hits
+    WHERE path LIKE ${pathPrefix + "%"}
+    GROUP BY slug
+    ORDER BY hits DESC
+    LIMIT ${limit}
+  `;
+  return rows.map((r) => r.slug);
+}
+
 export const getArtistPopularity = unstable_cache(
   async (
     artista: string,

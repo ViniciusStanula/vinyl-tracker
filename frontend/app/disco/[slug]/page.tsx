@@ -19,7 +19,7 @@ import { slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
-import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, type RelatedDeal } from "@/lib/db/disco";
+import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, getTopBotHitSlugs, type RelatedDeal } from "@/lib/db/disco";
 import { getEstilosList } from "@/lib/db/estilo";
 import { getPaisDisplayName, ISO2_TO_SLUG } from "@/lib/paises";
 import { getHreflangRecord } from "@/lib/db/hreflang";
@@ -32,14 +32,14 @@ import type { Metadata } from "next";
 // 1800 matches the data-layer TTL so the HTML cache never outlives its data.
 export const revalidate = 14400;
 
-// Without this a dynamic route renders dynamically (Cache-Control: no-store) in
-// Next 16 — the docs require returning an array, even empty, to enable ISR.
-// [] prebuilds nothing at build time; each /disco/[slug] is rendered and
-// CDN-cached on first request, then revalidated by the crawler's
-// revalidateTag("prices") and the 24h safety-net above. dynamicParams stays
-// true (default) so every slug is allowed.
-export function generateStaticParams() {
-  return [];
+// Prebuilds the pages Googlebot/bots actually hit most (bot_hits-ranked), so
+// their first visit is CDN-served instead of a cold DB render — the rest of
+// the ~30k-slug catalog still renders on first request same as before.
+// dynamicParams stays true (default) so every slug is allowed either way;
+// revalidateTag("prices") + the 24h safety-net above apply identically
+// whether a page was prebuilt here or rendered on-demand later.
+export async function generateStaticParams() {
+  return (await getTopBotHitSlugs("/disco/", 3000)).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
