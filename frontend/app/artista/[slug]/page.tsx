@@ -22,7 +22,7 @@ export const revalidate = 14400; // safety-net; on-demand purge via revalidateTa
 // (default). Sort/filter/pagination run client-side (ArtistaRecords) so no
 // server searchParams force the route dynamic either way.
 export async function generateStaticParams() {
-  return (await getTopBotHitSlugs("/artista/", 1000)).map((slug) => ({ slug }));
+  return (await getTopBotHitSlugs("/artista/", 150)).map((slug) => ({ slug }));
 }
 
 // Catalog cap: fetch the artist's whole set so client-side filtering is correct.
