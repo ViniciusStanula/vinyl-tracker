@@ -43,7 +43,8 @@ from database import (
     fetch_albums_needing_mb,
     bulk_update_mb,
 )
-from lastfm import clean_album_title, NON_GENRE_TAGS
+from lastfm import clean_album_title
+from genre_filter import filter_genres
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,7 +59,13 @@ USER_AGENT = os.environ.get(
     "MB_USER_AGENT", "VinylTracker/1.0 ( vinicius.stanula@gmail.com )"
 )
 # Minimum search score (0-100) to accept a release-group as the match.
-MB_SCORE_THRESHOLD = 90
+# Lowered from 90 once the title-token guard in search_release_group started
+# running on BOTH search paths. Score alone was never a precision mechanism:
+# MB scored the box set "Wings 1971-73" at >=90 for the query "Wings", while
+# scoring the correct "John Lennon/Plastic Ono Band" at only 80 (the bogus
+# "Plastic Ono Band Sessions" scored 100). The guard supplies precision, so the
+# threshold can be loose enough to keep correct-but-low-scoring matches.
+MB_SCORE_THRESHOLD = 70
 
 
 def _mb_get(path: str) -> dict | None:
@@ -101,20 +108,32 @@ def search_release_group(artist: str, album: str) -> dict | None:
     Returns {mbid, first_release_date, primary_type, genres} for the best
     release-group match, or None if nothing clears MB_SCORE_THRESHOLD.
     """
+    # The matched title's tokens must be a subset of the query's. Amazon titles
+    # carry edition/colour junk so they are the LONGER string, which makes the
+    # subset test safe — and it rejects a release-group whose title adds words
+    # the product never claimed. That is exactly how "WINGS[180g LP]" (one LP)
+    # matched the box set "Wings 1971-73" and inherited its 214-track tracklist:
+    # score alone was >= 90, and this guard only ran on the fallback path below.
+    # Artist tokens are discounted: MusicBrainz canonicalises some titles with
+    # the artist baked in ("John Lennon/Plastic Ono Band" for the album an
+    # Amazon listing just calls "Plastic Ono Band"), which would otherwise fail
+    # the subset test and lose a correct match.
+    qtok = _tokens(album)
+    atok = _tokens(artist)
+
+    def _title_ok(g: dict) -> bool:
+        return bool(g.get("title")) and (_tokens(g["title"]) - atok) <= qtok
+
     groups = [g for g in _mb_search_groups(artist, album, quoted=True)
-              if int(g.get("score", 0)) >= MB_SCORE_THRESHOLD]
+              if int(g.get("score", 0)) >= MB_SCORE_THRESHOLD and _title_ok(g)]
     if not groups:
         # Fallback: unquoted token AND. The exact-phrase query returns ZERO when
         # the Amazon title still carries edition/colour junk ("Pearl Jam: Ten",
         # "24K Magic Gold", "Back To Black (Half-Speed Master)"). Unquoted lets
-        # MB relevance-rank past the junk. Guard against false positives: the
-        # matched title's tokens must be a subset of the (junk-carrying) query.
-        qtok = _tokens(album)
+        # MB relevance-rank past the junk. Same title guard as above.
         groups = [
             g for g in _mb_search_groups(artist, album, quoted=False)
-            if int(g.get("score", 0)) >= MB_SCORE_THRESHOLD
-            and g.get("title")
-            and _tokens(g["title"]) <= qtok
+            if int(g.get("score", 0)) >= MB_SCORE_THRESHOLD and _title_ok(g)
         ]
     if not groups:
         return None
@@ -140,10 +159,11 @@ def search_release_group(artist: str, album: str) -> dict | None:
     rg = groups[0]
 
     def _genre_names(items):
-        return [
-            x["name"] for x in items
-            if x.get("name") and x["name"].lower() not in NON_GENRE_TAGS
-        ][:3]
+        # Allowlist, not blocklist. The tags fallback below is free text a MB
+        # user typed, so a blocklist never keeps up — the catalog filled with
+        # "offizielle charts", "plattentests.de", "ph_2_stars", bare years and
+        # once a raw MBID. filter_genres accepts only recognised genre names.
+        return filter_genres(x.get("name", "") for x in items)[:3]
 
     genres = _genre_names(rg.get("genres", []))
     if not genres:  # release-group genres are sparse; fall back to folksonomy tags
@@ -151,6 +171,7 @@ def search_release_group(artist: str, album: str) -> dict | None:
 
     return {
         "mbid":               rg.get("id", ""),
+        "title":              rg.get("title") or None,
         "first_release_date": rg.get("first-release-date") or None,
         "primary_type":       rg.get("primary-type") or None,
         "genres":             ", ".join(genres),
@@ -201,6 +222,7 @@ def main():
                 "first_release_date": hit["first_release_date"] if hit else None,
                 "primary_type":       hit["primary_type"] if hit else None,
                 "genres":             hit["genres"] if hit else None,
+                "title":              hit["title"] if hit else None,
             })
             if hit:
                 matched += 1

@@ -1060,20 +1060,26 @@ def ensure_mb_columns(conn) -> None:
             SELECT count(*) FROM information_schema.columns
             WHERE table_name = 'Disco'
               AND column_name IN
-                ('mb_mbid','mb_first_release_date','mb_primary_type','mb_genres')
+                ('mb_mbid','mb_first_release_date','mb_primary_type','mb_genres',
+                 'mb_title')
             """
         )
-        if cur.fetchone()[0] == 4:
+        if cur.fetchone()[0] == 5:
             log.debug("ensure_mb_columns: columns already present, skipping DDL.")
             return
         cur.execute("SET LOCAL lock_timeout = '10s'")
+        # mb_title stores the matched release-group's own title. Without it a
+        # bad match is undetectable after the fact: the catalog had a one-LP
+        # product carrying the 214-track tracklist of the box set "Wings
+        # 1971-73" and nothing on the row revealed the mismatch.
         cur.execute(
             """
             ALTER TABLE "Disco"
                 ADD COLUMN IF NOT EXISTS mb_mbid               TEXT,
                 ADD COLUMN IF NOT EXISTS mb_first_release_date TEXT,
                 ADD COLUMN IF NOT EXISTS mb_primary_type       TEXT,
-                ADD COLUMN IF NOT EXISTS mb_genres             TEXT
+                ADD COLUMN IF NOT EXISTS mb_genres             TEXT,
+                ADD COLUMN IF NOT EXISTS mb_title              TEXT
             """
         )
     conn.commit()
@@ -1104,8 +1110,8 @@ def fetch_albums_needing_mb(conn, limit: int = 200) -> list[dict]:
 def bulk_update_mb(conn, updates: list[dict]) -> int:
     """
     Writes MusicBrainz fields for album IDs.
-    Each item: {"id", "mbid", "first_release_date", "primary_type", "genres"}.
-    mbid="" marks a searched-but-unmatched row so it is not re-queried.
+    Each item: {"id", "mbid", "first_release_date", "primary_type", "genres",
+    "title"}. mbid="" marks a searched-but-unmatched row so it is not re-queried.
     """
     if not updates:
         return 0
@@ -1116,7 +1122,8 @@ def bulk_update_mb(conn, updates: list[dict]) -> int:
                SET mb_mbid               = %(mbid)s,
                    mb_first_release_date = %(first_release_date)s,
                    mb_primary_type       = %(primary_type)s,
-                   mb_genres             = %(genres)s
+                   mb_genres             = %(genres)s,
+                   mb_title              = %(title)s
                WHERE id = %(id)s""",
             updates,
             page_size=200,
