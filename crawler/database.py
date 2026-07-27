@@ -1482,18 +1482,19 @@ def ensure_disco_bio_columns(conn) -> None:
             """
             SELECT count(*) FROM information_schema.columns
             WHERE table_name = 'Disco'
-              AND column_name IN ('sobre_pt', 'sobre_generated_at')
+              AND column_name IN ('sobre_pt', 'sobre_generated_at', 'sobre_pt_source_url')
             """
         )
-        if cur.fetchone()[0] == 2:
+        if cur.fetchone()[0] == 3:
             log.debug("ensure_disco_bio_columns: columns already present, skipping DDL.")
             return
         cur.execute("SET LOCAL lock_timeout = '10s'")
         cur.execute(
             """
             ALTER TABLE "Disco"
-                ADD COLUMN IF NOT EXISTS sobre_pt           TEXT,
-                ADD COLUMN IF NOT EXISTS sobre_generated_at TIMESTAMPTZ
+                ADD COLUMN IF NOT EXISTS sobre_pt              TEXT,
+                ADD COLUMN IF NOT EXISTS sobre_generated_at    TIMESTAMPTZ,
+                ADD COLUMN IF NOT EXISTS sobre_pt_source_url   TEXT
             """
         )
     conn.commit()
@@ -1538,18 +1539,24 @@ def fetch_disco_bio_context(conn, slug: str) -> dict | None:
     }
 
 
-def save_disco_bio(conn, slug: str, sobre_pt: str) -> bool:
-    """Upserts sobre_pt + sobre_generated_at for the given Disco slug."""
+def save_disco_bio(conn, slug: str, sobre_pt: str, source_url: str | None = None) -> bool:
+    """Upserts sobre_pt + sobre_generated_at for the given Disco slug.
+
+    source_url records where the bio's facts were grounded (e.g. a Wikipedia
+    article), so the frontend can attribute/link it. None for bios grounded
+    only on MB/Last.fm data already attributed elsewhere on the page.
+    """
     try:
         with _cursor(conn) as cur:
             cur.execute(
                 """
                 UPDATE "Disco"
-                SET sobre_pt           = %s,
-                    sobre_generated_at = NOW()
+                SET sobre_pt             = %s,
+                    sobre_generated_at   = NOW(),
+                    sobre_pt_source_url  = %s
                 WHERE slug = %s
                 """,
-                (sobre_pt, slug),
+                (sobre_pt, source_url, slug),
             )
         conn.commit()
         return True
