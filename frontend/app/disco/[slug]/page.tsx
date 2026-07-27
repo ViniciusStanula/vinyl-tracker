@@ -709,6 +709,7 @@ export default async function DiscoPage({
           // where lastfm_wiki_pt was null — the two never coexist, so this is a
           // fallback, not a merge.
           const sobrePt = !wikiSummary ? (meta?.sobrePt ?? null) : null;
+          const sobrePtSourceUrl = sobrePt ? (meta?.sobrePtSourceUrl ?? null) : null;
           const hasMb = mbInfo != null && Boolean(
             mbInfo.releaseYear || mbInfo.primaryType ||
             mbInfo.genres.length > 0 || mbInfo.tracklist.length > 0 || mbInfo.rating
@@ -833,6 +834,19 @@ export default async function DiscoPage({
               {sobrePt && (
                 <div className="bg-sleeve rounded-xl border border-groove p-4">
                   <WikiExpander text={sobrePt} />
+                  {sobrePtSourceUrl && (
+                    <div className="mt-3 text-right">
+                      <a
+                        href={sobrePtSourceUrl}
+                        target="_blank"
+                        rel="nofollow noopener noreferrer"
+                        className="text-xs text-dust hover:text-parchment transition-colors"
+                        aria-label={`Ver ${disco.titulo} na Wikipedia`}
+                      >
+                        Dados: Wikipedia ↗
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
 
