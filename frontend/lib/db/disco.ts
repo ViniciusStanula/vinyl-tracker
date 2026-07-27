@@ -115,8 +115,12 @@ export const getDiscoMeta = unstable_cache(
 // traffic (bot_hits) rather than lastfm_listeners, so it prioritizes the pages
 // Googlebot/bots actually hit, independent of a record's popularity elsewhere.
 export async function getTopBotHitSlugs(pathPrefix: string, limit: number): Promise<string[]> {
+  // The (::int) cast is load-bearing: without it, Postgres can't infer the
+  // parameter's type and picks the regex-match `substring(text, pattern)`
+  // overload instead of the position-based one, silently returning NULL (or
+  // a bogus regex match) for almost every row instead of the real slug.
   const rows = await prisma.$queryRaw<{ slug: string }[]>`
-    SELECT substring(path from ${pathPrefix.length + 1}) AS slug, count(*) AS hits
+    SELECT substring(path from (${pathPrefix.length + 1})::int) AS slug, count(*) AS hits
     FROM bot_hits
     WHERE path LIKE ${pathPrefix + "%"}
     GROUP BY slug
