@@ -23,6 +23,14 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ revalidated: true, paths: body.paths.length, at: new Date().toISOString() });
   }
+  // "none": dead-man's-switch ping only. Lets the crawler confirm the site is
+  // reachable at end-of-run (so the workflow's failure step still fires on an
+  // outage) without re-purging a tag that a prior call this same run already
+  // covered — avoids a no-op double regen of every "prices"-tagged page.
+  if (body.tag === "none") {
+    return NextResponse.json({ revalidated: false, tag: "none", at: new Date().toISOString() });
+  }
+
   // Standard ISR: tag invalidation triggers stale-while-revalidate. First request
   // after the crawl gets the previous cached HTML instantly; background regen fires
   // and the next request gets fresh prices. No blocking render, no skeleton.

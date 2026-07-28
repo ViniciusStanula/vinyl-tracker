@@ -9,6 +9,8 @@ export type DiscoMeta = {
   lastfmListeners: number | null;
   lastfmPlaycount: number | null;
   lastfmWikiPt: string | null;
+  sobrePt: string | null;
+  sobrePtSourceUrl: string | null;
   mbMbid: string | null;
   mbFirstReleaseDate: string | null;
   mbPrimaryType: string | null;
@@ -88,6 +90,8 @@ export const getDiscoMeta = unstable_cache(
         lastfm_listeners AS "lastfmListeners",
         lastfm_playcount AS "lastfmPlaycount",
         lastfm_wiki_pt   AS "lastfmWikiPt",
+        sobre_pt         AS "sobrePt",
+        sobre_pt_source_url AS "sobrePtSourceUrl",
         mb_mbid                AS "mbMbid",
         mb_first_release_date  AS "mbFirstReleaseDate",
         mb_primary_type        AS "mbPrimaryType",
@@ -105,6 +109,26 @@ export const getDiscoMeta = unstable_cache(
   ["disco-meta"],
   { tags: ["prices"], revalidate: 14400 },
 );
+
+// Build-time only (generateStaticParams) — not wrapped in unstable_cache since
+// it runs once per deploy, not per-request. Ranks by real crawler-recorded
+// traffic (bot_hits) rather than lastfm_listeners, so it prioritizes the pages
+// Googlebot/bots actually hit, independent of a record's popularity elsewhere.
+export async function getTopBotHitSlugs(pathPrefix: string, limit: number): Promise<string[]> {
+  // The (::int) cast is load-bearing: without it, Postgres can't infer the
+  // parameter's type and picks the regex-match `substring(text, pattern)`
+  // overload instead of the position-based one, silently returning NULL (or
+  // a bogus regex match) for almost every row instead of the real slug.
+  const rows = await prisma.$queryRaw<{ slug: string }[]>`
+    SELECT substring(path from (${pathPrefix.length + 1})::int) AS slug, count(*) AS hits
+    FROM bot_hits
+    WHERE path LIKE ${pathPrefix + "%"}
+    GROUP BY slug
+    ORDER BY hits DESC
+    LIMIT ${limit}
+  `;
+  return rows.map((r) => r.slug);
+}
 
 export const getArtistPopularity = unstable_cache(
   async (

@@ -19,7 +19,7 @@ import { slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
-import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, type RelatedDeal } from "@/lib/db/disco";
+import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, getTopBotHitSlugs, type RelatedDeal } from "@/lib/db/disco";
 import { getEstilosList } from "@/lib/db/estilo";
 import { getPaisDisplayName, ISO2_TO_SLUG } from "@/lib/paises";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -30,14 +30,18 @@ import type { Metadata } from "next";
 // 1800 matches the data-layer TTL so the HTML cache never outlives its data.
 export const revalidate = 14400;
 
-// Without this a dynamic route renders dynamically (Cache-Control: no-store) in
-// Next 16 — the docs require returning an array, even empty, to enable ISR.
-// [] prebuilds nothing at build time; each /disco/[slug] is rendered and
-// CDN-cached on first request, then revalidated by the crawler's
-// revalidateTag("prices") and the 24h safety-net above. dynamicParams stays
-// true (default) so every slug is allowed.
-export function generateStaticParams() {
-  return [];
+// Prebuilds the pages Googlebot/bots actually hit most (bot_hits-ranked), so
+// their first visit is CDN-served instead of a cold DB render — the rest of
+// the ~30k-slug catalog still renders on first request same as before.
+// dynamicParams stays true (default) so every slug is allowed either way;
+// revalidateTag("prices") + the 24h safety-net above apply identically
+// whether a page was prebuilt here or rendered on-demand later.
+// Kept deliberately small: at 3000/1000/500 the build spent 7.2min prerendering
+// 4600 pages and exhausted Supabase's pooler (EMAXCONN, limit 400) on
+// concurrent builds. The top slugs are the ones bots re-hit constantly, so a
+// short head captures most of the benefit; the tail still renders on demand.
+export async function generateStaticParams() {
+  return (await getTopBotHitSlugs("/disco/", 300)).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -689,12 +693,17 @@ export default async function DiscoPage({
           // worth showing — listener stats (>0), wiki, MB facts, or Amazon rating.
           const hasLastfm = albumInfo != null && albumInfo.listeners > 0;
           const wikiSummary = albumInfo?.wikiSummary ?? null;
+          // sobrePt is Claude-written (claude_disco_bio_helper.py), only populated
+          // where lastfm_wiki_pt was null — the two never coexist, so this is a
+          // fallback, not a merge.
+          const sobrePt = !wikiSummary ? (meta?.sobrePt ?? null) : null;
+          const sobrePtSourceUrl = sobrePt ? (meta?.sobrePtSourceUrl ?? null) : null;
           const hasMb = mbInfo != null && Boolean(
             mbInfo.releaseYear || mbInfo.primaryType ||
             mbInfo.genres.length > 0 || mbInfo.tracklist.length > 0 || mbInfo.rating
           );
           const hasAmazon = Boolean(rating && disco.reviewCount && disco.reviewCount > 0);
-          if (!hasLastfm && !wikiSummary && !hasMb && !hasAmazon) return undefined;
+          if (!hasLastfm && !wikiSummary && !sobrePt && !hasMb && !hasAmazon) return undefined;
 
           const cleanTitle = cleanAlbumTitle(disco.titulo, disco.artista);
           const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
@@ -807,6 +816,25 @@ export default async function DiscoPage({
                       Dados: Last.fm ↗
                     </a>
                   </div>
+                </div>
+              )}
+
+              {sobrePt && (
+                <div className="bg-sleeve rounded-xl border border-groove p-4">
+                  <WikiExpander text={sobrePt} />
+                  {sobrePtSourceUrl && (
+                    <div className="mt-3 text-right">
+                      <a
+                        href={sobrePtSourceUrl}
+                        target="_blank"
+                        rel="nofollow noopener noreferrer"
+                        className="text-xs text-dust hover:text-parchment transition-colors"
+                        aria-label={`Ver ${disco.titulo} na Wikipedia`}
+                      >
+                        Dados: Wikipedia ↗
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -1060,20 +1060,26 @@ def ensure_mb_columns(conn) -> None:
             SELECT count(*) FROM information_schema.columns
             WHERE table_name = 'Disco'
               AND column_name IN
-                ('mb_mbid','mb_first_release_date','mb_primary_type','mb_genres')
+                ('mb_mbid','mb_first_release_date','mb_primary_type','mb_genres',
+                 'mb_title')
             """
         )
-        if cur.fetchone()[0] == 4:
+        if cur.fetchone()[0] == 5:
             log.debug("ensure_mb_columns: columns already present, skipping DDL.")
             return
         cur.execute("SET LOCAL lock_timeout = '10s'")
+        # mb_title stores the matched release-group's own title. Without it a
+        # bad match is undetectable after the fact: the catalog had a one-LP
+        # product carrying the 214-track tracklist of the box set "Wings
+        # 1971-73" and nothing on the row revealed the mismatch.
         cur.execute(
             """
             ALTER TABLE "Disco"
                 ADD COLUMN IF NOT EXISTS mb_mbid               TEXT,
                 ADD COLUMN IF NOT EXISTS mb_first_release_date TEXT,
                 ADD COLUMN IF NOT EXISTS mb_primary_type       TEXT,
-                ADD COLUMN IF NOT EXISTS mb_genres             TEXT
+                ADD COLUMN IF NOT EXISTS mb_genres             TEXT,
+                ADD COLUMN IF NOT EXISTS mb_title              TEXT
             """
         )
     conn.commit()
@@ -1104,8 +1110,8 @@ def fetch_albums_needing_mb(conn, limit: int = 200) -> list[dict]:
 def bulk_update_mb(conn, updates: list[dict]) -> int:
     """
     Writes MusicBrainz fields for album IDs.
-    Each item: {"id", "mbid", "first_release_date", "primary_type", "genres"}.
-    mbid="" marks a searched-but-unmatched row so it is not re-queried.
+    Each item: {"id", "mbid", "first_release_date", "primary_type", "genres",
+    "title"}. mbid="" marks a searched-but-unmatched row so it is not re-queried.
     """
     if not updates:
         return 0
@@ -1116,7 +1122,8 @@ def bulk_update_mb(conn, updates: list[dict]) -> int:
                SET mb_mbid               = %(mbid)s,
                    mb_first_release_date = %(first_release_date)s,
                    mb_primary_type       = %(primary_type)s,
-                   mb_genres             = %(genres)s
+                   mb_genres             = %(genres)s,
+                   mb_title              = %(title)s
                WHERE id = %(id)s""",
             updates,
             page_size=200,
@@ -1470,6 +1477,99 @@ def save_estilo_bio(conn, tag: str, intro: str, bio: str, lastfm_summary: str | 
     except Exception as exc:
         conn.rollback()
         log.warning("save_estilo_bio failed for %s: %s", tag, exc)
+        return False
+
+
+# ── Album-level "Sobre" (Claude-written) ────────────────────────────────────
+
+def ensure_disco_bio_columns(conn) -> None:
+    """Adds the album-level sobre columns if missing. Idempotent, raw DDL."""
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT count(*) FROM information_schema.columns
+            WHERE table_name = 'Disco'
+              AND column_name IN ('sobre_pt', 'sobre_generated_at', 'sobre_pt_source_url')
+            """
+        )
+        if cur.fetchone()[0] == 3:
+            log.debug("ensure_disco_bio_columns: columns already present, skipping DDL.")
+            return
+        cur.execute("SET LOCAL lock_timeout = '10s'")
+        cur.execute(
+            """
+            ALTER TABLE "Disco"
+                ADD COLUMN IF NOT EXISTS sobre_pt              TEXT,
+                ADD COLUMN IF NOT EXISTS sobre_generated_at    TIMESTAMPTZ,
+                ADD COLUMN IF NOT EXISTS sobre_pt_source_url   TEXT
+            """
+        )
+    conn.commit()
+    log.debug("ensure_disco_bio_columns: sobre columns created.")
+
+
+def fetch_disco_bio_context(conn, slug: str) -> dict | None:
+    """
+    Returns grounded data for writing an album-level "Sobre" section, or None
+    if the slug isn't found. Caller (Claude Code) composes the actual prose
+    from this data — nothing here is generated.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT d.slug, d.titulo, d.artista, d.mb_tracklist, d.mb_genres,
+                   d.mb_first_release_date, d.mb_primary_type,
+                   d.lastfm_wiki_pt, d.lastfm_tags, am.bio_short_pt
+            FROM "Disco" d
+            LEFT JOIN "ArtistMeta" am ON am.artista = d.artista
+            WHERE d.slug = %s
+            """,
+            (slug,),
+        )
+        row = cur.fetchone()
+    if row is None:
+        return None
+    (slug_, titulo, artista, mb_tracklist, mb_genres,
+     mb_first_release_date, mb_primary_type,
+     lastfm_wiki_pt, lastfm_tags, artist_bio_short) = row
+    return {
+        "slug": slug_,
+        "titulo": titulo,
+        "artista": artista,
+        "mb_tracklist": mb_tracklist,
+        "mb_genres": mb_genres,
+        "mb_first_release_date": mb_first_release_date,
+        "mb_primary_type": mb_primary_type,
+        "lastfm_wiki_pt": lastfm_wiki_pt,
+        "lastfm_tags": lastfm_tags,
+        "artist_bio_short": artist_bio_short,
+    }
+
+
+def save_disco_bio(conn, slug: str, sobre_pt: str, source_url: str | None = None) -> bool:
+    """Upserts sobre_pt + sobre_generated_at for the given Disco slug.
+
+    source_url records where the bio's facts were grounded (e.g. a Wikipedia
+    article), so the frontend can attribute/link it. None for bios grounded
+    only on MB/Last.fm data already attributed elsewhere on the page.
+    """
+    try:
+        with _cursor(conn) as cur:
+            cur.execute(
+                """
+                UPDATE "Disco"
+                SET sobre_pt             = %s,
+                    sobre_generated_at   = NOW(),
+                    sobre_pt_source_url  = %s
+                WHERE slug = %s
+                """,
+                (sobre_pt, source_url, slug),
+            )
+        conn.commit()
+        return True
+    except Exception as exc:
+        conn.rollback()
+        log.warning("save_disco_bio failed for %s: %s", slug, exc)
         return False
 
 

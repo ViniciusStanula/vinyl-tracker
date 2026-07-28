@@ -8,18 +8,19 @@ import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { toTitleCase } from "@/lib/utils/titleCase";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getArtistaPageData } from "@/lib/db/artista";
+import { getTopBotHitSlugs } from "@/lib/db/disco";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 export const revalidate = 14400; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
-// Without this Next 16 renders the route dynamically (Cache-Control: no-store).
-// [] = nothing prebuilt; each artist is rendered + CDN-cached on first request.
-// Sort/filter/pagination run client-side (ArtistaRecords) so no server
-// searchParams force the route dynamic. dynamicParams stays true (default).
-export function generateStaticParams() {
-  return [];
+// Prebuilds the artists bots hit most (bot_hits-ranked); the rest still
+// render + CDN-cache on first request as before. dynamicParams stays true
+// (default). Sort/filter/pagination run client-side (ArtistaRecords) so no
+// server searchParams force the route dynamic either way.
+export async function generateStaticParams() {
+  return (await getTopBotHitSlugs("/artista/", 150)).map((slug) => ({ slug }));
 }
 
 // Catalog cap: fetch the artist's whole set so client-side filtering is correct.

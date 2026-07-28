@@ -6,18 +6,19 @@ import { notFound } from "next/navigation";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getEstiloPageData, getRelatedEstilos, getTopArtistsForEstilo, getEstiloDisplayName, REDIRECTED_ESTILO_SLUGS, type SerializedEstiloData, type RelatedEstilo, type TopArtistForEstilo } from "@/lib/db/estilo";
+import { getTopBotHitSlugs } from "@/lib/db/disco";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 export const revalidate = 14400; // safety-net; on-demand purge via revalidateTag("prices") fires first
 
-// Without this Next 16 renders the route dynamically (Cache-Control: no-store).
-// [] = nothing prebuilt; each style is rendered + CDN-cached on first request.
-// Sort/filter/pagination run client-side (ArtistaRecords) so no server
-// searchParams force the route dynamic. dynamicParams stays true (default).
-export function generateStaticParams() {
-  return [];
+// Prebuilds the styles bots hit most (bot_hits-ranked); the rest still
+// render + CDN-cache on first request as before. dynamicParams stays true
+// (default). Sort/filter/pagination run client-side (ArtistaRecords) so no
+// server searchParams force the route dynamic either way.
+export async function generateStaticParams() {
+  return (await getTopBotHitSlugs("/estilo/", 50)).map((slug) => ({ slug }));
 }
 
 // Top-N cap: fetch the style's best records (default desconto sort) in one shot

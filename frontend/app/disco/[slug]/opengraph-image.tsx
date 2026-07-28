@@ -77,8 +77,13 @@ export default async function OgImage({
             </div>
           )}
           {precoMin != null && (
+            // Interpolated into ONE string child on purpose. Satori throws
+            // ("Expected <div> to have explicit display...") for a div with
+            // more than one child and no explicit display, which 500'd this
+            // route for every record that had price history. The throw happens
+            // while streaming the response, so it can't be caught here.
             <div style={{ color: "#957060", fontSize: 26 }}>
-              Menor preço já registrado: {fmt(precoMin)} · Histórico de 12 meses
+              {`Menor preço já registrado: ${fmt(precoMin)} · Histórico de 12 meses`}
             </div>
           )}
         </div>
