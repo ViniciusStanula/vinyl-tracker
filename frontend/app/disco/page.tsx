@@ -1,6 +1,5 @@
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
 import { getDiscoCount } from "@/lib/db/home";
-import { PEER_ORIGIN } from "@/lib/hreflang";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import SortBar from "@/components/SortBar";
 import InfiniteGrid from "@/components/InfiniteGrid";
@@ -54,11 +53,6 @@ const metadata = {
     "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
   alternates: {
     canonical: "/disco",
-    languages: {
-      "pt-BR": "/disco",
-      "en-US": `${PEER_ORIGIN}/records`,
-      "x-default": `${PEER_ORIGIN}/records`,
-    },
   },
   openGraph: {
     title: "Catálogo de Discos de Vinil — Garimpa Vinil",

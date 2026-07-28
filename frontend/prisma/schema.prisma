@@ -60,22 +60,6 @@ model HistoricoPreco {
   @@index([capturadoEm(sort: Desc)])
 }
 
-model HreflangSlug {
-  type String
-  slug String
-
-  @@id([type, slug])
-  @@map("HreflangSlug")
-}
-
-model HreflangRecord {
-  asin      String   @id
-  peerSlug  String   @map("peer_slug")
-  updatedAt DateTime @default(now()) @map("updated_at")
-
-  @@map("HreflangRecord")
-}
-
 // Bot/crawler hit log. Rows are inserted via the Supabase REST API from
 // proxy.ts (anon key + insert-only RLS policy), NOT via Prisma Client —
 // so every default must be a DB-level default (autoincrement/now()),

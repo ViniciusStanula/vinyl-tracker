@@ -7,8 +7,6 @@ import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getEstiloPageData, getRelatedEstilos, getTopArtistsForEstilo, getEstiloDisplayName, REDIRECTED_ESTILO_SLUGS, type SerializedEstiloData, type RelatedEstilo, type TopArtistForEstilo } from "@/lib/db/estilo";
 import { getTopBotHitSlugs } from "@/lib/db/disco";
-import { getHreflangSlug } from "@/lib/db/hreflang";
-import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
@@ -41,10 +39,7 @@ export async function generateMetadata({
   const { slug } = await params;
   if (REDIRECTED_ESTILO_SLUGS.has(slug)) return { title: "Estilo | Garimpa Vinil", robots: { index: false, follow: false } };
 
-  const [data, hasPeer] = await Promise.all([
-    getEstiloPageData(slug, 1, "desconto", null, RECORDS_CAP).catch(() => null),
-    getHreflangSlug("genre", slug).catch(() => false as false),
-  ]);
+  const data = await getEstiloPageData(slug, 1, "desconto", null, RECORDS_CAP).catch(() => null);
 
   if (!data) return { title: "Estilo | Garimpa Vinil" };
 
@@ -68,15 +63,6 @@ export async function generateMetadata({
     robots: noindex ? { index: false, follow: true } : undefined,
     alternates: {
       canonical: canonicalUrl,
-      ...(hasPeer && !noindex
-        ? {
-            languages: {
-              "pt-BR": `${SITE_URL}/estilo/${slug}`,
-              "en-US": `${PEER_ORIGIN}/genre/${slug}`,
-              "x-default": `${PEER_ORIGIN}/genre/${slug}`,
-            },
-          }
-        : {}),
     },
     openGraph: {
       type: "website",

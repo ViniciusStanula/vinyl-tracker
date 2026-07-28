@@ -9,8 +9,6 @@ import { toTitleCase } from "@/lib/utils/titleCase";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getArtistaPageData } from "@/lib/db/artista";
 import { getTopBotHitSlugs } from "@/lib/db/disco";
-import { getHreflangSlug } from "@/lib/db/hreflang";
-import { PEER_ORIGIN } from "@/lib/hreflang";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
@@ -40,10 +38,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
 
-  const [data, hasPeer] = await Promise.all([
-    getArtistaPageData(slug, 1, "desconto", null, RECORDS_CAP).catch(() => null),
-    getHreflangSlug("artist", slug).catch(() => false as const),
-  ]);
+  const data = await getArtistaPageData(slug, 1, "desconto", null, RECORDS_CAP).catch(() => null);
 
   if (!data) return { title: "Artista | Garimpa Vinil" };
 
@@ -73,15 +68,6 @@ export async function generateMetadata({
     robots: noindex ? { index: false, follow: true } : undefined,
     alternates: {
       canonical: canonicalUrl,
-      ...(hasPeer && !noindex
-        ? {
-            languages: {
-              "pt-BR": `${SITE_URL}/artista/${slug}`,
-              "en-US": `${PEER_ORIGIN}/artist/${slug}`,
-              "x-default": `${PEER_ORIGIN}/artist/${slug}`,
-            },
-          }
-        : {}),
     },
     openGraph: {
       type: "website",

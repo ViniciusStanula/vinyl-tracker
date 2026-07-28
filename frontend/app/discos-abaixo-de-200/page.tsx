@@ -1,5 +1,4 @@
 import { queryPriceUnder200WithCache } from "@/lib/db/promos";
-import { PEER_ORIGIN } from "@/lib/hreflang";
 import ArtistaRecords from "@/components/ArtistaRecords";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -24,11 +23,6 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     alternates: {
       canonical: "/discos-abaixo-de-200",
-      languages: {
-        "pt-BR": "/discos-abaixo-de-200",
-        "en-US": `${PEER_ORIGIN}/records-under-50`,
-        "x-default": `${PEER_ORIGIN}/records-under-50`,
-      },
     },
     openGraph: {
       title,
