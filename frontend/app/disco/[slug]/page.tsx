@@ -38,8 +38,12 @@ export const revalidate = 14400;
 // dynamicParams stays true (default) so every slug is allowed either way;
 // revalidateTag("prices") + the 24h safety-net above apply identically
 // whether a page was prebuilt here or rendered on-demand later.
+// Kept deliberately small: at 3000/1000/500 the build spent 7.2min prerendering
+// 4600 pages and exhausted Supabase's pooler (EMAXCONN, limit 400) on
+// concurrent builds. The top slugs are the ones bots re-hit constantly, so a
+// short head captures most of the benefit; the tail still renders on demand.
 export async function generateStaticParams() {
-  return (await getTopBotHitSlugs("/disco/", 3000)).map((slug) => ({ slug }));
+  return (await getTopBotHitSlugs("/disco/", 300)).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
