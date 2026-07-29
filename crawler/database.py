@@ -915,6 +915,28 @@ def upsert_category_associations(
     return len(rows)
 
 
+def fetch_untagged_discos(conn, limit: int | None = None) -> list[tuple[str, str, str]]:
+    """
+    Returns (slug, artista, titulo) for every Disco row with lastfm_tags IS
+    NULL -- the per-RECORD candidate list for backfill_tags.py's album-level
+    pass. Replaces fetch_untagged_artists (below) as the tag-enrichment
+    entry point: that function selects one row per ARTIST and the matching
+    write (bulk_update_tags) stamps the result onto every album that artist
+    has, which is the exact mechanism that capped 21,373 records at an
+    identical 3-tag artist-wide value (see genre_filter.py / PR #295).
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT slug, artista, titulo FROM "Disco"
+            WHERE lastfm_tags IS NULL
+            ORDER BY "createdAt" DESC
+            """ + ("LIMIT %s" if limit else ""),
+            (limit,) if limit else (),
+        )
+        return [(r[0], r[1], r[2]) for r in cur.fetchall()]
+
+
 def fetch_untagged_artists(conn, artistas: list[str] | None = None) -> list[str]:
     """
     Returns distinct artista values whose lastfm_tags column is NULL.
@@ -973,6 +995,32 @@ def bulk_update_tags(conn, artista_to_tags: dict[str, str]) -> int:
         updated = cur.rowcount
     conn.commit()
     log.debug("bulk_update_tags: updated tags for %d artista values.", len(rows))
+    return updated
+
+
+def bulk_update_tags_by_slug(conn, slug_to_tags: dict[str, str]) -> int:
+    """
+    Sets lastfm_tags per DISCO ROW (by slug), for the album-level re-tagging
+    pass -- unlike bulk_update_tags (per artista, which is how the site ended
+    up with every album by one artist sharing the same 3 tags in the first
+    place). No NULL guard here: this is an explicit re-tag of rows already
+    known to carry the artist-level-capped value, so overwriting is the
+    point, not a hazard to guard against.
+    """
+    if not slug_to_tags:
+        return 0
+
+    rows = [(tags, slug) for slug, tags in slug_to_tags.items()]
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            'UPDATE "Disco" SET lastfm_tags = %s WHERE slug = %s',
+            rows,
+            page_size=500,
+        )
+        updated = cur.rowcount
+    conn.commit()
+    log.debug("bulk_update_tags_by_slug: updated tags for %d rows.", len(rows))
     return updated
 
 

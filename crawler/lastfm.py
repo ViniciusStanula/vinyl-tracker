@@ -317,6 +317,59 @@ def _clean_wiki(html: str) -> str:
     return text
 
 
+def fetch_album_tags(artist: str, album: str, api_key: str, max_tags: int = 5) -> list[str] | None:
+    """
+    Returns up to max_tags genre tags for a specific album from Last.fm's
+    album.getTopTags -- the per-RECORD counterpart to fetch_artist_tags.
+
+    Root cause of the site's genre-precision problem: backfill_tags.py only
+    ever called artist.getTopTags and stamped the same 3 tags onto every
+    album by that artist (Pantera's "Reinventing the Steel", "Cowboys From
+    Hell" etc. all show identical genres). album.getTopTags scopes the
+    lookup to the specific release instead.
+
+    Returns None (not []) when the API call itself fails or the album isn't
+    found on Last.fm, distinct from a successful call that legitimately
+    found zero genre tags -- callers should not overwrite existing data on
+    None, but may on an empty list (matches fetch_artist_tags's existing
+    "'' means fetched, no tags" convention).
+    """
+    if _UNKNOWN_RE.search(artist):
+        return None
+
+    params = urllib.parse.urlencode({
+        "method":  "album.getTopTags",
+        "artist":  _uninvert(artist),
+        "album":   album,
+        "api_key": api_key,
+        "format":  "json",
+    })
+    try:
+        with urllib.request.urlopen(f"{LASTFM_BASE}?{params}", timeout=10) as resp:
+            data = json.loads(resp.read())
+    except Exception as exc:
+        log.debug("album.getTopTags failed for %r / %r: %s", artist, album, exc)
+        return None
+
+    if "error" in data:
+        log.debug("album.getTopTags error for %r / %r (%s): %s",
+                  artist, album, data.get("error"), data.get("message"))
+        return None
+
+    raw_tags: list[dict] = data.get("toptags", {}).get("tag", [])
+    tags: list[str] = []
+    for tag in raw_tags:
+        label = tag.get("name", "").lower().strip()
+        if not label or len(label) < 2 or len(label) > 40:
+            continue
+        if label in NON_GENRE_TAGS:
+            continue
+        tags.append(label)
+        if len(tags) >= max_tags:
+            break
+    return tags
+
+
 def _album_search_fallback(artist: str, cleaned: str, api_key: str) -> dict | None:
     """
     Falls back to album.search when album.getInfo finds nothing.
