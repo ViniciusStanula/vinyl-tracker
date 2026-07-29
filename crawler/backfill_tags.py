@@ -40,7 +40,7 @@ except ImportError:
     pass
 
 from database import get_connection, ensure_schema_extras, fetch_untagged_discos, bulk_update_tags_by_slug
-from lastfm import fetch_album_tags, clean_album_title
+from lastfm import fetch_album_tags, fetch_artist_tags, clean_album_title
 from genre_filter import filter_genres
 
 logging.basicConfig(
@@ -96,6 +96,18 @@ def main():
         # genre tag ranked behind five junk ones.
         raw_tags = fetch_album_tags(artista, clean, api_key, max_tags=15)
         tags = filter_genres(raw_tags)[:5] if raw_tags is not None else []
+
+        # Fallback for the ~1/3 of records where Last.fm has no per-album
+        # data at all (measured on a 40-row test batch): a genre that's only
+        # right for the artist beats no genre on the record page. Only fires
+        # when the per-album lookup came back genuinely empty, so most
+        # records still get real per-record precision -- this doesn't bring
+        # back the original bug, which was ALWAYS using the artist tag.
+        if not tags:
+            artist_tags = fetch_artist_tags(artista, api_key)
+            time.sleep(args.delay)
+            tags = filter_genres(artist_tags)[:5]
+
         tag_str = ", ".join(tags)
 
         if args.verbose or i % 50 == 0:
