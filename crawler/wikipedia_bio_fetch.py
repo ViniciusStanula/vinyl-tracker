@@ -80,6 +80,19 @@ import re
 # routinely name-drops the parent album it came from).
 _WRONG_TYPE = re.compile(r"\b(song|tour|musical|film|soundtrack|tv series)\b", re.IGNORECASE)
 
+# _WRONG_TYPE only ever checked hit_title, but a Wikipedia SONG page's title
+# is usually just the song's own name -- the "wrong type" signal instead
+# shows up in the extract's own opening clause. Confirmed live: "Smokin' in
+# the Boys Room" (title has no "song" in it) matched the Disco listing "Yeah
+# - Smokin' In The Boys Room", and its extract opens '"Smokin' in the Boys
+# Room" is a song originally recorded by Brownsville Station in 1973 on
+# their album Yeah!' -- describes the SONG, not the album, would have
+# misgrounded the bio despite is_about_album passing (the word "album"
+# appears, just about a different, parent work).
+_EXTRACT_WRONG_TYPE = re.compile(
+    r'^"?[^".]{0,80}"?\s+is\s+(a|an)\s+(song|single|track)\b', re.IGNORECASE
+)
+
 # Listing titles that bundle 2+ distinct albums into one Disco record (e.g. a
 # "Complete Vinyl Set" or "2-Pack"). A single Wikipedia album page can only
 # ever describe one of the bundled albums, so grounding a bio on it would
@@ -134,7 +147,7 @@ def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract:
     # (John Mayall album)" this way — a real album, just the wrong one.
     title_matches = title_lower == hit_core or title_lower in hit_core or hit_core in title_lower
     artist_in_extract = artista.lower() in extract.lower()
-    if _WRONG_TYPE.search(hit_title):
+    if _WRONG_TYPE.search(hit_title) or _EXTRACT_WRONG_TYPE.search(extract[:150]):
         return False
     # Disambiguation pages ("X may refer to: ...") list several unrelated
     # works and often name-drop the artist + "album" somewhere in the list,
