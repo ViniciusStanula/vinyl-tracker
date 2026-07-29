@@ -976,6 +976,32 @@ def bulk_update_tags(conn, artista_to_tags: dict[str, str]) -> int:
     return updated
 
 
+def bulk_update_tags_by_slug(conn, slug_to_tags: dict[str, str]) -> int:
+    """
+    Sets lastfm_tags per DISCO ROW (by slug), for the album-level re-tagging
+    pass -- unlike bulk_update_tags (per artista, which is how the site ended
+    up with every album by one artist sharing the same 3 tags in the first
+    place). No NULL guard here: this is an explicit re-tag of rows already
+    known to carry the artist-level-capped value, so overwriting is the
+    point, not a hazard to guard against.
+    """
+    if not slug_to_tags:
+        return 0
+
+    rows = [(tags, slug) for slug, tags in slug_to_tags.items()]
+    with _cursor(conn) as cur:
+        psycopg2.extras.execute_batch(
+            cur,
+            'UPDATE "Disco" SET lastfm_tags = %s WHERE slug = %s',
+            rows,
+            page_size=500,
+        )
+        updated = cur.rowcount
+    conn.commit()
+    log.debug("bulk_update_tags_by_slug: updated tags for %d rows.", len(rows))
+    return updated
+
+
 def fetch_albums_needing_lastfm_enrichment(
     conn, limit: int = 500, exclude_unidentified: bool = False
 ) -> list[dict]:
