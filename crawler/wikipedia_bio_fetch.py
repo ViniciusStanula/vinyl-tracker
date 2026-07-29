@@ -35,6 +35,7 @@ load_dotenv_if_present()
 
 from database import get_connection
 from lastfm import clean_album_title
+from mb_verify import verify_and_fix_mb
 
 API_URL = "https://en.wikipedia.org/w/api.php"
 HEADERS = {"User-Agent": "GarimpaVinil/1.0 (vinicius.stanula@gmail.com)"}
@@ -161,31 +162,43 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=50)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--apply-mb-fix", action="store_true",
+                     help="write MB re-matches for candidates with a wrong/missing "
+                          "match instead of just previewing them (default: dry run)")
+    ap.add_argument("--mb-delay", type=float, default=1.1)
     args = ap.parse_args()
 
     conn = get_connection()
     cur = conn.cursor()
+    # Was "AND d.mb_tracklist IS NOT NULL", which silently skipped forever any
+    # record whose MB match had never been found or was cleared — bios could
+    # never surface for those. Now selects mb_title/mb_mbid/mb_primary_type/
+    # mb_tracklist too, so the loop below can verify (and fix, via
+    # mb_verify.verify_and_fix_mb) each candidate's MB match before deciding
+    # whether it has a usable tracklist -- fixing the tracklist as a
+    # byproduct of processing the record for a bio, not a separate pass.
     cur.execute(
         """
-        SELECT d.slug, d.artista, d.titulo, count(b.id) AS hits
+        SELECT d.slug, d.artista, d.titulo, count(b.id) AS hits,
+               d.mb_title, d.mb_mbid, d.mb_primary_type, d.mb_tracklist
         FROM "Disco" d
         JOIN bot_hits b ON b.path = '/disco/' || d.slug
         WHERE d.disponivel = TRUE AND (d.format IS NULL OR d.format = 'vinyl')
           AND d.sobre_pt IS NULL AND d.lastfm_wiki_pt IS NULL
-          AND d.mb_tracklist IS NOT NULL
-        GROUP BY d.slug, d.artista, d.titulo
+        GROUP BY d.slug, d.artista, d.titulo, d.mb_title, d.mb_mbid, d.mb_primary_type, d.mb_tracklist
         ORDER BY hits DESC
         LIMIT %s
         """,
         (args.limit,),
     )
     rows = cur.fetchall()
-    conn.close()
 
     matched = []
     skipped = 0
     bundle_skipped = 0
-    for slug, artista, titulo, hits in rows:
+    mb_fixed = 0
+    no_tracklist = 0
+    for slug, artista, titulo, hits, mb_title, mb_mbid, mb_primary_type, mb_tracklist_raw in rows:
         if slug in EXCLUDE_SLUGS:
             skipped += 1
             print(f"SKIP   {artista} - {titulo}  (excluded slug)")
@@ -195,6 +208,23 @@ def main():
             print(f"SKIP   {artista} - {titulo}  (bundle listing)")
             continue
         titulo_clean = clean_album_title(titulo, artista)
+
+        mb_result = verify_and_fix_mb(
+            conn, slug, artista, titulo, titulo_clean,
+            mb_title, mb_mbid, mb_primary_type, mb_tracklist_raw,
+            delay=args.mb_delay, apply=args.apply_mb_fix,
+        )
+        if mb_result["fixed"]:
+            mb_fixed += 1
+            print(f"MB-FIX {artista} - {titulo_clean}  ({mb_result['reason']}) "
+                  f"-> {mb_result['mb_title'] or '(no confident match)'}"
+                  f"{'' if args.apply_mb_fix else '  [dry run, not written]'}")
+        if not mb_result["mb_tracklist"]:
+            no_tracklist += 1
+            skipped += 1
+            print(f"SKIP   {artista} - {titulo_clean}  (no MB tracklist)")
+            continue
+
         try:
             hits = search_candidate(artista, titulo_clean)
         except Exception as exc:
@@ -231,12 +261,16 @@ def main():
             skipped += 1
             print(f"SKIP   {artista} - {titulo_clean}  (no confident match)")
 
+    conn.close()
+
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(matched, f, ensure_ascii=False, indent=2)
 
     print(
-        f"\nDone. {len(matched)} matched, {skipped} skipped, "
-        f"{bundle_skipped} bundle-skipped, {len(rows)} total. Wrote {args.out}"
+        f"\nDone. {len(matched)} matched, {skipped} skipped "
+        f"({no_tracklist} for no MB tracklist), {bundle_skipped} bundle-skipped, "
+        f"{mb_fixed} MB re-matches {'applied' if args.apply_mb_fix else '(dry run)'}, "
+        f"{len(rows)} total. Wrote {args.out}"
     )
 
 
