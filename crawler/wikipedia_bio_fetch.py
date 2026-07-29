@@ -109,13 +109,22 @@ _COMPILATION_TITLE = re.compile(
 )
 
 
+def _norm_title(s: str) -> str:
+    # "&" vs "and" is a real, common difference between an Amazon listing
+    # title and MB/Wikipedia's canonical title (confirmed: "Flesh & Blood"
+    # vs Wikipedia's "Flesh and Blood" was rejected on this alone before this
+    # normalization existed). Same fold mb_verify.py/audit_mb_titles.py
+    # already use for the equivalent MB-title comparison.
+    return s.lower().replace("&", "and").strip()
+
+
 def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract: str) -> bool:
     # Cheap heuristics, deliberately conservative — false negatives (skip a
     # real match) are fine, false positives (wrong page) are not.
-    title_lower = titulo_clean.lower().strip()
+    title_lower = _norm_title(titulo_clean)
     hit_lower = hit_title.lower()
     # Strip Wikipedia disambiguation suffix like " (Coldplay album)" for comparison.
-    hit_core = hit_lower.split(" (")[0].strip()
+    hit_core = _norm_title(hit_lower.split(" (")[0])
     # Compare against hit_core, not hit_lower. The disambiguator often IS the
     # artist name ("(John Mayall album)") — when a Disco product's title is
     # just the bare artist name (an incomplete/bad Amazon listing), checking
@@ -137,13 +146,18 @@ def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract:
         return False
     if _COMPILATION_TITLE.search(titulo_clean) and not _COMPILATION_TITLE.search(hit_title):
         return False
-    # An album's Wikipedia intro sentence almost always uses the word "album"
-    # itself ("... is a/the studio album by ..."). Checking only the FIRST
-    # sentence (not the whole extract) matters — a song/tour page's later
-    # sentences often reference the parent album by name too.
-    first_sentence = extract.split(". ", 1)[0]
-    is_about_album = "album" in first_sentence.lower()
-    return title_matches and artist_in_extract and is_about_album and len(extract.strip()) >= 200
+    # An album/EP's Wikipedia intro sentence almost always uses the word
+    # "album" or "EP" itself ("... is a/the studio album by ..."). Was
+    # "first sentence" via extract.split(". ", 1)[0], but that breaks on any
+    # abbreviation period before the real sentence end — "Listen Without
+    # Prejudice Vol. 1 is the second solo studio album..." truncated at
+    # "Vol." and never reached "album", wrongly rejecting a real match. A
+    # fixed leading window is robust to that and still excludes a song/tour
+    # page's later, unrelated mention of the parent album (same intent the
+    # sentence-split was going for).
+    intro_window = extract[:220].lower()
+    is_about_album = "album" in intro_window or re.search(r"\bep\b", intro_window)
+    return title_matches and artist_in_extract and bool(is_about_album) and len(extract.strip()) >= 200
 
 
 # Known-bad slugs that keep resurfacing every run because sobre_pt stays NULL
