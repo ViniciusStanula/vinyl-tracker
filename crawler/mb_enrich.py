@@ -83,6 +83,26 @@ def _tokens(s: str) -> set[str]:
     return set(re.sub(r"[^\w\s]", " ", s.lower()).split())
 
 
+def title_matches_release(mb_title: str, album_clean: str, artist: str) -> bool:
+    """
+    True if a MusicBrainz release-group title plausibly matches a cleaned
+    Amazon album title. Shared by search_release_group (live matching) and
+    audit_mb_titles.py (retroactive audit of already-matched rows, using the
+    backfilled mb_title column instead of a fresh API call) so both use
+    exactly the same rule.
+
+    Artist tokens are discounted from mb_title before comparing, since
+    MusicBrainz canonicalises some titles with the artist baked in
+    ("John Lennon/Plastic Ono Band"), which would otherwise fail the subset
+    test for a listing that just calls it "Plastic Ono Band".
+    """
+    if not mb_title:
+        return False
+    qtok = _tokens(album_clean)
+    atok = _tokens(artist)
+    return (_tokens(mb_title) - atok) <= qtok
+
+
 # Lucene special chars that break a MusicBrainz query if left unescaped.
 _LUCENE_SPECIALS = re.compile(r'[+\-&|!(){}\[\]^"~*?:\\/]')
 
@@ -118,11 +138,8 @@ def search_release_group(artist: str, album: str) -> dict | None:
     # the artist baked in ("John Lennon/Plastic Ono Band" for the album an
     # Amazon listing just calls "Plastic Ono Band"), which would otherwise fail
     # the subset test and lose a correct match.
-    qtok = _tokens(album)
-    atok = _tokens(artist)
-
     def _title_ok(g: dict) -> bool:
-        return bool(g.get("title")) and (_tokens(g["title"]) - atok) <= qtok
+        return title_matches_release(g.get("title", ""), album, artist)
 
     groups = [g for g in _mb_search_groups(artist, album, quoted=True)
               if int(g.get("score", 0)) >= MB_SCORE_THRESHOLD and _title_ok(g)]
