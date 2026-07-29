@@ -107,7 +107,12 @@ _BUNDLE_TITLE = re.compile(
 )
 
 
-_DISAMBIG = re.compile(r"may (also )?refer to:?", re.IGNORECASE)
+# \s+ not literal spaces: Wikipedia's disambiguation-list boilerplate can
+# carry a double space ("Death metal may  also refer to:") that a single
+# literal space silently fails to match. Confirmed live: this let a
+# disambiguation page (Dismember's "DEATH METAL" listing matched to the
+# genre-name disambig page) through as a "confident" match.
+_DISAMBIG = re.compile(r"may\s+(also\s+)?refer to:?", re.IGNORECASE)
 
 # A "Live" or "Best Of"/compilation listing routinely matches the artist's
 # ORIGINAL studio album page on title alone (e.g. "X: Live In LA" vs the
