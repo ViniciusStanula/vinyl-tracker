@@ -205,6 +205,21 @@ export default async function DiscoPage({
       }
     : null;
 
+  // The header badge and "Ficha técnica" must show the same genres — they
+  // used to disagree because the header read raw lastfm_tags (which a past
+  // enrichment bug clobbered to the ARTIST's tags on many rows, e.g. every
+  // Pantera album showing "thrash metal, groove metal, heavy metal" even
+  // when it doesn't apply to that specific record) while Ficha técnica
+  // already read the per-release mb_genres. Prefer mbInfo.genres (same
+  // validated {name, slug} shape Ficha técnica uses) and only fall back to
+  // lastfm-derived styleTags when there's no MB genre data at all.
+  const headerGenres = mbInfo && mbInfo.genres.length > 0
+    ? mbInfo.genres
+    : styleTags.map((tag) => {
+        const tagSlug = slugifyStyle(tag);
+        return { name: tag, slug: validStyleSlugs.has(tagSlug) ? tagSlug : null };
+      });
+
   // Artist country of origin (from MusicBrainz via ArtistMeta), rendered as a
   // PT-BR-named link to the /pais/<slug> listing. Independent of the release
   // match — only shown when both the ISO code and a known PT name resolve.
@@ -563,18 +578,22 @@ export default async function DiscoPage({
               >
                 {disco.artista}
               </Link>
-              {styleTags.length > 0 && (
+              {headerGenres.length > 0 && (
                 <>
                   <span aria-hidden="true" className="opacity-40">·</span>
-                  {styleTags.map((tag, i) => (
-                    <span key={tag} className="contents">
+                  {headerGenres.map((g, i) => (
+                    <span key={g.name} className="contents">
                       {i > 0 && <span aria-hidden="true" className="opacity-40">/</span>}
-                      <Link
-                        href={`/estilo/${slugifyStyle(tag)}`}
-                        className="hover:text-parchment transition-colors"
-                      >
-                        {tag}
-                      </Link>
+                      {g.slug ? (
+                        <Link
+                          href={`/estilo/${g.slug}`}
+                          className="hover:text-parchment transition-colors"
+                        >
+                          {g.name}
+                        </Link>
+                      ) : (
+                        g.name
+                      )}
                     </span>
                   ))}
                 </>
