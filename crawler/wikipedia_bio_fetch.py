@@ -115,7 +115,14 @@ def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract:
     hit_lower = hit_title.lower()
     # Strip Wikipedia disambiguation suffix like " (Coldplay album)" for comparison.
     hit_core = hit_lower.split(" (")[0].strip()
-    title_matches = title_lower == hit_core or title_lower in hit_lower or hit_core in title_lower
+    # Compare against hit_core, not hit_lower. The disambiguator often IS the
+    # artist name ("(John Mayall album)") — when a Disco product's title is
+    # just the bare artist name (an incomplete/bad Amazon listing), checking
+    # against the full hit_lower makes "john mayall" trivially match ANY
+    # album by John Mayall, since the artist name sits right there in the
+    # suffix. Confirmed: "John Mayall" (product) matched "Back to the Roots
+    # (John Mayall album)" this way — a real album, just the wrong one.
+    title_matches = title_lower == hit_core or title_lower in hit_core or hit_core in title_lower
     artist_in_extract = artista.lower() in extract.lower()
     if _WRONG_TYPE.search(hit_title):
         return False
