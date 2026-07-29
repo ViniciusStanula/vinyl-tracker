@@ -1,14 +1,28 @@
 """
-backfill_tags.py — One-time script to tag all existing artists with Last.fm genres.
+backfill_tags.py — Tags every Disco row with lastfm_tags IS NULL, per RECORD.
 
-Fetches tags for every Disco row where lastfm_tags IS NULL, respecting Last.fm's
-~5 req/s rate limit.  Safe to interrupt and re-run: already-tagged artists
-(including those with an empty string) are skipped.
+Runs on a schedule (.github/workflows/tag_enrichment.yml, every 6h) so this
+is the entry point for tagging brand-new listings, not just a one-time
+backfill despite the filename.
+
+Was per-ARTIST (Last.fm artist.getTopTags, one call per artist, written via
+UPDATE ... WHERE artista = %s) until 2026-07-29: that stamped the SAME 3
+tags onto every album by an artist, capping 21,373 records at an identical
+artist-wide value (Pantera's "Reinventing the Steel", "Cowboys From Hell",
+"History of Hostility" all showed the same genre string). Fixed to call
+album.getTopTags per record instead. See crawler/rematch_album_tags.py for
+the one-off backfill that corrected the already-clobbered rows; this file
+is what keeps NEW rows from developing the same problem going forward.
+
+Safe to interrupt and re-run: only rows with lastfm_tags IS NULL are
+selected, and a row is written (even to '') as soon as it's processed, so a
+partial run just leaves the remainder NULL for next time.
 
 Usage:
     python backfill_tags.py
     python backfill_tags.py --dry-run        # print what would be fetched, no writes
-    python backfill_tags.py --delay 0.3      # slower rate (default: 0.21 s)
+    python backfill_tags.py --delay 0.3      # slower rate (default: 0.25)
+    python backfill_tags.py --limit 500      # cap this run (workflow uses this)
 
 Requires:
     LASTFM_API_KEY and DATABASE_URL in environment (or .env file).
@@ -19,15 +33,15 @@ import time
 import argparse
 import logging
 
-# Load .env if python-dotenv is available (dev convenience).
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
 
-from database import get_connection, ensure_schema_extras, fetch_untagged_artists, bulk_update_tags
-from lastfm import fetch_artist_tags
+from database import get_connection, ensure_schema_extras, fetch_untagged_discos, bulk_update_tags_by_slug
+from lastfm import fetch_album_tags, clean_album_title
+from genre_filter import filter_genres
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,12 +52,12 @@ log = logging.getLogger(__name__)
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Backfill Last.fm genre tags for all artists")
+    p = argparse.ArgumentParser(description="Tag every Disco row missing lastfm_tags, per record")
     p.add_argument("--dry-run",  action="store_true", help="Fetch tags but do not write to DB")
-    p.add_argument("--delay",    type=float, default=0.21, metavar="S",
-                   help="Seconds between Last.fm requests (default: 0.21)")
-    p.add_argument("--batch",    type=int, default=100, metavar="N",
-                   help="DB commit batch size (default: 100)")
+    p.add_argument("--delay",    type=float, default=0.25, metavar="S",
+                   help="Seconds between Last.fm requests (default: 0.25)")
+    p.add_argument("--limit",    type=int, default=None, metavar="N",
+                   help="Cap the number of rows processed this run")
     p.add_argument("--verbose",  action="store_true")
     return p.parse_args()
 
@@ -62,46 +76,42 @@ def main():
     conn = get_connection()
     ensure_schema_extras(conn)   # adds lastfm_tags column if it doesn't exist yet
 
-    untagged = fetch_untagged_artists(conn)   # all artists with lastfm_tags IS NULL
-    total = len(untagged)
-    log.info("Artists to tag: %d%s", total, "  (dry-run — no writes)" if args.dry_run else "")
+    rows = fetch_untagged_discos(conn, limit=args.limit)
+    total = len(rows)
+    log.info("Records to tag: %d%s", total, "  (dry-run — no writes)" if args.dry_run else "")
 
     if total == 0:
-        log.info("Nothing to do. All artists already have tags.")
+        log.info("Nothing to do. All records already have tags.")
         conn.close()
         return
 
     t_start = time.monotonic()
-    batch: dict[str, str] = {}
     done = 0
 
-    for i, artista in enumerate(untagged, 1):
-        tags = fetch_artist_tags(artista, api_key)
+    for i, (slug, artista, titulo) in enumerate(rows, 1):
+        clean = clean_album_title(titulo, artista)
+        # Pull more raw candidates than kept -- filter_genres below removes
+        # junk Last.fm ranks high (years, the artist's own name as a
+        # self-tag), so truncating before filtering can throw away a real
+        # genre tag ranked behind five junk ones.
+        raw_tags = fetch_album_tags(artista, clean, api_key, max_tags=15)
+        tags = filter_genres(raw_tags)[:5] if raw_tags is not None else []
         tag_str = ", ".join(tags)
-        batch[artista] = tag_str
 
         if args.verbose or i % 50 == 0:
-            log.info("[%d/%d] %r → %s", i, total, artista, repr(tag_str) if tag_str else "(none)")
+            log.info("[%d/%d] %r / %r → %s", i, total, artista, clean, repr(tag_str) if tag_str else "(none)")
 
-        # Flush batch to DB
-        if not args.dry_run and len(batch) >= args.batch:
-            written = bulk_update_tags(conn, batch)
-            done += written
-            log.info("  Committed %d rows (%d/%d total).", written, done, total)
-            batch = {}
+        if not args.dry_run:
+            bulk_update_tags_by_slug(conn, {slug: tag_str})
+            done += 1
 
         if i < total:
             time.sleep(args.delay)
 
-    # Final flush
-    if not args.dry_run and batch:
-        written = bulk_update_tags(conn, batch)
-        done += written
-
     conn.close()
     elapsed = time.monotonic() - t_start
     log.info(
-        "Done. %d/%d artists %s in %.0fs.",
+        "Done. %d/%d records %s in %.0fs.",
         done if not args.dry_run else total,
         total,
         "tagged" if not args.dry_run else "inspected (dry-run)",

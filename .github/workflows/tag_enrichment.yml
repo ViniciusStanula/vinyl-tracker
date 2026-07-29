@@ -29,9 +29,12 @@ jobs:
         run: pip install -r crawler/requirements.txt
 
       - name: Run tag enrichment
-        # Fetches Last.fm genre tags for all artists where lastfm_tags IS NULL.
-        # Safe to interrupt and re-run: already-tagged artists are skipped.
-        # At ~0.21s/artist the 55-min ceiling handles ~15,000 artists per run.
+        # Fetches Last.fm genre tags per RECORD (album.getTopTags) for every
+        # Disco row where lastfm_tags IS NULL -- i.e. brand-new listings
+        # since the last run, not a one-time backfill despite the filename.
+        # Per-artist tagging (pre-2026-07-29) stamped the same 3 tags onto
+        # every album by an artist; see crawler/rematch_album_tags.py for the
+        # backfill that corrected the already-clobbered rows.
         run: python crawler/backfill_tags.py
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

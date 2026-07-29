@@ -915,6 +915,28 @@ def upsert_category_associations(
     return len(rows)
 
 
+def fetch_untagged_discos(conn, limit: int | None = None) -> list[tuple[str, str, str]]:
+    """
+    Returns (slug, artista, titulo) for every Disco row with lastfm_tags IS
+    NULL -- the per-RECORD candidate list for backfill_tags.py's album-level
+    pass. Replaces fetch_untagged_artists (below) as the tag-enrichment
+    entry point: that function selects one row per ARTIST and the matching
+    write (bulk_update_tags) stamps the result onto every album that artist
+    has, which is the exact mechanism that capped 21,373 records at an
+    identical 3-tag artist-wide value (see genre_filter.py / PR #295).
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT slug, artista, titulo FROM "Disco"
+            WHERE lastfm_tags IS NULL
+            ORDER BY "createdAt" DESC
+            """ + ("LIMIT %s" if limit else ""),
+            (limit,) if limit else (),
+        )
+        return [(r[0], r[1], r[2]) for r in cur.fetchall()]
+
+
 def fetch_untagged_artists(conn, artistas: list[str] | None = None) -> list[str]:
     """
     Returns distinct artista values whose lastfm_tags column is NULL.
