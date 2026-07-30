@@ -133,7 +133,13 @@ def _norm_title(s: str) -> str:
     # vs Wikipedia's "Flesh and Blood" was rejected on this alone before this
     # normalization existed). Same fold mb_verify.py/audit_mb_titles.py
     # already use for the equivalent MB-title comparison.
-    return s.lower().replace("&", "and").strip()
+    s = s.lower().replace("&", "and")
+    # Strip other punctuation too (comma, colon, period, ...) -- confirmed
+    # live: M83's "Dead Cities Red Seas & Lost Ghosts" (Amazon listing, no
+    # comma) failed against Wikipedia's real title "Dead Cities, Red Seas &
+    # Lost Ghosts" purely because of that one comma; nothing else differed.
+    s = re.sub(r"[^\w\s]", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
 
 
 def _contains_whole(needle: str, haystack: str) -> bool:
