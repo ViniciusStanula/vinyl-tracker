@@ -136,7 +136,19 @@ def _norm_title(s: str) -> str:
     return s.lower().replace("&", "and").strip()
 
 
-def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract: str) -> bool:
+def _contains_whole(needle: str, haystack: str) -> bool:
+    # Plain "in" lets a substring match across a word boundary that changes
+    # meaning -- confirmed live: hit_core "romance" matched inside product
+    # title "...mis romances" (a DIFFERENT, later Luis Miguel album) purely
+    # because "romance" is a prefix of "romances". \b...\b requires the
+    # matched span to end/start on a real word boundary, so "romance" no
+    # longer matches inside "romances" (no boundary between "e" and "s").
+    if not needle:
+        return False
+    return re.search(r"\b" + re.escape(needle) + r"\b", haystack) is not None
+
+
+def is_confident_match(hit_title: str, titulo: str, titulo_clean: str, artista: str, extract: str) -> bool:
     # Cheap heuristics, deliberately conservative — false negatives (skip a
     # real match) are fine, false positives (wrong page) are not.
     title_lower = _norm_title(titulo_clean)
@@ -150,7 +162,7 @@ def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract:
     # album by John Mayall, since the artist name sits right there in the
     # suffix. Confirmed: "John Mayall" (product) matched "Back to the Roots
     # (John Mayall album)" this way — a real album, just the wrong one.
-    title_matches = title_lower == hit_core or title_lower in hit_core or hit_core in title_lower
+    title_matches = title_lower == hit_core or _contains_whole(title_lower, hit_core) or _contains_whole(hit_core, title_lower)
     artist_in_extract = artista.lower() in extract.lower()
     if _WRONG_TYPE.search(hit_title) or _EXTRACT_WRONG_TYPE.search(extract[:150]):
         return False
@@ -160,9 +172,19 @@ def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract:
     # article about the record itself.
     if _DISAMBIG.search(extract[:200]):
         return False
-    if _LIVE_TITLE.search(titulo_clean) and not _LIVE_TITLE.search(hit_title):
+    # Check the RAW titulo too, not just titulo_clean. clean_album_title can
+    # strip "Live"/edition-marker words as junk before this function ever
+    # sees them -- confirmed live: "History of the Grateful Dead Vol. 1
+    # (Bear's Choice) [Live] [50th Anniversary Edition]" cleaned down to
+    # "History of the Grateful Dead Vol. 1 (Bear's Choice)", losing "Live"
+    # entirely, so this guard silently never fired and the record matched
+    # the band's unrelated 1967 studio debut instead of anything about the
+    # actual live release. Same failure emptied "Marvin Gaye Vinyl - Let's
+    # Get It On... Live..." down to just "Marvin Gaye", which then matched
+    # a random early album via the bare-artist-name trap above.
+    if (_LIVE_TITLE.search(titulo_clean) or _LIVE_TITLE.search(titulo)) and not _LIVE_TITLE.search(hit_title):
         return False
-    if _COMPILATION_TITLE.search(titulo_clean) and not _COMPILATION_TITLE.search(hit_title):
+    if (_COMPILATION_TITLE.search(titulo_clean) or _COMPILATION_TITLE.search(titulo)) and not _COMPILATION_TITLE.search(hit_title):
         return False
     # An album/EP's Wikipedia intro sentence almost always uses the word
     # "album" or "EP" itself ("... is a/the studio album by ..."). Was
@@ -273,7 +295,7 @@ def main():
                 print(f"EXTRACT_ERROR {slug} / {hit['title']}: {exc}", file=sys.stderr)
                 continue
             time.sleep(RATE_LIMIT)
-            if is_confident_match(hit["title"], titulo_clean, artista, extract):
+            if is_confident_match(hit["title"], titulo, titulo_clean, artista, extract):
                 found = (hit["title"], extract)
                 break
 
