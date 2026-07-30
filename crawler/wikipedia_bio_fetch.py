@@ -202,7 +202,7 @@ def is_confident_match(hit_title: str, titulo: str, titulo_clean: str, artista: 
     # page's later, unrelated mention of the parent album (same intent the
     # sentence-split was going for).
     intro_window = extract[:220].lower()
-    is_about_album = "album" in intro_window or re.search(r"\bep\b", intro_window)
+    is_about_album = "album" in intro_window or "mixtape" in intro_window or re.search(r"\bep\b", intro_window)
     # Was >= 200 -- rejected genuinely valid short extracts. Confirmed live:
     # "Passion and Warfare" (Steve Vai, certified Gold, unambiguously the
     # right album -- title/artist/is_about_album all passed) has a real
