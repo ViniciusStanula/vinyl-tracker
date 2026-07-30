@@ -154,6 +154,46 @@ def _contains_whole(needle: str, haystack: str) -> bool:
     return re.search(r"\b" + re.escape(needle) + r"\b", haystack) is not None
 
 
+def _artist_in_extract(artista: str, extract: str) -> bool:
+    # Case-insensitive substring alone is unsafe when the artist name is a
+    # short/common English word -- confirmed live: the band "Studio" passed
+    # this check against Elton John's "Songs from the West Coast" page purely
+    # because that extract's boilerplate says "...is the twenty-sixth studio
+    # album by...". Real mentions of an artist's own name in Wikipedia prose
+    # are capitalized (it's a proper noun); the generic word "studio" in
+    # "studio album" is not -- so require a word-boundary match that starts
+    # with an uppercase letter.
+    #
+    # A bare uppercase check breaks any "The X" artist, though: English
+    # grammar lowercases "the" as an article mid-sentence ("...album by the
+    # Rolling Stones"), even though the DB stores "The Rolling Stones" with
+    # a capital T. Confirmed live -- this literally broke The Beatles, The
+    # Rolling Stones, The Beach Boys, etc. the moment the uppercase check
+    # was added. Strip a leading "The " before checking case, and let it
+    # optionally re-match a lowercase "the " right before the core name.
+    if not artista:
+        return False
+    core = re.sub(r"^the\s+", "", artista, flags=re.IGNORECASE) or artista
+    # (?<!\w)/(?!\w) instead of \b at the edges: \b requires a transition
+    # between a word char and a non-word char, which never fires when the
+    # pattern itself starts/ends on punctuation. Confirmed live: "N.W.A."
+    # (trailing ".") never matched with a trailing \b, since "." followed by
+    # a space is non-word-to-non-word, not a boundary. The lookarounds just
+    # assert "not a word character here", which is what was actually meant.
+    pattern = r"(?<!\w)(?:the\s+)?" + re.escape(core) + r"(?!\w)"
+    for m in re.finditer(pattern, extract, re.IGNORECASE):
+        core_start = m.end() - len(core)
+        # Not .isupper(): a real match starting with a digit ("21st Century
+        # Schizoid Band", "6LACK") is neither upper nor lower, so .isupper()
+        # always failed it even though it's a correct, properly-matched
+        # mention. .islower() only rejects an actual lowercase letter (the
+        # "studio" collision this check exists for), letting digits/
+        # punctuation/uppercase all pass as before.
+        if not extract[core_start:core_start + 1].islower():
+            return True
+    return False
+
+
 def is_confident_match(hit_title: str, titulo: str, titulo_clean: str, artista: str, extract: str) -> bool:
     # Cheap heuristics, deliberately conservative — false negatives (skip a
     # real match) are fine, false positives (wrong page) are not.
@@ -169,7 +209,7 @@ def is_confident_match(hit_title: str, titulo: str, titulo_clean: str, artista: 
     # suffix. Confirmed: "John Mayall" (product) matched "Back to the Roots
     # (John Mayall album)" this way — a real album, just the wrong one.
     title_matches = title_lower == hit_core or _contains_whole(title_lower, hit_core) or _contains_whole(hit_core, title_lower)
-    artist_in_extract = artista.lower() in extract.lower()
+    artist_in_extract = _artist_in_extract(artista, extract)
     if _WRONG_TYPE.search(hit_title) or _EXTRACT_WRONG_TYPE.search(extract[:150]):
         return False
     # Disambiguation pages ("X may refer to: ...") list several unrelated
