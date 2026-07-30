@@ -197,7 +197,15 @@ def is_confident_match(hit_title: str, titulo: str, titulo_clean: str, artista: 
     # sentence-split was going for).
     intro_window = extract[:220].lower()
     is_about_album = "album" in intro_window or re.search(r"\bep\b", intro_window)
-    return title_matches and artist_in_extract and bool(is_about_album) and len(extract.strip()) >= 200
+    # Was >= 200 -- rejected genuinely valid short extracts. Confirmed live:
+    # "Passion and Warfare" (Steve Vai, certified Gold, unambiguously the
+    # right album -- title/artist/is_about_album all passed) has a real
+    # Wikipedia intro of only 173 chars ("...is the second studio album by
+    # guitarist Steve Vai, released on May 22, 1990... certified Gold by the
+    # RIAA."), two complete factual sentences, just short. 80 still rejects
+    # genuinely degenerate stubs (a single sub-sentence fragment) without
+    # punishing an artist/album whose Wikipedia page just isn't long.
+    return title_matches and artist_in_extract and bool(is_about_album) and len(extract.strip()) >= 80
 
 
 # Known-bad slugs that keep resurfacing every run because sobre_pt stays NULL
