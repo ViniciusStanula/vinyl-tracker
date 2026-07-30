@@ -140,6 +140,18 @@ const nextConfig: NextConfig = {
       { source: "/estilo/jim-hall", destination: "/artista/jim-hall", permanent: true },
       { source: "/estilo/middle-of-the-road", destination: "/artista/middle-of-the-road", permanent: true },
       { source: "/estilo/queen", destination: "/artista/queen", permanent: true },
+      // More artist-name tags found from the 2026-07-30 artist/genre audit
+      // (K-pop idol names and other artists leaked in as lastfm_tags).
+      { source: "/estilo/exo", destination: "/artista/exo", permanent: true },
+      { source: "/estilo/jimin", destination: "/artista/jimin", permanent: true },
+      { source: "/estilo/rose", destination: "/artista/rose", permanent: true },
+      { source: "/estilo/jay-z", destination: "/artista/jay-z", permanent: true },
+      { source: "/estilo/metallica", destination: "/artista/metallica", permanent: true },
+      // Anime titles used as a folksonomy tag instead of the actual genre --
+      // redirect into the real anime-soundtrack listing rather than a
+      // single-title page with no unique browsing value.
+      { source: "/estilo/naruto", destination: "/estilo/anime", permanent: true },
+      { source: "/estilo/one-piece", destination: "/estilo/anime", permanent: true },
       // Duplicate-meaning tags found from a user report, 2026-07-18: singular/
       // plural and pt/en variants of the same genre splitting inventory across
       // two pages. Redirect the thinner one into the one with real inventory.
