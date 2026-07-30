@@ -209,6 +209,16 @@ def is_confident_match(hit_title: str, titulo: str, titulo_clean: str, artista: 
 #   matcher bug.
 EXCLUDE_SLUGS = {
     "take-cover-disco-de-vinil-98buka",
+    # Peter Gabriel self-titled his first four solo albums (1977, 1978, 1980,
+    # 1982 -- fans call them "Car"/"Scratch"/"Melt"/"Security" but Wikipedia's
+    # own page titles disambiguate only by year). This product is the 4th
+    # ("Security"), but every source disagrees on which one: the matched
+    # Wikipedia extract keeps landing on the 2nd (1978) or 3rd (1980) album,
+    # while mb_tracklist/mb_first_release_date point at the 1st (1977).
+    # Recurred identically across 3 separate batches (2026-07-29/30) with zero
+    # progress each time since sobre_pt never gets written -- excluding
+    # outright rather than re-spending API calls on it every run.
+    "peter-gabriel-4-security-ll5tnj",
 }
 
 
