@@ -74,6 +74,9 @@ const nextConfig: NextConfig = {
       { source: "/estilo/valve", destination: "/estilo/game", permanent: true },
       { source: "/estilo/video-game-music", destination: "/estilo/game", permanent: true },
       { source: "/estilo/game-remixes", destination: "/estilo/game", permanent: true },
+      // "ost" is just an abbreviation of "soundtrack" -- every disco tagged ost
+      // is now also tagged soundtrack (backfilled), so no unique inventory left.
+      { source: "/estilo/ost", destination: "/estilo/soundtrack", permanent: true },
       // lastfm_tags leaked artist names in as if they were genres — an artist is
       // not a style, so these send to the real artist page instead of a fake genre page.
       { source: "/estilo/eric-church", destination: "/artista/eric-church", permanent: true },
