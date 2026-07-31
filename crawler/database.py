@@ -708,6 +708,45 @@ def clear_deal_score(conn, disco_id: str) -> None:
     conn.commit()
 
 
+def ensure_ean_column(conn) -> None:
+    """
+    Idempotently add Disco.ean. Kept separate from ensure_schema_extras so its
+    fast-path column count stays undisturbed.
+
+    Disco.ean  TEXT  13-digit barcode from the Creators API
+                     (itemInfo.externalIds). Feeds schema.org gtin13, which is
+                     how Google matches a listing to a real-world product.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_name = 'Disco' AND column_name = 'ean'
+            """
+        )
+        if cur.fetchone()[0]:
+            log.debug("ensure_ean_column: column already present, skipping DDL.")
+            return
+        cur.execute("SET LOCAL lock_timeout = '10s'")
+        cur.execute('ALTER TABLE "Disco" ADD COLUMN IF NOT EXISTS ean TEXT')
+    conn.commit()
+    log.debug("ensure_ean_column: ean column created.")
+
+
+def save_ean(conn, disco_id: str, ean: str) -> None:
+    """
+    Store the product barcode. Called on every API refresh pass, so the
+    IS DISTINCT FROM guard keeps it a no-op once the value is known — the
+    barcode never changes for an ASIN, and we do not want ~30k pointless row
+    writes (and dead tuples) per run.
+    """
+    with _cursor(conn) as cur:
+        cur.execute(
+            'UPDATE "Disco" SET ean = %s WHERE id = %s AND ean IS DISTINCT FROM %s',
+            (ean, disco_id, ean),
+        )
+
+
 def mark_unavailable(conn, disco_id: str) -> None:
     """
     Marks a Disco record as unavailable (product page 404 or out-of-stock).

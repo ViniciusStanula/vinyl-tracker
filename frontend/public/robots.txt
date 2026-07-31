@@ -7,8 +7,10 @@ Allow: /
 # Internal search results — noindex'd in metadata too (belt-and-suspenders)
 Disallow: /*?*q=
 Disallow: /*_rsc=
-# User-specific / transactional pages
-Disallow: /alertas
+# User-specific / transactional pages. Scoped to the sub-routes: /alertas itself
+# is a public signup page with no account data, and is indexable on purpose.
+Disallow: /alertas/gerenciar
+Disallow: /alertas/confirmar
 # AI-training opt-out (contentsignals.org; advisory, not yet enforced)
 Content-Signal: search=yes, ai-input=yes, ai-train=no
 

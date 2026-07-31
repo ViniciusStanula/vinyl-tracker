@@ -187,7 +187,7 @@ _TRAILING_ANNIVERSARY = re.compile(
 # or "- Vinil Disney - ...". Only media/format words — no colours — so a real
 # title word is never eaten. Leading separators/spaces allowed before the token.
 _LEADING_FORMAT = re.compile(
-    r"^[\s\-]*(?:(?:disco\s+de\s+vin(?:il|yl)|vinyl|vinil|\d*x?lp|cd)\b[\s\-]*)+",
+    r"^[\s\-]*(?:(?:disco\s+de\s+vin(?:il|yl)(?:\s+novo)?|vinyl|vinil|\d*x?lp|cd)\b[\s\-]*)+",
     re.IGNORECASE,
 )
 

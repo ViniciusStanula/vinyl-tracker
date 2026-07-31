@@ -54,6 +54,7 @@ export async function generateMetadata({
   if (!disco || (disco.format && disco.format !== "vinyl")) {
     return { title: "Disco de Vinil | Garimpa Vinil" };
   }
+  const meta = await getDiscoMeta(slug).catch(() => null);
 
   const tituloLimpo = cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
   const isUnknownArtistDisco = disco.artista.toLowerCase() === "artista não identificado";
@@ -63,6 +64,18 @@ export async function generateMetadata({
   if (title.length > 60) title = base;
   if (title.length > 60 && includeArtist) title = `${tituloLimpo} em Vinil`;
   if (title.length > 60) title = `${truncateTitle(tituloLimpo, 51)} em Vinil`;
+
+  // mb_first_release_date is the release-GROUP date, i.e. the album's ORIGINAL
+  // year — not the year this particular pressing was manufactured, which we
+  // don't know. Rendered parenthetically after the album title so it reads as
+  // the album's year rather than implying a pressing date. Applied last and
+  // only when it still fits the 60-char budget, so it never costs the artist
+  // name or the brand suffix; skipped entirely on the truncated variant.
+  const anoOriginal = /^(\d{4})/.exec(meta?.mbFirstReleaseDate ?? "")?.[1];
+  if (anoOriginal && title.includes(tituloLimpo)) {
+    const comAno = title.replace(tituloLimpo, `${tituloLimpo} (${anoOriginal})`);
+    if (comAno.length <= 60) title = comAno;
+  }
 
   const valores = disco.precos.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;
@@ -386,6 +399,12 @@ export default async function DiscoPage({
     name: disco.titulo,
     description: `Compre ${disco.titulo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}.`,
     sku: disco.asin,
+    // Barcode from Amazon's Creators API (itemInfo.externalIds). This is the
+    // identifier Google uses to match a listing to a real-world product, so it
+    // is worth more than sku/brand alone. Guarded on exactly 13 digits: a
+    // malformed gtin13 is worse than none, since it would assert this listing
+    // IS some other product.
+    ...(meta?.ean && /^\d{13}$/.test(meta.ean) ? { gtin13: meta.ean } : {}),
     image: disco.imgUrl ?? undefined,
     brand: { "@type": "Brand", name: disco.artista },
     url: `${siteUrl}/disco/${slug}`,
@@ -434,6 +453,11 @@ export default async function DiscoPage({
     },
     ...(meta?.mbFirstReleaseDate ? { datePublished: meta.mbFirstReleaseDate } : {}),
     ...(albumGenres.length ? { genre: albumGenres } : {}),
+    // Declare the physical format. schema.org/VinylFormat is the precise term
+    // and this catalogue is vinyl-only (non-vinyl rows carry format='cd' or
+    // 'other' and never reach this page), so it's always accurate here. Without
+    // it nothing in the markup states that these products are records at all.
+    musicReleaseFormat: "https://schema.org/VinylFormat",
     ...(mbInfo && mbInfo.tracklist.length
       ? {
           numTracks: mbInfo.tracklist.length,
@@ -446,6 +470,21 @@ export default async function DiscoPage({
         }
       : {}),
     ...(aggregateRatingLd ? { aggregateRating: aggregateRatingLd } : {}),
+    // Entity-linking to the canonical record on each source -- only where we
+    // hold a verified URL/ID, never a guessed slug (a wrong sameAs is worse
+    // than no sameAs). No Last.fm entry: we only store tags/wiki text for
+    // this record, not a canonical last.fm/music/... URL, and that URL's
+    // slug isn't reliably derivable from artista/titulo.
+    ...((meta?.sobrePtSourceUrl || meta?.mbMbid)
+      ? {
+          sameAs: [
+            ...(meta?.sobrePtSourceUrl ? [meta.sobrePtSourceUrl] : []),
+            // mb_mbid is '' (not null) when a search ran and found no match --
+            // only build the URL when there's an actual ID.
+            ...(meta?.mbMbid ? [`https://musicbrainz.org/release-group/${meta.mbMbid}`] : []),
+          ],
+        }
+      : {}),
   });
 
   const breadcrumbJsonLd = toJsonLd({
@@ -725,7 +764,12 @@ export default async function DiscoPage({
           if (!hasLastfm && !wikiSummary && !sobrePt && !hasMb && !hasAmazon) return undefined;
 
           const cleanTitle = cleanAlbumTitle(disco.titulo, disco.artista);
-          const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
+          // Last.fm canonicalises spaces as "+", not "%20" — album.getInfo
+          // returns e.g. https://www.last.fm/music/Larkin+Poe/Reskinned. The
+          // %20 form usually redirects but isn't the canonical URL, so encode
+          // everything else normally and then swap %20 for +.
+          const lastfmSegment = (s: string) => encodeURIComponent(s).replace(/%20/g, "+");
+          const lastfmUrl = `https://www.last.fm/music/${lastfmSegment(disco.artista)}/${lastfmSegment(cleanTitle)}`;
           return (
             <section aria-labelledby="sobre-album-heading" className="space-y-4">
               <h2 id="sobre-album-heading" className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>

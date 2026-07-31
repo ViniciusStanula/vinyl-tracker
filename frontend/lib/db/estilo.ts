@@ -37,6 +37,8 @@ export const REDIRECTED_ESTILO_SLUGS = new Set([
   "valve",
   "video-game-music",
   "game-remixes",
+  // merged into /estilo/soundtrack — "ost" is just an abbreviation of it
+  "ost",
   // artist names, not genres — redirected to /artista/<slug>
   "eric-church",
   "shania-twain",
@@ -64,6 +66,15 @@ export const REDIRECTED_ESTILO_SLUGS = new Set([
   "belchior",
   "fagner",
   "little-big-town",
+  "exo",
+  "jimin",
+  "rose",
+  "jay-z",
+  "metallica",
+  // anime titles used as folksonomy tags instead of the real genre — merged
+  // into /estilo/anime
+  "naruto",
+  "one-piece",
   // Last.fm personal-list tags, not genres (no sensible redirect target — just excluded)
   "upcoming-album-2024",
   "scandinavian-girls-sweden",

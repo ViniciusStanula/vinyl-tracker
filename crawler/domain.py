@@ -42,8 +42,12 @@ _VINYL_FIGURE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# (?!-\d) on \blp\b: Amazon SKU codes like "(LP-0311)" on non-music listings
+# (e.g. paper clips "Clipes de papel ... (LP-0311)") otherwise false-match as
+# a vinyl "LP" mention. Real vinyl titles never use a hyphenated numeric code
+# right after "LP" (catalog numbers appear as "2LP", "180g", etc., not this).
 _VINYL_TITLE_RE = re.compile(
-    r"vinil|vinyl|\blp\b"
+    r"vinil|vinyl|\blp\b(?!-\d)"
     r'|\b7["\']\b'
     r'|\b10["\']?\b\s*(?:inch|polegadas)'
     r'|\b12["\']?\b\s*(?:inch|polegadas)'
@@ -55,7 +59,7 @@ _VINYL_TITLE_RE = re.compile(
     re.IGNORECASE,
 )
 _VINYL_CARD_RE = re.compile(
-    r"vinil|vinyl|\blp\b|180\s?g(?:r(?:am)?)?|gatefold|picture\s+disc"
+    r"vinil|vinyl|\blp\b(?!-\d)|180\s?g(?:r(?:am)?)?|gatefold|picture\s+disc"
     r"|disco\s+(?:de\s+)?vinil|formato:\s*vinil|format:\s*vinyl|33\s+rpm|45\s+rpm",
     re.IGNORECASE,
 )

@@ -34,7 +34,7 @@ load_dotenv_if_present()
 
 from db_retry import connect_with_retry
 from database import bulk_update_tags_by_slug
-from lastfm import fetch_album_tags
+from lastfm import fetch_album_tags, fetch_artist_tags
 from genre_filter import filter_genres
 
 SUSPECT_SQL = """
@@ -57,6 +57,27 @@ JOIN dupe_fingerprint d ON d.lastfm_tags = c.lastfm_tags AND d.artista = c.artis
 ORDER BY c.artista, c.titulo
 """
 
+# --broad: catches what SUSPECT_SQL's duplicate-fingerprint requirement
+# necessarily misses -- a singleton album by an artist with only one
+# catalogued record can't be "confirmed" clobbered by comparing against a
+# sibling that doesn't exist, even though it's exactly as likely to be the
+# same artist-level stamp. Also sweeps in every record with NO tags at all
+# (NULL or ''), which SUSPECT_SQL never touched. Re-running the exactly-3
+# check here after the first pass has already run is safe and cheap: rows
+# it already fixed no longer have 3 tags (they got 2, 4, or 5 real ones),
+# so they won't be reselected.
+BROAD_SQL = """
+SELECT slug, artista, titulo, COALESCE(lastfm_tags, '') AS lastfm_tags
+FROM "Disco"
+WHERE disponivel = TRUE AND (format IS NULL OR format = 'vinyl')
+  AND (
+    lastfm_tags IS NULL
+    OR lastfm_tags = ''
+    OR array_length(string_to_array(lastfm_tags, ', '), 1) = 3
+  )
+ORDER BY artista, titulo
+"""
+
 
 def clean_title_for_lastfm(titulo: str, artista: str) -> str:
     # Reuse the same Amazon-junk stripper the enrichment pipelines already
@@ -72,6 +93,8 @@ def main():
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--delay", type=float, default=0.25)
     ap.add_argument("--backup", default="lastfm_tags_rematch_backup.json")
+    ap.add_argument("--broad", action="store_true",
+                     help="also catch singleton-artist 3-tag rows and rows with no tags at all")
     args = ap.parse_args()
 
     api_key = os.environ.get("LASTFM_API_KEY", "")
@@ -81,11 +104,11 @@ def main():
 
     conn = connect_with_retry()
     cur = conn.cursor()
-    cur.execute(SUSPECT_SQL)
+    cur.execute(BROAD_SQL if args.broad else SUSPECT_SQL)
     suspects = cur.fetchall()
     if args.limit:
         suspects = suspects[: args.limit]
-    print(f"suspect rows (artist-level-capped, duplicate fingerprint): {len(suspects)}")
+    print(f"suspect rows ({'broad' if args.broad else 'duplicate fingerprint'}): {len(suspects)}")
 
     backup = []
     got_tags = got_empty = got_none = 0
@@ -112,20 +135,33 @@ def main():
         new_tags = filter_genres(raw_tags)[:5] if raw_tags is not None else None
 
         if new_tags is None:
-            got_none += 1
-            print(f"  NO-RESULT  {artista[:22]:22s} | {clean[:35]:35s} (kept old: {old_tags})")
-            continue
+            if old_tags.strip():
+                got_none += 1
+                print(f"  NO-RESULT  {artista[:22]:22s} | {clean[:35]:35s} (kept old: {old_tags})")
+                continue
+            new_tags = []  # fall through to the same artist-level fallback below
 
         if not new_tags:
-            # Last.fm has no per-album tags for this specific release. Keep
-            # the old artist-level value rather than clear it -- per user
-            # decision, never worse than before an empty per-album result
-            # is not a case where "no data beats wrong data" applies, since
-            # the site still needs SOMETHING to show for this record.
-            got_empty += 1
-            unchanged += 1
-            print(f"  {artista[:22]:22s} | {clean[:35]:35s} | old: {old_tags[:35]:35s} -> new: (none, kept old)")
-            continue
+            if old_tags.strip():
+                # Last.fm has no per-album tags for this specific release,
+                # but the row already carried a real (if imprecise,
+                # artist-stamped) value. Keep it rather than clear it -- per
+                # user decision, never worse than before.
+                got_empty += 1
+                unchanged += 1
+                print(f"  {artista[:22]:22s} | {clean[:35]:35s} | old: {old_tags[:35]:35s} -> new: (none, kept old)")
+                continue
+            # --broad only: the row had NO tags at all to fall back to (this
+            # is the "ideally every record has SOME genre" sweep). Fall back
+            # to artist-level, same as backfill_tags.py's equivalent case --
+            # imprecise beats nothing.
+            artist_raw = fetch_artist_tags(artista, api_key)
+            time.sleep(args.delay)
+            new_tags = filter_genres(artist_raw)[:5]
+            if not new_tags:
+                got_empty += 1
+                print(f"  {artista[:22]:22s} | {clean[:35]:35s} | old: (none) -> new: (none -- no data anywhere)")
+                continue
 
         new_str = ", ".join(new_tags)
         got_tags += 1

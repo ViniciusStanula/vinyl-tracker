@@ -35,6 +35,7 @@ load_dotenv_if_present()
 
 from database import get_connection
 from lastfm import clean_album_title
+from mb_verify import verify_and_fix_mb
 
 API_URL = "https://en.wikipedia.org/w/api.php"
 HEADERS = {"User-Agent": "GarimpaVinil/1.0 (vinicius.stanula@gmail.com)"}
@@ -79,6 +80,19 @@ import re
 # routinely name-drops the parent album it came from).
 _WRONG_TYPE = re.compile(r"\b(song|tour|musical|film|soundtrack|tv series)\b", re.IGNORECASE)
 
+# _WRONG_TYPE only ever checked hit_title, but a Wikipedia SONG page's title
+# is usually just the song's own name -- the "wrong type" signal instead
+# shows up in the extract's own opening clause. Confirmed live: "Smokin' in
+# the Boys Room" (title has no "song" in it) matched the Disco listing "Yeah
+# - Smokin' In The Boys Room", and its extract opens '"Smokin' in the Boys
+# Room" is a song originally recorded by Brownsville Station in 1973 on
+# their album Yeah!' -- describes the SONG, not the album, would have
+# misgrounded the bio despite is_about_album passing (the word "album"
+# appears, just about a different, parent work).
+_EXTRACT_WRONG_TYPE = re.compile(
+    r'^"?[^".]{0,80}"?\s+is\s+(a|an)\s+(song|single|track)\b', re.IGNORECASE
+)
+
 # Listing titles that bundle 2+ distinct albums into one Disco record (e.g. a
 # "Complete Vinyl Set" or "2-Pack"). A single Wikipedia album page can only
 # ever describe one of the bundled albums, so grounding a bio on it would
@@ -93,7 +107,12 @@ _BUNDLE_TITLE = re.compile(
 )
 
 
-_DISAMBIG = re.compile(r"may (also )?refer to:?", re.IGNORECASE)
+# \s+ not literal spaces: Wikipedia's disambiguation-list boilerplate can
+# carry a double space ("Death metal may  also refer to:") that a single
+# literal space silently fails to match. Confirmed live: this let a
+# disambiguation page (Dismember's "DEATH METAL" listing matched to the
+# genre-name disambig page) through as a "confident" match.
+_DISAMBIG = re.compile(r"may\s+(also\s+)?refer to:?", re.IGNORECASE)
 
 # A "Live" or "Best Of"/compilation listing routinely matches the artist's
 # ORIGINAL studio album page on title alone (e.g. "X: Live In LA" vs the
@@ -108,13 +127,80 @@ _COMPILATION_TITLE = re.compile(
 )
 
 
-def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract: str) -> bool:
+def _norm_title(s: str) -> str:
+    # "&" vs "and" is a real, common difference between an Amazon listing
+    # title and MB/Wikipedia's canonical title (confirmed: "Flesh & Blood"
+    # vs Wikipedia's "Flesh and Blood" was rejected on this alone before this
+    # normalization existed). Same fold mb_verify.py/audit_mb_titles.py
+    # already use for the equivalent MB-title comparison.
+    s = s.lower().replace("&", "and")
+    # Strip other punctuation too (comma, colon, period, ...) -- confirmed
+    # live: M83's "Dead Cities Red Seas & Lost Ghosts" (Amazon listing, no
+    # comma) failed against Wikipedia's real title "Dead Cities, Red Seas &
+    # Lost Ghosts" purely because of that one comma; nothing else differed.
+    s = re.sub(r"[^\w\s]", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _contains_whole(needle: str, haystack: str) -> bool:
+    # Plain "in" lets a substring match across a word boundary that changes
+    # meaning -- confirmed live: hit_core "romance" matched inside product
+    # title "...mis romances" (a DIFFERENT, later Luis Miguel album) purely
+    # because "romance" is a prefix of "romances". \b...\b requires the
+    # matched span to end/start on a real word boundary, so "romance" no
+    # longer matches inside "romances" (no boundary between "e" and "s").
+    if not needle:
+        return False
+    return re.search(r"\b" + re.escape(needle) + r"\b", haystack) is not None
+
+
+def _artist_in_extract(artista: str, extract: str) -> bool:
+    # Case-insensitive substring alone is unsafe when the artist name is a
+    # short/common English word -- confirmed live: the band "Studio" passed
+    # this check against Elton John's "Songs from the West Coast" page purely
+    # because that extract's boilerplate says "...is the twenty-sixth studio
+    # album by...". Real mentions of an artist's own name in Wikipedia prose
+    # are capitalized (it's a proper noun); the generic word "studio" in
+    # "studio album" is not -- so require a word-boundary match that starts
+    # with an uppercase letter.
+    #
+    # A bare uppercase check breaks any "The X" artist, though: English
+    # grammar lowercases "the" as an article mid-sentence ("...album by the
+    # Rolling Stones"), even though the DB stores "The Rolling Stones" with
+    # a capital T. Confirmed live -- this literally broke The Beatles, The
+    # Rolling Stones, The Beach Boys, etc. the moment the uppercase check
+    # was added. Strip a leading "The " before checking case, and let it
+    # optionally re-match a lowercase "the " right before the core name.
+    if not artista:
+        return False
+    core = re.sub(r"^the\s+", "", artista, flags=re.IGNORECASE) or artista
+    # (?<!\w)/(?!\w) instead of \b at the edges: \b requires a transition
+    # between a word char and a non-word char, which never fires when the
+    # pattern itself starts/ends on punctuation. Confirmed live: "N.W.A."
+    # (trailing ".") never matched with a trailing \b, since "." followed by
+    # a space is non-word-to-non-word, not a boundary. The lookarounds just
+    # assert "not a word character here", which is what was actually meant.
+    pattern = r"(?<!\w)(?:the\s+)?" + re.escape(core) + r"(?!\w)"
+    for m in re.finditer(pattern, extract, re.IGNORECASE):
+        core_start = m.end() - len(core)
+        # Not .isupper(): a real match starting with a digit ("21st Century
+        # Schizoid Band", "6LACK") is neither upper nor lower, so .isupper()
+        # always failed it even though it's a correct, properly-matched
+        # mention. .islower() only rejects an actual lowercase letter (the
+        # "studio" collision this check exists for), letting digits/
+        # punctuation/uppercase all pass as before.
+        if not extract[core_start:core_start + 1].islower():
+            return True
+    return False
+
+
+def is_confident_match(hit_title: str, titulo: str, titulo_clean: str, artista: str, extract: str) -> bool:
     # Cheap heuristics, deliberately conservative — false negatives (skip a
     # real match) are fine, false positives (wrong page) are not.
-    title_lower = titulo_clean.lower().strip()
+    title_lower = _norm_title(titulo_clean)
     hit_lower = hit_title.lower()
     # Strip Wikipedia disambiguation suffix like " (Coldplay album)" for comparison.
-    hit_core = hit_lower.split(" (")[0].strip()
+    hit_core = _norm_title(hit_lower.split(" (")[0])
     # Compare against hit_core, not hit_lower. The disambiguator often IS the
     # artist name ("(John Mayall album)") — when a Disco product's title is
     # just the bare artist name (an incomplete/bad Amazon listing), checking
@@ -122,9 +208,9 @@ def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract:
     # album by John Mayall, since the artist name sits right there in the
     # suffix. Confirmed: "John Mayall" (product) matched "Back to the Roots
     # (John Mayall album)" this way — a real album, just the wrong one.
-    title_matches = title_lower == hit_core or title_lower in hit_core or hit_core in title_lower
-    artist_in_extract = artista.lower() in extract.lower()
-    if _WRONG_TYPE.search(hit_title):
+    title_matches = title_lower == hit_core or _contains_whole(title_lower, hit_core) or _contains_whole(hit_core, title_lower)
+    artist_in_extract = _artist_in_extract(artista, extract)
+    if _WRONG_TYPE.search(hit_title) or _EXTRACT_WRONG_TYPE.search(extract[:150]):
         return False
     # Disambiguation pages ("X may refer to: ...") list several unrelated
     # works and often name-drop the artist + "album" somewhere in the list,
@@ -132,17 +218,40 @@ def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract:
     # article about the record itself.
     if _DISAMBIG.search(extract[:200]):
         return False
-    if _LIVE_TITLE.search(titulo_clean) and not _LIVE_TITLE.search(hit_title):
+    # Check the RAW titulo too, not just titulo_clean. clean_album_title can
+    # strip "Live"/edition-marker words as junk before this function ever
+    # sees them -- confirmed live: "History of the Grateful Dead Vol. 1
+    # (Bear's Choice) [Live] [50th Anniversary Edition]" cleaned down to
+    # "History of the Grateful Dead Vol. 1 (Bear's Choice)", losing "Live"
+    # entirely, so this guard silently never fired and the record matched
+    # the band's unrelated 1967 studio debut instead of anything about the
+    # actual live release. Same failure emptied "Marvin Gaye Vinyl - Let's
+    # Get It On... Live..." down to just "Marvin Gaye", which then matched
+    # a random early album via the bare-artist-name trap above.
+    if (_LIVE_TITLE.search(titulo_clean) or _LIVE_TITLE.search(titulo)) and not _LIVE_TITLE.search(hit_title):
         return False
-    if _COMPILATION_TITLE.search(titulo_clean) and not _COMPILATION_TITLE.search(hit_title):
+    if (_COMPILATION_TITLE.search(titulo_clean) or _COMPILATION_TITLE.search(titulo)) and not _COMPILATION_TITLE.search(hit_title):
         return False
-    # An album's Wikipedia intro sentence almost always uses the word "album"
-    # itself ("... is a/the studio album by ..."). Checking only the FIRST
-    # sentence (not the whole extract) matters — a song/tour page's later
-    # sentences often reference the parent album by name too.
-    first_sentence = extract.split(". ", 1)[0]
-    is_about_album = "album" in first_sentence.lower()
-    return title_matches and artist_in_extract and is_about_album and len(extract.strip()) >= 200
+    # An album/EP's Wikipedia intro sentence almost always uses the word
+    # "album" or "EP" itself ("... is a/the studio album by ..."). Was
+    # "first sentence" via extract.split(". ", 1)[0], but that breaks on any
+    # abbreviation period before the real sentence end — "Listen Without
+    # Prejudice Vol. 1 is the second solo studio album..." truncated at
+    # "Vol." and never reached "album", wrongly rejecting a real match. A
+    # fixed leading window is robust to that and still excludes a song/tour
+    # page's later, unrelated mention of the parent album (same intent the
+    # sentence-split was going for).
+    intro_window = extract[:220].lower()
+    is_about_album = "album" in intro_window or "mixtape" in intro_window or re.search(r"\bep\b", intro_window)
+    # Was >= 200 -- rejected genuinely valid short extracts. Confirmed live:
+    # "Passion and Warfare" (Steve Vai, certified Gold, unambiguously the
+    # right album -- title/artist/is_about_album all passed) has a real
+    # Wikipedia intro of only 173 chars ("...is the second studio album by
+    # guitarist Steve Vai, released on May 22, 1990... certified Gold by the
+    # RIAA."), two complete factual sentences, just short. 80 still rejects
+    # genuinely degenerate stubs (a single sub-sentence fragment) without
+    # punishing an artist/album whose Wikipedia page just isn't long.
+    return title_matches and artist_in_extract and bool(is_about_album) and len(extract.strip()) >= 80
 
 
 # Known-bad slugs that keep resurfacing every run because sobre_pt stays NULL
@@ -154,6 +263,16 @@ def is_confident_match(hit_title: str, titulo_clean: str, artista: str, extract:
 #   matcher bug.
 EXCLUDE_SLUGS = {
     "take-cover-disco-de-vinil-98buka",
+    # Peter Gabriel self-titled his first four solo albums (1977, 1978, 1980,
+    # 1982 -- fans call them "Car"/"Scratch"/"Melt"/"Security" but Wikipedia's
+    # own page titles disambiguate only by year). This product is the 4th
+    # ("Security"), but every source disagrees on which one: the matched
+    # Wikipedia extract keeps landing on the 2nd (1978) or 3rd (1980) album,
+    # while mb_tracklist/mb_first_release_date point at the 1st (1977).
+    # Recurred identically across 3 separate batches (2026-07-29/30) with zero
+    # progress each time since sobre_pt never gets written -- excluding
+    # outright rather than re-spending API calls on it every run.
+    "peter-gabriel-4-security-ll5tnj",
 }
 
 
@@ -161,31 +280,43 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=50)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--apply-mb-fix", action="store_true",
+                     help="write MB re-matches for candidates with a wrong/missing "
+                          "match instead of just previewing them (default: dry run)")
+    ap.add_argument("--mb-delay", type=float, default=1.1)
     args = ap.parse_args()
 
     conn = get_connection()
     cur = conn.cursor()
+    # Was "AND d.mb_tracklist IS NOT NULL", which silently skipped forever any
+    # record whose MB match had never been found or was cleared — bios could
+    # never surface for those. Now selects mb_title/mb_mbid/mb_primary_type/
+    # mb_tracklist too, so the loop below can verify (and fix, via
+    # mb_verify.verify_and_fix_mb) each candidate's MB match before deciding
+    # whether it has a usable tracklist -- fixing the tracklist as a
+    # byproduct of processing the record for a bio, not a separate pass.
     cur.execute(
         """
-        SELECT d.slug, d.artista, d.titulo, count(b.id) AS hits
+        SELECT d.slug, d.artista, d.titulo, count(b.id) AS hits,
+               d.mb_title, d.mb_mbid, d.mb_primary_type, d.mb_tracklist
         FROM "Disco" d
         JOIN bot_hits b ON b.path = '/disco/' || d.slug
         WHERE d.disponivel = TRUE AND (d.format IS NULL OR d.format = 'vinyl')
           AND d.sobre_pt IS NULL AND d.lastfm_wiki_pt IS NULL
-          AND d.mb_tracklist IS NOT NULL
-        GROUP BY d.slug, d.artista, d.titulo
+        GROUP BY d.slug, d.artista, d.titulo, d.mb_title, d.mb_mbid, d.mb_primary_type, d.mb_tracklist
         ORDER BY hits DESC
         LIMIT %s
         """,
         (args.limit,),
     )
     rows = cur.fetchall()
-    conn.close()
 
     matched = []
     skipped = 0
     bundle_skipped = 0
-    for slug, artista, titulo, hits in rows:
+    mb_fixed = 0
+    no_tracklist = 0
+    for slug, artista, titulo, hits, mb_title, mb_mbid, mb_primary_type, mb_tracklist_raw in rows:
         if slug in EXCLUDE_SLUGS:
             skipped += 1
             print(f"SKIP   {artista} - {titulo}  (excluded slug)")
@@ -195,6 +326,23 @@ def main():
             print(f"SKIP   {artista} - {titulo}  (bundle listing)")
             continue
         titulo_clean = clean_album_title(titulo, artista)
+
+        mb_result = verify_and_fix_mb(
+            conn, slug, artista, titulo, titulo_clean,
+            mb_title, mb_mbid, mb_primary_type, mb_tracklist_raw,
+            delay=args.mb_delay, apply=args.apply_mb_fix,
+        )
+        if mb_result["fixed"]:
+            mb_fixed += 1
+            print(f"MB-FIX {artista} - {titulo_clean}  ({mb_result['reason']}) "
+                  f"-> {mb_result['mb_title'] or '(no confident match)'}"
+                  f"{'' if args.apply_mb_fix else '  [dry run, not written]'}")
+        if not mb_result["mb_tracklist"]:
+            no_tracklist += 1
+            skipped += 1
+            print(f"SKIP   {artista} - {titulo_clean}  (no MB tracklist)")
+            continue
+
         try:
             hits = search_candidate(artista, titulo_clean)
         except Exception as exc:
@@ -211,7 +359,7 @@ def main():
                 print(f"EXTRACT_ERROR {slug} / {hit['title']}: {exc}", file=sys.stderr)
                 continue
             time.sleep(RATE_LIMIT)
-            if is_confident_match(hit["title"], titulo_clean, artista, extract):
+            if is_confident_match(hit["title"], titulo, titulo_clean, artista, extract):
                 found = (hit["title"], extract)
                 break
 
@@ -231,12 +379,16 @@ def main():
             skipped += 1
             print(f"SKIP   {artista} - {titulo_clean}  (no confident match)")
 
+    conn.close()
+
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(matched, f, ensure_ascii=False, indent=2)
 
     print(
-        f"\nDone. {len(matched)} matched, {skipped} skipped, "
-        f"{bundle_skipped} bundle-skipped, {len(rows)} total. Wrote {args.out}"
+        f"\nDone. {len(matched)} matched, {skipped} skipped "
+        f"({no_tracklist} for no MB tracklist), {bundle_skipped} bundle-skipped, "
+        f"{mb_fixed} MB re-matches {'applied' if args.apply_mb_fix else '(dry run)'}, "
+        f"{len(rows)} total. Wrote {args.out}"
     )
 
 

@@ -224,12 +224,14 @@ const _getArtistaPageData = unstable_cache(
       wikidataUrl: string | null;
       wikipediaUrl: string | null;
       spotifyUrl: string | null;
+      mbid: string | null;
       bioShortPt: string | null;
       bioPt: string | null;
     }[]>`
       SELECT wikidata_url  AS "wikidataUrl",
              wikipedia_url AS "wikipediaUrl",
              spotify_url   AS "spotifyUrl",
+             mbid          AS "mbid",
              bio_short_pt  AS "bioShortPt",
              bio_pt        AS "bioPt"
       FROM "ArtistMeta"
@@ -285,8 +287,15 @@ const _getArtistaPageData = unstable_cache(
     if (total === 0 && unavailableItems.length === 0) return null;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const topStyles = getTopStyles(tagsRows.map((r) => r.lastfmTags), 5, canonical);
-    const sameAs = [meta?.wikidataUrl, meta?.wikipediaUrl, meta?.spotifyUrl]
-      .filter((u): u is string => Boolean(u));
+    const sameAs = [
+      meta?.wikidataUrl,
+      meta?.wikipediaUrl,
+      meta?.spotifyUrl,
+      // mbid covers ~6x more artists (10.5k) than the three URL fields
+      // combined (~1.7k) -- most of this catalog's artist-level entity
+      // linking comes from here, not from the other three.
+      meta?.mbid ? `https://musicbrainz.org/artist/${meta.mbid}` : null,
+    ].filter((u): u is string => Boolean(u));
     const bioShortPt = meta?.bioShortPt ?? null;
     const bioPt      = meta?.bioPt ?? null;
 
