@@ -386,6 +386,12 @@ export default async function DiscoPage({
     name: disco.titulo,
     description: `Compre ${disco.titulo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}.`,
     sku: disco.asin,
+    // Barcode from Amazon's Creators API (itemInfo.externalIds). This is the
+    // identifier Google uses to match a listing to a real-world product, so it
+    // is worth more than sku/brand alone. Guarded on exactly 13 digits: a
+    // malformed gtin13 is worse than none, since it would assert this listing
+    // IS some other product.
+    ...(meta?.ean && /^\d{13}$/.test(meta.ean) ? { gtin13: meta.ean } : {}),
     image: disco.imgUrl ?? undefined,
     brand: { "@type": "Brand", name: disco.artista },
     url: `${siteUrl}/disco/${slug}`,

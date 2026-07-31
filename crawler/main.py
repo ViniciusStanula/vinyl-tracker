@@ -52,6 +52,8 @@ from database import (
     ensure_api_budget_ledger,
     get_api_budget_used,
     add_api_budget_used,
+    ensure_ean_column,
+    save_ean,
 )
 from crawl_tiering import (
     ensure_tier_columns,
@@ -2808,6 +2810,13 @@ def crawl_stale_records_api(
                 else:
                     counts["errors"] += 1  # transient miss — do NOT mark unavailable
                 continue
+            # Barcode is stable product metadata, valid whether or not the item
+            # is currently purchasable, so it is stored before the availability
+            # branches rather than inside any of them. save_ean no-ops once the
+            # value is known, so this costs nothing on repeat runs.
+            if res.ean and not dry_run:
+                save_ean(conn, disco_id, res.ean)
+
             oos = (res.in_stock is False) or (
                 isinstance(res.availability_type, str)
                 and res.availability_type.upper() in _API_OOS_TYPES
@@ -3185,6 +3194,7 @@ def main():
     try:
         ensure_schema_extras(conn)
         ensure_category_tables(conn, list(zip(CATEGORY_URLS, CATEGORY_NAMES)))
+        ensure_ean_column(conn)
         category_tables_ready = True
         log.info("Schema OK.")
     except Exception as exc:

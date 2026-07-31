@@ -19,6 +19,7 @@ export type DiscoMeta = {
   mbRating: number | null;
   mbRatingVotes: number | null;
   artistCountry: string | null;
+  ean: string | null;
 };
 
 export type RelatedDeal = {
@@ -99,7 +100,8 @@ export const getDiscoMeta = unstable_cache(
         mb_tracklist           AS "mbTracklist",
         mb_rating              AS "mbRating",
         mb_rating_votes        AS "mbRatingVotes",
-        am.country             AS "artistCountry"
+        am.country             AS "artistCountry",
+        d.ean                  AS "ean"
       FROM "Disco" d
       LEFT JOIN "ArtistMeta" am ON am.artista = d.artista
       WHERE d.slug = ${slug}
