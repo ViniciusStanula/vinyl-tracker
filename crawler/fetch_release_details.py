@@ -84,6 +84,39 @@ def fetch_details(rg_mbid: str) -> dict | None:
     if not releases:
         return {}
 
+    # A release-group is the ABSTRACT album; label / catalogue number / barcode
+    # / country belong to a specific PRESSING. We only matched at group level
+    # (artist + title), so we do NOT know which pressing this listing sells.
+    # Measured on 12 random matched records: median 4 releases per group (max
+    # 38), median 2 distinct labels (max 11), and 8 of 12 groups had more than
+    # one label. Genesis "Foxtrot" alone spans 38 pressings / 11 labels / 9
+    # countries / 1972-2025.
+    #
+    # So anything pressing-specific is only emitted when the group leaves no
+    # room for doubt:
+    #   - exactly one release            -> label + catalogue number + barcode
+    #   - many releases, one shared label -> label only (cat/barcode still vary)
+    #   - otherwise                       -> nothing
+    # A wrong gtin13 is the most damaging of these: it tells Google the listing
+    # is a different physical product.
+    labels = {
+        (li.get("label") or {}).get("name")
+        for rel in releases
+        for li in (rel.get("label-info") or [])
+        if (li.get("label") or {}).get("name")
+    }
+    countries = {r.get("country") for r in releases if r.get("country")}
+
+    if len(releases) > 1:
+        only_label = labels.pop() if len(labels) == 1 else None
+        return {
+            "mb_label": only_label,
+            "mb_catalog_number": None,
+            "mb_barcode": None,
+            # Country is per-pressing too; only safe when they all agree.
+            "mb_release_country": countries.pop() if len(countries) == 1 else None,
+        }
+
     # MusicBrainz editors sometimes type the literal word "none" (or "[none]")
     # into catalog-number rather than leaving it empty; seen live on Public
     # Image Ltd. Storing that would render "Catálogo: none" on the page.
@@ -91,7 +124,14 @@ def fetch_details(rg_mbid: str) -> dict | None:
         if not v:
             return None
         s = str(v).strip()
-        return None if s.lower().strip("[]") in ("none", "n/a", "-", "") else s
+        if s.lower().strip("[]") in ("none", "n/a", "-", ""):
+            return None
+        # A bare 12-13 digit string is an EAN/UPC that an editor filed in the
+        # wrong field (seen live: Jethro Tull "5099993455275"). Emitting that as
+        # schema.org catalogNumber would be wrong -- barcodes belong in gtin13.
+        if s.isdigit() and len(s) in (12, 13):
+            return None
+        return s
 
     def label_of(rel):
         for li in rel.get("label-info") or []:
