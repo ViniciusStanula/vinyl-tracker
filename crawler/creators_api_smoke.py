@@ -111,6 +111,9 @@ def _fake_cfg() -> CreatorsConfig:
         token_url="https://example.invalid/token",
         api_base="https://example.invalid/catalog/v1",
         scope="creatorsapi::default", tps=1.0, tpd=10,
+        # Kept in step with CreatorsConfig: tpd_per_run was added to the
+        # dataclass without updating this fake, which broke --offline entirely.
+        tpd_per_run=10,
         credential_version=None,
     )
 

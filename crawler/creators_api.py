@@ -60,6 +60,17 @@ _DEFAULT_RESOURCES = [
     "offersV2.listings.isBuyBoxWinner",
     "offersV2.listings.dealDetails",
     "itemInfo.title",
+    # EAN/UPC. Verified live against amazon.com.br (B09D8CGM5V returns
+    # eans.displayValues ["0602438167913"] + upcs.displayValues). Free to add:
+    # Phase-0/3 refresh already calls getItems for these ASINs, so this rides
+    # along on existing calls and costs no extra TPS/TPD budget.
+    #
+    # Worth having because a barcode identifies the exact PRESSING. Our
+    # MusicBrainz match is only release-group level (the abstract album), which
+    # cannot tell a 1972 original from a 2025 reissue -- Genesis "Foxtrot" alone
+    # spans 38 pressings across 11 labels. A barcode resolves that, and is also
+    # the correct value for schema.org gtin13.
+    "itemInfo.externalIds",
     "customerReviews.count",       # accepted by API; returned empty for sampled BR ASINs
     "customerReviews.starRating",  # accepted by API; returned empty for sampled BR ASINs
 ]
@@ -341,6 +352,7 @@ class ItemResult:
     star_rating: float | None     # from customerReviews.starRating (empty for sampled BR ASINs)
     merchant_name: str | None
     is_buybox_winner: bool | None
+    ean: str | None               # 13-digit barcode from itemInfo.externalIds
     errors: list | None
     raw: dict  # full per-item JSON, so the harness can print and we map later
 
@@ -419,6 +431,21 @@ def _parse_item(item: dict) -> ItemResult:
     review_count = _coerce_int(_dig(item, "customerReviews", "count"))
     star_rating = _coerce_float(_dig(item, "customerReviews", "starRating"))
 
+    # externalIds.eans.displayValues is a list; take the first well-formed EAN-13.
+    # Fall back to a 12-digit UPC zero-padded to 13, which is the standard
+    # UPC-A -> EAN-13 promotion and keeps one consistent gtin13 field.
+    ean = None
+    for key, width in (("eans", 13), ("upcs", 12)):
+        vals = _dig(item, "itemInfo", "externalIds", key, "displayValues")
+        if isinstance(vals, list):
+            for v in vals:
+                digits = "".join(ch for ch in str(v) if ch.isdigit())
+                if len(digits) == width:
+                    ean = digits.zfill(13)
+                    break
+        if ean:
+            break
+
     return ItemResult(
         asin=asin,
         price=price,
@@ -432,6 +459,7 @@ def _parse_item(item: dict) -> ItemResult:
         star_rating=star_rating,
         merchant_name=merchant_name if isinstance(merchant_name, str) else None,
         is_buybox_winner=is_buybox_winner,
+        ean=ean,
         errors=None,
         raw=item,
     )
