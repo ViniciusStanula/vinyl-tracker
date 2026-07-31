@@ -434,6 +434,11 @@ export default async function DiscoPage({
     },
     ...(meta?.mbFirstReleaseDate ? { datePublished: meta.mbFirstReleaseDate } : {}),
     ...(albumGenres.length ? { genre: albumGenres } : {}),
+    // Declare the physical format. schema.org/VinylFormat is the precise term
+    // and this catalogue is vinyl-only (non-vinyl rows carry format='cd' or
+    // 'other' and never reach this page), so it's always accurate here. Without
+    // it nothing in the markup states that these products are records at all.
+    musicReleaseFormat: "https://schema.org/VinylFormat",
     ...(mbInfo && mbInfo.tracklist.length
       ? {
           numTracks: mbInfo.tracklist.length,
