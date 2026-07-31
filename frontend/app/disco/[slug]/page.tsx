@@ -54,6 +54,7 @@ export async function generateMetadata({
   if (!disco || (disco.format && disco.format !== "vinyl")) {
     return { title: "Disco de Vinil | Garimpa Vinil" };
   }
+  const meta = await getDiscoMeta(slug).catch(() => null);
 
   const tituloLimpo = cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
   const isUnknownArtistDisco = disco.artista.toLowerCase() === "artista não identificado";
@@ -63,6 +64,18 @@ export async function generateMetadata({
   if (title.length > 60) title = base;
   if (title.length > 60 && includeArtist) title = `${tituloLimpo} em Vinil`;
   if (title.length > 60) title = `${truncateTitle(tituloLimpo, 51)} em Vinil`;
+
+  // mb_first_release_date is the release-GROUP date, i.e. the album's ORIGINAL
+  // year — not the year this particular pressing was manufactured, which we
+  // don't know. Rendered parenthetically after the album title so it reads as
+  // the album's year rather than implying a pressing date. Applied last and
+  // only when it still fits the 60-char budget, so it never costs the artist
+  // name or the brand suffix; skipped entirely on the truncated variant.
+  const anoOriginal = /^(\d{4})/.exec(meta?.mbFirstReleaseDate ?? "")?.[1];
+  if (anoOriginal && title.includes(tituloLimpo)) {
+    const comAno = title.replace(tituloLimpo, `${tituloLimpo} (${anoOriginal})`);
+    if (comAno.length <= 60) title = comAno;
+  }
 
   const valores = disco.precos.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;
