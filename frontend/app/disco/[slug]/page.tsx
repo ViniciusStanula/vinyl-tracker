@@ -740,7 +740,12 @@ export default async function DiscoPage({
           if (!hasLastfm && !wikiSummary && !sobrePt && !hasMb && !hasAmazon) return undefined;
 
           const cleanTitle = cleanAlbumTitle(disco.titulo, disco.artista);
-          const lastfmUrl = `https://www.last.fm/music/${encodeURIComponent(disco.artista)}/${encodeURIComponent(cleanTitle)}`;
+          // Last.fm canonicalises spaces as "+", not "%20" — album.getInfo
+          // returns e.g. https://www.last.fm/music/Larkin+Poe/Reskinned. The
+          // %20 form usually redirects but isn't the canonical URL, so encode
+          // everything else normally and then swap %20 for +.
+          const lastfmSegment = (s: string) => encodeURIComponent(s).replace(/%20/g, "+");
+          const lastfmUrl = `https://www.last.fm/music/${lastfmSegment(disco.artista)}/${lastfmSegment(cleanTitle)}`;
           return (
             <section aria-labelledby="sobre-album-heading" className="space-y-4">
               <h2 id="sobre-album-heading" className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
