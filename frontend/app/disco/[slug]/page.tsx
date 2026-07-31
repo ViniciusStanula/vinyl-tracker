@@ -769,7 +769,37 @@ export default async function DiscoPage({
           // %20 form usually redirects but isn't the canonical URL, so encode
           // everything else normally and then swap %20 for +.
           const lastfmSegment = (s: string) => encodeURIComponent(s).replace(/%20/g, "+");
-          const lastfmUrl = `https://www.last.fm/music/${lastfmSegment(disco.artista)}/${lastfmSegment(cleanTitle)}`;
+          // MusicBrainz publishes a canonical Last.fm artist URL, which fixes
+          // cases our own artista string gets wrong -- most importantly "AC/DC",
+          // where the raw slash builds a broken path and MB has "AC%2FDC".
+          //
+          // But MB's first last.fm relation is not always the one to use: for
+          // Taylor Swift it's the Japanese-language page, and for Travis Scott
+          // the "Travi$ Scott" alias. So adopt it only when it is the SAME name
+          // as ours once case, punctuation and accents are folded away -- i.e.
+          // when the only thing we gain is correct encoding or accenting
+          // ("Maria Bethânia", "Panic! at the Disco"). A genuinely different
+          // string means we can't tell which is right, so keep our own.
+          const foldName = (s: string) =>
+            s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          const canonicalBase = (() => {
+            const raw = meta?.artistLastfmUrl;
+            if (!raw) return null;
+            const seg = raw.replace(/\/+$/, "").split("/music/")[1];
+            if (!seg) return null;
+            let decoded: string;
+            try {
+              decoded = decodeURIComponent(seg.replace(/\+/g, " "));
+            } catch {
+              return null; // malformed percent-encoding stored upstream
+            }
+            return foldName(decoded) === foldName(disco.artista)
+              ? raw.replace(/%20/g, "+").replace(/\/+$/, "")
+              : null;
+          })();
+          const artistBase =
+            canonicalBase ?? `https://www.last.fm/music/${lastfmSegment(disco.artista)}`;
+          const lastfmUrl = `${artistBase}/${lastfmSegment(cleanTitle)}`;
           return (
             <section aria-labelledby="sobre-album-heading" className="space-y-4">
               <h2 id="sobre-album-heading" className="font-display text-base font-semibold text-cream">Sobre o álbum</h2>
