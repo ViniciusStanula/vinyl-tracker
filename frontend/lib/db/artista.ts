@@ -225,6 +225,7 @@ const _getArtistaPageData = unstable_cache(
       wikipediaUrl: string | null;
       spotifyUrl: string | null;
       mbid: string | null;
+      mbUrls: Record<string, string[]> | null;
       bioShortPt: string | null;
       bioPt: string | null;
     }[]>`
@@ -232,6 +233,7 @@ const _getArtistaPageData = unstable_cache(
              wikipedia_url AS "wikipediaUrl",
              spotify_url   AS "spotifyUrl",
              mbid          AS "mbid",
+             mb_urls       AS "mbUrls",
              bio_short_pt  AS "bioShortPt",
              bio_pt        AS "bioPt"
       FROM "ArtistMeta"
@@ -287,15 +289,39 @@ const _getArtistaPageData = unstable_cache(
     if (total === 0 && unavailableItems.length === 0) return null;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const topStyles = getTopStyles(tagsRows.map((r) => r.lastfmTags), 5, canonical);
+    // Relation types from ArtistMeta.mb_urls that identify the ARTIST as an
+    // entity. MusicBrainz also returns "streaming"/"free streaming", which are
+    // deliberately excluded: those lists mix real profiles with per-release
+    // store URLs (Amazon /gp/product/... shows up there), and a store page for
+    // one record is not an identifier for the artist.
+    const SAMEAS_RELATIONS = [
+      "official homepage",
+      "social network",
+      "soundcloud",
+      "bandcamp",
+      "youtube",
+      "discogs",
+      "allmusic",
+    ] as const;
+
     const sameAs = [
-      meta?.wikidataUrl,
-      meta?.wikipediaUrl,
-      meta?.spotifyUrl,
-      // mbid covers ~6x more artists (10.5k) than the three URL fields
-      // combined (~1.7k) -- most of this catalog's artist-level entity
-      // linking comes from here, not from the other three.
-      meta?.mbid ? `https://musicbrainz.org/artist/${meta.mbid}` : null,
-    ].filter((u): u is string => Boolean(u));
+      ...new Set(
+        [
+          meta?.wikidataUrl,
+          meta?.wikipediaUrl,
+          meta?.spotifyUrl,
+          // mbid covers ~6x more artists (10.5k) than the three URL fields
+          // combined (~1.7k) -- most of this catalog's artist-level entity
+          // linking comes from here, not from the other three.
+          meta?.mbid ? `https://musicbrainz.org/artist/${meta.mbid}` : null,
+          // MusicBrainz url-rels: 9,409 artists carry these, so this is now the
+          // widest source of entity links by a distance. Deduped against the
+          // fields above because wikidata arrives from both.
+          ...SAMEAS_RELATIONS.flatMap((rel) => meta?.mbUrls?.[rel] ?? []),
+          ...(meta?.mbUrls?.["wikidata"] ?? []),
+        ].filter((u): u is string => Boolean(u)),
+      ),
+    ];
     const bioShortPt = meta?.bioShortPt ?? null;
     const bioPt      = meta?.bioPt ?? null;
 

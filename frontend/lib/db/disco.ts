@@ -19,6 +19,7 @@ export type DiscoMeta = {
   mbRating: number | null;
   mbRatingVotes: number | null;
   artistCountry: string | null;
+  artistLastfmUrl: string | null;
   ean: string | null;
 };
 
@@ -101,6 +102,10 @@ export const getDiscoMeta = unstable_cache(
         mb_rating              AS "mbRating",
         mb_rating_votes        AS "mbRatingVotes",
         am.country             AS "artistCountry",
+        -- Canonical Last.fm artist URL as MusicBrainz records it. The disco
+        -- page used to build this from our own artista string, which is the
+        -- Amazon-derived spelling and does not always match Last.fm's.
+        am.mb_urls->'last.fm'->>0 AS "artistLastfmUrl",
         d.ean                  AS "ean"
       FROM "Disco" d
       LEFT JOIN "ArtistMeta" am ON am.artista = d.artista
