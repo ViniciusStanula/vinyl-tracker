@@ -446,6 +446,21 @@ export default async function DiscoPage({
         }
       : {}),
     ...(aggregateRatingLd ? { aggregateRating: aggregateRatingLd } : {}),
+    // Entity-linking to the canonical record on each source -- only where we
+    // hold a verified URL/ID, never a guessed slug (a wrong sameAs is worse
+    // than no sameAs). No Last.fm entry: we only store tags/wiki text for
+    // this record, not a canonical last.fm/music/... URL, and that URL's
+    // slug isn't reliably derivable from artista/titulo.
+    ...((meta?.sobrePtSourceUrl || meta?.mbMbid)
+      ? {
+          sameAs: [
+            ...(meta?.sobrePtSourceUrl ? [meta.sobrePtSourceUrl] : []),
+            // mb_mbid is '' (not null) when a search ran and found no match --
+            // only build the URL when there's an actual ID.
+            ...(meta?.mbMbid ? [`https://musicbrainz.org/release-group/${meta.mbMbid}`] : []),
+          ],
+        }
+      : {}),
   });
 
   const breadcrumbJsonLd = toJsonLd({
