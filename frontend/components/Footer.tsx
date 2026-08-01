@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import FooterSection from "@/components/FooterSection";
+
 function TelegramIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -50,6 +52,24 @@ const GUIA_LINKS = [
   { label: "Vinil 180g vale a pena?",  href: "/guias/vinil-180g-vale-a-pena" },
 ];
 
+// Decade pages. Must stay within DECADES in lib/decadas.ts — /decada/[decada]
+// 404s outside it, so 1950 is excluded here despite having ~233 records.
+const TOP_DECADAS = [1960, 1970, 1980, 1990, 2000, 2010, 2020];
+
+// Country pages, slugs derived from the PT-BR name (US -> "estados-unidos").
+// Brasil is lifted above its inventory rank because this is a pt-BR audience;
+// the rest follow available-record count.
+const TOP_PAISES = [
+  { nome: "Brasil",         slug: "brasil" },
+  { nome: "Estados Unidos", slug: "estados-unidos" },
+  { nome: "Reino Unido",    slug: "reino-unido" },
+  { nome: "Canadá",         slug: "canada" },
+  { nome: "Alemanha",       slug: "alemanha" },
+  { nome: "Austrália",      slug: "australia" },
+  { nome: "Suécia",         slug: "suecia" },
+  { nome: "França",         slug: "franca" },
+];
+
 const TOP_ESTILOS = [
   { nome: "Rock",       slug: "rock" },
   { nome: "Jazz",       slug: "jazz" },
@@ -64,14 +84,6 @@ const TOP_ESTILOS = [
   { nome: "Samba",      slug: "samba" },
   { nome: "MPB",        slug: "mpb" },
 ];
-
-function FooterHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[10px] uppercase tracking-widest font-semibold text-dust mb-3">
-      {children}
-    </p>
-  );
-}
 
 function FooterLink({ href, children, external }: {
   href: string;
@@ -93,7 +105,11 @@ export default function Footer() {
   return (
     <footer className="mt-16 border-t border-groove bg-record">
       <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8 text-sm">
+        {/* 5 columns on desktop so "Explorar por Estilo" gets a real one. It
+            used to be a 2-column grid nested inside the Explorar column, which
+            split that column in half and produced a phantom sub-column aligning
+            with nothing else in the footer. */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-8 text-sm">
 
           {/* ── Brand ────────────────────────────────── */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
@@ -118,58 +134,92 @@ export default function Footer() {
 
           {/* ── Navegar ──────────────────────────────── */}
           <nav aria-label="Navegação do rodapé" className="col-span-1 flex flex-col">
-            <FooterHeading>Navegar</FooterHeading>
-            <ul className="flex flex-col gap-2">
-              {NAV_LINKS.map(({ label, href }) => (
-                <li key={href}>
-                  <FooterLink href={href}>{label}</FooterLink>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-5">
-              <FooterHeading>Guias</FooterHeading>
-              <ul className="flex flex-col gap-2">
-                {GUIA_LINKS.map(({ label, href }) => (
+            <FooterSection heading="Navegar">
+              <ul className="flex flex-col gap-3 md:gap-2">
+                {NAV_LINKS.map(({ label, href }) => (
                   <li key={href}>
                     <FooterLink href={href}>{label}</FooterLink>
                   </li>
                 ))}
               </ul>
+            </FooterSection>
+
+            <div className="mt-5">
+              <FooterSection heading="Guias">
+                <ul className="flex flex-col gap-3 md:gap-2">
+                  {GUIA_LINKS.map(({ label, href }) => (
+                    <li key={href}>
+                      <FooterLink href={href}>{label}</FooterLink>
+                    </li>
+                  ))}
+                </ul>
+              </FooterSection>
             </div>
           </nav>
 
-          {/* ── Explorar ─────────────────────────────── */}
-          <nav aria-label="Explorar o catálogo" className="col-span-2 md:col-span-1 flex flex-col">
-            <FooterHeading>Explorar</FooterHeading>
-            <ul className="flex flex-col gap-2 mb-5">
-              {BROWSE_LINKS.map(({ label, href }) => (
-                <li key={href}>
-                  <FooterLink href={href}>{label}</FooterLink>
-                </li>
-              ))}
-            </ul>
+          {/* ── Explorar + Décadas ───────────────────── */}
+          <nav aria-label="Explorar o catálogo" className="col-span-1 flex flex-col">
+            <FooterSection heading="Explorar">
+              <ul className="flex flex-col gap-3 md:gap-2">
+                {BROWSE_LINKS.map(({ label, href }) => (
+                  <li key={href}>
+                    <FooterLink href={href}>{label}</FooterLink>
+                  </li>
+                ))}
+              </ul>
+            </FooterSection>
 
-            <FooterHeading>Explorar por Estilo</FooterHeading>
-            <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {TOP_ESTILOS.map(({ nome, slug }) => (
-                <li key={slug}>
-                  <FooterLink href={`/estilo/${slug}`}>{nome}</FooterLink>
-                </li>
-              ))}
-            </ul>
+            <div className="mt-5">
+              <FooterSection heading="Décadas">
+                <ul className="flex flex-col gap-3 md:gap-2">
+                  {TOP_DECADAS.map((d) => (
+                    <li key={d}>
+                      <FooterLink href={`/decada/${d}`}>Anos {d}</FooterLink>
+                    </li>
+                  ))}
+                </ul>
+              </FooterSection>
+            </div>
           </nav>
 
-          {/* ── Legal ────────────────────────────────── */}
+          {/* ── Explorar por Estilo ──────────────────── */}
+          <nav aria-label="Explorar por estilo musical" className="col-span-1 flex flex-col">
+            <FooterSection heading="Explorar por Estilo">
+              <ul className="flex flex-col gap-3 md:gap-2">
+                {TOP_ESTILOS.map(({ nome, slug }) => (
+                  <li key={slug}>
+                    <FooterLink href={`/estilo/${slug}`}>{nome}</FooterLink>
+                  </li>
+                ))}
+              </ul>
+            </FooterSection>
+          </nav>
+
+          {/* ── Países + Legal ───────────────────────── */}
           <div className="col-span-1 flex flex-col">
-            <FooterHeading>Legal</FooterHeading>
-            <ul className="flex flex-col gap-2">
-              {LEGAL_LINKS.map(({ label, href }) => (
-                <li key={href}>
-                  <FooterLink href={href}>{label}</FooterLink>
-                </li>
-              ))}
-            </ul>
+            <nav aria-label="Explorar por país">
+              <FooterSection heading="Países">
+                <ul className="flex flex-col gap-3 md:gap-2">
+                  {TOP_PAISES.map(({ nome, slug }) => (
+                    <li key={slug}>
+                      <FooterLink href={`/pais/${slug}`}>{nome}</FooterLink>
+                    </li>
+                  ))}
+                </ul>
+              </FooterSection>
+            </nav>
+
+            <div className="mt-5">
+              <FooterSection heading="Legal">
+                <ul className="flex flex-col gap-3 md:gap-2">
+                  {LEGAL_LINKS.map(({ label, href }) => (
+                    <li key={href}>
+                      <FooterLink href={href}>{label}</FooterLink>
+                    </li>
+                  ))}
+                </ul>
+              </FooterSection>
+            </div>
           </div>
 
         </div>
