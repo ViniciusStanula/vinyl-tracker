@@ -1064,21 +1064,15 @@ export default async function DiscoPage({
                         <dd className="text-cream font-medium text-right">{meta.mbLabel}</dd>
                       </div>
                     )}
-                    {/* Discogs only — resolved from the barcode, so it belongs to
-                        the pressing being sold. The MusicBrainz equivalents were
-                        dropped because a release-GROUP spans every pressing. */}
-                    {meta?.discogsCatno && (
-                      <div className="flex justify-between gap-4">
-                        <dt className="text-dust">Catálogo</dt>
-                        <dd className="text-cream font-medium text-right">{meta.discogsCatno}</dd>
-                      </div>
-                    )}
-                    {meta?.discogsCountry && (
-                      <div className="flex justify-between gap-4">
-                        <dt className="text-dust">Prensado em</dt>
-                        <dd className="text-cream font-medium text-right">{meta.discogsCountry}</dd>
-                      </div>
-                    )}
+                    {/* No "Prensado em" row. 41% of discogs_country is a region
+                        or a shrug rather than a country — Europe (83),
+                        Worldwide (46), Unknown (12), USA & Europe (10) — which
+                        is the same objection that kept MusicBrainz's XW/XE off
+                        the page, just spelled out. And no "Catálogo" row: the
+                        number is correct but it is collector minutiae that does
+                        not help someone decide whether to buy. It still goes out
+                        as schema.org catalogNumber, where it helps Google
+                        identify the product without taking up space here. */}
                     {artistPais && (
                       <div className="flex justify-between">
                         <dt className="text-dust">Origem</dt>
