@@ -99,30 +99,46 @@ def main() -> None:
     client = CreatorsClient(CreatorsConfig.from_env())
     print(f"API budget remaining this run: {client.budget_remaining()} calls\n")
 
-    found = missing = 0
-    try:
-        results = client.get_items(list(by_asin))
-    except BudgetExhausted as exc:
-        print(f"budget exhausted before completion: {exc}")
-        return
+    # Fetched and written in slices rather than one 1,776-call call. Passing the
+    # whole list to get_items() blocks until every call returns and only writes
+    # afterwards, so hitting the per-run budget cap raised BudgetExhausted and
+    # discarded every barcode fetched up to that point — spending the API budget
+    # and saving nothing. Committing per slice means an interrupted run keeps
+    # what it earned and the next run resumes from there.
+    SLICE = 100  # 10 API calls per slice
+    asins = list(by_asin)
+    found = missing = seen = 0
 
-    for r in results:
-        entry = by_asin.get(r.asin)
-        if entry is None:
-            continue
-        disco_id, slug = entry
-        if r.ean:
-            found += 1
-            if args.apply:
-                save_ean(conn, disco_id, r.ean)
+    for i in range(0, len(asins), SLICE):
+        chunk = asins[i : i + SLICE]
+        try:
+            results = client.get_items(chunk)
+        except BudgetExhausted as exc:
+            print(f"\nAPI budget reached after {seen} items — {exc}")
+            print("Progress is saved. Re-run to continue.")
+            break
+
+        for r in results:
+            entry = by_asin.get(r.asin)
+            if entry is None:
+                continue
+            disco_id, slug = entry
+            seen += 1
+            if r.ean:
+                found += 1
+                if args.apply:
+                    save_ean(conn, disco_id, r.ean)
+                else:
+                    print(f"  {slug[:52]:54s} -> {r.ean}")
             else:
-                print(f"  {slug[:52]:54s} -> {r.ean}")
-        else:
-            missing += 1
+                missing += 1
 
-    total = len(results) or 1
+        if args.apply and (i // SLICE) % 10 == 0:
+            log.info("%d/%d processed — %d barcodes stored", seen, len(asins), found)
+
+    total = seen or 1
     print(
-        f"\nitems returned    : {len(results)}"
+        f"\nitems processed   : {seen}"
         f"\n  with a barcode  : {found}  ({100*found/total:.0f}%)"
         f"\n  no barcode      : {missing}"
         f"\nAPI calls left    : {client.budget_remaining()}"
