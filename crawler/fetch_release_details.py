@@ -99,11 +99,19 @@ def fetch_details(rg_mbid: str) -> dict | None:
     #   - otherwise                       -> nothing
     # A wrong gtin13 is the most damaging of these: it tells Google the listing
     # is a different physical product.
+    # "[no label]" is MusicBrainz's placeholder for a self-released or unlabelled
+    # pressing, not a label name. Left in, it renders "Gravadora: [no label]".
+    # Matched exactly rather than by leading "[": real labels use brackets too
+    # ("[PIAS] Recordings", "[PIAS] Le Label"), and a prefix rule would drop them.
+    def is_real_label(name: str) -> bool:
+        return name.strip().lower() not in ("[no label]", "no label", "unknown")
+
     labels = {
         (li.get("label") or {}).get("name")
         for rel in releases
         for li in (rel.get("label-info") or [])
         if (li.get("label") or {}).get("name")
+        and is_real_label((li.get("label") or {}).get("name"))
     }
     countries = {r.get("country") for r in releases if r.get("country")}
 

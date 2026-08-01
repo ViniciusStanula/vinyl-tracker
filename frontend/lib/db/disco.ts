@@ -21,6 +21,10 @@ export type DiscoMeta = {
   mbRatingVotes: number | null;
   artistCountry: string | null;
   artistLastfmUrl: string | null;
+  mbLabel: string | null;
+  mbCatalogNumber: string | null;
+  mbBarcode: string | null;
+  mbReleaseCountry: string | null;
   ean: string | null;
 };
 
@@ -113,6 +117,14 @@ export const getDiscoMeta = (slug: string) =>
         -- page used to build this from our own artista string, which is the
         -- Amazon-derived spelling and does not always match Last.fm's.
         am.mb_urls->'last.fm'->>0 AS "artistLastfmUrl",
+        -- Pressing-level fields. NULL on ~57% of records by design: they are
+        -- only stored when the MusicBrainz release-group leaves no doubt (one
+        -- release, or every release sharing the same label). See
+        -- crawler/fetch_release_details.py.
+        d.mb_label             AS "mbLabel",
+        d.mb_catalog_number    AS "mbCatalogNumber",
+        d.mb_barcode           AS "mbBarcode",
+        d.mb_release_country   AS "mbReleaseCountry",
         d.ean                  AS "ean"
       FROM "Disco" d
       LEFT JOIN "ArtistMeta" am ON am.artista = d.artista
