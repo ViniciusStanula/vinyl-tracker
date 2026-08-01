@@ -74,13 +74,29 @@ export default function Tracklist({ tracks, previewCount = 8 }: Props) {
           const newSide = hasSides && side !== sides[i - 1];
           return (
             <li key={i}>
+              {/* Gap above every side but the first. `first:mt-0` did not work
+                  here: the heading is always the first child of its own <li>,
+                  so the modifier matched on every side and none got separated. */}
               {newSide && (
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-dust mt-4 first:mt-0 mb-1.5">
+                <p
+                  className={`font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-dust mb-1.5 ${
+                    i === 0 ? "" : "mt-4"
+                  }`}
+                >
                   {sideLabel(side as string, totalSides)}
                 </p>
               )}
               <div className="flex gap-3 items-baseline">
-                <span className="text-parchment tabular-nums w-7 text-right shrink-0">
+                {/* Plain numbers are right-aligned so 9 and 10 line up on the
+                    units digit. Side codes are left-aligned instead: "A1" and
+                    "B12" share a left edge, not a right one, and right-aligning
+                    them pushed the codes away from the side heading above and
+                    left a ragged edge down the column. */}
+                <span
+                  className={`text-parchment tabular-nums w-7 shrink-0 ${
+                    hasSides ? "text-left" : "text-right"
+                  }`}
+                >
                   {hasSides ? track.position : i + 1}
                 </span>
                 <span className="text-cream flex-1 min-w-0">{track.title}</span>
