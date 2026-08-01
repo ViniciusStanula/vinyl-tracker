@@ -434,8 +434,29 @@ def main() -> None:
             if t.get("title")
         ]
         sides = any(re.match(r"^[A-Z]\d", (t.get("position") or "")) for t in tracklist)
-        catno = clean_catno(next((l.get("catno") for l in (rel.get("labels") or [])), None))
-        country = rel.get("country") or hit.get("country")
+        # A barcode is not always unique. Measured on 25 random records: 10 map
+        # to exactly one Discogs release, 12 map to several, and 5 of those 12
+        # disagree on country. Evangelion "Finally" (0194398431512) returns five
+        # — US 2022, US 2021 x2, a US misprint variant and a Europe pressing.
+        #
+        # So the pressing-level fields are only trustworthy when the barcode
+        # resolved to a single release. Where several share it, country and
+        # catalogue number are a coin flip and are left NULL, exactly as they
+        # were for ambiguous MusicBrainz release-groups.
+        siblings = [r for r in results if verify_match(artista, titulo, r)]
+        unique_pressing = len(siblings) == 1
+
+        # Track layout is safe across siblings only if they are structurally the
+        # same object — a 1LP and a 2LP variant of one album have different side
+        # letters. Compared on the search result's own format list, so this
+        # costs no extra calls.
+        same_format = len({tuple(sorted(r.get("format") or [])) for r in siblings}) == 1
+
+        catno = (
+            clean_catno(next((l.get("catno") for l in (rel.get("labels") or [])), None))
+            if unique_pressing else None
+        )
+        country = (rel.get("country") or hit.get("country")) if unique_pressing else None
         styles = ", ".join(rel.get("styles") or hit.get("style") or []) or None
 
         # One extra call, only when a master exists. Worth it: the master year
@@ -451,6 +472,12 @@ def main() -> None:
         resolved += 1
         with_sides += bool(sides)
         with_catno += bool(catno)
+
+        # Siblings that differ in format may differ in side layout, so the
+        # tracklist is only stored when they are structurally identical.
+        if not (unique_pressing or same_format):
+            tracklist = []
+            sides = False
 
         if args.apply:
             with conn.cursor() as cur:
