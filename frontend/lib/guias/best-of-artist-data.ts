@@ -324,7 +324,9 @@ const _getBestAlbums = unstable_cache(
     return fetchRankedAlbums(artist);
   },
   ["best-of-artist"],
-  { tags: ["prices"], revalidate: 86400 }
+  // Editorial ranking with a 24h TTL — the "prices" tag was purging it 8x/day
+  // to regenerate content that is refreshed daily by design.
+  { revalidate: 86400 }
 );
 
 export const getBestAlbums = cache(_getBestAlbums);

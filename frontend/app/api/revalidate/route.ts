@@ -31,14 +31,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ revalidated: false, tag: "none", at: new Date().toISOString() });
   }
 
+  // Per-entity purge: the crawler sends the tags for exactly the records and
+  // artists it observed this run, instead of purging "prices" and marking all
+  // ~42,000 record + artist pages stale when only ~4,200 were looked at.
+  //
+  // Entity tags are validated by shape rather than an allowlist (there are
+  // ~31,000 possible values). The prefix set is closed and the slug charset is
+  // restricted, so a leaked secret still cannot purge an arbitrary tag.
+  if (Array.isArray(body.tags) && body.tags.length > 0) {
+    const ENTITY_TAG = /^(disco|artista|estilo|pais|decada)-[a-z0-9-]{1,120}$/;
+    const accepted = (body.tags as unknown[]).filter(
+      (t): t is string => typeof t === "string" && ENTITY_TAG.test(t),
+    );
+    for (const t of accepted) revalidateTag(t, {});
+    return NextResponse.json({
+      revalidated: true,
+      tags: accepted.length,
+      rejected: body.tags.length - accepted.length,
+      at: new Date().toISOString(),
+    });
+  }
+
   // Standard ISR: tag invalidation triggers stale-while-revalidate. First request
   // after the crawl gets the previous cached HTML instantly; background regen fires
   // and the next request gets fresh prices. No blocking render, no skeleton.
   //
   // `tag` selects the scope: "deals" (frequent in-loop deal refresh) regenerates
-  // only the deal surfaces (home, ofertas, carousel); "prices" (default) is the
-  // broad purge fired at end-of-run. Allowlisted so a leaked secret can't purge
-  // arbitrary tags.
+  // only the deal surfaces (home, ofertas, carousel); "prices" (default) now
+  // covers the aggregate surfaces only — the listings whose ?page= variants
+  // cannot be enumerated — and is still fired once at end-of-run as a safety net.
+  // Allowlisted so a leaked secret can't purge arbitrary tags.
   const ALLOWED_TAGS = new Set(["prices", "deals"]);
   const tag = typeof body.tag === "string" && ALLOWED_TAGS.has(body.tag) ? body.tag : "prices";
   revalidateTag(tag, {});

@@ -78,7 +78,10 @@ export const getSitemapData = unstable_cache(
     return { artists, styles };
   },
   ["sitemap-page"],
-  { tags: ["prices"], revalidate: 3600 },
+  // No prices here — just the URL inventory. The 1h TTL is the right cadence;
+  // carrying the "prices" tag meant a rebuild on every crawl (8x/day) for a
+  // file whose content only changes when records are added or removed.
+  { revalidate: 3600 },
 );
 
 // Months in Portuguese and English for date-slug detection
@@ -113,7 +116,8 @@ export const getLatestDiscoUpdate = unstable_cache(
     return rows[0]?.maxUpdatedAt ?? new Date();
   },
   ["latest-disco-update"],
-  { tags: ["prices"], revalidate: 3600 },
+  // <lastmod> timestamp only; hourly is ample for sitemap freshness.
+  { revalidate: 3600 },
 );
 
 export async function getSitemapArtists(): Promise<MetadataRoute.Sitemap> {

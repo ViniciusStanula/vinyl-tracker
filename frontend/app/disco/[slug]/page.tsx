@@ -169,7 +169,7 @@ export default async function DiscoPage({
     // Genres link to /estilo/[slug] only when a style page actually exists for
     // that slug (style pages are derived from lastfm_tags, not MB genres).
     meta?.mbMbid ? getEstilosList() : Promise.resolve([]),
-    getRelatedDeals(disco.id, styleTags),
+    getRelatedDeals(disco.id, slug, styleTags),
     // Rank of this album among the artist's tracked vinyls, by Last.fm listeners.
     (meta?.lastfmListeners ?? 0) > 0
       ? getArtistPopularity(disco.artista, slug)
@@ -177,7 +177,7 @@ export default async function DiscoPage({
     // Other vinyls by the same artist (most-listened first) for a dedicated rail.
     artistLower === "artista não identificado"
       ? Promise.resolve([])
-      : getArtistTopAlbums(disco.artista, disco.id),
+      : getArtistTopAlbums(disco.artista, disco.id, slug),
   ]);
 
   // MusicBrainz release-group facts (mb_mbid = "" means searched, no match).
