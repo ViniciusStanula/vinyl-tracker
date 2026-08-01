@@ -190,8 +190,54 @@ class Discogs:
         time.sleep(self.delay)
         return data
 
+    def master_year(self, master_id: int) -> int | None:
+        """Original release year of the album, not of this pressing.
+
+        A release carries the year the vinyl was manufactured; the master
+        carries the year the album first came out. Janis "Janis" is pressing
+        2023 / master 1975, Ready To Die is 2023 / 1994. Only the master is
+        usable for /decada.
+        """
+        data = self._get(f"/masters/{master_id}")
+        time.sleep(self.delay)
+        year = (data or {}).get("year")
+        return int(year) if isinstance(year, int) and 1900 < year < 2100 else None
+
+
+_COLUMNS = (
+    "discogs_release_id",
+    "discogs_catno",
+    "discogs_country",
+    "discogs_styles",
+    "discogs_tracklist",
+    "discogs_checked_at",
+    "discogs_master_year",
+    "discogs_master_checked_at",
+)
+
 
 def ensure_columns(conn) -> None:
+    """Add the Discogs columns, skipping the DDL entirely once they exist.
+
+    ADD COLUMN IF NOT EXISTS still takes an ACCESS EXCLUSIVE lock even when
+    every column is already there, so running it unconditionally at startup
+    makes this script fight whatever else is writing to "Disco" — the price
+    crawler every three hours, or a sibling backfill. It cost a running EAN
+    backfill once: the ALTER queued for the lock, and the backfill's UPDATE hit
+    its own lock timeout and died.
+
+    Same fast path ensure_schema_extras() in database.py uses: read the catalog
+    first, and only reach for DDL when something is genuinely missing.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """SELECT count(*) FROM information_schema.columns
+               WHERE table_name = 'Disco' AND column_name = ANY(%s)""",
+            (list(_COLUMNS),),
+        )
+        if cur.fetchone()[0] == len(_COLUMNS):
+            return
+
     with conn.cursor() as cur:
         cur.execute(
             """ALTER TABLE "Disco"
@@ -200,7 +246,13 @@ def ensure_columns(conn) -> None:
                  ADD COLUMN IF NOT EXISTS discogs_country     TEXT,
                  ADD COLUMN IF NOT EXISTS discogs_styles      TEXT,
                  ADD COLUMN IF NOT EXISTS discogs_tracklist   JSONB,
-                 ADD COLUMN IF NOT EXISTS discogs_checked_at  TIMESTAMPTZ"""
+                 ADD COLUMN IF NOT EXISTS discogs_checked_at  TIMESTAMPTZ,
+                 -- Original album year from the Discogs MASTER, never the
+                 -- release: a release's year is when this pressing was made.
+                 -- Separate checked_at because a legitimate answer is "this
+                 -- release has no master", which must not be retried forever.
+                 ADD COLUMN IF NOT EXISTS discogs_master_year       INTEGER,
+                 ADD COLUMN IF NOT EXISTS discogs_master_checked_at TIMESTAMPTZ"""
         )
     conn.commit()
 
@@ -214,7 +266,12 @@ def fetch_candidates(conn, limit: int | None) -> list[tuple]:
             WHERE ean ~ '^[0-9]{{13}}$'
               AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
-              AND discogs_checked_at IS NULL
+              AND (
+                discogs_checked_at IS NULL
+                -- Rows resolved before master-year lookup existed: pick them up
+                -- instead of needing a separate backfill pass.
+                OR (discogs_release_id IS NOT NULL AND discogs_master_checked_at IS NULL)
+              )
             ORDER BY price_count DESC NULLS LAST
             {'LIMIT %s' if limit else ''}
             """,
@@ -247,7 +304,7 @@ def main() -> None:
     )
 
     resolved = rejected = missed = non_vinyl = 0
-    with_sides = with_catno = 0
+    with_sides = with_catno = with_master = 0
 
     for slug, artista, titulo, ean in rows:
         results = dg.by_barcode(ean)
@@ -290,6 +347,16 @@ def main() -> None:
         country = rel.get("country") or hit.get("country")
         styles = ", ".join(rel.get("styles") or hit.get("style") or []) or None
 
+        # One extra call, only when a master exists. Worth it: the master year
+        # both fills records with no release date and catches wrong ones —
+        # Jethro Tull "Living In The Past" is 1972, and MusicBrainz has it as
+        # 2013 from a reissue release-group, which files it under the wrong
+        # decade on the site today.
+        master_id = rel.get("master_id")
+        master_year = dg.master_year(master_id) if master_id else None
+        if master_year:
+            with_master += 1
+
         resolved += 1
         with_sides += bool(sides)
         with_catno += bool(catno)
@@ -298,12 +365,14 @@ def main() -> None:
             with conn.cursor() as cur:
                 cur.execute(
                     """UPDATE "Disco"
-                       SET discogs_release_id = %s,
-                           discogs_catno      = %s,
-                           discogs_country    = %s,
-                           discogs_styles     = %s,
-                           discogs_tracklist  = %s,
-                           discogs_checked_at = NOW()
+                       SET discogs_release_id        = %s,
+                           discogs_catno             = %s,
+                           discogs_country           = %s,
+                           discogs_styles            = %s,
+                           discogs_tracklist         = %s,
+                           discogs_master_year       = %s,
+                           discogs_master_checked_at = NOW(),
+                           discogs_checked_at        = NOW()
                        WHERE slug = %s""",
                     (
                         hit["id"],
@@ -311,14 +380,15 @@ def main() -> None:
                         country,
                         styles,
                         json.dumps(tracklist, ensure_ascii=False) if tracklist else None,
+                        master_year,
                         slug,
                     ),
                 )
         else:
             print(
                 f"  OK  {artista[:16]:18s} | {titulo[:24]:26s} | "
-                f"{country or '--':14s} sides={'Y' if sides else 'n'} "
-                f"catno={catno or '-'} styles={styles or '-'}"
+                f"{country or '--':12s} sides={'Y' if sides else 'n'} "
+                f"orig={master_year or '-':6} catno={catno or '-'} styles={styles or '-'}"
             )
 
     total = len(rows) or 1
@@ -326,6 +396,7 @@ def main() -> None:
         f"\nresolved            : {resolved}  ({100*resolved/total:.0f}%)"
         f"\n  ...with A/B sides : {with_sides}"
         f"\n  ...with catalogue : {with_catno}"
+        f"\n  ...with orig year : {with_master}"
         f"\n  ...non-vinyl hit  : {non_vinyl}  (flagged only, not acted on)"
         f"\nrejected by verify  : {rejected}"
         f"\nbarcode not found   : {missed}"
