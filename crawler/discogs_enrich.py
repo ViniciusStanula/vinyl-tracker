@@ -524,6 +524,49 @@ def fetch_noBarcode_candidates(conn, limit: int | None) -> list[tuple]:
         return cur.fetchall()
 
 
+def salvage_by_title(dg, conn, args, slug, artista, titulo) -> bool:
+    """Last chance for a record whose barcode found nothing, or found junk.
+
+    Those rows used to be stamped checked and retired empty. An artist+title
+    search still identifies the ALBUM, so the pressing-invariant fields apply
+    exactly as they do for records that never had a barcode: styles and the
+    original year, never country, catalogue number or side layout.
+
+    Measured on 60 records: 9 barcode misses, 3 of them recovered this way, at
+    the cost of one extra call per miss. Returns True when something was saved.
+
+    The row is stamped checked either way — the barcode already failed and the
+    title search has now failed too, so there is nothing left to retry.
+    """
+    query = clean_album_title(titulo, artista) or titulo
+    inv: dict = {}
+    if not _UNIDENTIFIED.search(artista or ""):
+        try:
+            alt = dg.by_artist_title(artista, query)
+            inv = pressing_invariant(
+                [r for r in alt if verify_match(artista, titulo, r)]
+            )
+        except DiscogsUnavailable:
+            # Do not stamp: the barcode answered, this did not, so the row is
+            # still worth another run.
+            return False
+
+    if args.apply:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE "Disco"
+                   SET discogs_styles      = COALESCE(%s, discogs_styles),
+                       discogs_master_year = COALESCE(%s, discogs_master_year),
+                       discogs_checked_at  = NOW()
+                   WHERE slug = %s""",
+                (inv.get("styles"), inv.get("year"), slug),
+            )
+    elif inv:
+        print(f"  SALVAGE {artista[:16]:18s} | {titulo[:26]:28s} "
+              f"year={inv.get('year') or '-'} styles={inv.get('styles') or '-'}")
+    return bool(inv)
+
+
 def main() -> None:
     # Rebound here rather than at import: doing it at module scope replaces the
     # stdout pytest has already captured, and every test in this file then dies
@@ -557,7 +600,7 @@ def main() -> None:
         f"({dg.delay}s/call)\n"
     )
 
-    resolved = rejected = missed = non_vinyl = unavailable = 0
+    resolved = rejected = missed = non_vinyl = unavailable = salvaged = 0
     with_sides = with_catno = with_master = 0
 
     for slug, artista, titulo, ean in rows:
@@ -569,12 +612,8 @@ def main() -> None:
             continue
         if not results:
             missed += 1
-            if args.apply:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
-                        (slug,),
-                    )
+            if salvage_by_title(dg, conn, args, slug, artista, titulo):
+                salvaged += 1
             continue
 
         hit = next(
@@ -584,12 +623,10 @@ def main() -> None:
         if hit is None:
             rejected += 1
             print(f"  REJECT {artista[:18]:20s} | {titulo[:30]:32s} -> {results[0].get('title','')[:40]}")
-            if args.apply:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
-                        (slug,),
-                    )
+            # A rejected hit means the barcode pointed somewhere else, so the
+            # barcode is the part not to trust — the title is still worth a try.
+            if salvage_by_title(dg, conn, args, slug, artista, titulo):
+                salvaged += 1
             continue
 
         fmts = [f.lower() for f in (hit.get("format") or [])]
@@ -716,6 +753,8 @@ def main() -> None:
         f"\n  ...non-vinyl hit  : {non_vinyl}  (flagged only, not acted on)"
         f"\nrejected by verify  : {rejected}"
         f"\nbarcode not found   : {missed}"
+        f"\n  ...salvaged by title search : {salvaged}"
+        f"\nAPI unavailable, left unchecked : {unavailable}"
     )
     if not args.apply:
         print("\nDRY RUN — nothing written.")
