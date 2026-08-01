@@ -598,6 +598,38 @@ def fetch_noBarcode_candidates(conn, limit: int | None) -> list[tuple]:
         return cur.fetchall()
 
 
+def album_level_fields(dg, verified: list[dict]) -> dict:
+    """What can be said about the ALBUM from a set of verified pressings.
+
+    Prefers the shared master — one authoritative lookup giving the original
+    year, the clean title, genres and the running order — and falls back to
+    pressing_invariant when the pressings point at different masters or none.
+
+    Never returns pressing-level data. The master tracklist carries no side
+    letters, which is precisely the claim a pressing-agnostic match can make.
+    """
+    if not verified:
+        return {}
+    mid = master_consensus(verified)
+    if mid:
+        master = dg.master(mid) or {}
+        year = master.get("year")
+        return {
+            "year": year if isinstance(year, int) and 1900 < year < 2100 else None,
+            "styles": ", ".join(master.get("styles") or []) or None,
+            "genres": ", ".join(master.get("genres") or []) or None,
+            "title": (master.get("title") or "").strip() or None,
+            "tracks": [
+                {"position": t.get("position"), "title": t.get("title"),
+                 "duration": t.get("duration")}
+                for t in (master.get("tracklist") or [])
+                if t.get("title") and (t.get("type_") or "track") == "track"
+            ],
+        }
+    inv = pressing_invariant(verified)
+    return {"year": inv.get("year"), "styles": inv.get("styles")} if inv else {}
+
+
 def salvage_by_title(dg, conn, args, slug, artista, titulo) -> bool:
     """Last chance for a record whose barcode found nothing, or found junk.
 
@@ -613,12 +645,12 @@ def salvage_by_title(dg, conn, args, slug, artista, titulo) -> bool:
     title search has now failed too, so there is nothing left to retry.
     """
     query = clean_album_title(titulo, artista) or titulo
-    inv: dict = {}
+    alb: dict = {}
     if not _UNIDENTIFIED.search(artista or ""):
         try:
             alt = dg.by_artist_title(artista, query)
-            inv = pressing_invariant(
-                [r for r in alt if verify_match(artista, titulo, r)]
+            alb = album_level_fields(
+                dg, [r for r in alt if verify_match(artista, titulo, r)]
             )
         except DiscogsUnavailable:
             # Do not stamp: the barcode answered, this did not, so the row is
@@ -630,15 +662,22 @@ def salvage_by_title(dg, conn, args, slug, artista, titulo) -> bool:
             cur.execute(
                 """UPDATE "Disco"
                    SET discogs_styles      = COALESCE(%s, discogs_styles),
+                       discogs_genres      = COALESCE(%s, discogs_genres),
+                       discogs_title       = COALESCE(discogs_title, %s),
+                       discogs_tracklist   = COALESCE(discogs_tracklist, %s),
                        discogs_master_year = COALESCE(%s, discogs_master_year),
                        discogs_checked_at  = NOW()
                    WHERE slug = %s""",
-                (inv.get("styles"), inv.get("year"), slug),
+                (alb.get("styles"), alb.get("genres"), alb.get("title"),
+                 json.dumps(alb["tracks"], ensure_ascii=False)
+                 if alb.get("tracks") else None,
+                 alb.get("year"), slug),
             )
-    elif inv:
+    elif alb:
         print(f"  SALVAGE {artista[:16]:18s} | {titulo[:26]:28s} "
-              f"year={inv.get('year') or '-'} styles={inv.get('styles') or '-'}")
-    return bool(inv)
+              f"year={alb.get('year') or '-':6} tracks={len(alb.get('tracks') or []) or '-':4} "
+              f"styles={(alb.get('styles') or '-')[:30]}")
+    return bool(alb)
 
 
 def main() -> None:
@@ -911,47 +950,29 @@ def run_no_barcode(conn, args) -> None:
         # spanning 2017 to 2026, so they never agree on a year, yet all eight
         # carry one master_id and are plainly the same album. The master then
         # answers authoritatively in a single call, where the old path gave up.
-        mid = master_consensus(verified)
-        master = None
-        if mid:
-            try:
-                master = dg.master(mid)
-            except DiscogsUnavailable:
-                unavailable += 1
-                continue
+        had_master = master_consensus(verified) is not None
+        try:
+            alb = album_level_fields(dg, verified)
+        except DiscogsUnavailable:
+            unavailable += 1
+            continue
 
-        if master:
-            year = master.get("year")
-            year = int(year) if isinstance(year, int) and 1900 < year < 2100 else None
-            styles = ", ".join(master.get("styles") or []) or None
-            genres = ", ".join(master.get("genres") or []) or None
-            dg_title = (master.get("title") or "").strip() or None
-            # The master tracklist is the album's running order with no side
-            # letters, which is what a pressing-agnostic match can honestly
-            # claim. COALESCE below keeps a real vinyl tracklist if one is
-            # already stored — that one has A1/B1 and is strictly better.
-            tracks = [
-                {"position": t.get("position"), "title": t.get("title"),
-                 "duration": t.get("duration")}
-                for t in (master.get("tracklist") or [])
-                if t.get("title") and (t.get("type_") or "track") == "track"
-            ]
+        if not alb:
+            ambiguous += 1
+            if args.apply:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
+                        (slug,),
+                    )
+            continue
+
+        year, styles = alb.get("year"), alb.get("styles")
+        genres, dg_title = alb.get("genres"), alb.get("title")
+        tracks = alb.get("tracks") or []
+        if had_master:
             from_master += 1
         else:
-            inv = pressing_invariant(verified)
-            if not inv:
-                ambiguous += 1
-                if args.apply:
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
-                            (slug,),
-                        )
-                continue
-            year = inv.get("year")
-            styles = inv.get("styles")
-            genres = dg_title = None
-            tracks = []
             agreed += 1
 
         if args.apply:
@@ -972,7 +993,7 @@ def run_no_barcode(conn, args) -> None:
                 )
         else:
             print(
-                f"  {'MASTER' if master else 'AGREE ':6s} {artista[:16]:18s} | "
+                f"  {'MASTER' if had_master else 'AGREE ':6s} {artista[:16]:18s} | "
                 f"{titulo[:24]:26s} | {len(verified)} pressings | "
                 f"year={year or '-':6} tracks={len(tracks) or '-':4} "
                 f"styles={(styles or '-')[:30]}"
