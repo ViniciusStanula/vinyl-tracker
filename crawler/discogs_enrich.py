@@ -259,6 +259,22 @@ def verify_match(
     return False
 
 
+def master_consensus(results: list[dict]) -> int | None:
+    """The Discogs master every verified pressing points at, or None.
+
+    Far stronger evidence than the field-by-field agreement pressing_invariant
+    asks for. Niall Horan "Flicker" returns eight pressings across three
+    countries and two decades; all eight carry master_id 1254664, which settles
+    that they are one album even though their years and styles differ.
+
+    Search results already carry master_id, so this is free, and it turns the
+    barcode-less path from "hope every pressing agrees" into one authoritative
+    lookup.
+    """
+    ids = {r.get("master_id") for r in results if r.get("master_id")}
+    return ids.pop() if len(ids) == 1 else None
+
+
 def sibling_consensus(sibs: list[dict], key: str) -> str | None:
     """The one value every sibling release agrees on, or None.
 
@@ -424,6 +440,12 @@ class Discogs:
 
     def release(self, release_id: int) -> dict | None:
         data = self._get(f"/releases/{release_id}")
+        time.sleep(self.delay)
+        return data
+
+    def master(self, master_id: int) -> dict | None:
+        """The album as an abstract work: year, title, styles, tracklist."""
+        data = self._get(f"/masters/{master_id}")
         time.sleep(self.delay)
         return data
 
@@ -864,7 +886,7 @@ def run_no_barcode(conn, args) -> None:
         f"auth: {'yes' if dg.authed else 'anonymous'}\n"
     )
 
-    agreed = ambiguous = missed = unavailable = 0
+    agreed = ambiguous = missed = unavailable = from_master = 0
     for slug, artista, titulo in rows:
         query_title = clean_album_title(titulo, artista) or titulo
         try:
@@ -883,38 +905,82 @@ def run_no_barcode(conn, args) -> None:
             continue
 
         verified = [r for r in results if verify_match(artista, titulo, r)]
-        inv = pressing_invariant(verified)
-        if not inv:
-            ambiguous += 1
-            if args.apply:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
-                        (slug,),
-                    )
-            continue
 
-        agreed += 1
+        # Prefer the master. Asking every pressing to agree field by field is
+        # the wrong question — Niall Horan "Flicker" returns eight pressings
+        # spanning 2017 to 2026, so they never agree on a year, yet all eight
+        # carry one master_id and are plainly the same album. The master then
+        # answers authoritatively in a single call, where the old path gave up.
+        mid = master_consensus(verified)
+        master = None
+        if mid:
+            try:
+                master = dg.master(mid)
+            except DiscogsUnavailable:
+                unavailable += 1
+                continue
+
+        if master:
+            year = master.get("year")
+            year = int(year) if isinstance(year, int) and 1900 < year < 2100 else None
+            styles = ", ".join(master.get("styles") or []) or None
+            genres = ", ".join(master.get("genres") or []) or None
+            dg_title = (master.get("title") or "").strip() or None
+            # The master tracklist is the album's running order with no side
+            # letters, which is what a pressing-agnostic match can honestly
+            # claim. COALESCE below keeps a real vinyl tracklist if one is
+            # already stored — that one has A1/B1 and is strictly better.
+            tracks = [
+                {"position": t.get("position"), "title": t.get("title"),
+                 "duration": t.get("duration")}
+                for t in (master.get("tracklist") or [])
+                if t.get("title") and (t.get("type_") or "track") == "track"
+            ]
+            from_master += 1
+        else:
+            inv = pressing_invariant(verified)
+            if not inv:
+                ambiguous += 1
+                if args.apply:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
+                            (slug,),
+                        )
+                continue
+            year = inv.get("year")
+            styles = inv.get("styles")
+            genres = dg_title = None
+            tracks = []
+            agreed += 1
+
         if args.apply:
             with conn.cursor() as cur:
                 cur.execute(
                     """UPDATE "Disco"
                        SET discogs_styles            = COALESCE(%s, discogs_styles),
+                           discogs_genres            = COALESCE(%s, discogs_genres),
+                           discogs_title             = COALESCE(discogs_title, %s),
+                           discogs_tracklist         = COALESCE(discogs_tracklist, %s),
                            discogs_master_year       = COALESCE(%s, discogs_master_year),
                            discogs_master_checked_at = NOW(),
                            discogs_checked_at        = NOW()
                        WHERE slug = %s""",
-                    (inv.get("styles"), inv.get("year"), slug),
+                    (styles, genres, dg_title,
+                     json.dumps(tracks, ensure_ascii=False) if tracks else None,
+                     year, slug),
                 )
         else:
             print(
-                f"  AGREE {artista[:16]:18s} | {titulo[:26]:28s} | "
-                f"{len(verified)} pressings | year={inv.get('year') or '-'} "
-                f"styles={inv.get('styles') or '-'}"
+                f"  {'MASTER' if master else 'AGREE ':6s} {artista[:16]:18s} | "
+                f"{titulo[:24]:26s} | {len(verified)} pressings | "
+                f"year={year or '-':6} tracks={len(tracks) or '-':4} "
+                f"styles={(styles or '-')[:30]}"
             )
 
     total = len(rows) or 1
     print(
+        f"\nresolved via master        : {from_master}  ({100*from_master/total:.0f}%)"
         f"\nconsensus across pressings : {agreed}  ({100*agreed/total:.0f}%)"
         f"\npressings disagreed        : {ambiguous}"
         f"\nnothing found              : {missed}"

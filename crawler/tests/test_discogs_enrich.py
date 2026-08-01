@@ -1,4 +1,9 @@
-from discogs_enrich import verify_match, clean_catno, sibling_consensus
+from discogs_enrich import (
+    verify_match,
+    clean_catno,
+    sibling_consensus,
+    master_consensus,
+)
 
 
 def hit(title: str) -> dict:
@@ -185,3 +190,27 @@ class TestSiblingConsensus:
         # a barcode still do not have a catalogue number.
         sibs = [{"catno": "00602458871463"}, {"catno": "00602458871463"}]
         assert sibling_consensus(sibs, "catno") is None
+
+
+class TestMasterConsensus:
+    """One shared master beats asking every pressing to agree field by field."""
+
+    def test_all_pressings_share_one_master(self):
+        # Niall Horan "Flicker": eight pressings spanning 2017 to 2026, all
+        # carrying master 1254664. They never agree on a year, but they are
+        # unambiguously one album.
+        sibs = [{"master_id": 1254664, "year": "2017"},
+                {"master_id": 1254664, "year": "2026"},
+                {"master_id": 1254664, "year": "2017"}]
+        assert master_consensus(sibs) == 1254664
+
+    def test_two_masters_is_not_consensus(self):
+        sibs = [{"master_id": 1254664}, {"master_id": 999}]
+        assert master_consensus(sibs) is None
+
+    def test_missing_master_ids_are_ignored_not_counted(self):
+        sibs = [{"master_id": 1254664}, {"year": "2019"}, {"master_id": None}]
+        assert master_consensus(sibs) == 1254664
+
+    def test_no_masters_at_all(self):
+        assert master_consensus([{"year": "2019"}, {}]) is None
