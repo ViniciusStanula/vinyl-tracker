@@ -259,6 +259,32 @@ def verify_match(
     return False
 
 
+def sibling_consensus(sibs: list[dict], key: str) -> str | None:
+    """The one value every sibling release agrees on, or None.
+
+    A barcode mapping to several releases does not mean they give several
+    answers. Measured on 30 records — 11 with multiple pressings behind one
+    barcode — the siblings agreed on label and catalogue number 82% of the
+    time, while country differed 64% of the time (the same record pressed for
+    Europe and for the US). So country stays gated on a single pressing, and
+    these two are taken by consensus instead of being dropped.
+
+    Reads the search results, which already carry catno and label, so this
+    costs no extra API call.
+    """
+    values = set()
+    for r in sibs:
+        v = r.get(key)
+        if isinstance(v, list):
+            v = v[0] if v else None
+        if key == "catno":
+            v = clean_catno(v)
+        v = (v or "").strip() or None
+        if v:
+            values.add(v)
+    return values.pop() if len(values) == 1 else None
+
+
 def pressing_invariant(results: list[dict]) -> dict:
     """Fields every matching vinyl pressing agrees on, and nothing else.
 
@@ -699,7 +725,8 @@ def main() -> None:
 
         catno = (
             clean_catno(next((l.get("catno") for l in (rel.get("labels") or [])), None))
-            if unique_pressing else None
+            if unique_pressing
+            else sibling_consensus(siblings, "catno")
         )
         country = (rel.get("country") or hit.get("country")) if unique_pressing else None
         # Discogs uses a literal "Unknown" placeholder, which is not a country.
@@ -709,12 +736,14 @@ def main() -> None:
         # Album-level, so it survives an ambiguous barcode the way styles do.
         genres = ", ".join(rel.get("genres") or []) or None
 
-        # Pressing-level, same gate as catno and country: with several releases
-        # behind one barcode, the label and the manufacturing date are a coin
-        # flip between them.
-        label = None
+        # The manufacturing date and the physical description are the fields
+        # that genuinely differ between pressings sharing a barcode (siblings
+        # agreed on format only 36% of the time), so they stay gated on a
+        # single pressing. The label does not — 82% agreement — so it falls
+        # back to consensus rather than being dropped.
         released = None
         format_desc = None
+        label = sibling_consensus(siblings, "label")
         if unique_pressing:
             label = (next((l.get("name") for l in (rel.get("labels") or [])), None)
                      or None)

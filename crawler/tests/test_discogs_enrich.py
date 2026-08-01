@@ -1,4 +1,4 @@
-from discogs_enrich import verify_match, clean_catno
+from discogs_enrich import verify_match, clean_catno, sibling_consensus
 
 
 def hit(title: str) -> dict:
@@ -159,3 +159,29 @@ class TestCatnoBarcodeJunk:
         assert clean_catno("MOVLP208") == "MOVLP208"
         assert clean_catno("DOC310") == "DOC310"
         assert clean_catno("8023") == "8023"
+
+
+class TestSiblingConsensus:
+    """A barcode with several releases behind it can still give one answer."""
+
+    def test_agreeing_siblings_yield_the_value(self):
+        sibs = [{"catno": "MOVLP208"}, {"catno": "MOVLP208"}]
+        assert sibling_consensus(sibs, "catno") == "MOVLP208"
+
+    def test_disagreeing_siblings_yield_nothing(self):
+        sibs = [{"catno": "MOVLP208"}, {"catno": "DOC310"}]
+        assert sibling_consensus(sibs, "catno") is None
+
+    def test_a_missing_value_does_not_veto_the_others(self):
+        sibs = [{"catno": "MOVLP208"}, {"catno": None}, {"catno": ""}]
+        assert sibling_consensus(sibs, "catno") == "MOVLP208"
+
+    def test_label_is_a_list_on_search_results(self):
+        sibs = [{"label": ["Music On Vinyl", "Sony"]}, {"label": ["Music On Vinyl"]}]
+        assert sibling_consensus(sibs, "label") == "Music On Vinyl"
+
+    def test_barcode_junk_in_catno_is_still_rejected(self):
+        # Consensus must not smuggle past clean_catno: two siblings agreeing on
+        # a barcode still do not have a catalogue number.
+        sibs = [{"catno": "00602458871463"}, {"catno": "00602458871463"}]
+        assert sibling_consensus(sibs, "catno") is None
