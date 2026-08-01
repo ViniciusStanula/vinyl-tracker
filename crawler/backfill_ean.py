@@ -74,7 +74,13 @@ def fetch_candidates(conn, limit: int | None) -> list[tuple[str, str, str]]:
             -- Same convention mb_mbid uses: NULL = never searched, '' = searched
             -- and nothing found.
             WHERE ean IS NULL
-              AND asin IS NOT NULL AND asin <> ''
+              -- Amazon ASINs only. The asin column also holds Mercado Livre
+              -- ids ("MLB38069840") from ml_crawler, and getItems rejects the
+              -- ENTIRE batch with HTTP 400 if one is present — so a handful of
+              -- ML rows killed a run that had 800 valid ASINs behind them.
+              -- Braces doubled: this is an f-string, and {10} would otherwise
+              -- be substituted as the literal "10", giving '^[A-Z0-9]10$'.
+              AND asin ~ '^[A-Z0-9]{{10}}$'
               AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
             ORDER BY price_count DESC NULLS LAST
