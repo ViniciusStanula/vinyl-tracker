@@ -21,8 +21,25 @@ What it stores
     discogs_catno        text   catalogue number (cleaned)
     discogs_country      text   pressing country, real names not XW/XE
     discogs_styles       text   comma-separated, granular ("Hard Bop")
+    discogs_genres       text   the level above styles ("Rock")
     discogs_tracklist    jsonb  [{position, title, duration}] with A1/B1
+    discogs_title        text   album name without Amazon's pressing junk
+    discogs_label        text   the record label
+    discogs_released     text   when THIS pressing was made
+    discogs_master_year  int    when the ALBUM first came out — use for /decada
+    discogs_format_desc  text   "2xLP, Album, Reissue, 180 Gram"
     discogs_checked_at   ts     so reruns skip and failures can be retried
+
+Three tiers of confidence
+-------------------------
+Fields are written according to how well the evidence identifies the DISC, not
+just the album. A barcode resolving to one release is the strongest case; the
+same barcode shared by several pressings is weaker; an artist+title search
+identifies only the work.
+
+  pressing-level, single release only : country, released, format_desc
+  pressing-level, or sibling consensus: catno, label
+  album-level, always safe            : styles, genres, master_year, title
 
 Deliberately NOT trusted blindly
 --------------------------------
