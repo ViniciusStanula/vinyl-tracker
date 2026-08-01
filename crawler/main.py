@@ -3156,6 +3156,61 @@ def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
     return success
 
 
+def _notify_revalidate_tags(since_iso: str) -> int:
+    """Purge the per-record cache tags for everything observed since `since_iso`.
+
+    Replaces the blast radius of the broad "prices" purge for record pages: a
+    run observes ~4,200 of ~31,000 records, and the untouched ~27,000 no longer
+    get marked stale and rebuilt. Artist and aggregate surfaces still rely on
+    the broad purge that follows this call.
+
+    Best-effort by design. A failure here leaves those records on their 4h TTL
+    and the end-of-run "prices" purge still runs, so the worst case is the old
+    behaviour, never a stale page beyond what it was before.
+    """
+    import requests as _requests
+
+    from revalidate_tags import observed_disco_tags, chunked
+
+    url = os.environ.get("REVALIDATE_URL")
+    secret = os.environ.get("REVALIDATE_SECRET")
+    if not url or not secret:
+        return 0
+
+    # Own short-lived connection: this runs after the pipeline has closed its
+    # own, and the query is a single indexed read.
+    try:
+        _conn = get_connection()
+        try:
+            tags = observed_disco_tags(_conn, since_iso)
+        finally:
+            _conn.close()
+    except Exception as exc:
+        log.warning("Per-record tag lookup failed (non-fatal): %s", exc)
+        return 0
+
+    if not tags:
+        log.info("Revalidation [per-record]: no records observed this run")
+        return 0
+
+    sent = 0
+    for batch in chunked(tags):
+        try:
+            resp = _requests.post(url, json={"secret": secret, "tags": batch}, timeout=20)
+            if resp.status_code == 200:
+                sent += len(batch)
+            else:
+                log.warning(
+                    "Per-record purge batch failed — HTTP %s: %s",
+                    resp.status_code, resp.text[:200],
+                )
+        except Exception as exc:
+            log.warning("Per-record purge batch failed (non-fatal): %s", exc)
+
+    log.info("Revalidation [per-record]: purged %d/%d record tags", sent, len(tags))
+    return sent
+
+
 def main():
     args = parse_args()
 
@@ -3186,6 +3241,11 @@ def main():
         for item in all_items[:3]:
             log.info("  ASIN: %s | %s | R$ %.2f", item["asin"], item["titulo"][:50], item["precoBrl"])
         return
+
+    # Taken before any price write so the per-record purge cannot miss a record
+    # observed early in the run. Deliberately a UTC wall-clock stamp (not
+    # monotonic) because it is compared against HistoricoPreco.capturadoEm.
+    run_started_iso = datetime.now(timezone.utc).isoformat()
 
     log.info("Connecting to database...")
     conn = get_connection()
@@ -3720,6 +3780,13 @@ def main():
     # failure step opens a GitHub issue. (DB writes are committed per-phase
     # regardless; this gate is about predictable cache behavior on failure.)
     t_pipeline_end = time.time()
+
+    # Per-record purge first: the records this run actually observed. The broad
+    # purge below then covers artist pages and the aggregate surfaces, which
+    # stay on the "prices" tag (artist slugs are derived by slugifyArtist() in
+    # TypeScript and reproducing that here risks a silent miss).
+    _notify_revalidate_tags(run_started_iso)
+
     if _prices_purged_this_run:
         # Post-Phase-3.5 already purged "prices" and Phases 4-6 never write
         # price data, so re-purging here would only regen the same pages for
