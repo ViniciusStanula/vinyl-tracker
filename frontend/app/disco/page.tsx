@@ -6,6 +6,7 @@ import InfiniteGrid from "@/components/InfiniteGrid";
 import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import { Suspense } from "react";
+import DealLegend from "@/components/DealLegend";
 
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
 
@@ -122,15 +123,7 @@ export default async function DiscosPage({
       </div>
 
       {/* ── Deal badge legend — suppressed when HIDE_PRICE_HISTORY */}
-      {!HIDE_PRICE_HISTORY && (
-        <p className="text-xs text-dust mb-4 leading-relaxed">
-          <span className="text-gold font-semibold">✦ Melhor Preço</span> = menor preço registrado
-          {" · "}
-          <span className="text-deallit font-semibold">✓ Ótima Oferta</span> = abaixo da média histórica
-          {" · "}
-          Boa Oferta = com desconto ativo
-        </p>
-      )}
+      {!HIDE_PRICE_HISTORY && <DealLegend />}
 
       {/* ── Result count + grid stream in; static chrome above ships in the
              shell so the h1 and intro land inside <main> before the footer. */}

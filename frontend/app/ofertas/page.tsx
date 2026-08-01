@@ -4,30 +4,13 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { toJsonLd } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
+import { DEAL_TIERS } from "@/lib/dealTiers";
 
 export const revalidate = 14400;
 
-// Tier metadata (3 = best). Copy is pt-BR and avoids em dashes per house style.
-const TIERS = [
-  {
-    score: 3,
-    label: "Melhor Preço",
-    mark: "✦",
-    blurb: "No menor preço já registrado, ou bem perto dele.",
-  },
-  {
-    score: 2,
-    label: "Ótima Oferta",
-    mark: "✓",
-    blurb: "Abaixo da média dos últimos 90 dias.",
-  },
-  {
-    score: 1,
-    label: "Boa Oferta",
-    mark: "",
-    blurb: "Com desconto sobre a média histórica de preço.",
-  },
-] as const;
+// Tier metadata now lives in lib/dealTiers.ts so this page, the listing-page
+// legend and llms.txt cannot describe the same badge differently again.
+const TIERS = DEAL_TIERS;
 
 export async function generateMetadata(): Promise<Metadata> {
   let count = 0;

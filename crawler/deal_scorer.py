@@ -32,21 +32,31 @@ DEAL SCORING TIERS (Keepa approach) — pt-BR display labels
 -----------------------------------------------------------
 Scores are assigned 1–3 (stored as deal_score on Disco):
 
+Each tier is a STRICT SUPERSET of the one below it, so a higher badge is
+always harder to earn than a lower one:
+
   Score 1 (DEAL_TIER_GOOD)  — "Boa Oferta"
     Baseline deal: current price is ≥ DEAL_THRESHOLD_PCT below avg_30d
     and the absolute drop is ≥ MIN_ABSOLUTE_DROP.
 
   Score 2 (DEAL_TIER_GREAT) — "Ótima Oferta"
-    Confirmed deal: also below avg_90d, confirming the price is genuinely
-    low vs. the longer trend, not a correction from a temporary spike.
-    Only reachable at high_confidence (168+ data points).
+    Tier 1 AND below avg_90d, confirming the price is genuinely low vs. the
+    longer trend, not a correction from a temporary spike.
+    Requires moderate_confidence or better.
 
   Score 3 (DEAL_TIER_BEST)  — "Melhor Preço"
-    Floor-level deal: current price is at or within LOW_PROXIMITY_MARGIN
-    of the 30-day price floor (low_30d). This is the signal most basic
-    trackers miss — it ensures the price is actually near the historical
-    floor rather than just off an inflated average.
-    Reachable at moderate_confidence (48+) and high_confidence (168+).
+    Tier 2 AND current price at or below low_all_time — the lowest price we
+    have ever recorded for this product. No proximity margin: it must match
+    or beat the record outright.
+    Requires high_confidence.
+
+    The disco page prints "o menor preço registrado foi R$X, em <date>"
+    directly under the badge, so any margin here would let the badge
+    contradict the number beside it. Keep this exact.
+
+    low_all_time is the low across OUR history, which begins 2026-04-14 —
+    it is not an all-time-ever low. Display copy must say "menor preço desde
+    que começamos a acompanhar", never "de todos os tempos".
 
 DUAL-GATE THRESHOLD
 --------------------
@@ -62,10 +72,14 @@ ADAPTIVE CONFIDENCE TIERS
 Designed to work with sparse early-operation data. As history accumulates,
 products naturally graduate to higher tiers with no code changes needed:
 
-  < 24 data points  → insufficient_data    skip scoring entirely
-  24–47  data points → low_confidence      score with available data, max Tier 1
-  48–167 data points → moderate_confidence use avg_30d only, max Tier 1 or 3
-  168+   data points → high_confidence     full multi-window scoring, all tiers
+Thresholds combine tracked days with event count (see _confidence_level), so a
+product priced steadily for 45 days counts as well-covered even with few
+distinct price events:
+
+  < MIN_HISTORY_POINTS events, or < 1 day  → insufficient_data  not scored
+  < 14 days   or < 10 events              → low_confidence      max Tier 1
+  < 45 days   or < 30 events              → moderate_confidence max Tier 2
+  45+ days   and 30+ events               → high_confidence     all tiers
 
 COOLDOWN / DEDUPLICATION
 -------------------------
@@ -89,7 +103,7 @@ DEAL_COOLDOWN_HOURS   = 6      # hours before re-flagging the same product
 MIN_HISTORY_POINTS    = 3      # minimum recorded price events to attempt scoring
 ROLLING_WINDOW_SHORT  = 30     # days for primary average (avg_30d)
 ROLLING_WINDOW_LONG   = 90     # days for secondary average (avg_90d)
-LOW_PROXIMITY_MARGIN  = 0.02   # within 2% of period low to reach DEAL_TIER_BEST
+LOW_PROXIMITY_MARGIN  = 0.02   # within 2% of low_30d: overrides the re-flag cooldown
 EARLY_REFLAG_DROP     = 0.05   # 5% further drop overrides cooldown
 
 # Prices below this threshold are excluded from all benchmark calculations and
@@ -152,7 +166,7 @@ def _compute_raw_score(
     current_price: float,
     avg_30d: float,
     avg_90d: float | None,
-    low_30d: float | None,
+    low_all_time: float | None,
     confidence: str,
 ) -> int | None:
     """
@@ -160,12 +174,34 @@ def _compute_raw_score(
 
     Returns a DEAL_TIER_* constant (1–3) or None when no deal qualifies.
 
-    Score escalation logic:
+    Score escalation logic — each tier is a STRICT SUPERSET of the one below,
+    so a higher badge is always harder to earn:
       DEAL_TIER_GOOD  (1): dual-gate threshold met vs avg_30d
-      DEAL_TIER_GREAT (2): also confirmed below avg_90d  [high_confidence only]
-      DEAL_TIER_BEST  (3): at or near the 30-day price floor [moderate+ confidence]
+      DEAL_TIER_GREAT (2): Tier 1 AND below avg_90d          [moderate+ confidence]
+      DEAL_TIER_BEST  (3): Tier 2 AND at/below low_all_time  [high confidence]
 
-    Tier 3 always beats Tier 2 — being at the price floor is the strongest signal.
+    This replaces an earlier arrangement where Tier 3 short-circuited Tier 2 and
+    was anchored on low_30d. Two things were wrong with it:
+
+      1. Tier 3 needed only moderate confidence while Tier 2 needed high, so the
+         "best" badge was EASIER to earn than the middle one. Measured live:
+         "Melhor Preço" was on 567 of 709 badged records (79%) while "Ótima
+         Oferta" was on 104, and 64 records held Tier 3 at a confidence level
+         that could never reach Tier 2.
+
+      2. Anchoring on low_30d meant the badge fired on a 30-day floor while the
+         label (and the on-page FAQ line "o menor preço registrado foi R$X")
+         speak about the recorded low. 27% of Tier 3 records sat more than 5%
+         above their true recorded low, and 11% more than 20% above — the badge
+         contradicted the price graph directly beneath it.
+
+    Tier 3 now requires the price to match or beat low_all_time outright (no
+    proximity margin), so the badge and the chart can never disagree.
+
+    NOTE: low_all_time is the lowest price *we have recorded*, and the price
+    history only starts 2026-04-14. Copy must therefore say "menor preço desde
+    que começamos a acompanhar", never "de todos os tempos". The claim
+    strengthens on its own as history accumulates, with no code change.
     """
     if confidence == CONFIDENCE_INSUFFICIENT:
         return None
@@ -182,21 +218,24 @@ def _compute_raw_score(
 
     score = DEAL_TIER_GOOD  # 1 — baseline qualifying tier
 
-    # Escalate to Tier 2: confirmation via 90-day average (high confidence only)
+    # Escalate to Tier 2: confirmation via 90-day average. Moderate confidence
+    # is enough — the 90-day comparison is the check that carries the meaning
+    # here, and requiring high confidence is what forced the old inversion.
     if (
-        confidence == CONFIDENCE_HIGH
+        confidence in (CONFIDENCE_MODERATE, CONFIDENCE_HIGH)
         and avg_90d is not None
         and current_price < avg_90d
     ):
         score = DEAL_TIER_GREAT  # 2
 
-    # Escalate to Tier 3: near the 30-day price floor (moderate and high confidence)
-    # This check overrides Tier 2 — floor-level price is the strongest possible signal.
+    # Escalate to Tier 3: at or below the lowest price ever recorded. Gated on
+    # having reached Tier 2 first so the ladder stays monotonic.
     if (
-        confidence in (CONFIDENCE_MODERATE, CONFIDENCE_HIGH)
-        and low_30d is not None
-        and low_30d > 0
-        and current_price <= low_30d * (1.0 + LOW_PROXIMITY_MARGIN)
+        score == DEAL_TIER_GREAT
+        and confidence == CONFIDENCE_HIGH
+        and low_all_time is not None
+        and low_all_time > 0
+        and current_price <= low_all_time
     ):
         score = DEAL_TIER_BEST  # 3
 
@@ -394,7 +433,7 @@ def score_deals(conn) -> dict:
         )
 
         confidence = _confidence_tier(total_points, history_days)
-        raw_score  = _compute_raw_score(current_price, avg_30d, avg_90d, low_30d, confidence)
+        raw_score  = _compute_raw_score(current_price, avg_30d, avg_90d, low_all_time, confidence)
 
         # Apply cooldown only when transitioning NULL → non-NULL (new deal detection).
         # If a product is already flagged (deal_score != NULL), we update its score
