@@ -128,18 +128,41 @@ def verify_match(our_artist: str, our_title: str, result: dict) -> bool:
 
 
 class Discogs:
+    """Discogs client.
+
+    Two credential shapes are accepted, both lifting the rate limit from ~25 to
+    60 requests/minute:
+
+      DISCOGS_TOKEN            personal access token
+      DISCOGS_KEY + _SECRET    OAuth consumer credentials, sent as an
+                               app-level Authorization header. Discogs allows
+                               these directly for requests that need no user
+                               context, so no OAuth handshake is required.
+
+    Credentials go in the Authorization header rather than the query string so
+    they never land in a logged or retried URL.
+    """
+
     def __init__(self) -> None:
         self.token = os.environ.get("DISCOGS_TOKEN")
-        self.delay = DELAY_TOKEN if self.token else DELAY_ANON
+        self.key = os.environ.get("DISCOGS_KEY")
+        self.secret = os.environ.get("DISCOGS_SECRET")
+        self.authed = bool(self.token or (self.key and self.secret))
+        self.delay = DELAY_TOKEN if self.authed else DELAY_ANON
+
+    def _auth_header(self) -> dict:
+        if self.token:
+            return {"Authorization": f"Discogs token={self.token}"}
+        if self.key and self.secret:
+            return {"Authorization": f"Discogs key={self.key}, secret={self.secret}"}
+        return {}
 
     def _get(self, path: str, params: dict | None = None) -> dict | None:
         params = dict(params or {})
-        if self.token:
-            params["token"] = self.token
         url = f"{API}{path}"
         if params:
             url += "?" + urllib.parse.urlencode(params)
-        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        req = urllib.request.Request(url, headers={"User-Agent": UA, **self._auth_header()})
         for attempt in (1, 2, 3):
             try:
                 with urllib.request.urlopen(req, timeout=30) as r:
@@ -219,7 +242,8 @@ def main() -> None:
     dg = Discogs()
     print(
         f"candidates: {len(rows)} | mode: {'APPLY' if args.apply else 'DRY RUN'} | "
-        f"auth: {'token' if dg.token else 'anonymous'} ({dg.delay}s/call)\n"
+        f"auth: {'token' if dg.token else 'key+secret' if dg.authed else 'anonymous'} "
+        f"({dg.delay}s/call)\n"
     )
 
     resolved = rejected = missed = non_vinyl = 0
