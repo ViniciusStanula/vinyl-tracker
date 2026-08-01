@@ -658,7 +658,7 @@ export default async function DiscoPage({
                 </span>
                 {Math.abs(desconto30d) >= 1 && (
                   <span className={`text-xs font-bold ${
-                    desconto30d >= 1 ? "text-deallit" : "text-cut"
+                    desconto30d >= 1 ? "text-deallit" : "text-cutlit"
                   }`}>
                     {desconto30d >= 0
                       ? `↓ ${fmtPct(Math.abs(desconto30d))}`
@@ -734,9 +734,9 @@ export default async function DiscoPage({
                 <div className="w-px bg-groove self-stretch" aria-hidden="true" />
                 <div className="flex-1 px-3 py-3 min-w-0">
                   <dt className="text-[9px] text-dust uppercase tracking-wide mb-1 flex items-center gap-0.5">
-                    Máx. <span className="text-cut">↑</span>
+                    Máx. <span className="text-cutlit">↑</span>
                   </dt>
-                  <dd className="font-bold text-cut tabular-nums text-xs sm:text-sm">{fmt(precoMax)}</dd>
+                  <dd className="font-bold text-cutlit tabular-nums text-xs sm:text-sm">{fmt(precoMax)}</dd>
                   {maxRecord && <dd className="text-[9px] text-dust mt-0.5"><time dateTime={maxRecord.capturadoEm.toISOString()}>{fmtDate(maxRecord.capturadoEm)}</time></dd>}
                 </div>
               </dl>

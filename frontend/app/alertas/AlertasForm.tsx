@@ -278,7 +278,7 @@ export default function AlertasForm() {
         {/* Price threshold */}
         <div>
           <label htmlFor="max-price" className="block text-sm font-medium text-parchment mb-2">
-            Preço limite (R$) <span className="text-cut" aria-hidden="true">*</span>
+            Preço limite (R$) <span className="text-cutlit" aria-hidden="true">*</span>
           </label>
           <input
             id="max-price"
@@ -300,7 +300,7 @@ export default function AlertasForm() {
         {/* Email */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-parchment mb-2">
-            Seu e-mail <span className="text-cut" aria-hidden="true">*</span>
+            Seu e-mail <span className="text-cutlit" aria-hidden="true">*</span>
           </label>
           <input
             id="email"

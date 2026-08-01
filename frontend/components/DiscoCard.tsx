@@ -145,7 +145,7 @@ export default memo(function DiscoCard({
         <div className="absolute inset-0 bg-gradient-to-t from-record/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
         {isUnavailable ? (
-          <div className="absolute bottom-2 left-2 z-20 inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-groove/90 text-dust">
+          <div className="absolute bottom-2 left-2 z-20 inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-groove/90 text-parchment">
             Indisponível
           </div>
         ) : (

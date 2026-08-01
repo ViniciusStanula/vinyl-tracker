@@ -15,7 +15,14 @@
   --color-goldmute:  #7a4f0e;   /* muted/disabled gold */
 
   /* ── Status ──────────────────────────────────────────────────── */
-  --color-cut:       #b81828;   /* discount/danger red */
+  --color-cut:       #b81828;   /* discount/danger SURFACE — bg/border only */
+  /* Text-weight red. --color-cut measures 3.01:1 on --color-record, so it fails
+     WCAG AA wherever it was used as text — which included a role="alert" error
+     message, the price-rise figures and the delete-alert button. It cannot
+     simply be lightened: DiscoCard renders cream on a solid bg-cut discount
+     badge, and lightening the token would drop that pairing from 5.29:1 to
+     2.75:1. Same split as gold/goldlit and deal/deallit — surface vs text. */
+  --color-cutlit:    #e85c68;   /* 5.80 record / 5.45 sleeve / 5.19 label / 4.74 groove */
   --color-deal:      #1e7a50;   /* positive / deal found */
   --color-deallit:   #35c47a;   /* bright positive */
 

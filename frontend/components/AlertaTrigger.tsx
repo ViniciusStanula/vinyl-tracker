@@ -495,7 +495,7 @@ function Modal({
 
             {/* Error message */}
             {formState === "error" && errorMsg && (
-              <p className="text-cut text-sm -mt-2" role="alert">
+              <p className="text-cutlit text-sm -mt-2" role="alert">
                 {errorMsg}
               </p>
             )}

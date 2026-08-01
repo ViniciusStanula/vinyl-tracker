@@ -67,7 +67,7 @@ export default function PriceHistoryTable({ rows }: Props) {
                         delta === null
                           ? "text-dust"
                           : delta > 0
-                          ? "text-cut"
+                          ? "text-cutlit"
                           : delta < 0
                           ? "text-deallit"
                           : "text-dust"

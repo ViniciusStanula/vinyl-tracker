@@ -80,7 +80,7 @@ const GRADES = [
   {
     abbr: "NM",
     name: "Near Mint",
-    color: "text-patina",
+    color: "text-dust",
     border: "border-patina/40",
     vinil:
       "Marcas visíveis apenas sob luz direta e oblíqua, nunca a olho nu em luz normal. Nenhum risco perceptível ao toque. Brilho quase intacto. Zero ruído de fundo durante a reprodução.",
@@ -548,7 +548,7 @@ export default function GradingPage() {
                   {
                     label: "Hairline",
                     nota: "NM ou alto VG+",
-                    notaColor: "text-patina",
+                    notaColor: "text-dust",
                     desc: "Marca finíssima, visível apenas sob luz direta em ângulo muito específico. Não afeta a reprodução. Comuns mesmo em discos muito bem conservados.",
                   },
                   {
