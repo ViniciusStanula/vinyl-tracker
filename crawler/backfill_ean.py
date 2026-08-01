@@ -27,7 +27,10 @@ Budget
 than raised: the 3-hourly price refresh draws on the same budget, and starving
 it to finish a backfill sooner is the wrong trade. Run twice.
 
-Resumable: rows that gain an EAN drop out of the candidate query.
+Resumable: rows that gain an EAN drop out of the candidate query, and rows
+Amazon has no barcode for are marked '' so they drop out too. Without that
+marker they stayed NULL, sorted back to the front on price_count, and the next
+run spent its entire budget re-asking the same 1,389 questions.
 
     python backfill_ean.py --limit 200        # dry run
     python backfill_ean.py --apply
@@ -62,6 +65,14 @@ def fetch_candidates(conn, limit: int | None) -> list[tuple[str, str, str]]:
             f"""
             SELECT id, asin, slug
             FROM "Disco"
+            -- NULL means never asked. Rows where Amazon HAS no barcode are
+            -- marked '' rather than left NULL, so they drop out instead of
+            -- being re-fetched on every run: the first pass found 1,389 of
+            -- them, and because the query sorts by price_count they went
+            -- straight back to the front of the queue and the next run spent
+            -- its whole budget re-asking the same questions.
+            -- Same convention mb_mbid uses: NULL = never searched, '' = searched
+            -- and nothing found.
             WHERE ean IS NULL
               AND asin IS NOT NULL AND asin <> ''
               AND disponivel = TRUE
@@ -132,6 +143,12 @@ def main() -> None:
                     print(f"  {slug[:52]:54s} -> {r.ean}")
             else:
                 missing += 1
+                if args.apply:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            'UPDATE "Disco" SET ean = %s WHERE id = %s AND ean IS NULL',
+                            ("", disco_id),
+                        )
 
         if args.apply and (i // SLICE) % 10 == 0:
             log.info("%d/%d processed — %d barcodes stored", seen, len(asins), found)
