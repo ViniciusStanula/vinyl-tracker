@@ -458,6 +458,22 @@ export default async function DiscoPage({
     // 'other' and never reach this page), so it's always accurate here. Without
     // it nothing in the markup states that these products are records at all.
     musicReleaseFormat: "https://schema.org/VinylFormat",
+    // Label only. Catalogue number and pressing country are deliberately NOT
+    // emitted even though the crawler stores them:
+    //   * They come from the single-release case, and for a much-reissued album
+    //     "MusicBrainz has one release" means MB's coverage is thin, not that
+    //     one pressing exists — Queen "Greatest Hits" resolves to a Russian
+    //     Hollywood Records pressing that Amazon Brasil plainly is not selling.
+    //   * mb_release_country is 41% XW/XE, which are MusicBrainz pseudo-codes
+    //     for Worldwide/Europe, not countries, and the rest are ISO codes
+    //     rather than names.
+    // A label survives across pressings far better than a catalogue number, and
+    // most stored labels come from the safer case (every release sharing one
+    // label). Asserting the wrong catalogue number tells Google this listing is
+    // a different physical product.
+    ...(meta?.mbLabel
+      ? { recordLabel: { "@type": "Organization", name: meta.mbLabel } }
+      : {}),
     ...(mbInfo && mbInfo.tracklist.length
       ? {
           numTracks: mbInfo.tracklist.length,
@@ -973,6 +989,17 @@ export default async function DiscoPage({
                       <div className="flex justify-between">
                         <dt className="text-dust">Tipo</dt>
                         <dd className="text-cream font-medium">{mbInfo.primaryType}</dd>
+                      </div>
+                    )}
+                    {/* Pressing-level rows. Absent on ~57% of records on
+                        purpose: only stored when the MusicBrainz release-group
+                        is unambiguous, because a release-group spans every
+                        pressing of an album (Genesis "Foxtrot" covers 38 across
+                        11 labels) and we only matched at group level. */}
+                    {meta?.mbLabel && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Gravadora</dt>
+                        <dd className="text-cream font-medium text-right">{meta.mbLabel}</dd>
                       </div>
                     )}
                     {artistPais && (
