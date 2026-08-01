@@ -22,7 +22,13 @@
   /* ── Text ────────────────────────────────────────────────────── */
   --color-cream:     #f0e6d0;   /* primary text */
   --color-parchment: #b8936a;   /* secondary text */
-  --color-dust:      #957060;   /* muted/placeholder — passes 4.5:1 on record bg */
+  /* Was #957060, whose comment claimed it passed 4.5:1 on --color-record. It
+     measured 4.484:1 — just under AA — and it is also used on the card
+     surfaces, where it was further off: 4.27 on --color-sleeve and 4.07 on
+     --color-label. Raised until it clears AA on the LIGHTEST surface it lands
+     on rather than only on the page background:
+        record 5.08   sleeve 4.77   label 4.55  */
+  --color-dust:      #9e7969;   /* muted/placeholder — passes AA on all 3 surfaces */
   --color-ash:       #3d2a20;   /* very muted */
 
   /* ── Typography ──────────────────────────────────────────────── */
@@ -230,4 +236,22 @@ body::after {
   .vinil-sidebar-layout > nav[aria-label="Índice do artigo"] {
     position: static;
   }
+}
+
+/* ── Keyboard focus floor ──────────────────────────────────────────────
+   A handful of components declare their own focus-visible ring (the house
+   pattern is ring-gold + ring-offset-record, 16 call sites). Everything else —
+   including all 48 footer links — fell back to the browser default outline,
+   which varies by engine and is poorly tuned against this near-black palette.
+
+   Declared as `outline` rather than a Tailwind ring so it never fights the
+   components that already bring their own; those set focus-visible:outline-none
+   and draw their ring instead. */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
