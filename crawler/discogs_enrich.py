@@ -64,6 +64,7 @@ from preflight import load_dotenv_if_present
 load_dotenv_if_present()
 
 from db_retry import connect_with_retry
+from lastfm import clean_album_title
 
 log = logging.getLogger(__name__)
 
@@ -127,6 +128,49 @@ def verify_match(our_artist: str, our_title: str, result: dict) -> bool:
     return artist_ok and title_ok
 
 
+def pressing_invariant(results: list[dict]) -> dict:
+    """Fields every matching vinyl pressing agrees on, and nothing else.
+
+    Records with no barcode (Amazon simply has none for many listings) can
+    still be found by artist + title, but that returns the album rather than a
+    pressing. Utada "One Last Kiss" comes back as six releases — Europe, Japan
+    x2, US x3 — differing in colour, catalogue number and country.
+
+    What does NOT differ across those six: styles (J-pop, Theme, Anison) and
+    the year. Those are properties of the album, not of the disc, so they are
+    safe to take. Country, catalogue number and side layout are pressing-level
+    and are deliberately never returned here — that is the same distinction
+    that stopped us shipping MusicBrainz catalogue numbers.
+
+    Returns {} unless at least two pressings agree, so a single ambiguous hit
+    cannot masquerade as consensus.
+    """
+    vinyl = [
+        r for r in results
+        if any("vinyl" in str(f).lower() for f in (r.get("format") or []))
+    ]
+    if len(vinyl) < 2:
+        return {}
+
+    out: dict = {}
+
+    style_sets = [frozenset(r.get("style") or []) for r in vinyl if r.get("style")]
+    if style_sets and len(set(style_sets)) == 1 and style_sets[0]:
+        out["styles"] = ", ".join(sorted(style_sets[0]))
+
+    years = {r.get("year") for r in vinyl if r.get("year")}
+    if len(years) == 1:
+        y = years.pop()
+        try:
+            y = int(y)
+        except (TypeError, ValueError):
+            y = None
+        if y and 1900 < y < 2100:
+            out["year"] = y
+
+    return out
+
+
 class Discogs:
     """Discogs client.
 
@@ -182,6 +226,14 @@ class Discogs:
 
     def by_barcode(self, barcode: str) -> list[dict]:
         data = self._get("/database/search", {"barcode": barcode})
+        time.sleep(self.delay)
+        return (data or {}).get("results") or []
+
+    def by_artist_title(self, artist: str, title: str) -> list[dict]:
+        data = self._get(
+            "/database/search",
+            {"artist": artist, "release_title": title, "format": "Vinyl"},
+        )
         time.sleep(self.delay)
         return (data or {}).get("results") or []
 
@@ -280,6 +332,35 @@ def fetch_candidates(conn, limit: int | None) -> list[tuple]:
         return cur.fetchall()
 
 
+def fetch_noBarcode_candidates(conn, limit: int | None) -> list[tuple]:
+    """Records with no barcode, for the artist+title fallback.
+
+    Amazon has no EAN for a large share of listings — Utada "One Last Kiss"
+    among them — so those rows can never be resolved by barcode. Searching by
+    artist + title still finds the album, just not the pressing, which is why
+    only pressing_invariant() fields get written for them.
+
+    Unidentified-artist rows are excluded: without an artist the search has
+    nothing to constrain it and would return whatever shares a title.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT slug, artista, titulo
+            FROM "Disco"
+            WHERE (ean IS NULL OR ean !~ '^[0-9]{{13}}$')
+              AND disponivel = TRUE
+              AND (format IS NULL OR format = 'vinyl')
+              AND artista !~* 'artista n[ãa]o identificad'
+              AND discogs_checked_at IS NULL
+            ORDER BY price_count DESC NULLS LAST
+            {'LIMIT %s' if limit else ''}
+            """,
+            (limit,) if limit else (),
+        )
+        return cur.fetchall()
+
+
 def main() -> None:
     # Rebound here rather than at import: doing it at module scope replaces the
     # stdout pytest has already captured, and every test in this file then dies
@@ -289,11 +370,21 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--limit", type=int)
+    ap.add_argument(
+        "--no-barcode",
+        action="store_true",
+        help="fallback pass: match barcode-less records by artist+title and "
+             "store only fields every vinyl pressing agrees on",
+    )
     args = ap.parse_args()
 
     conn = connect_with_retry()
     conn.autocommit = True
     ensure_columns(conn)
+
+    if args.no_barcode:
+        run_no_barcode(conn, args)
+        return
 
     rows = fetch_candidates(conn, args.limit)
     dg = Discogs()
@@ -400,6 +491,76 @@ def main() -> None:
         f"\n  ...non-vinyl hit  : {non_vinyl}  (flagged only, not acted on)"
         f"\nrejected by verify  : {rejected}"
         f"\nbarcode not found   : {missed}"
+    )
+    if not args.apply:
+        print("\nDRY RUN — nothing written.")
+
+
+def run_no_barcode(conn, args) -> None:
+    """Artist+title pass for records Amazon has no barcode for.
+
+    Writes only pressing-invariant fields. discogs_release_id, catno, country
+    and tracklist stay NULL on purpose: artist+title identifies the album, not
+    the disc, and those four differ between pressings of the same album.
+    """
+    rows = fetch_noBarcode_candidates(conn, args.limit)
+    dg = Discogs()
+    print(
+        f"barcode-less candidates: {len(rows)} | "
+        f"mode: {'APPLY' if args.apply else 'DRY RUN'} | "
+        f"auth: {'yes' if dg.authed else 'anonymous'}\n"
+    )
+
+    agreed = ambiguous = missed = 0
+    for slug, artista, titulo in rows:
+        query_title = clean_album_title(titulo, artista) or titulo
+        results = dg.by_artist_title(artista, query_title)
+        if not results:
+            missed += 1
+            if args.apply:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
+                        (slug,),
+                    )
+            continue
+
+        verified = [r for r in results if verify_match(artista, titulo, r)]
+        inv = pressing_invariant(verified)
+        if not inv:
+            ambiguous += 1
+            if args.apply:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
+                        (slug,),
+                    )
+            continue
+
+        agreed += 1
+        if args.apply:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """UPDATE "Disco"
+                       SET discogs_styles            = COALESCE(%s, discogs_styles),
+                           discogs_master_year       = COALESCE(%s, discogs_master_year),
+                           discogs_master_checked_at = NOW(),
+                           discogs_checked_at        = NOW()
+                       WHERE slug = %s""",
+                    (inv.get("styles"), inv.get("year"), slug),
+                )
+        else:
+            print(
+                f"  AGREE {artista[:16]:18s} | {titulo[:26]:28s} | "
+                f"{len(verified)} pressings | year={inv.get('year') or '-'} "
+                f"styles={inv.get('styles') or '-'}"
+            )
+
+    total = len(rows) or 1
+    print(
+        f"\nconsensus across pressings : {agreed}  ({100*agreed/total:.0f}%)"
+        f"\npressings disagreed        : {ambiguous}"
+        f"\nnothing found              : {missed}"
     )
     if not args.apply:
         print("\nDRY RUN — nothing written.")
