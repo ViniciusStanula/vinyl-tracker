@@ -10,23 +10,51 @@ export interface Track {
   position?: string | null;
 }
 
-/** Side letter of a Discogs position, or null for a flat tracklist. */
-function sideOf(position: string | null | undefined): string | null {
-  const m = /^([A-Z])\d/.exec((position ?? "").trim());
-  return m ? m[1] : null;
+/** Which side of which disc a Discogs position belongs to, or null.
+ *
+ *  Real formats across ~13,000 stored positions:
+ *
+ *      A1        12,222   the norm
+ *      (digits)     406   flat numbering, no sides — MusicBrainz fallback
+ *      CD-1         125   a CD inside a vinyl box set, NOT a vinyl side
+ *      A             98   a whole side is one track (side-long piece, 7")
+ *      A-1           18   hyphenated
+ *      1A, 2B        ~24  TRACK number first, then side letter
+ *
+ *  The first version matched only /^([A-Z])\d/, so everything except "A1" fell
+ *  through — and because side headings required EVERY track to have one, a
+ *  single "A" suppressed headings for the whole record.
+ */
+export function sideKey(position: string | null | undefined): string | null {
+  const p = (position ?? "").trim().toUpperCase();
+  if (!p) return null;
+  // A CD bundled with the LPs is its own thing, not a lettered side.
+  if (/^CD/.test(p)) return "CD";
+  // "1A", "2B" — TRACK number first, side letter second. Verified against
+  // Honky Tonk Christmas, whose positions run 1A 2A 3A 4A 5A 1B 2B 3B 4B 5B:
+  // five tracks per side of one LP. Disc-first numbering would instead read
+  // 1A 1B 2A 2B. Reading the digit as a disc turned that single LP into
+  // "LP 1" through "LP 5".
+  const trackFirst = /^\d+[-.]?([A-Z])$/.exec(p);
+  if (trackFirst) return trackFirst[1];
+  // "A1", "A-1", "A"
+  const letterFirst = /^([A-Z])[-.]?\d*$/.exec(p);
+  if (letterFirst) return letterFirst[1];
+  return null;
 }
 
-/** Human label for a side.
+/** Human label for a side key.
  *
- *  Two sides is one LP, so "Lado A" is unambiguous. Beyond that the record is
- *  a multi-disc set and the letter alone stops being readable — Starfield ships
- *  as 6 LPs with sides A through L. Pair the letters into discs so it reads
- *  "LP 2 · Lado C" rather than asking anyone to count the alphabet.
+ *  Two sides is one LP, so "Lado A" is unambiguous. Beyond that the letter
+ *  alone stops being readable — Starfield ships as 6 LPs with sides A to L,
+ *  and the catalogue holds sets up to 18 sides — so pair the letters into
+ *  discs and say which LP it is.
  */
-function sideLabel(letter: string, totalSides: number): string {
-  if (totalSides <= 2) return `Lado ${letter}`;
-  const index = letter.charCodeAt(0) - 65; // A = 0
-  return `LP ${Math.floor(index / 2) + 1} · Lado ${letter}`;
+export function sideLabel(key: string, totalSides: number): string {
+  if (key === "CD") return "CD";
+  if (totalSides <= 2) return `Lado ${key}`;
+  const index = key.charCodeAt(0) - 65; // A = 0
+  return `LP ${Math.floor(index / 2) + 1} · Lado ${key}`;
 }
 
 interface Props {
@@ -52,11 +80,15 @@ export default function Tracklist({ tracks, previewCount = 8 }: Props) {
   const shown = needsCollapse && !expanded ? tracks.slice(0, previewCount) : tracks;
   const totalMs = tracks.reduce((sum, t) => sum + (t.length ?? 0), 0);
 
-  // Side headings only when every shown track carries a position — a partial
-  // set would render an orphan heading over an unlabelled run of tracks.
-  const sides = shown.map((t) => sideOf(t.position));
-  const hasSides = sides.length > 0 && sides.every(Boolean);
-  const totalSides = new Set(tracks.map((t) => sideOf(t.position)).filter(Boolean)).size;
+  // Headings need most tracks to carry a side, not all: a vinyl box set with a
+  // bonus CD legitimately mixes "A1" with "CD-1", and requiring every track to
+  // have a lettered side suppressed headings for the entire record.
+  const sides = shown.map((t) => sideKey(t.position));
+  const known = sides.filter(Boolean).length;
+  const hasSides = sides.length > 0 && known / sides.length >= 0.6;
+  const totalSides = new Set(
+    tracks.map((t) => sideKey(t.position)).filter((k) => k && k !== "CD")
+  ).size;
 
   return (
     <div className="mt-4 pt-4 border-t border-groove">
