@@ -106,16 +106,49 @@ def clean_catno(v: str | None) -> str | None:
     return s
 
 
-def verify_match(our_artist: str, our_title: str, result: dict) -> bool:
+def _is_latin_comparable(s: str) -> bool:
+    """True when a string has enough Latin letters to compare against ours.
+
+    Discogs catalogues many releases under their native script: Joe Hisaishi's
+    "La Folia" is listed as "久石譲* / ヴィヴァルディ* - ラ・フォリア". Our
+    catalogue stores the romanised name, so token comparison finds no overlap
+    and rejects a correct match. That silently discarded every Japanese,
+    Korean, Cyrillic and Greek pressing — a real share of the anime and game
+    soundtracks in this catalogue.
+    """
+    letters = [c for c in s if c.isalpha()]
+    if not letters:
+        return False
+    latin = sum(1 for c in letters if c.isascii())
+    return latin / len(letters) >= 0.3
+
+
+def verify_match(
+    our_artist: str, our_title: str, result: dict, *, from_barcode: bool = False
+) -> bool:
     """True when the Discogs hit plausibly IS our record.
 
     Discogs search returns "Artist - Title" in one string. Requires the artist
     to be recognisable and at least one meaningful title token to overlap, so a
     reused or mistyped barcode cannot silently attach the wrong pressing.
+
+    from_barcode=True relaxes one case: a Discogs title in a non-Latin script
+    cannot be compared against our romanised one, so the barcode carries the
+    match alone. Narrow on purpose — every wrong match seen in testing had a
+    Latin title, where the check still applies (Duck Fight Goose -> Boy & Bear,
+    Steve Davis -> Magdalena Bay).
+
+    The artist+title fallback must pass from_barcode=False. It has no barcode
+    to fall back on, so relaxing there would accept any release whose title
+    happens to be in another script.
     """
-    combined = _norm(result.get("title") or "")
+    raw = result.get("title") or ""
+    combined = _norm(raw)
     if not combined:
         return False
+
+    if from_barcode and not _is_latin_comparable(raw):
+        return True
 
     a_tok = _tokens(our_artist)
     t_tok = _tokens(our_title)
@@ -409,7 +442,10 @@ def main() -> None:
                     )
             continue
 
-        hit = next((r for r in results if verify_match(artista, titulo, r)), None)
+        hit = next(
+            (r for r in results if verify_match(artista, titulo, r, from_barcode=True)),
+            None,
+        )
         if hit is None:
             rejected += 1
             print(f"  REJECT {artista[:18]:20s} | {titulo[:30]:32s} -> {results[0].get('title','')[:40]}")
@@ -443,7 +479,9 @@ def main() -> None:
         # resolved to a single release. Where several share it, country and
         # catalogue number are a coin flip and are left NULL, exactly as they
         # were for ambiguous MusicBrainz release-groups.
-        siblings = [r for r in results if verify_match(artista, titulo, r)]
+        siblings = [
+            r for r in results if verify_match(artista, titulo, r, from_barcode=True)
+        ]
         unique_pressing = len(siblings) == 1
 
         # Track layout is safe across siblings only if they are structurally the

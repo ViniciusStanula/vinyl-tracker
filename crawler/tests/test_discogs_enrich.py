@@ -72,3 +72,47 @@ class TestCleanCatno:
 
     def test_keeps_numeric_strings_that_are_not_barcode_length(self):
         assert clean_catno("130701") == "130701"  # a real Fat Cat sublabel catno
+
+
+# ─── non-Latin titles ────────────────────────────────────────────────────────
+# Discogs lists many releases under their native script. Joe Hisaishi's
+# "La Folia" is "久石譲* / ヴィヴァルディ* - ラ・フォリア", which shares no
+# tokens with our romanised "Joe Hisaishi", so the check rejected a correct
+# barcode match and every Japanese/Korean/Cyrillic pressing with it.
+
+class TestNonLatinTitles:
+    def test_barcode_match_accepts_a_japanese_title(self):
+        assert verify_match(
+            "Joe Hisaishi",
+            "La Folia Vivaldi",
+            hit("久石譲* / ヴィヴァルディ* - ラ・フォリア - パン種とタマゴ姫"),
+            from_barcode=True,
+        )
+
+    def test_barcode_match_accepts_cyrillic(self):
+        assert verify_match("Kino", "Gruppa Krovi", hit("Кино - Группа Крови"), from_barcode=True)
+
+    def test_artist_title_search_still_rejects_non_latin(self):
+        # No barcode backing this path, so an unreadable title is not evidence.
+        assert not verify_match(
+            "Joe Hisaishi", "La Folia Vivaldi", hit("久石譲* - ラ・フォリア")
+        )
+
+    def test_relaxation_does_not_apply_to_latin_titles(self):
+        # The wrong matches found in testing were all Latin — the guard must
+        # keep catching them even when the caller came from a barcode.
+        assert not verify_match(
+            "Duck Fight Goose", "Suck On Light",
+            hit("Boy & Bear - Suck On Light"), from_barcode=True,
+        )
+        assert not verify_match(
+            "Steve Davis", "Steve Davis Meets Hank Jones",
+            hit("Magdalena Bay - Mini Mix Vol. 3"), from_barcode=True,
+        )
+
+    def test_mixed_script_still_compared(self):
+        # Enough Latin to compare, so the normal rule applies and this is wrong.
+        assert not verify_match(
+            "Coldplay", "Parachutes",
+            hit("Metallica - Master of Puppets (メタリカ)"), from_barcode=True,
+        )
