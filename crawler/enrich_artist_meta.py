@@ -26,6 +26,12 @@ import time
 
 import requests
 
+# Matches the rest of the crawler scripts. Without it this module only runs
+# where DATABASE_URL is already exported (GitHub Actions), and dies locally.
+from preflight import load_dotenv_if_present
+
+load_dotenv_if_present()
+
 from database import get_connection
 
 log = logging.getLogger(__name__)
