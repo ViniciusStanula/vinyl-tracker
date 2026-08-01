@@ -214,3 +214,23 @@ class TestMasterConsensus:
 
     def test_no_masters_at_all(self):
         assert master_consensus([{"year": "2019"}, {}]) is None
+
+
+class TestReissueSeriesJunk:
+    def test_label_series_does_not_dilute_the_title(self):
+        # "Jazz Samba Encore! (Verve Acoustic Sounds Series)" — the series is
+        # the label's branding. Counting its words dropped title coverage to
+        # 0.43 and lost the match. Our artist here is wrong too ("The Verve"
+        # is the label, not the band), so the title has to carry it alone.
+        assert verify_match(
+            "The Verve", "Jazz Samba Encore! (Verve Acoustic Sounds Series)",
+            hit("Stan Getz / Luiz Bonfa* - Jazz Samba Encore!"), from_barcode=True,
+        )
+        assert verify_match(
+            "Sonny Clark", "Dial 'S' For Sonny (Blue Note Classic Vinyl Series)",
+            hit("Sonny Clark - Dial 'S' For Sonny"), from_barcode=True,
+        )
+
+    def test_an_ordinary_parenthetical_is_left_alone(self):
+        from discogs_enrich import _strip_series
+        assert _strip_series("Greatest Hits (Live In Paris)") == "Greatest Hits (Live In Paris)"

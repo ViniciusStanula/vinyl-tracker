@@ -132,6 +132,18 @@ iex gram 180g indie
 _UNIDENTIFIED = re.compile(r"artista n[ãa]o identificad", re.I)
 
 
+# A reissue series is the publisher's branding, not part of the album name:
+# "Jazz Samba Encore! (Verve Acoustic Sounds Series)", "Dial 'S' For Sonny
+# (Blue Note Classic Vinyl Series)". clean_album_title leaves these because
+# they carry no vinyl word, and the extra tokens drag title coverage under the
+# threshold — that one cost the Stan Getz / Luiz Bonfa match.
+_SERIES_PAREN = re.compile(r"\s*\([^)]*\bseries\b[^)]*\)", re.I)
+
+
+def _strip_series(title: str) -> str:
+    return _SERIES_PAREN.sub("", title or "").strip()
+
+
 def _tokens(s: str) -> set[str]:
     """Identifying words only — short words and stopwords carry no evidence."""
     return {t for t in _norm(s).split() if len(t) > 2 and t not in _STOPWORDS}
@@ -213,7 +225,7 @@ def verify_match(
     # Of The Princess Kaguya Ost (2Lp/Remaster/Etched Side/Japanese Import/
     # Obistrip/Gatefold/Limited)", which matched Discogs on all three words
     # that matter and still scored 0.43 coverage.
-    t_tok = _tokens(clean_album_title(our_title, our_artist) or our_title)
+    t_tok = _tokens(_strip_series(clean_album_title(our_title, our_artist) or our_title))
     hay = set(combined.split())
 
     # Nothing identifying on our side means the comparison cannot be made, and
