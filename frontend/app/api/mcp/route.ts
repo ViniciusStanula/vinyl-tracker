@@ -217,7 +217,7 @@ async function execGetDeals(args: Record<string, unknown>) {
 
   return textContent({
     total_encontrado: deals.length,
-    nota: "deal_score: 3=Melhor Preço (all-time low), 2=Ótima Oferta (well below avg), 1=Boa Oferta (below avg)",
+    nota: "deal_score: 3=Melhor Preço (at/below the lowest price recorded since 2026-04-14), 2=Ótima Oferta (below the 30- and 90-day averages), 1=Boa Oferta (>=10% and >=R$2 below the 30-day average)",
     deals: deals.map(formatDisco),
   });
 }

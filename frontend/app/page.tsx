@@ -10,6 +10,7 @@ import BackToTop from "@/components/BackToTop";
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
+import DealLegend from "@/components/DealLegend";
 
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
 
@@ -254,15 +255,7 @@ export default async function HomePage() {
       </div>
 
       {/* ── Deal badge legend — suppressed when HIDE_PRICE_HISTORY */}
-      {!HIDE_PRICE_HISTORY && (
-        <p className="text-xs text-dust mb-4 leading-relaxed">
-          <span className="text-gold font-semibold">✦ Melhor Preço</span> = menor preço registrado
-          {" · "}
-          <span className="text-deallit font-semibold">✓ Ótima Oferta</span> = abaixo da média histórica
-          {" · "}
-          Boa Oferta = com desconto ativo
-        </p>
-      )}
+      {!HIDE_PRICE_HISTORY && <DealLegend />}
 
       {/* ── Result count + grid stream in; everything above ships in the
              shell so the hero, h1, carousel, and links land inside <main>

@@ -32,9 +32,9 @@ Agent discovery:
 ## Deal Scoring
 
 deal_score field:
-- 3 = "Melhor Preço" — current price is at or below all-time low
-- 2 = "Ótima Oferta" — significantly below 30-day average
-- 1 = "Boa Oferta" — below 30-day average
+- 3 = "Melhor Preço" — at or below the lowest price recorded since tracking began (2026-04-14); requires tier 2 first
+- 2 = "Ótima Oferta" — tier 1 and also below the 90-day average
+- 1 = "Boa Oferta" — at least 10% and R$2 below the 30-day average
 - null = no active deal
 
 ## Key Pages
