@@ -188,7 +188,7 @@ export default function GerenciarAlertaPage() {
           <>
             <button
               onClick={() => setConfirmingDelete(true)}
-              className="w-full border border-cut/50 text-cut hover:bg-cut/10 text-sm font-medium py-3.5 rounded-xl transition-colors cursor-pointer"
+              className="w-full border border-cut/50 text-cutlit hover:bg-cut/10 text-sm font-medium py-3.5 rounded-xl transition-colors cursor-pointer"
             >
               Cancelar alerta e remover meus dados
             </button>

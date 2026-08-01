@@ -10,7 +10,7 @@ export default function StyleTags({ tags }: { tags: string[] }) {
           <li key={tag}>
             <Link
               href={`/estilo/${slugifyStyle(tag)}`}
-              className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+              className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-parchment hover:text-cream hover:border-wax/70 transition-colors"
             >
               {tag}
             </Link>

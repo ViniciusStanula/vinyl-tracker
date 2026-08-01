@@ -241,7 +241,7 @@ export default async function EstiloPage({
               <li key={a.slug}>
                 <Link
                   href={`/artista/${a.slug}`}
-                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-parchment hover:text-cream hover:border-wax/70 transition-colors"
                 >
                   {a.artista}
                 </Link>
@@ -262,7 +262,7 @@ export default async function EstiloPage({
               <li key={e.slug}>
                 <Link
                   href={`/estilo/${e.slug}`}
-                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-parchment hover:text-cream hover:border-wax/70 transition-colors"
                 >
                   {getEstiloDisplayName(e.tag)}
                 </Link>

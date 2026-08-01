@@ -26,7 +26,7 @@ export default function GuiasRelacionados({ className = "" }: { className?: stri
           <li key={g.href}>
             <Link
               href={g.href}
-              className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-dust hover:text-parchment hover:border-wax/70 transition-colors"
+              className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-parchment hover:text-cream hover:border-wax/70 transition-colors"
             >
               {g.label}
             </Link>

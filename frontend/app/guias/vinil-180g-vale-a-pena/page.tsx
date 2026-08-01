@@ -586,7 +586,7 @@ export default function Vinil180gPage() {
             {[
               {
                 label: "Original pode ser melhor quando",
-                color: "text-patina",
+                color: "text-dust",
                 items: [
                   "Está em boa condição (VG+ ou melhor)",
                   "O reissue foi feito de fonte digital, não das fitas",
@@ -637,7 +637,7 @@ export default function Vinil180gPage() {
             {[
               {
                 label: "Faz sentido",
-                color: "text-patina",
+                color: "text-dust",
                 items: [
                   "Você coleciona a longo prazo e a resistência ao empenamento é prioridade",
                   "Você mora em região quente e não tem controle perfeito de temperatura",

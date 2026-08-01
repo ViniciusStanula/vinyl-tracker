@@ -822,7 +822,7 @@ export default function ComoGuardarPage() {
               <div className="grid sm:grid-cols-3 gap-3 text-parchment text-sm">
                 {[
                   { label: "Papel puro", nota: "Evite", notaColor: "text-red-400", desc: "Vem de fábrica na maioria dos discos. Solta fibras com o tempo, é abrasivo contra o vinil e contribui pra acumular estática. Troque em TODO disco novo que você comprar." },
-                  { label: "Poly puro", nota: "Bom", notaColor: "text-patina", desc: "Macio, antiestático, completamente liso. O melhor pro disco em termos de proteção. Contra: desliza demais dentro da capa." },
+                  { label: "Poly puro", nota: "Bom", notaColor: "text-dust", desc: "Macio, antiestático, completamente liso. O melhor pro disco em termos de proteção. Contra: desliza demais dentro da capa." },
                   { label: "Paper com lining", nota: "Ideal", notaColor: "text-gold", desc: "Por fora é papel (dá rigidez), por dentro tem camada de poly que toca o disco. Preferido por colecionadores sérios. Resolve os dois lados do problema." },
                 ].map(({ label, nota, notaColor, desc }) => (
                   <div key={label} className="bg-sleeve border border-groove rounded-xl p-4">

@@ -312,14 +312,14 @@ export default function VinilColoridoPage() {
               {
                 label: "Colorido sólido",
                 nota: "Equivalente ao preto na prática",
-                notaColor: "text-patina",
+                notaColor: "text-dust",
                 text: "Uma cor uniforme, um pigmento de boa qualidade, mesma planta e mesmo master. O dono da Vinil Brasil, Michel Nath, afirma que num teste cego com os mesmos materiais e corte ninguém consegue distinguir do preto. A diferença que existia na era dos pigmentos baratos praticamente desapareceu em prensagens modernas de qualidade.",
                 source: null,
               },
               {
                 label: "Transparente",
                 nota: "Muito próximo do sólido",
-                notaColor: "text-patina",
+                notaColor: "text-dust",
                 text: "Usa agentes clareadores ao invés do carbon black. Visualmente bonito, sem as mesmas propriedades antiestáticas do preto, mas sonicamente muito próximo de um colorido sólido bem prensado. A desvantagem real é sensibilidade levemente maior à degradação por UV: guarde longe de luz solar direta.",
                 source: null,
               },
@@ -538,7 +538,7 @@ export default function VinilColoridoPage() {
             {[
               {
                 label: "Faz sentido",
-                color: "text-patina",
+                color: "text-dust",
                 items: [
                   "Edição limitada com mesmo master e planta da versão preta",
                   "Você quer a peça como objeto visual além do disco para ouvir",
@@ -612,7 +612,7 @@ export default function VinilColoridoPage() {
             {[
               {
                 label: "Picture disc faz sentido quando",
-                color: "text-patina",
+                color: "text-dust",
                 items: [
                   "Você quer pendurar na parede ou exibir na estante como objeto visual",
                   "É uma edição de colecionador de artista que você acompanha e não vai revender",
