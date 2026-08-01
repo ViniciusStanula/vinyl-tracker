@@ -602,13 +602,19 @@ export default async function DiscoPage({
       {/* Hero — sticky album art left, details right on desktop */}
       <header className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 mb-6">
 
-        {disco.imgUrl && (
-          <div className="lg:col-span-5">
-            <div className="lg:sticky lg:top-[82px]">
-              {/* Offset shadow layer — stacked sleeve effect */}
-              <div className="relative">
-                <div className="absolute inset-0 translate-x-3 translate-y-3 bg-groove border border-wax/40 rounded-2xl" aria-hidden="true" />
-                <div className="relative aspect-square bg-label rounded-2xl overflow-hidden">
+        {/* The sleeve column renders even without a cover. 133 listable records
+            have no image — Amazon serves a 60x40 blank for them and genuinely
+            has no art — and dropping the column made the hero collapse to one
+            full-width slab of text that reads as a broken page. DiscoCard
+            already draws this mark in the same situation; the detail page was
+            the only surface that showed nothing. */}
+        <div className="lg:col-span-5">
+          <div className="lg:sticky lg:top-[82px]">
+            {/* Offset shadow layer — stacked sleeve effect */}
+            <div className="relative">
+              <div className="absolute inset-0 translate-x-3 translate-y-3 bg-groove border border-wax/40 rounded-2xl" aria-hidden="true" />
+              <div className="relative aspect-square bg-label rounded-2xl overflow-hidden">
+                {disco.imgUrl ? (
                   <Image
                     src={disco.imgUrl}
                     alt={`${disco.titulo} por ${disco.artista}, capa do álbum`}
@@ -617,13 +623,24 @@ export default async function DiscoPage({
                     className="object-cover"
                     priority
                   />
-                </div>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                    <svg viewBox="0 0 48 48" fill="none" className="w-16 h-16 text-patina" aria-hidden="true">
+                      <path d="M18 34V16l18-4v18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="14" cy="34" r="4" stroke="currentColor" strokeWidth="2" />
+                      <circle cx="32" cy="30" r="4" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                    <p className="text-dust text-xs leading-relaxed">
+                      Capa não disponível para este disco
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
 
-        <div className={`flex flex-col justify-between ${disco.imgUrl ? "lg:col-span-7" : "lg:col-span-12"}`}>
+        <div className="flex flex-col justify-between lg:col-span-7">
           <div>
             {/* Single meta line: artist · genre */}
             <p className="text-dust text-[11px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2 flex-wrap">
