@@ -132,7 +132,11 @@ def clean_catno(v: str | None) -> str | None:
     s = str(v).strip()
     if s.lower().strip("[]") in ("none", "n/a", "-", "", "not on label"):
         return None
-    if s.isdigit() and len(s) in (12, 13):
+    # Digits only and barcode-length is a barcode, not a catalogue number.
+    # The range is 12-14 rather than (12, 13) because editors pad: Anne Wilson
+    # "REBEL" carries catno "00602458871463", which is the 12-digit UPC with
+    # two leading zeros, and slipped through a length-13 test.
+    if s.isdigit() and 12 <= len(s) <= 14:
         return None
     return s
 
@@ -421,6 +425,10 @@ _COLUMNS = (
     "discogs_master_year",
     "discogs_master_checked_at",
     "discogs_title",
+    "discogs_label",
+    "discogs_released",
+    "discogs_format_desc",
+    "discogs_genres",
 )
 
 
@@ -467,7 +475,25 @@ def ensure_columns(conn) -> None:
                  --    PURPLE AND BLUE 140G)"
                  --   "Dial 'S' For Sonny (Blue Note Classic Vinyl Series)"
                  -- Discogs stores the album's actual title.
-                 ADD COLUMN IF NOT EXISTS discogs_title             TEXT"""
+                 ADD COLUMN IF NOT EXISTS discogs_title             TEXT,
+                 -- Ficha tecnica. All four measured on a 29-record field
+                 -- audit before being added.
+                 --
+                 -- Label: Discogs had one where MusicBrainz had none on 21 of
+                 -- 29, and disagreed on 3. Pressing-level, so it is written
+                 -- under the same unique_pressing gate as catno and country.
+                 ADD COLUMN IF NOT EXISTS discogs_label             TEXT,
+                 -- Full pressing date, present on 29 of 29. Distinct from
+                 -- discogs_master_year, which is when the ALBUM first came
+                 -- out; this is when this particular disc was made.
+                 ADD COLUMN IF NOT EXISTS discogs_released          TEXT,
+                 -- "LP, Album, Reissue, 180 Gram, Gatefold". Reissue alone
+                 -- appeared on 13 of 29 — the difference between an original
+                 -- and a repress, which the page cannot state today.
+                 ADD COLUMN IF NOT EXISTS discogs_format_desc       TEXT,
+                 -- Broad genre ("Rock", "Stage & Screen"), a level above
+                 -- styles. Album-level, so no pressing gate.
+                 ADD COLUMN IF NOT EXISTS discogs_genres            TEXT"""
         )
     conn.commit()
 
@@ -676,7 +702,31 @@ def main() -> None:
             if unique_pressing else None
         )
         country = (rel.get("country") or hit.get("country")) if unique_pressing else None
+        # Discogs uses a literal "Unknown" placeholder, which is not a country.
+        if (country or "").strip().lower() in ("unknown", "unbekannt", ""):
+            country = None
         styles = ", ".join(rel.get("styles") or hit.get("style") or []) or None
+        # Album-level, so it survives an ambiguous barcode the way styles do.
+        genres = ", ".join(rel.get("genres") or []) or None
+
+        # Pressing-level, same gate as catno and country: with several releases
+        # behind one barcode, the label and the manufacturing date are a coin
+        # flip between them.
+        label = None
+        released = None
+        format_desc = None
+        if unique_pressing:
+            label = (next((l.get("name") for l in (rel.get("labels") or [])), None)
+                     or None)
+            released = (rel.get("released") or "").strip() or None
+            fmt = (rel.get("formats") or [{}])[0]
+            parts = list(fmt.get("descriptions") or [])
+            if fmt.get("text"):
+                parts.append(fmt["text"])          # "180 Gram", "Blue Translucent"
+            qty = str(fmt.get("qty") or "")
+            if qty.isdigit() and int(qty) > 1:
+                parts.insert(0, f"{qty}xLP")
+            format_desc = ", ".join(dict.fromkeys(p for p in parts if p)) or None
 
         # One extra call, only when a master exists. Worth it: the master year
         # both fills records with no release date and catches wrong ones —
@@ -721,6 +771,10 @@ def main() -> None:
                            discogs_tracklist         = %s,
                            discogs_master_year       = %s,
                            discogs_title             = %s,
+                           discogs_label             = %s,
+                           discogs_released          = %s,
+                           discogs_format_desc       = %s,
+                           discogs_genres            = %s,
                            discogs_master_checked_at = CASE WHEN %s THEN NULL
                                                             ELSE NOW() END,
                            discogs_checked_at        = NOW()
@@ -733,6 +787,10 @@ def main() -> None:
                         json.dumps(tracklist, ensure_ascii=False) if tracklist else None,
                         master_year,
                         dg_title,
+                        label,
+                        released,
+                        format_desc,
+                        genres,
                         master_failed,
                         slug,
                     ),
@@ -741,7 +799,9 @@ def main() -> None:
             print(
                 f"  OK  {artista[:16]:18s} | {titulo[:24]:26s} | "
                 f"{country or '--':12s} sides={'Y' if sides else 'n'} "
-                f"orig={master_year or '-':6} catno={catno or '-'} styles={styles or '-'}"
+                f"orig={master_year or '-':6} catno={catno or '-':12s} "
+                f"label={(label or '-')[:18]:20s} rel={released or '-':12s} "
+                f"fmt={(format_desc or '-')[:34]}"
             )
 
     total = len(rows) or 1

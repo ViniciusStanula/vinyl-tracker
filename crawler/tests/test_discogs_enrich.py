@@ -144,3 +144,18 @@ class TestNonLatinTitles:
             "Coldplay", "Parachutes",
             hit("Metallica - Master of Puppets (メタリカ)"), from_barcode=True,
         )
+
+
+class TestCatnoBarcodeJunk:
+    def test_padded_upc_in_the_catalogue_field_is_rejected(self):
+        # Anne Wilson "REBEL" carries catno "00602458871463" — the 12-digit UPC
+        # with two leading zeros. A length-13 test let it through and the page
+        # would have published a barcode as a catalogue number.
+        assert clean_catno("00602458871463") is None
+        assert clean_catno("602458871463") is None
+        assert clean_catno("0602458871463") is None
+
+    def test_real_catalogue_numbers_survive(self):
+        assert clean_catno("MOVLP208") == "MOVLP208"
+        assert clean_catno("DOC310") == "DOC310"
+        assert clean_catno("8023") == "8023"
