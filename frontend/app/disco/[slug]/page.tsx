@@ -185,9 +185,47 @@ export default async function DiscoPage({
   // "Single" is frequently a wrong release-group match — hide it rather than
   // surface a likely-mislabeled type. Localize the rest to pt-BR.
   const MB_TYPE_PT: Record<string, string> = { Album: "Álbum", EP: "EP", Compilation: "Coletânea" };
+  // Vinyl tracklist from the exact pressing Discogs resolved by barcode.
+  // Preferred over mb_tracklist, which comes from the release GROUP's
+  // representative release and is frequently the CD: sampling 59 records,
+  // 15 disagreed by more than two tracks, e.g. Castle in the Sky at 23 tracks
+  // on MusicBrainz versus 14 on the actual LP. It also carries side positions,
+  // which MusicBrainz has no concept of at group level.
+  const discogsTracks = ((): { title: string; length: number | null; position: string | null }[] => {
+    const raw = meta?.discogsTracklist;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      // Rows already stored before the crawler learned to drop Discogs
+      // "heading" dividers: they carry a title but no position, and left in
+      // they inflate the count and break side detection.
+      .filter((t): t is { title: string; position?: string; duration?: string } =>
+        Boolean(t && typeof t === "object" && "title" in t))
+      .filter((t) => String(t.position ?? "").trim() !== "")
+      .map((t) => ({
+        title: String(t.title),
+        // Discogs durations are "3:42" strings; the component wants ms.
+        length: (() => {
+          const m = /^(\d+):(\d{2})$/.exec(String(t.duration ?? "").trim());
+          return m ? (Number(m[1]) * 60 + Number(m[2])) * 1000 : null;
+        })(),
+        position: t.position ? String(t.position) : null,
+      }));
+  })();
+
+  // Original release year. MusicBrainz sometimes matched a reissue
+  // release-group, and Discogs' master is sometimes itself a reissue master —
+  // in both cases the wrong value is the LATER one, so the earlier of the two
+  // is the album's original year. Measured on 59 records: 7 disagreed, and
+  // taking the minimum was correct in every case checked (Castle in the Sky
+  // MB 2002 / Discogs 1986; Selena LIVE MB 2026 / Discogs 1993).
+  const mbYear = Number(meta?.mbFirstReleaseDate?.slice(0, 4)) || null;
+  const dgYear = meta?.discogsMasterYear ?? null;
+  const originalYear =
+    mbYear && dgYear ? String(Math.min(mbYear, dgYear)) : String(mbYear ?? dgYear ?? "") || null;
+
   const mbInfo = meta?.mbMbid
     ? {
-        releaseYear: meta.mbFirstReleaseDate?.slice(0, 4) ?? null,
+        releaseYear: originalYear,
         primaryType: meta.mbPrimaryType ? MB_TYPE_PT[meta.mbPrimaryType] ?? null : null,
         genres: (meta.mbGenres ?? "")
           .split(", ")
@@ -202,18 +240,22 @@ export default async function DiscoPage({
           meta.mbRating != null && (meta.mbRatingVotes ?? 0) >= 10
             ? { value: meta.mbRating, votes: meta.mbRatingVotes as number }
             : null,
-        tracklist: ((): { title: string; length: number | null }[] => {
-          try {
-            const parsed = JSON.parse(meta.mbTracklist ?? "[]");
-            if (!Array.isArray(parsed)) return [];
-            // New format: [{title, length}]. Legacy format: [string].
-            return parsed.map((t) =>
-              typeof t === "string" ? { title: t, length: null } : t
-            );
-          } catch {
-            return [];
-          }
-        })(),
+        // Discogs (the actual vinyl) wins; MusicBrainz is the fallback for
+        // records Discogs has not resolved.
+        tracklist: discogsTracks.length
+          ? discogsTracks
+          : ((): { title: string; length: number | null }[] => {
+              try {
+                const parsed = JSON.parse(meta.mbTracklist ?? "[]");
+                if (!Array.isArray(parsed)) return [];
+                // New format: [{title, length}]. Legacy format: [string].
+                return parsed.map((t) =>
+                  typeof t === "string" ? { title: t, length: null } : t
+                );
+              } catch {
+                return [];
+              }
+            })(),
         url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
       }
     : null;
@@ -474,6 +516,9 @@ export default async function DiscoPage({
     ...(meta?.mbLabel
       ? { recordLabel: { "@type": "Organization", name: meta.mbLabel } }
       : {}),
+    // Safe to assert now: it comes from a barcode-resolved pressing, and is
+    // only stored when the barcode mapped to a single Discogs release.
+    ...(meta?.discogsCatno ? { catalogNumber: meta.discogsCatno } : {}),
     ...(mbInfo && mbInfo.tracklist.length
       ? {
           numTracks: mbInfo.tracklist.length,
@@ -1017,6 +1062,21 @@ export default async function DiscoPage({
                       <div className="flex justify-between gap-4">
                         <dt className="text-dust">Gravadora</dt>
                         <dd className="text-cream font-medium text-right">{meta.mbLabel}</dd>
+                      </div>
+                    )}
+                    {/* Discogs only — resolved from the barcode, so it belongs to
+                        the pressing being sold. The MusicBrainz equivalents were
+                        dropped because a release-GROUP spans every pressing. */}
+                    {meta?.discogsCatno && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Catálogo</dt>
+                        <dd className="text-cream font-medium text-right">{meta.discogsCatno}</dd>
+                      </div>
+                    )}
+                    {meta?.discogsCountry && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Prensado em</dt>
+                        <dd className="text-cream font-medium text-right">{meta.discogsCountry}</dd>
                       </div>
                     )}
                     {artistPais && (

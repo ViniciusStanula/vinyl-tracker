@@ -298,6 +298,7 @@ _COLUMNS = (
     "discogs_checked_at",
     "discogs_master_year",
     "discogs_master_checked_at",
+    "discogs_title",
 )
 
 
@@ -337,7 +338,14 @@ def ensure_columns(conn) -> None:
                  -- Separate checked_at because a legitimate answer is "this
                  -- release has no master", which must not be retried forever.
                  ADD COLUMN IF NOT EXISTS discogs_master_year       INTEGER,
-                 ADD COLUMN IF NOT EXISTS discogs_master_checked_at TIMESTAMPTZ"""
+                 ADD COLUMN IF NOT EXISTS discogs_master_checked_at TIMESTAMPTZ,
+                 -- Clean album title. Ours is the Amazon marketing string and
+                 -- carries pressing junk on ~24% of records:
+                 --   "DOCTOR WHO: FOUR FROM DOOM'S DAY (2LP/TRANSLUCENT
+                 --    PURPLE AND BLUE 140G)"
+                 --   "Dial 'S' For Sonny (Blue Note Classic Vinyl Series)"
+                 -- Discogs stores the album's actual title.
+                 ADD COLUMN IF NOT EXISTS discogs_title             TEXT"""
         )
     conn.commit()
 
@@ -464,10 +472,15 @@ def main() -> None:
             non_vinyl += 1
 
         rel = dg.release(hit["id"]) or {}
+        # type_ "heading" rows are section dividers, not tracks — a Janis
+        # pressing opens with "From The Soundtrack Of The Motion Picture
+        # \"Janis\"" at position "". Kept, they inflate the track count and
+        # break side detection, since a position-less row sits between real
+        # ones. "index" rows are the same kind of thing for multi-part suites.
         tracklist = [
             {"position": t.get("position"), "title": t.get("title"), "duration": t.get("duration")}
             for t in (rel.get("tracklist") or [])
-            if t.get("title")
+            if t.get("title") and (t.get("type_") or "track") == "track"
         ]
         sides = any(re.match(r"^[A-Z]\d", (t.get("position") or "")) for t in tracklist)
         # A barcode is not always unique. Measured on 25 random records: 10 map
@@ -502,6 +515,10 @@ def main() -> None:
         # Jethro Tull "Living In The Past" is 1972, and MusicBrainz has it as
         # 2013 from a reissue release-group, which files it under the wrong
         # decade on the site today.
+        # Discogs release titles are the album name without the pressing
+        # description Amazon bakes into ours.
+        dg_title = (rel.get("title") or "").strip() or None
+
         master_id = rel.get("master_id")
         master_year = dg.master_year(master_id) if master_id else None
         if master_year:
@@ -527,6 +544,7 @@ def main() -> None:
                            discogs_styles            = %s,
                            discogs_tracklist         = %s,
                            discogs_master_year       = %s,
+                           discogs_title             = %s,
                            discogs_master_checked_at = NOW(),
                            discogs_checked_at        = NOW()
                        WHERE slug = %s""",
@@ -537,6 +555,7 @@ def main() -> None:
                         styles,
                         json.dumps(tracklist, ensure_ascii=False) if tracklist else None,
                         master_year,
+                        dg_title,
                         slug,
                     ),
                 )
