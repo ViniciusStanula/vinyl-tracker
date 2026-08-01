@@ -99,15 +99,43 @@ class TestNonLatinTitles:
         )
 
     def test_relaxation_does_not_apply_to_latin_titles(self):
-        # The wrong matches found in testing were all Latin — the guard must
-        # keep catching them even when the caller came from a barcode.
-        assert not verify_match(
-            "Duck Fight Goose", "Suck On Light",
-            hit("Boy & Bear - Suck On Light"), from_barcode=True,
-        )
+        # A readable title that agrees on nothing is still a rejection.
         assert not verify_match(
             "Steve Davis", "Steve Davis Meets Hank Jones",
             hit("Magdalena Bay - Mini Mix Vol. 3"), from_barcode=True,
+        )
+        # Verified live: barcode 5030679660417 on our Queen "Greatest Hits" row
+        # returns Judas Priest. Nothing agrees, so nothing is written.
+        assert not verify_match(
+            "Queen", "LP QUEEN GREATEST HITS (NACIONAL)",
+            hit("Judas Priest - The Best Of Judas Priest"), from_barcode=True,
+        )
+
+    def test_wrong_artist_column_does_not_veto_a_right_title(self):
+        # Our artista column is wrong often enough that requiring it to agree
+        # threw away correct matches. Verified live: barcode 0602577935046 on
+        # our "Duck Fight Goose" row returns exactly one release, Boy & Bear's
+        # "Suck On Light" (2019, Universal). Duck Fight Goose have no such
+        # album — the artist column is wrong and the match is right.
+        assert verify_match(
+            "Duck Fight Goose", "Suck On Light",
+            hit("Boy & Bear - Suck On Light"), from_barcode=True,
+        )
+
+    def test_one_shared_word_is_not_a_match(self):
+        # "the" alone used to carry both halves of the check, which is how
+        # "See the Sun" was stored with The Paper Dolls' tracklist.
+        assert not verify_match(
+            "See the Sun", "See The Sun [Disco de Vinil]",
+            hit("The Paper Dolls* - My Life (Is In Your Hands)"),
+            from_barcode=True,
+        )
+
+    def test_artist_agreement_carries_a_censored_title(self):
+        # Discogs censors this title; ours is uncensored, so no word lines up.
+        assert verify_match(
+            "KMD", "BLACK BASTARDS (2LP)",
+            hit("KMD - Bl_ck B_st_rds"), from_barcode=True,
         )
 
     def test_mixed_script_still_compared(self):

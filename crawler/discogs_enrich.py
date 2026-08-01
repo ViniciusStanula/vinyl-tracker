@@ -85,8 +85,39 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", s)).strip()
 
 
+# Words that carry no identifying power, so an overlap on one of them is not
+# evidence of a match. "the" alone was enough to pass both halves of
+# verify_match: "See the Sun" matched "The Paper Dolls - My Life (Is In Your
+# Hands)" on that single token, and the record was stored with the wrong
+# album's tracklist. Any title containing "the" matched any other one.
+#
+# Includes the pressing/format words Amazon bakes into our titles ("Disco de
+# Vinil", "[VINYL]", "Edicao Limitada"), which are ours alone and would never
+# be evidence about which release Discogs returned.
+_STOPWORDS = frozenset("""
+the and for with from that this you your ours out off her his its
+los las les des del della delle une uns und der das dem den ein eine
+que com por para uno una unos unas nos nas dos das aos
+disco vinil vinyl album albuns record records lp lps ep eps single singles
+edicao edition ediciones limitada limited deluxe expanded remaster remastered
+import importado exclusive exclusivo colored coloured gatefold reissue
+versao version original official soundtrack ost trilha sonora
+explicit content nacional novo lacrado duplo triplo clear 2lp 3lp 4lp
+iex gram 180g indie
+""".split())
+# "die" is deliberately absent: it is a German article but also an English verb,
+# and dropping it cost the match on HEALTH "Die Slow".
+
+# Amazon's stand-in for "we could not parse an artist". Carries no more signal
+# than "Various Artists", but was treated as a real artist name, so a correct
+# hit was rejected for not containing the words "artista identificado":
+# "This Is The Show - Clear Vinyl" vs Discogs "Pluralone - This Is The Show".
+_UNIDENTIFIED = re.compile(r"artista n[ãa]o identificad", re.I)
+
+
 def _tokens(s: str) -> set[str]:
-    return {t for t in _norm(s).split() if len(t) > 2}
+    """Identifying words only — short words and stopwords carry no evidence."""
+    return {t for t in _norm(s).split() if len(t) > 2 and t not in _STOPWORDS}
 
 
 def clean_catno(v: str | None) -> str | None:
@@ -147,18 +178,81 @@ def verify_match(
     if not combined:
         return False
 
-    if from_barcode and not _is_latin_comparable(raw):
+    # Test the title half alone. Discogs writes "Artist - Title", and a romaji
+    # artist over a Japanese title reads as 30%+ Latin overall, so a fully
+    # Japanese title never reached this relaxation: Nausicaa is catalogued as
+    # "Yasuda Narumi* - 風の谷のナウシカ (2024 Ver.)".
+    title_part = raw.split(" - ", 1)[1] if " - " in raw else raw
+    if from_barcode and not _is_latin_comparable(title_part):
         return True
 
     a_tok = _tokens(our_artist)
-    t_tok = _tokens(our_title)
+    # Compare against the album name, not Amazon's pressing description. The
+    # junk is counted in the denominator otherwise: our Kaguya title is "Tale
+    # Of The Princess Kaguya Ost (2Lp/Remaster/Etched Side/Japanese Import/
+    # Obistrip/Gatefold/Limited)", which matched Discogs on all three words
+    # that matter and still scored 0.43 coverage.
+    t_tok = _tokens(clean_album_title(our_title, our_artist) or our_title)
     hay = set(combined.split())
 
+    # Nothing identifying on our side means the comparison cannot be made, and
+    # "cannot verify" is not "verified". Both halves used to treat an empty
+    # token set as a pass, so a record whose artist and title reduced to
+    # stopwords accepted the first result the barcode returned, whatever it was.
+    if not a_tok and not t_tok:
+        return False
+
     # "Various Artists" carries no signal; fall back to title agreement alone.
-    generic_artist = not a_tok or _norm(our_artist).startswith("various")
+    generic_artist = (
+        not a_tok
+        or _norm(our_artist).startswith("various")
+        or bool(_UNIDENTIFIED.search(our_artist or ""))
+    )
     artist_ok = generic_artist or bool(a_tok & hay)
-    title_ok = not t_tok or bool(t_tok & hay)
-    return artist_ok and title_ok
+    # Same rule on the title side: an empty title token set is only acceptable
+    # when the artist actually matched something.
+    title_ok = bool(t_tok & hay) if t_tok else not generic_artist
+    if artist_ok and title_ok:
+        return True
+
+    # Our artista column is wrong often enough that requiring it to agree threw
+    # away correct matches wholesale. Measured on category batches: "Sekiro"
+    # filed against Pizza Tower's soundtrack, "Kill la Kill" against Halloween,
+    # "The Batman" against Wallace & Gromit — in each case our title was right,
+    # Discogs found the right album, and the artist gate rejected it. It also
+    # rejects legitimate credit differences: Mega Man Legends 2 is credited to
+    # Makoto Tomozawa, not "Capcom Sound Team", and Novectacle is "Novect".
+    #
+    # So a title can carry a match on its own, but only a specific one: at
+    # least two identifying words and most of our title accounted for. One
+    # shared word is how "the" attached The Paper Dolls to "See The Sun".
+    if t_tok:
+        overlap = t_tok & hay
+        if len(overlap) >= 2 and len(overlap) / len(t_tok) >= 0.6:
+            return True
+        # A single word can carry it when the word is rare enough to be an
+        # identifier in its own right and it is our whole title: "Romaplasm"
+        # is not a coincidence, "Live" would be. Our artist column had this
+        # record under "Romantasm"; Discogs has it under Baths.
+        if (
+            len(overlap) == 1
+            and overlap == t_tok
+            and len(next(iter(overlap))) >= 7
+        ):
+            return True
+
+    # Barcode plus an artist agreement, with a title that will not line up.
+    # Discogs censors titles (KMD "Bl_ck B_st_rds" for "Black Bastards"), files
+    # self-titled records as "Cracker - Cracker" against our "Cracker -
+    # 180-Gram Black Vinyl", and numbers sequels our pressing description
+    # buries ("II (IEX) (Indie Exclusive)" vs "Van Halen II").
+    #
+    # Safe because it needs a real artist token to land: the two genuinely
+    # wrong barcodes in these batches (Queen -> Judas Priest, a Curtis Mayfield
+    # tribute -> Django Reinhardt) share no artist word and stay rejected.
+    if from_barcode and not generic_artist and bool(a_tok & hay):
+        return True
+    return False
 
 
 def pressing_invariant(results: list[dict]) -> dict:
@@ -202,6 +296,14 @@ def pressing_invariant(results: list[dict]) -> dict:
             out["year"] = y
 
     return out
+
+
+class DiscogsUnavailable(Exception):
+    """The API could not be reached — as opposed to answering "nothing found".
+
+    Callers must leave discogs_checked_at alone when they see this, so the
+    record is retried on the next run instead of being retired unenriched.
+    """
 
 
 class Discogs:
@@ -249,23 +351,43 @@ class Discogs:
                     time.sleep(self.delay * 4 * attempt)
                     continue
                 if exc.code == 404:
-                    return None
+                    return None  # genuinely absent, and that is an answer
+                if 500 <= exc.code < 600:
+                    log.warning("Discogs HTTP %s on %s", exc.code, path)
+                    time.sleep(self.delay * attempt)
+                    continue
                 log.warning("Discogs HTTP %s on %s", exc.code, path)
                 return None
             except Exception as exc:
                 log.warning("Discogs error on %s: %s", path, exc)
                 time.sleep(self.delay * attempt)
-        return None
+        # Exhausted the retries. This is NOT "no results" — returning None here
+        # made a timeout indistinguishable from an empty search, and the caller
+        # then stamped discogs_checked_at, retiring the record permanently on a
+        # transient blip. The same audit batch reported 4 misses one run and 6
+        # the next, which is how this surfaced.
+        raise DiscogsUnavailable(path)
 
+    # type=release is not optional. A barcode search returns master rows mixed
+    # in with release rows, both carrying a plain "id", and master ids collide
+    # with unrelated release ids: The Beatles "Live At The Hollywood Bowl"
+    # (0602557054996) returns master 1103767, and /releases/1103767 is a Dutch
+    # novelty record. verify_match cannot catch this — it reads the search
+    # result's title, which is correct on the master too, so the wrong album is
+    # only visible after the release fetch.
+    #
+    # It also fixes a silent one: masters counted as siblings inflated the
+    # count, so single pressings looked ambiguous and lost catno and country.
     def by_barcode(self, barcode: str) -> list[dict]:
-        data = self._get("/database/search", {"barcode": barcode})
+        data = self._get("/database/search", {"barcode": barcode, "type": "release"})
         time.sleep(self.delay)
         return (data or {}).get("results") or []
 
     def by_artist_title(self, artist: str, title: str) -> list[dict]:
         data = self._get(
             "/database/search",
-            {"artist": artist, "release_title": title, "format": "Vinyl"},
+            {"artist": artist, "release_title": title, "format": "Vinyl",
+             "type": "release"},
         )
         time.sleep(self.delay)
         return (data or {}).get("results") or []
@@ -435,11 +557,16 @@ def main() -> None:
         f"({dg.delay}s/call)\n"
     )
 
-    resolved = rejected = missed = non_vinyl = 0
+    resolved = rejected = missed = non_vinyl = unavailable = 0
     with_sides = with_catno = with_master = 0
 
     for slug, artista, titulo, ean in rows:
-        results = dg.by_barcode(ean)
+        try:
+            results = dg.by_barcode(ean)
+        except DiscogsUnavailable:
+            # Leave discogs_checked_at NULL so the next run picks the row up.
+            unavailable += 1
+            continue
         if not results:
             missed += 1
             if args.apply:
@@ -471,7 +598,11 @@ def main() -> None:
             # misclassified, but format changes are a separate, reviewed job.
             non_vinyl += 1
 
-        rel = dg.release(hit["id"]) or {}
+        try:
+            rel = dg.release(hit["id"]) or {}
+        except DiscogsUnavailable:
+            unavailable += 1
+            continue
         # type_ "heading" rows are section dividers, not tracks — a Janis
         # pressing opens with "From The Soundtrack Of The Motion Picture
         # \"Janis\"" at position "". Kept, they inflate the track count and
@@ -520,7 +651,15 @@ def main() -> None:
         dg_title = (rel.get("title") or "").strip() or None
 
         master_id = rel.get("master_id")
-        master_year = dg.master_year(master_id) if master_id else None
+        master_failed = False
+        try:
+            master_year = dg.master_year(master_id) if master_id else None
+        except DiscogsUnavailable:
+            # The release itself is in hand, so keep it; only the original-year
+            # lookup failed. Leaving discogs_master_checked_at NULL below makes
+            # the resume branch in fetch_candidates come back for just this.
+            master_year = None
+            master_failed = True
         if master_year:
             with_master += 1
 
@@ -545,7 +684,8 @@ def main() -> None:
                            discogs_tracklist         = %s,
                            discogs_master_year       = %s,
                            discogs_title             = %s,
-                           discogs_master_checked_at = NOW(),
+                           discogs_master_checked_at = CASE WHEN %s THEN NULL
+                                                            ELSE NOW() END,
                            discogs_checked_at        = NOW()
                        WHERE slug = %s""",
                     (
@@ -556,6 +696,7 @@ def main() -> None:
                         json.dumps(tracklist, ensure_ascii=False) if tracklist else None,
                         master_year,
                         dg_title,
+                        master_failed,
                         slug,
                     ),
                 )
@@ -595,10 +736,14 @@ def run_no_barcode(conn, args) -> None:
         f"auth: {'yes' if dg.authed else 'anonymous'}\n"
     )
 
-    agreed = ambiguous = missed = 0
+    agreed = ambiguous = missed = unavailable = 0
     for slug, artista, titulo in rows:
         query_title = clean_album_title(titulo, artista) or titulo
-        results = dg.by_artist_title(artista, query_title)
+        try:
+            results = dg.by_artist_title(artista, query_title)
+        except DiscogsUnavailable:
+            unavailable += 1
+            continue
         if not results:
             missed += 1
             if args.apply:
