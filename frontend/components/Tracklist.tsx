@@ -37,8 +37,10 @@ export function sideKey(position: string | null | undefined): string | null {
   // "LP 1" through "LP 5".
   const trackFirst = /^\d+[-.]?([A-Z])$/.exec(p);
   if (trackFirst) return trackFirst[1];
-  // "A1", "A-1", "A"
-  const letterFirst = /^([A-Z])[-.]?\d*$/.exec(p);
+  // "A1", "A-1", "A", and sub-track numbering: Todd Rundgren "Something /
+  // Anything?" runs A1..A6, B1.1, B1.2, B2..B6, C1.., D1.3, D2.. — two parts of
+  // one banded track. Trailing dots and digits are all still side B.
+  const letterFirst = /^([A-Z])[-.]?[\d.]*$/.exec(p);
   if (letterFirst) return letterFirst[1];
   return null;
 }
@@ -103,7 +105,14 @@ export default function Tracklist({ tracks, previewCount = 8 }: Props) {
       <ol className="space-y-1.5 text-sm">
         {shown.map((track, i) => {
           const side = sides[i];
-          const newSide = hasSides && side !== sides[i - 1];
+          // `side` is null for any position this file cannot parse, and the
+          // heading threshold is a majority rather than all of them, so a
+          // record can legitimately reach here with most sides known and a few
+          // not. Rendering a heading for one of those called sideLabel(null),
+          // which crashed the whole page on `charCodeAt` — and crashed the
+          // production build with it, since these pages are prerendered.
+          // An unparsed position now just continues under the previous heading.
+          const newSide = hasSides && side !== null && side !== sides[i - 1];
           return (
             <li key={i}>
               {/* Gap above every side but the first. `first:mt-0` did not work

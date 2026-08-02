@@ -4,6 +4,14 @@ import Link from "next/link";
 import { Suspense, useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import SearchBar from "./SearchBar";
+import MegaMenu from "./MegaMenu";
+import {
+  BROWSE_LINKS,
+  MENU_PREVIEW_COUNT,
+  TOP_DECADAS,
+  TOP_ESTILOS,
+  TOP_PAISES,
+} from "@/lib/browseLinks";
 
 function VinylLogo() {
   return (
@@ -21,20 +29,71 @@ function VinylLogo() {
   );
 }
 
+/**
+ * A section is current when the URL is that page or sits underneath it, so
+ * /guias/pre-amplificador-phono still marks "Guias".
+ *
+ * Compared segment by segment rather than with a bare startsWith, which would
+ * light up "Discos" on /discos-abaixo-de-200 — a different section whose path
+ * happens to share a prefix.
+ */
+function isSection(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+// "Discos" is absent: on desktop it is the mega-menu trigger, and in the mobile
+// drawer it is the first accordion. Both render it themselves.
+//
+// "Artistas" is absent too. It pointed at /artistas-mais-ouvidos, a 24-name
+// chart, while the 11,935-name catalogue sat at /artistas reachable only from a
+// breadcrumb — one label that misdescribed whichever page it pointed at. Both
+// now appear under their own names in the menu.
+//
+// Ofertas leads: it was reachable only from the homepage, and most visitors
+// arrive on a record page from search and never see the homepage. Every product
+// page shows a deal badge with no route to the page that lists them.
 const NAV_LINKS = [
-  { href: "/disco",                 label: "Discos"   },
-  { href: "/artistas-mais-ouvidos", label: "Artistas" },
-  { href: "/guias",                 label: "Guias"    },
-  { href: "/sobre",                 label: "Sobre"    },
+  { href: "/ofertas", label: "Ofertas" },
+  { href: "/guias",   label: "Guias"   },
+  { href: "/sobre",   label: "Sobre"   },
+];
+
+// Groups shown as accordions in the mobile drawer. Same lists the desktop panel
+// and the footer use, so none of the three can drift.
+const MOBILE_GROUPS = [
+  {
+    heading: "Estilos",
+    hub: { label: "Ver todos os estilos", href: "/estilos" },
+    items: TOP_ESTILOS.slice(0, MENU_PREVIEW_COUNT).map(({ nome, slug }) => ({
+      label: nome,
+      href: `/estilo/${slug}`,
+    })),
+  },
+  {
+    heading: "Décadas",
+    hub: { label: "Ver todas as décadas", href: "/decadas" },
+    items: TOP_DECADAS.map((d) => ({ label: `Anos ${d}`, href: `/decada/${d}` })),
+  },
+  {
+    heading: "Países",
+    hub: { label: "Ver todos os países", href: "/paises" },
+    items: TOP_PAISES.slice(0, MENU_PREVIEW_COUNT).map(({ nome, slug }) => ({
+      label: nome,
+      href: `/pais/${slug}`,
+    })),
+  },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // One accordion at a time: two expanded groups push the rest off a phone
+  // screen, and the drawer stops being navigation.
+  const [expanded, setExpanded] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
-  useEffect(() => { setOpen(false); }, [pathname]);
+  useEffect(() => { setOpen(false); setExpanded(null); }, [pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -99,13 +158,14 @@ export default function Navbar() {
 
           {/* ── Desktop nav links ── */}
           <nav aria-label="Navegação principal" className="hidden sm:flex items-center gap-0.5 shrink-0">
+            <MegaMenu isActive={isSection(pathname, "/disco")} />
             {NAV_LINKS.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
-                aria-current={pathname === href ? "page" : undefined}
+                aria-current={isSection(pathname, href) ? "page" : undefined}
                 className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                  pathname === href
+                  isSection(pathname, href)
                     ? "text-cream"
                     : "text-dust hover:text-gold hover:bg-groove/40"
                 }`}
@@ -152,14 +212,108 @@ export default function Navbar() {
             className="fixed top-[62px] left-0 right-0 z-40 bg-sleeve border-b border-groove shadow-2xl sm:hidden"
             aria-label="Menu principal"
           >
-            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+            {/* Capped and scrollable: expanding two groups otherwise runs the
+                drawer past the bottom of a phone, and the last items become
+                unreachable because the drawer is fixed, not in page flow. */}
+            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1 max-h-[calc(100dvh-62px)] overflow-y-auto overscroll-contain">
+              <Link
+                href="/disco"
+                aria-current={isSection(pathname, "/disco") ? "page" : undefined}
+                className={`px-4 py-3 rounded-xl text-base transition-colors active:scale-[0.98] ${
+                  isSection(pathname, "/disco")
+                    ? "bg-wax text-cream font-semibold"
+                    : "text-parchment hover:text-cream hover:bg-groove/60"
+                }`}
+              >
+                Todos os discos
+              </Link>
+
+              {MOBILE_GROUPS.map(({ heading, hub, items }) => {
+                const isOpen = expanded === heading;
+                return (
+                  <div key={heading}>
+                    <button
+                      type="button"
+                      onClick={() => setExpanded(isOpen ? null : heading)}
+                      aria-expanded={isOpen}
+                      className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-base text-parchment hover:text-cream hover:bg-groove/60 transition-colors active:scale-[0.98]"
+                    >
+                      {heading}
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                        className={`w-4 h-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      >
+                        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+
+                    {isOpen && (
+                      <ul className="pl-4 pb-1 flex flex-col">
+                        {items.map(({ label, href }) => (
+                          <li key={href}>
+                            <Link
+                              href={href}
+                              className="block px-4 py-2.5 rounded-lg text-[15px] text-dust hover:text-cream hover:bg-groove/60 transition-colors"
+                            >
+                              {label}
+                            </Link>
+                          </li>
+                        ))}
+                        <li>
+                          <Link
+                            href={hub.href}
+                            className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-gold hover:text-cream transition-colors"
+                          >
+                            {hub.label} →
+                          </Link>
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+
+              {BROWSE_LINKS.filter((l) => l.href === "/discos-abaixo-de-200").map(
+                ({ label, href }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="px-4 py-3 rounded-xl text-base text-parchment hover:text-cream hover:bg-groove/60 transition-colors active:scale-[0.98]"
+                  >
+                    {label}
+                  </Link>
+                ),
+              )}
+
+              <div className="my-1 border-t border-groove/60" />
+
+              <Link
+                href="/artistas-mais-ouvidos"
+                aria-current={isSection(pathname, "/artistas-mais-ouvidos") ? "page" : undefined}
+                className="px-4 py-3 rounded-xl text-base text-parchment hover:text-cream hover:bg-groove/60 transition-colors active:scale-[0.98]"
+              >
+                Artistas mais ouvidos
+              </Link>
+              <Link
+                href="/artistas"
+                aria-current={isSection(pathname, "/artistas") ? "page" : undefined}
+                className="px-4 py-3 rounded-xl text-base text-parchment hover:text-cream hover:bg-groove/60 transition-colors active:scale-[0.98]"
+              >
+                Catálogo de artistas A-Z
+              </Link>
+
+
               {NAV_LINKS.map(({ href, label }) => (
                 <Link
                   key={href}
                   href={href}
-                  aria-current={pathname === href ? "page" : undefined}
+                  aria-current={isSection(pathname, href) ? "page" : undefined}
                   className={`px-4 py-3 rounded-xl text-base transition-colors active:scale-[0.98] ${
-                    pathname === href
+                    isSection(pathname, href)
                       ? "bg-wax text-cream font-semibold"
                       : "text-parchment hover:text-cream hover:bg-groove/60"
                   }`}

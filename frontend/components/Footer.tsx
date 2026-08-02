@@ -1,6 +1,12 @@
 import Link from "next/link";
 
 import FooterSection from "@/components/FooterSection";
+import {
+  BROWSE_LINKS,
+  TOP_DECADAS,
+  TOP_ESTILOS,
+  TOP_PAISES,
+} from "@/lib/browseLinks";
 
 function TelegramIcon({ className }: { className?: string }) {
   return (
@@ -25,15 +31,6 @@ const NAV_LINKS = [
   { label: "Sobre o Site",          href: "/sobre" },
 ];
 
-// Hub pages for each browse dimension. They were reachable only from the
-// breadcrumbs on their own children, so /decadas had no inbound links at all.
-const BROWSE_LINKS = [
-  { label: "Estilos Musicais", href: "/estilos" },
-  { label: "Décadas",          href: "/decadas" },
-  { label: "Países",           href: "/paises" },
-  { label: "Discos até R$200", href: "/discos-abaixo-de-200" },
-];
-
 const LEGAL_LINKS = [
   { label: "Política de Privacidade", href: "/politica-de-privacidade" },
   { label: "Termos de Uso",           href: "/termos-de-uso" },
@@ -52,38 +49,6 @@ const GUIA_LINKS = [
   { label: "Vinil 180g vale a pena?",  href: "/guias/vinil-180g-vale-a-pena" },
 ];
 
-// Decade pages. Must stay within DECADES in lib/decadas.ts — /decada/[decada]
-// 404s outside it, so 1950 is excluded here despite having ~233 records.
-const TOP_DECADAS = [1960, 1970, 1980, 1990, 2000, 2010, 2020];
-
-// Country pages, slugs derived from the PT-BR name (US -> "estados-unidos").
-// Brasil is lifted above its inventory rank because this is a pt-BR audience;
-// the rest follow available-record count.
-const TOP_PAISES = [
-  { nome: "Brasil",         slug: "brasil" },
-  { nome: "Estados Unidos", slug: "estados-unidos" },
-  { nome: "Reino Unido",    slug: "reino-unido" },
-  { nome: "Canadá",         slug: "canada" },
-  { nome: "Alemanha",       slug: "alemanha" },
-  { nome: "Austrália",      slug: "australia" },
-  { nome: "Suécia",         slug: "suecia" },
-  { nome: "França",         slug: "franca" },
-];
-
-const TOP_ESTILOS = [
-  { nome: "Rock",       slug: "rock" },
-  { nome: "Jazz",       slug: "jazz" },
-  { nome: "Pop",        slug: "pop" },
-  { nome: "Clássica",   slug: "classical" },
-  { nome: "Hip-Hop",    slug: "hip-hop" },
-  { nome: "Blues",      slug: "blues" },
-  { nome: "Eletrônica", slug: "electronic" },
-  { nome: "Soul",       slug: "soul" },
-  { nome: "Folk",       slug: "folk" },
-  { nome: "Metal",      slug: "metal" },
-  { nome: "Samba",      slug: "samba" },
-  { nome: "MPB",        slug: "mpb" },
-];
 
 function FooterLink({ href, children, external }: {
   href: string;
