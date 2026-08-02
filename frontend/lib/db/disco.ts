@@ -27,6 +27,15 @@ export type DiscoMeta = {
   discogsCatno: string | null;
   discogsCountry: string | null;
   discogsMasterYear: number | null;
+  discogsReleaseId: number | null;
+  discogsLabel: string | null;
+  discogsReleased: string | null;
+  discogsFormatDesc: string | null;
+  discogsGenres: string | null;
+  discogsRating: number | null;
+  discogsRatingVotes: number | null;
+  discogsHave: number | null;
+  discogsWant: number | null;
   discogsTracklist: unknown;
   mbCatalogNumber: string | null;
   mbBarcode: string | null;
@@ -138,6 +147,15 @@ export const getDiscoMeta = (slug: string) =>
         d.discogs_catno        AS "discogsCatno",
         d.discogs_country      AS "discogsCountry",
         d.discogs_master_year  AS "discogsMasterYear",
+        d.discogs_release_id   AS "discogsReleaseId",
+        d.discogs_label        AS "discogsLabel",
+        d.discogs_released     AS "discogsReleased",
+        d.discogs_format_desc  AS "discogsFormatDesc",
+        d.discogs_genres       AS "discogsGenres",
+        d.discogs_rating::float8 AS "discogsRating",
+        d.discogs_rating_votes AS "discogsRatingVotes",
+        d.discogs_have         AS "discogsHave",
+        d.discogs_want         AS "discogsWant",
         d.discogs_tracklist    AS "discogsTracklist",
         d.mb_catalog_number    AS "mbCatalogNumber",
         d.mb_barcode           AS "mbBarcode",

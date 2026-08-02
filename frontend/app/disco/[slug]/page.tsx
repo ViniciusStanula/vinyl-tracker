@@ -223,11 +223,15 @@ export default async function DiscoPage({
   const originalYear =
     mbYear && dgYear ? String(Math.min(mbYear, dgYear)) : String(mbYear ?? dgYear ?? "") || null;
 
-  const mbInfo = meta?.mbMbid
+  // Built from whichever source has anything to say. It was gated on a
+  // MusicBrainz match, which hid the entire panel — tracklist included — on
+  // 1,170 records that Discogs resolved and MusicBrainz never matched. Their
+  // sides and original year were collected and then never rendered.
+  const mbInfo = (meta?.mbMbid || discogsTracks.length > 0 || dgYear)
     ? {
         releaseYear: originalYear,
-        primaryType: meta.mbPrimaryType ? MB_TYPE_PT[meta.mbPrimaryType] ?? null : null,
-        genres: (meta.mbGenres ?? "")
+        primaryType: meta?.mbPrimaryType ? MB_TYPE_PT[meta.mbPrimaryType] ?? null : null,
+        genres: (meta?.mbGenres ?? "")
           .split(", ")
           .filter(Boolean)
           .slice(0, 3)
@@ -237,7 +241,7 @@ export default async function DiscoPage({
           }),
         // Community rating (0–5). Hide low-vote noise — needs >=10 votes.
         rating:
-          meta.mbRating != null && (meta.mbRatingVotes ?? 0) >= 10
+          meta?.mbRating != null && (meta.mbRatingVotes ?? 0) >= 10
             ? { value: meta.mbRating, votes: meta.mbRatingVotes as number }
             : null,
         // Discogs (the actual vinyl) wins; MusicBrainz is the fallback for
@@ -246,7 +250,7 @@ export default async function DiscoPage({
           ? discogsTracks
           : ((): { title: string; length: number | null }[] => {
               try {
-                const parsed = JSON.parse(meta.mbTracklist ?? "[]");
+                const parsed = JSON.parse(meta?.mbTracklist ?? "[]");
                 if (!Array.isArray(parsed)) return [];
                 // New format: [{title, length}]. Legacy format: [string].
                 return parsed.map((t) =>
@@ -256,7 +260,29 @@ export default async function DiscoPage({
                 return [];
               }
             })(),
-        url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
+        url: meta?.mbMbid
+          ? `https://musicbrainz.org/release-group/${meta.mbMbid}`
+          : null,
+        // Attribution has to name the sources this record actually used. The
+        // panel credited MusicBrainz alone while showing a Discogs tracklist
+        // and, where the two disagreed, a Discogs release year. Discogs' API
+        // terms require attribution when their data is displayed.
+        sources: [
+          ...(meta?.mbMbid
+            ? [{
+                name: "MusicBrainz",
+                url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
+              }]
+            : []),
+          ...(meta?.discogsReleaseId
+            ? [{
+                name: "Discogs",
+                url: `https://www.discogs.com/release/${meta.discogsReleaseId}`,
+              }]
+            : discogsTracks.length > 0 || dgYear
+              ? [{ name: "Discogs", url: null }]
+              : []),
+        ],
       }
     : null;
 
@@ -415,14 +441,25 @@ export default async function DiscoPage({
   const ratingParts: { label: string; value: number; count: number }[] = [
     ...(rating && disco.reviewCount ? [{ label: "Amazon", value: rating, count: disco.reviewCount }] : []),
     ...(mbInfo?.rating ? [{ label: "MusicBrainz", value: mbInfo.rating.value, count: mbInfo.rating.votes }] : []),
+    // Discogs clears the 10-vote bar far more often than MusicBrainz does: on a
+    // 12-release sample, 8 versus the 1,739 records site-wide that qualify on
+    // MusicBrainz. Same 5-point scale, so it blends without conversion.
+    ...(meta?.discogsRating && (meta.discogsRatingVotes ?? 0) >= 10
+      ? [{ label: "Discogs", value: Number(meta.discogsRating), count: meta.discogsRatingVotes as number }]
+      : []),
   ];
   const totalVotes = ratingParts.reduce((n, r) => n + r.count, 0);
   const blendedRating =
     totalVotes > 0
       ? ratingParts.reduce((n, r) => n + r.value * r.count, 0) / totalVotes
       : null;
-  // ratingCount (not reviewCount): the aggregate mixes Amazon reviews with
-  // MusicBrainz community ratings, so "ratings" is the accurate umbrella term.
+  // ratingCount (not reviewCount): the aggregate mixes Amazon buyer reviews
+  // with MusicBrainz and Discogs community ratings, so "ratings" is the
+  // accurate umbrella term. All three are 5-point scales.
+  //
+  // Google requires an aggregateRating in Product markup to be visible on the
+  // page, and it is: the "Avaliação combinada" block below renders this same
+  // number, the same vote total, and now names the sources it came from.
   const aggregateRatingLd =
     blendedRating != null
       ? {
@@ -949,7 +986,9 @@ export default async function DiscoPage({
                           </div>
                           <p className="text-xs text-dust mt-0.5">
                             {ratingParts.length >= 2
-                              ? `média ponderada de ${totalVotes} votos`
+                              ? `${totalVotes.toLocaleString("pt-BR")} votos · ${ratingParts
+                                  .map((r) => r.label)
+                                  .join(", ")}`
                               : `${totalVotes.toLocaleString("pt-BR")} ${
                                   ratingParts[0].label === "Amazon" ? "avaliações" : "votos"
                                 } · ${ratingParts[0].label}`}
@@ -1013,15 +1052,27 @@ export default async function DiscoPage({
                 <div className="bg-sleeve rounded-xl border border-groove p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs font-semibold text-dust uppercase tracking-wide">Ficha técnica</h3>
-                    <a
-                      href={mbInfo.url}
-                      target="_blank"
-                      rel="nofollow noopener noreferrer"
-                      className="text-xs text-dust hover:text-parchment transition-colors flex items-center gap-1"
-                      aria-label={`Ver ${disco.titulo} no MusicBrainz`}
-                    >
-                      Dados: MusicBrainz ↗
-                    </a>
+                    <p className="text-xs text-dust flex items-center gap-1 flex-wrap justify-end">
+                      <span>Dados:</span>
+                      {mbInfo.sources.map((src, i) => (
+                        <span key={src.name} className="flex items-center gap-1">
+                          {i > 0 && <span aria-hidden="true">·</span>}
+                          {src.url ? (
+                            <a
+                              href={src.url}
+                              target="_blank"
+                              rel="nofollow noopener noreferrer"
+                              className="hover:text-parchment transition-colors"
+                              aria-label={`Ver ${disco.titulo} no ${src.name}`}
+                            >
+                              {src.name} ↗
+                            </a>
+                          ) : (
+                            src.name
+                          )}
+                        </span>
+                      ))}
+                    </p>
                   </div>
                   <dl className="space-y-2 text-sm">
                     {mbInfo.releaseYear && (
@@ -1047,10 +1098,18 @@ export default async function DiscoPage({
                         </dd>
                       </div>
                     )}
-                    {mbInfo.primaryType && (
-                      <div className="flex justify-between">
-                        <dt className="text-dust">Tipo</dt>
-                        <dd className="text-cream font-medium">{mbInfo.primaryType}</dd>
+                    {/* Discogs describes the physical record; MusicBrainz
+                        describes the release-group it matched, which is often
+                        the wrong one. Jethro Tull "Living In The Past" is a
+                        21-track double compilation and MusicBrainz called it an
+                        EP. Same class of error as the release year, which the
+                        Discogs master already overrides. */}
+                    {(meta?.discogsFormatDesc || mbInfo.primaryType) && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Formato</dt>
+                        <dd className="text-cream font-medium text-right">
+                          {meta?.discogsFormatDesc ?? mbInfo.primaryType}
+                        </dd>
                       </div>
                     )}
                     {/* Pressing-level rows. Absent on ~57% of records on
@@ -1058,10 +1117,26 @@ export default async function DiscoPage({
                         is unambiguous, because a release-group spans every
                         pressing of an album (Genesis "Foxtrot" covers 38 across
                         11 labels) and we only matched at group level. */}
-                    {meta?.mbLabel && (
+                    {/* Discogs names the label on this pressing; MusicBrainz
+                        names one for the release-group. Discogs had a label
+                        where MusicBrainz had none on 21 of 29 sampled. */}
+                    {(meta?.discogsLabel || meta?.mbLabel) && (
                       <div className="flex justify-between gap-4">
                         <dt className="text-dust">Gravadora</dt>
-                        <dd className="text-cream font-medium text-right">{meta.mbLabel}</dd>
+                        <dd className="text-cream font-medium text-right">
+                          {meta?.discogsLabel ?? meta?.mbLabel}
+                        </dd>
+                      </div>
+                    )}
+                    {/* When this copy was pressed, as opposed to when the album
+                        came out. The pair is the useful part: a 1972 album on a
+                        2024 repress is a different buy from an original. */}
+                    {meta?.discogsReleased && meta.discogsReleased !== mbInfo.releaseYear && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Esta prensagem</dt>
+                        <dd className="text-cream font-medium text-right">
+                          {meta.discogsReleased}
+                        </dd>
                       </div>
                     )}
                     {/* No "Prensado em" row. 41% of discogs_country is a region
