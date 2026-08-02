@@ -508,6 +508,10 @@ _COLUMNS = (
     "discogs_released",
     "discogs_format_desc",
     "discogs_genres",
+    "discogs_rating",
+    "discogs_rating_votes",
+    "discogs_have",
+    "discogs_want",
 )
 
 
@@ -539,6 +543,16 @@ class ResilientConn:
 
     def cursor(self):
         return self.conn.cursor()
+
+    # autocommit is on, so these are no-ops for the write path. They exist
+    # because ensure_columns() commits its DDL explicitly, and that call only
+    # runs when a column is genuinely missing — so this crashed the run the
+    # first time new columns were added, long after the class was introduced.
+    def commit(self) -> None:
+        self.conn.commit()
+
+    def rollback(self) -> None:
+        self.conn.rollback()
 
     def write(self, sql: str, params: tuple = ()) -> None:
         for attempt in (1, 2, 3):
@@ -615,7 +629,25 @@ def ensure_columns(conn) -> None:
                  ADD COLUMN IF NOT EXISTS discogs_format_desc       TEXT,
                  -- Broad genre ("Rock", "Stage & Screen"), a level above
                  -- styles. Album-level, so no pressing gate.
-                 ADD COLUMN IF NOT EXISTS discogs_genres            TEXT"""
+                 ADD COLUMN IF NOT EXISTS discogs_genres            TEXT,
+                 -- Community data, already inside the release payload we fetch
+                 -- for every barcode-resolved record, so it costs no extra
+                 -- call. Worth having: the MusicBrainz rating is only shown
+                 -- above 10 votes and clears that bar on 1,739 records, while
+                 -- a sample of 12 Discogs releases had 8 above it and all 12
+                 -- carried have/want counts.
+                 --
+                 -- Ratings are per pressing on Discogs, and an ambiguous
+                 -- barcode means we rated one of several. Unlike a catalogue
+                 -- number that is fine: it is still a real rating of a real
+                 -- pressing of this album, not a false identifier for the disc.
+                 ADD COLUMN IF NOT EXISTS discogs_rating            NUMERIC(3,2),
+                 ADD COLUMN IF NOT EXISTS discogs_rating_votes      INTEGER,
+                 -- How many collectors own this pressing and how many want it.
+                 -- Present on every release sampled, and a signal Amazon has no
+                 -- equivalent for.
+                 ADD COLUMN IF NOT EXISTS discogs_have              INTEGER,
+                 ADD COLUMN IF NOT EXISTS discogs_want              INTEGER"""
         )
     conn.commit()
 
@@ -869,6 +901,16 @@ def main() -> None:
         # Album-level, so it survives an ambiguous barcode the way styles do.
         genres = ", ".join(rel.get("genres") or []) or None
 
+        community = rel.get("community") or {}
+        crating = community.get("rating") or {}
+        rating_avg = crating.get("average")
+        rating_votes = crating.get("count") or 0
+        # A rating of 0.0 means nobody has rated it, not that it is terrible.
+        if not rating_votes or not rating_avg:
+            rating_avg = rating_votes = None
+        have = community.get("have")
+        want = community.get("want")
+
         # The manufacturing date and the physical description are the fields
         # that genuinely differ between pressings sharing a barcode (siblings
         # agreed on format only 36% of the time), so they stay gated on a
@@ -936,6 +978,10 @@ def main() -> None:
                        discogs_released          = %s,
                        discogs_format_desc       = %s,
                        discogs_genres            = %s,
+                       discogs_rating            = %s,
+                       discogs_rating_votes      = %s,
+                       discogs_have              = %s,
+                       discogs_want              = %s,
                        discogs_master_checked_at = CASE WHEN %s THEN NULL
                                                         ELSE NOW() END,
                        discogs_checked_at        = NOW()
@@ -952,6 +998,10 @@ def main() -> None:
                     released,
                     format_desc,
                     genres,
+                    rating_avg,
+                    rating_votes,
+                    have,
+                    want,
                     master_failed,
                     slug,
                 ),
