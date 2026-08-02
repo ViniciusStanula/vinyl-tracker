@@ -22,6 +22,12 @@ export type DiscoMeta = {
   artistCountry: string | null;
   artistLastfmUrl: string | null;
   mbLabel: string | null;
+  discogsTitle: string | null;
+  discogsStyles: string | null;
+  discogsCatno: string | null;
+  discogsCountry: string | null;
+  discogsMasterYear: number | null;
+  discogsTracklist: unknown;
   mbCatalogNumber: string | null;
   mbBarcode: string | null;
   mbReleaseCountry: string | null;
@@ -122,6 +128,17 @@ export const getDiscoMeta = (slug: string) =>
         -- release, or every release sharing the same label). See
         -- crawler/fetch_release_details.py.
         d.mb_label             AS "mbLabel",
+        -- Discogs resolves the record to an exact pressing via its barcode, so
+        -- these describe the disc Amazon actually sells. The tracklist in
+        -- particular is the VINYL running order with side positions; mb_tracklist
+        -- is the release-group's representative release and is frequently the CD
+        -- (Castle in the Sky: 23 tracks on MB, 14 on the LP).
+        d.discogs_title        AS "discogsTitle",
+        d.discogs_styles       AS "discogsStyles",
+        d.discogs_catno        AS "discogsCatno",
+        d.discogs_country      AS "discogsCountry",
+        d.discogs_master_year  AS "discogsMasterYear",
+        d.discogs_tracklist    AS "discogsTracklist",
         d.mb_catalog_number    AS "mbCatalogNumber",
         d.mb_barcode           AS "mbBarcode",
         d.mb_release_country   AS "mbReleaseCountry",

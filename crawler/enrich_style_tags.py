@@ -74,6 +74,13 @@ _CANDIDATES_QUERY = """
     WHERE lastfm_tags = ''
       AND disponivel = TRUE
       AND (format IS NULL OR format = 'vinyl')
+      -- Without an artist the model has only a product title to reason from,
+      -- and it falls back to the most common tag in the vocabulary: a sample
+      -- of 12 unidentified-artist rows produced "rock" for a death-metal album
+      -- (Dirges of Elysium) and for a power-pop band (Uni Boys). That is
+      -- guessing, and it pollutes /estilo pages with records that do not
+      -- belong. Identify the artist first, then these rows become eligible.
+      AND artista !~* 'artista n[ãa]o identificad'
     ORDER BY "createdAt" DESC
     {limit_clause}
 """

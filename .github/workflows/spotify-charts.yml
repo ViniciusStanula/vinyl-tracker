@@ -48,14 +48,20 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Trigger Vercel redeploy
-        # Only redeploy when data actually changed.
-        # Set VERCEL_DEPLOY_HOOK in repo Settings → Secrets → Actions.
-        # Create the hook at: vercel.com → project → Settings → Git → Deploy Hooks
-        if: steps.commit.outputs.changed == 'true'
-        env:
-          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
-        run: |
-          if [ -n "$HOOK" ]; then
-            curl -s -X POST "$HOOK"
-          fi
+      # No deploy hook here on purpose. The push above already triggers a
+      # production deploy through Vercel's git integration, so firing a hook as
+      # well started TWO production builds seconds apart:
+      #
+      #   10:01:34  push  chore: update Spotify charts [2026-08-02]
+      #   10:01:37  deploy ih4kisxnv  -> Ready
+      #   10:01:39  deploy 7tdcl3skj  -> Error
+      #
+      # Each build prerenders ~600 pages with 3 workers holding their own
+      # Prisma pools. Two at once exceeded the Supabase pooler's 400-client
+      # limit and the second died mid-prerender:
+      #
+      #   Error [DriverAdapterError]: (EMAXCONN) max client connections
+      #   reached, limit: 400
+      #
+      # The failure is a race, so it shows up as an intermittent red build on a
+      # commit that is perfectly fine.

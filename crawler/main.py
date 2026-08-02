@@ -1329,6 +1329,22 @@ def parse_product_page(soup) -> tuple[float | None, bool, int | None]:
     return price, in_stock, review_count
 
 
+def _is_placeholder_image(src: str) -> bool:
+    """True for Amazon's "no cover art" asset.
+
+    Amazon serves a 60x40 blank under images/I/01... when a listing has no
+    image. Stored like a real URL it renders as a broken box; 439 records had
+    picked it up before this guard existed, 282 of them sharing the single ID
+    01AodW1Gh-L.
+
+    Matched by the `01` prefix rather than by the four known IDs so a new
+    variant cannot slip through. Safe: every one of the 439 rows carrying that
+    prefix was a placeholder, and all four IDs return 782-1445 bytes against
+    ~9KB for a real cover at the same requested size.
+    """
+    return "/images/I/01" in src
+
+
 def _extract_byline_artist(soup) -> str:
     """
     Reads the artist from a product page's byline, or UNKNOWN_ARTIST when no
@@ -1380,11 +1396,14 @@ def parse_product_page_discovery(soup, asin: str) -> dict | None:
     artist = _extract_byline_artist(soup)
 
     img_url = ""
+    # See _is_placeholder_image: an empty img_url leaves the frontend free to
+    # draw its own fallback, which reads as deliberate; Amazon's 60x40 blank
+    # reads as a broken image.
     for sel in ("#landingImage", "#imgBlkFront", "#main-image"):
         img_el = soup.select_one(sel)
         if img_el:
             src = img_el.get("src", "").strip() or img_el.get("data-old-hires", "").strip()
-            if src and not src.startswith("data:"):
+            if src and not src.startswith("data:") and not _is_placeholder_image(src):
                 img_url = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SL1500_.", src)
                 break
 

@@ -185,9 +185,47 @@ export default async function DiscoPage({
   // "Single" is frequently a wrong release-group match — hide it rather than
   // surface a likely-mislabeled type. Localize the rest to pt-BR.
   const MB_TYPE_PT: Record<string, string> = { Album: "Álbum", EP: "EP", Compilation: "Coletânea" };
+  // Vinyl tracklist from the exact pressing Discogs resolved by barcode.
+  // Preferred over mb_tracklist, which comes from the release GROUP's
+  // representative release and is frequently the CD: sampling 59 records,
+  // 15 disagreed by more than two tracks, e.g. Castle in the Sky at 23 tracks
+  // on MusicBrainz versus 14 on the actual LP. It also carries side positions,
+  // which MusicBrainz has no concept of at group level.
+  const discogsTracks = ((): { title: string; length: number | null; position: string | null }[] => {
+    const raw = meta?.discogsTracklist;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      // Rows already stored before the crawler learned to drop Discogs
+      // "heading" dividers: they carry a title but no position, and left in
+      // they inflate the count and break side detection.
+      .filter((t): t is { title: string; position?: string; duration?: string } =>
+        Boolean(t && typeof t === "object" && "title" in t))
+      .filter((t) => String(t.position ?? "").trim() !== "")
+      .map((t) => ({
+        title: String(t.title),
+        // Discogs durations are "3:42" strings; the component wants ms.
+        length: (() => {
+          const m = /^(\d+):(\d{2})$/.exec(String(t.duration ?? "").trim());
+          return m ? (Number(m[1]) * 60 + Number(m[2])) * 1000 : null;
+        })(),
+        position: t.position ? String(t.position) : null,
+      }));
+  })();
+
+  // Original release year. MusicBrainz sometimes matched a reissue
+  // release-group, and Discogs' master is sometimes itself a reissue master —
+  // in both cases the wrong value is the LATER one, so the earlier of the two
+  // is the album's original year. Measured on 59 records: 7 disagreed, and
+  // taking the minimum was correct in every case checked (Castle in the Sky
+  // MB 2002 / Discogs 1986; Selena LIVE MB 2026 / Discogs 1993).
+  const mbYear = Number(meta?.mbFirstReleaseDate?.slice(0, 4)) || null;
+  const dgYear = meta?.discogsMasterYear ?? null;
+  const originalYear =
+    mbYear && dgYear ? String(Math.min(mbYear, dgYear)) : String(mbYear ?? dgYear ?? "") || null;
+
   const mbInfo = meta?.mbMbid
     ? {
-        releaseYear: meta.mbFirstReleaseDate?.slice(0, 4) ?? null,
+        releaseYear: originalYear,
         primaryType: meta.mbPrimaryType ? MB_TYPE_PT[meta.mbPrimaryType] ?? null : null,
         genres: (meta.mbGenres ?? "")
           .split(", ")
@@ -202,18 +240,22 @@ export default async function DiscoPage({
           meta.mbRating != null && (meta.mbRatingVotes ?? 0) >= 10
             ? { value: meta.mbRating, votes: meta.mbRatingVotes as number }
             : null,
-        tracklist: ((): { title: string; length: number | null }[] => {
-          try {
-            const parsed = JSON.parse(meta.mbTracklist ?? "[]");
-            if (!Array.isArray(parsed)) return [];
-            // New format: [{title, length}]. Legacy format: [string].
-            return parsed.map((t) =>
-              typeof t === "string" ? { title: t, length: null } : t
-            );
-          } catch {
-            return [];
-          }
-        })(),
+        // Discogs (the actual vinyl) wins; MusicBrainz is the fallback for
+        // records Discogs has not resolved.
+        tracklist: discogsTracks.length
+          ? discogsTracks
+          : ((): { title: string; length: number | null }[] => {
+              try {
+                const parsed = JSON.parse(meta.mbTracklist ?? "[]");
+                if (!Array.isArray(parsed)) return [];
+                // New format: [{title, length}]. Legacy format: [string].
+                return parsed.map((t) =>
+                  typeof t === "string" ? { title: t, length: null } : t
+                );
+              } catch {
+                return [];
+              }
+            })(),
         url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
       }
     : null;
@@ -474,6 +516,9 @@ export default async function DiscoPage({
     ...(meta?.mbLabel
       ? { recordLabel: { "@type": "Organization", name: meta.mbLabel } }
       : {}),
+    // Safe to assert now: it comes from a barcode-resolved pressing, and is
+    // only stored when the barcode mapped to a single Discogs release.
+    ...(meta?.discogsCatno ? { catalogNumber: meta.discogsCatno } : {}),
     ...(mbInfo && mbInfo.tracklist.length
       ? {
           numTracks: mbInfo.tracklist.length,
@@ -602,13 +647,19 @@ export default async function DiscoPage({
       {/* Hero — sticky album art left, details right on desktop */}
       <header className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 mb-6">
 
-        {disco.imgUrl && (
-          <div className="lg:col-span-5">
-            <div className="lg:sticky lg:top-[82px]">
-              {/* Offset shadow layer — stacked sleeve effect */}
-              <div className="relative">
-                <div className="absolute inset-0 translate-x-3 translate-y-3 bg-groove border border-wax/40 rounded-2xl" aria-hidden="true" />
-                <div className="relative aspect-square bg-label rounded-2xl overflow-hidden">
+        {/* The sleeve column renders even without a cover. 133 listable records
+            have no image — Amazon serves a 60x40 blank for them and genuinely
+            has no art — and dropping the column made the hero collapse to one
+            full-width slab of text that reads as a broken page. DiscoCard
+            already draws this mark in the same situation; the detail page was
+            the only surface that showed nothing. */}
+        <div className="lg:col-span-5">
+          <div className="lg:sticky lg:top-[82px]">
+            {/* Offset shadow layer — stacked sleeve effect */}
+            <div className="relative">
+              <div className="absolute inset-0 translate-x-3 translate-y-3 bg-groove border border-wax/40 rounded-2xl" aria-hidden="true" />
+              <div className="relative aspect-square bg-label rounded-2xl overflow-hidden">
+                {disco.imgUrl ? (
                   <Image
                     src={disco.imgUrl}
                     alt={`${disco.titulo} por ${disco.artista}, capa do álbum`}
@@ -617,13 +668,24 @@ export default async function DiscoPage({
                     className="object-cover"
                     priority
                   />
-                </div>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                    <svg viewBox="0 0 48 48" fill="none" className="w-16 h-16 text-patina" aria-hidden="true">
+                      <path d="M18 34V16l18-4v18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="14" cy="34" r="4" stroke="currentColor" strokeWidth="2" />
+                      <circle cx="32" cy="30" r="4" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                    <p className="text-dust text-xs leading-relaxed">
+                      Capa não disponível para este disco
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
 
-        <div className={`flex flex-col justify-between ${disco.imgUrl ? "lg:col-span-7" : "lg:col-span-12"}`}>
+        <div className="flex flex-col justify-between lg:col-span-7">
           <div>
             {/* Single meta line: artist · genre */}
             <p className="text-dust text-[11px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2 flex-wrap">
@@ -1002,6 +1064,15 @@ export default async function DiscoPage({
                         <dd className="text-cream font-medium text-right">{meta.mbLabel}</dd>
                       </div>
                     )}
+                    {/* No "Prensado em" row. 41% of discogs_country is a region
+                        or a shrug rather than a country — Europe (83),
+                        Worldwide (46), Unknown (12), USA & Europe (10) — which
+                        is the same objection that kept MusicBrainz's XW/XE off
+                        the page, just spelled out. And no "Catálogo" row: the
+                        number is correct but it is collector minutiae that does
+                        not help someone decide whether to buy. It still goes out
+                        as schema.org catalogNumber, where it helps Google
+                        identify the product without taking up space here. */}
                     {artistPais && (
                       <div className="flex justify-between">
                         <dt className="text-dust">Origem</dt>

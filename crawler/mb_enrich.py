@@ -212,13 +212,18 @@ def main():
     ensure_mb_columns(conn)
 
     with conn.cursor() as cur:
+        # Must mirror fetch_albums_needing_mb() exactly, including the format
+        # filter. Without it this counted CDs and non-music rows the chunk query
+        # never returns, so the run logged "12,214 rows to search" and then
+        # stopped after 2 — making a finished backfill look like a stalled one.
         cur.execute(
             """SELECT count(*) FROM "Disco"
                WHERE mb_mbid IS NULL AND disponivel = TRUE
+                 AND (format IS NULL OR format = 'vinyl')
                  AND artista !~* 'artista n[ãa]o identificad'"""
         )
         start = cur.fetchone()[0]
-    log.info("Starting MB enrichment: %d identified-artist rows to search.", start)
+    log.info("Starting MB enrichment: %d identified vinyl rows to search.", start)
 
     total = matched = chunks = 0
     t_start = time.monotonic()
