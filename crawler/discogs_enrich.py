@@ -76,6 +76,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import psycopg2
+
 from preflight import load_dotenv_if_present
 
 load_dotenv_if_present()
@@ -509,6 +511,49 @@ _COLUMNS = (
 )
 
 
+class ResilientConn:
+    """A connection that reopens itself when the pooler drops it.
+
+    This job holds one connection for 30+ hours. Supabase's pooler does not:
+    the first full run died after ten minutes with "server closed the
+    connection unexpectedly", 134 records in. connect_with_retry covers a
+    failure to OPEN a connection (EMAXCONN), which is a different thing —
+    nothing was reopening one that went away mid-loop.
+
+    Reads still go through .cursor(); they all happen at startup, before there
+    has been time to lose anything. Writes go through .write(), which
+    reconnects and replays the statement, because a dropped connection only
+    surfaces when the next execute runs.
+
+    autocommit stays on, so a drop can never cost more than the statement in
+    flight — every record already written stays written, and the run resumes
+    from where it stopped.
+    """
+
+    def __init__(self):
+        self._open()
+
+    def _open(self) -> None:
+        self.conn = connect_with_retry()
+        self.conn.autocommit = True
+
+    def cursor(self):
+        return self.conn.cursor()
+
+    def write(self, sql: str, params: tuple = ()) -> None:
+        for attempt in (1, 2, 3):
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute(sql, params)
+                return
+            except (psycopg2.OperationalError, psycopg2.InterfaceError) as exc:
+                log.warning("DB connection lost (attempt %s), reopening: %s",
+                            attempt, str(exc).strip().splitlines()[0])
+                time.sleep(2 * attempt)
+                self._open()
+        raise RuntimeError("database unreachable after 3 reconnects")
+
+
 def ensure_columns(conn) -> None:
     """Add the Discogs columns, skipping the DDL entirely once they exist.
 
@@ -687,21 +732,20 @@ def salvage_by_title(dg, conn, args, slug, artista, titulo) -> bool:
             return False
 
     if args.apply:
-        with conn.cursor() as cur:
-            cur.execute(
-                """UPDATE "Disco"
-                   SET discogs_styles      = COALESCE(%s, discogs_styles),
-                       discogs_genres      = COALESCE(%s, discogs_genres),
-                       discogs_title       = COALESCE(discogs_title, %s),
-                       discogs_tracklist   = COALESCE(discogs_tracklist, %s),
-                       discogs_master_year = COALESCE(%s, discogs_master_year),
-                       discogs_checked_at  = NOW()
-                   WHERE slug = %s""",
-                (alb.get("styles"), alb.get("genres"), alb.get("title"),
-                 json.dumps(alb["tracks"], ensure_ascii=False)
-                 if alb.get("tracks") else None,
-                 alb.get("year"), slug),
-            )
+        conn.write(
+            """UPDATE "Disco"
+               SET discogs_styles      = COALESCE(%s, discogs_styles),
+                   discogs_genres      = COALESCE(%s, discogs_genres),
+                   discogs_title       = COALESCE(discogs_title, %s),
+                   discogs_tracklist   = COALESCE(discogs_tracklist, %s),
+                   discogs_master_year = COALESCE(%s, discogs_master_year),
+                   discogs_checked_at  = NOW()
+               WHERE slug = %s""",
+            (alb.get("styles"), alb.get("genres"), alb.get("title"),
+             json.dumps(alb["tracks"], ensure_ascii=False)
+             if alb.get("tracks") else None,
+             alb.get("year"), slug),
+        )
     elif alb:
         print(f"  SALVAGE {artista[:16]:18s} | {titulo[:26]:28s} "
               f"year={alb.get('year') or '-':6} tracks={len(alb.get('tracks') or []) or '-':4} "
@@ -726,8 +770,7 @@ def main() -> None:
     )
     args = ap.parse_args()
 
-    conn = connect_with_retry()
-    conn.autocommit = True
+    conn = ResilientConn()
     ensure_columns(conn)
 
     if args.no_barcode:
@@ -880,40 +923,39 @@ def main() -> None:
             sides = False
 
         if args.apply:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """UPDATE "Disco"
-                       SET discogs_release_id        = %s,
-                           discogs_catno             = %s,
-                           discogs_country           = %s,
-                           discogs_styles            = %s,
-                           discogs_tracklist         = %s,
-                           discogs_master_year       = %s,
-                           discogs_title             = %s,
-                           discogs_label             = %s,
-                           discogs_released          = %s,
-                           discogs_format_desc       = %s,
-                           discogs_genres            = %s,
-                           discogs_master_checked_at = CASE WHEN %s THEN NULL
-                                                            ELSE NOW() END,
-                           discogs_checked_at        = NOW()
-                       WHERE slug = %s""",
-                    (
-                        hit["id"],
-                        catno,
-                        country,
-                        styles,
-                        json.dumps(tracklist, ensure_ascii=False) if tracklist else None,
-                        master_year,
-                        dg_title,
-                        label,
-                        released,
-                        format_desc,
-                        genres,
-                        master_failed,
-                        slug,
-                    ),
-                )
+            conn.write(
+                """UPDATE "Disco"
+                   SET discogs_release_id        = %s,
+                       discogs_catno             = %s,
+                       discogs_country           = %s,
+                       discogs_styles            = %s,
+                       discogs_tracklist         = %s,
+                       discogs_master_year       = %s,
+                       discogs_title             = %s,
+                       discogs_label             = %s,
+                       discogs_released          = %s,
+                       discogs_format_desc       = %s,
+                       discogs_genres            = %s,
+                       discogs_master_checked_at = CASE WHEN %s THEN NULL
+                                                        ELSE NOW() END,
+                       discogs_checked_at        = NOW()
+                   WHERE slug = %s""",
+                (
+                    hit["id"],
+                    catno,
+                    country,
+                    styles,
+                    json.dumps(tracklist, ensure_ascii=False) if tracklist else None,
+                    master_year,
+                    dg_title,
+                    label,
+                    released,
+                    format_desc,
+                    genres,
+                    master_failed,
+                    slug,
+                ),
+            )
         else:
             print(
                 f"  OK  {artista[:16]:18s} | {titulo[:24]:26s} | "
@@ -965,11 +1007,10 @@ def run_no_barcode(conn, args) -> None:
         if not results:
             missed += 1
             if args.apply:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
-                        (slug,),
-                    )
+                conn.write(
+                    'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
+                    (slug,),
+                )
             continue
 
         verified = [r for r in results if verify_match(artista, titulo, r)]
@@ -989,11 +1030,10 @@ def run_no_barcode(conn, args) -> None:
         if not alb:
             ambiguous += 1
             if args.apply:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
-                        (slug,),
-                    )
+                conn.write(
+                    'UPDATE "Disco" SET discogs_checked_at = NOW() WHERE slug = %s',
+                    (slug,),
+                )
             continue
 
         year, styles = alb.get("year"), alb.get("styles")
@@ -1005,21 +1045,20 @@ def run_no_barcode(conn, args) -> None:
             agreed += 1
 
         if args.apply:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """UPDATE "Disco"
-                       SET discogs_styles            = COALESCE(%s, discogs_styles),
-                           discogs_genres            = COALESCE(%s, discogs_genres),
-                           discogs_title             = COALESCE(discogs_title, %s),
-                           discogs_tracklist         = COALESCE(discogs_tracklist, %s),
-                           discogs_master_year       = COALESCE(%s, discogs_master_year),
-                           discogs_master_checked_at = NOW(),
-                           discogs_checked_at        = NOW()
-                       WHERE slug = %s""",
-                    (styles, genres, dg_title,
-                     json.dumps(tracks, ensure_ascii=False) if tracks else None,
-                     year, slug),
-                )
+            conn.write(
+                """UPDATE "Disco"
+                   SET discogs_styles            = COALESCE(%s, discogs_styles),
+                       discogs_genres            = COALESCE(%s, discogs_genres),
+                       discogs_title             = COALESCE(discogs_title, %s),
+                       discogs_tracklist         = COALESCE(discogs_tracklist, %s),
+                       discogs_master_year       = COALESCE(%s, discogs_master_year),
+                       discogs_master_checked_at = NOW(),
+                       discogs_checked_at        = NOW()
+                   WHERE slug = %s""",
+                (styles, genres, dg_title,
+                 json.dumps(tracks, ensure_ascii=False) if tracks else None,
+                 year, slug),
+            )
         else:
             print(
                 f"  {'MASTER' if had_master else 'AGREE ':6s} {artista[:16]:18s} | "
