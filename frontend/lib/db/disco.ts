@@ -27,6 +27,7 @@ export type DiscoMeta = {
   discogsCatno: string | null;
   discogsCountry: string | null;
   discogsMasterYear: number | null;
+  discogsReleaseId: number | null;
   discogsTracklist: unknown;
   mbCatalogNumber: string | null;
   mbBarcode: string | null;
@@ -138,6 +139,7 @@ export const getDiscoMeta = (slug: string) =>
         d.discogs_catno        AS "discogsCatno",
         d.discogs_country      AS "discogsCountry",
         d.discogs_master_year  AS "discogsMasterYear",
+        d.discogs_release_id   AS "discogsReleaseId",
         d.discogs_tracklist    AS "discogsTracklist",
         d.mb_catalog_number    AS "mbCatalogNumber",
         d.mb_barcode           AS "mbBarcode",

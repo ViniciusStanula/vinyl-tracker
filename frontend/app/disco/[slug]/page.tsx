@@ -223,11 +223,15 @@ export default async function DiscoPage({
   const originalYear =
     mbYear && dgYear ? String(Math.min(mbYear, dgYear)) : String(mbYear ?? dgYear ?? "") || null;
 
-  const mbInfo = meta?.mbMbid
+  // Built from whichever source has anything to say. It was gated on a
+  // MusicBrainz match, which hid the entire panel — tracklist included — on
+  // 1,170 records that Discogs resolved and MusicBrainz never matched. Their
+  // sides and original year were collected and then never rendered.
+  const mbInfo = (meta?.mbMbid || discogsTracks.length > 0 || dgYear)
     ? {
         releaseYear: originalYear,
-        primaryType: meta.mbPrimaryType ? MB_TYPE_PT[meta.mbPrimaryType] ?? null : null,
-        genres: (meta.mbGenres ?? "")
+        primaryType: meta?.mbPrimaryType ? MB_TYPE_PT[meta.mbPrimaryType] ?? null : null,
+        genres: (meta?.mbGenres ?? "")
           .split(", ")
           .filter(Boolean)
           .slice(0, 3)
@@ -237,7 +241,7 @@ export default async function DiscoPage({
           }),
         // Community rating (0–5). Hide low-vote noise — needs >=10 votes.
         rating:
-          meta.mbRating != null && (meta.mbRatingVotes ?? 0) >= 10
+          meta?.mbRating != null && (meta.mbRatingVotes ?? 0) >= 10
             ? { value: meta.mbRating, votes: meta.mbRatingVotes as number }
             : null,
         // Discogs (the actual vinyl) wins; MusicBrainz is the fallback for
@@ -246,7 +250,7 @@ export default async function DiscoPage({
           ? discogsTracks
           : ((): { title: string; length: number | null }[] => {
               try {
-                const parsed = JSON.parse(meta.mbTracklist ?? "[]");
+                const parsed = JSON.parse(meta?.mbTracklist ?? "[]");
                 if (!Array.isArray(parsed)) return [];
                 // New format: [{title, length}]. Legacy format: [string].
                 return parsed.map((t) =>
@@ -256,7 +260,29 @@ export default async function DiscoPage({
                 return [];
               }
             })(),
-        url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
+        url: meta?.mbMbid
+          ? `https://musicbrainz.org/release-group/${meta.mbMbid}`
+          : null,
+        // Attribution has to name the sources this record actually used. The
+        // panel credited MusicBrainz alone while showing a Discogs tracklist
+        // and, where the two disagreed, a Discogs release year. Discogs' API
+        // terms require attribution when their data is displayed.
+        sources: [
+          ...(meta?.mbMbid
+            ? [{
+                name: "MusicBrainz",
+                url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
+              }]
+            : []),
+          ...(meta?.discogsReleaseId
+            ? [{
+                name: "Discogs",
+                url: `https://www.discogs.com/release/${meta.discogsReleaseId}`,
+              }]
+            : discogsTracks.length > 0 || dgYear
+              ? [{ name: "Discogs", url: null }]
+              : []),
+        ],
       }
     : null;
 
@@ -1013,15 +1039,27 @@ export default async function DiscoPage({
                 <div className="bg-sleeve rounded-xl border border-groove p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs font-semibold text-dust uppercase tracking-wide">Ficha técnica</h3>
-                    <a
-                      href={mbInfo.url}
-                      target="_blank"
-                      rel="nofollow noopener noreferrer"
-                      className="text-xs text-dust hover:text-parchment transition-colors flex items-center gap-1"
-                      aria-label={`Ver ${disco.titulo} no MusicBrainz`}
-                    >
-                      Dados: MusicBrainz ↗
-                    </a>
+                    <p className="text-xs text-dust flex items-center gap-1 flex-wrap justify-end">
+                      <span>Dados:</span>
+                      {mbInfo.sources.map((src, i) => (
+                        <span key={src.name} className="flex items-center gap-1">
+                          {i > 0 && <span aria-hidden="true">·</span>}
+                          {src.url ? (
+                            <a
+                              href={src.url}
+                              target="_blank"
+                              rel="nofollow noopener noreferrer"
+                              className="hover:text-parchment transition-colors"
+                              aria-label={`Ver ${disco.titulo} no ${src.name}`}
+                            >
+                              {src.name} ↗
+                            </a>
+                          ) : (
+                            src.name
+                          )}
+                        </span>
+                      ))}
+                    </p>
                   </div>
                   <dl className="space-y-2 text-sm">
                     {mbInfo.releaseYear && (
