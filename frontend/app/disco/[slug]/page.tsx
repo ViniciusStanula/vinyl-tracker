@@ -441,14 +441,25 @@ export default async function DiscoPage({
   const ratingParts: { label: string; value: number; count: number }[] = [
     ...(rating && disco.reviewCount ? [{ label: "Amazon", value: rating, count: disco.reviewCount }] : []),
     ...(mbInfo?.rating ? [{ label: "MusicBrainz", value: mbInfo.rating.value, count: mbInfo.rating.votes }] : []),
+    // Discogs clears the 10-vote bar far more often than MusicBrainz does: on a
+    // 12-release sample, 8 versus the 1,739 records site-wide that qualify on
+    // MusicBrainz. Same 5-point scale, so it blends without conversion.
+    ...(meta?.discogsRating && (meta.discogsRatingVotes ?? 0) >= 10
+      ? [{ label: "Discogs", value: Number(meta.discogsRating), count: meta.discogsRatingVotes as number }]
+      : []),
   ];
   const totalVotes = ratingParts.reduce((n, r) => n + r.count, 0);
   const blendedRating =
     totalVotes > 0
       ? ratingParts.reduce((n, r) => n + r.value * r.count, 0) / totalVotes
       : null;
-  // ratingCount (not reviewCount): the aggregate mixes Amazon reviews with
-  // MusicBrainz community ratings, so "ratings" is the accurate umbrella term.
+  // ratingCount (not reviewCount): the aggregate mixes Amazon buyer reviews
+  // with MusicBrainz and Discogs community ratings, so "ratings" is the
+  // accurate umbrella term. All three are 5-point scales.
+  //
+  // Google requires an aggregateRating in Product markup to be visible on the
+  // page, and it is: the "Avaliação combinada" block below renders this same
+  // number, the same vote total, and now names the sources it came from.
   const aggregateRatingLd =
     blendedRating != null
       ? {
@@ -975,7 +986,9 @@ export default async function DiscoPage({
                           </div>
                           <p className="text-xs text-dust mt-0.5">
                             {ratingParts.length >= 2
-                              ? `média ponderada de ${totalVotes} votos`
+                              ? `${totalVotes.toLocaleString("pt-BR")} votos · ${ratingParts
+                                  .map((r) => r.label)
+                                  .join(", ")}`
                               : `${totalVotes.toLocaleString("pt-BR")} ${
                                   ratingParts[0].label === "Amazon" ? "avaliações" : "votos"
                                 } · ${ratingParts[0].label}`}
@@ -1085,10 +1098,18 @@ export default async function DiscoPage({
                         </dd>
                       </div>
                     )}
-                    {mbInfo.primaryType && (
-                      <div className="flex justify-between">
-                        <dt className="text-dust">Tipo</dt>
-                        <dd className="text-cream font-medium">{mbInfo.primaryType}</dd>
+                    {/* Discogs describes the physical record; MusicBrainz
+                        describes the release-group it matched, which is often
+                        the wrong one. Jethro Tull "Living In The Past" is a
+                        21-track double compilation and MusicBrainz called it an
+                        EP. Same class of error as the release year, which the
+                        Discogs master already overrides. */}
+                    {(meta?.discogsFormatDesc || mbInfo.primaryType) && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Formato</dt>
+                        <dd className="text-cream font-medium text-right">
+                          {meta?.discogsFormatDesc ?? mbInfo.primaryType}
+                        </dd>
                       </div>
                     )}
                     {/* Pressing-level rows. Absent on ~57% of records on
@@ -1096,10 +1117,26 @@ export default async function DiscoPage({
                         is unambiguous, because a release-group spans every
                         pressing of an album (Genesis "Foxtrot" covers 38 across
                         11 labels) and we only matched at group level. */}
-                    {meta?.mbLabel && (
+                    {/* Discogs names the label on this pressing; MusicBrainz
+                        names one for the release-group. Discogs had a label
+                        where MusicBrainz had none on 21 of 29 sampled. */}
+                    {(meta?.discogsLabel || meta?.mbLabel) && (
                       <div className="flex justify-between gap-4">
                         <dt className="text-dust">Gravadora</dt>
-                        <dd className="text-cream font-medium text-right">{meta.mbLabel}</dd>
+                        <dd className="text-cream font-medium text-right">
+                          {meta?.discogsLabel ?? meta?.mbLabel}
+                        </dd>
+                      </div>
+                    )}
+                    {/* When this copy was pressed, as opposed to when the album
+                        came out. The pair is the useful part: a 1972 album on a
+                        2024 repress is a different buy from an original. */}
+                    {meta?.discogsReleased && meta.discogsReleased !== mbInfo.releaseYear && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Esta prensagem</dt>
+                        <dd className="text-cream font-medium text-right">
+                          {meta.discogsReleased}
+                        </dd>
                       </div>
                     )}
                     {/* No "Prensado em" row. 41% of discogs_country is a region
