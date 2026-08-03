@@ -10,6 +10,24 @@ import { buildOrderBy, PAGE_SIZE, type ProcessedDisco } from "@/lib/queryDiscos"
 const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
 const ACCENT_TO   = "aaaaaaeeeeiiiiooooouuuucny";
 
+// Uppercase forms too, for the A-Z bucketing below. Folding only the lowercase
+// ones left "Ávila" starting with a literal Á, and Postgres collation makes
+// 'Á' BETWEEN 'A' AND 'Z' true — so it became its own bucket, the index linked
+// to /artistas/á, and that route 404s because it only accepts ASCII A-Z.
+// Three such buckets existed (Á, Å, É) holding five artists reachable from no
+// letter page at all.
+const ACCENT_FROM_UPPER = "ÁÀÂÃÄÅÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑÝ";
+const ACCENT_TO_UPPER   = "AAAAAAEEEEIIIIOOOOOUUUUCNY";
+
+/** First letter of an artist name, accent-folded, or NULL when it is not A-Z.
+ *
+ *  Compared with a regex rather than BETWEEN: BETWEEN uses the database
+ *  collation, under which accented and other Latin letters sort inside the A-Z
+ *  range, so it accepted characters the URL cannot carry.
+ */
+const INITIAL_SQL = Prisma.sql`upper(left(translate(artista,
+  ${ACCENT_FROM + ACCENT_FROM_UPPER}, ${ACCENT_TO + ACCENT_TO_UPPER}), 1))`;
+
 type ArtistaRow = {
   id: string;
   titulo: string;
@@ -442,9 +460,7 @@ const _getArtistaLetterCounts = unstable_cache(
     const rows = await prisma.$queryRaw<{ letra: string; total: bigint }[]>`
       SELECT letra, COUNT(*) AS total FROM (
         SELECT CASE
-                 WHEN upper(left(translate(artista, ${ACCENT_FROM}, ${ACCENT_TO}), 1))
-                      BETWEEN 'A' AND 'Z'
-                 THEN upper(left(translate(artista, ${ACCENT_FROM}, ${ACCENT_TO}), 1))
+                 WHEN ${INITIAL_SQL} ~ '^[A-Z]$' THEN ${INITIAL_SQL}
                  ELSE '#'
                END AS letra
         FROM "Disco"
@@ -480,8 +496,8 @@ const _getArtistasByLetter = unstable_cache(
     // non-Latin scripts.
     const letterFilter =
       letra === "#"
-        ? Prisma.sql`AND upper(left(translate(artista, ${ACCENT_FROM}, ${ACCENT_TO}), 1)) NOT BETWEEN 'A' AND 'Z'`
-        : Prisma.sql`AND upper(left(translate(artista, ${ACCENT_FROM}, ${ACCENT_TO}), 1)) = ${letra}`;
+        ? Prisma.sql`AND ${INITIAL_SQL} !~ '^[A-Z]$'`
+        : Prisma.sql`AND ${INITIAL_SQL} = ${letra}`;
     const rows = await prisma.$queryRaw<{
       artista: string;
       discoCount: bigint;
