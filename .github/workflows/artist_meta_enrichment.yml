@@ -42,6 +42,25 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
+      - name: Fetch external URLs from MusicBrainz
+        # Fills ArtistMeta.mb_urls — the Wikidata/Spotify/Discogs/AllMusic/
+        # social links that become sameAs on the artist page, and reach every
+        # record page through byArtist's @id.
+        #
+        # This script existed but was in no workflow: it was run once by hand,
+        # covered 9.4k artists, and never ran again as the catalogue grew. That
+        # left 2,600 artists publishing no sameAs at all, and nothing was going
+        # to fix it — the daily step above refreshes enriched_at without ever
+        # touching mb_urls, so the 30-day re-enrichment rule never helped.
+        #
+        # Resumes by default (WHERE mb_urls IS NULL), so a limit is a per-run
+        # budget rather than a cap on coverage. 300 at ~1.1s/artist is ~6 min,
+        # which keeps this workflow inside the MusicBrainz rate budget it
+        # already shares with the step above.
+        run: python crawler/fetch_artist_urls.py --apply --limit 300
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Revalidate existing URLs
         # Checks stored URLs and nulls any that now return 4xx/5xx.
         # No MusicBrainz requests — safe to run with higher limit.

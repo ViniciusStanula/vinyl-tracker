@@ -5,6 +5,7 @@ import StyleTags from "@/components/StyleTags";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
+import { getPaisDisplayName } from "@/lib/paises";
 import { toTitleCase } from "@/lib/utils/titleCase";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getArtistaPageData } from "@/lib/db/artista";
@@ -97,7 +98,7 @@ export default async function ArtistaPage({
   const data = await getArtistaPageData(slug, 1, "desconto", null, RECORDS_CAP);
   if (!data) notFound();
 
-  const { canonical, items, total, topStyles, sameAs, bioShortPt, bioPt, unavailableItems } = data;
+  const { canonical, items, total, topStyles, sameAs, bioShortPt, bioPt, country, unavailableItems } = data;
   const artista = toTitleCase(canonical);
   const isUnknownArtist = canonical.toLowerCase() === "artista não identificado";
   const siteUrl = SITE_URL;
@@ -133,6 +134,22 @@ export default async function ArtistaPage({
     name: artista,
     url: `${siteUrl}/artista/${slug}`,
     ...(topStyles.length > 0 ? { genre: topStyles } : {}),
+    // The bio the page already shows. Google wants an aggregate or description
+    // in markup to be visible content, and this is the same paragraph rendered
+    // above the record grid.
+    ...(bioShortPt ? { description: bioShortPt } : {}),
+    // Where the act is from, as MusicBrainz has it. foundingLocation rather
+    // than location: this is the country of origin, not where they are now.
+    // Through the same map the record page uses for Origem — ArtistMeta stores
+    // an ISO code and publishing a bare "US" as a place name helps nobody.
+    ...((country && getPaisDisplayName(country))
+      ? {
+          foundingLocation: {
+            "@type": "Place",
+            name: getPaisDisplayName(country),
+          },
+        }
+      : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
   });
 

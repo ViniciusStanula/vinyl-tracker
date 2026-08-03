@@ -42,6 +42,7 @@ export type ArtistaPageData = {
   sameAs: string[];
   bioShortPt: string | null;
   bioPt: string | null;
+  country: string | null;
   unavailableItems: ProcessedDisco[];
 };
 
@@ -228,6 +229,7 @@ const _getArtistaPageData = unstable_cache(
       mbUrls: Record<string, string[]> | null;
       bioShortPt: string | null;
       bioPt: string | null;
+      country: string | null;
     }[]>`
       SELECT wikidata_url  AS "wikidataUrl",
              wikipedia_url AS "wikipediaUrl",
@@ -235,7 +237,8 @@ const _getArtistaPageData = unstable_cache(
              mbid          AS "mbid",
              mb_urls       AS "mbUrls",
              bio_short_pt  AS "bioShortPt",
-             bio_pt        AS "bioPt"
+             bio_pt        AS "bioPt",
+             country       AS "country"
       FROM "ArtistMeta"
       WHERE artista = ANY(${variants})
       LIMIT 1
@@ -323,6 +326,7 @@ const _getArtistaPageData = unstable_cache(
       ),
     ];
     const bioShortPt = meta?.bioShortPt ?? null;
+    const country = meta?.country ?? null;
     const bioPt      = meta?.bioPt ?? null;
 
     const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
@@ -380,7 +384,7 @@ const _getArtistaPageData = unstable_cache(
       }];
     });
 
-    return { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, unavailableItems };
+    return { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, country, unavailableItems };
   },
   ["artista-page"],
   { tags: ["prices"], revalidate: 14400 }
