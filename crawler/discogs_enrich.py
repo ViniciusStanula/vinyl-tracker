@@ -82,7 +82,7 @@ from preflight import load_dotenv_if_present
 
 load_dotenv_if_present()
 
-from db_retry import connect_with_retry
+from db_retry import ResilientConn, connect_with_retry
 from lastfm import clean_album_title
 
 log = logging.getLogger(__name__)
@@ -512,60 +512,8 @@ _COLUMNS = (
     "discogs_rating_votes",
     "discogs_have",
     "discogs_want",
+    "discogs_artist",
 )
-
-
-class ResilientConn:
-    """A connection that reopens itself when the pooler drops it.
-
-    This job holds one connection for 30+ hours. Supabase's pooler does not:
-    the first full run died after ten minutes with "server closed the
-    connection unexpectedly", 134 records in. connect_with_retry covers a
-    failure to OPEN a connection (EMAXCONN), which is a different thing —
-    nothing was reopening one that went away mid-loop.
-
-    Reads still go through .cursor(); they all happen at startup, before there
-    has been time to lose anything. Writes go through .write(), which
-    reconnects and replays the statement, because a dropped connection only
-    surfaces when the next execute runs.
-
-    autocommit stays on, so a drop can never cost more than the statement in
-    flight — every record already written stays written, and the run resumes
-    from where it stopped.
-    """
-
-    def __init__(self):
-        self._open()
-
-    def _open(self) -> None:
-        self.conn = connect_with_retry()
-        self.conn.autocommit = True
-
-    def cursor(self):
-        return self.conn.cursor()
-
-    # autocommit is on, so these are no-ops for the write path. They exist
-    # because ensure_columns() commits its DDL explicitly, and that call only
-    # runs when a column is genuinely missing — so this crashed the run the
-    # first time new columns were added, long after the class was introduced.
-    def commit(self) -> None:
-        self.conn.commit()
-
-    def rollback(self) -> None:
-        self.conn.rollback()
-
-    def write(self, sql: str, params: tuple = ()) -> None:
-        for attempt in (1, 2, 3):
-            try:
-                with self.conn.cursor() as cur:
-                    cur.execute(sql, params)
-                return
-            except (psycopg2.OperationalError, psycopg2.InterfaceError) as exc:
-                log.warning("DB connection lost (attempt %s), reopening: %s",
-                            attempt, str(exc).strip().splitlines()[0])
-                time.sleep(2 * attempt)
-                self._open()
-        raise RuntimeError("database unreachable after 3 reconnects")
 
 
 def ensure_columns(conn) -> None:
@@ -647,7 +595,18 @@ def ensure_columns(conn) -> None:
                  -- Present on every release sampled, and a signal Amazon has no
                  -- equivalent for.
                  ADD COLUMN IF NOT EXISTS discogs_have              INTEGER,
-                 ADD COLUMN IF NOT EXISTS discogs_want              INTEGER"""
+                 ADD COLUMN IF NOT EXISTS discogs_want              INTEGER,
+                 -- The artist Discogs credits on the resolved pressing. Our
+                 -- artista column comes from the Amazon listing and is wrong
+                 -- often enough to matter: "A New Place 2 Drown" is credited
+                 -- here to '"A New Place 2 Drown" Documentary by Will Robson',
+                 -- which is a documentary title, not an artist.
+                 --
+                 -- Stored, not applied. Correcting artista changes
+                 -- /artista/<slug> URLs, so the decision needs evidence first,
+                 -- and heuristics on our own column cannot supply it — "3 Doors
+                 -- Down" and "6LACK" look like junk and are not.
+                 ADD COLUMN IF NOT EXISTS discogs_artist            TEXT"""
         )
     conn.commit()
 
@@ -901,6 +860,15 @@ def main() -> None:
         # Album-level, so it survives an ambiguous barcode the way styles do.
         genres = ", ".join(rel.get("genres") or []) or None
 
+        # Discogs credits the artist per release. Joined on ", " because a
+        # split release lists several, and stripped of the "(2)" disambiguators
+        # Discogs appends when two acts share a name.
+        dg_artist = ", ".join(
+            re.sub(r"\s*\(\d+\)$", "", (a.get("name") or "").strip())
+            for a in (rel.get("artists") or [])
+            if a.get("name")
+        ) or None
+
         community = rel.get("community") or {}
         crating = community.get("rating") or {}
         rating_avg = crating.get("average")
@@ -982,6 +950,7 @@ def main() -> None:
                        discogs_rating_votes      = %s,
                        discogs_have              = %s,
                        discogs_want              = %s,
+                       discogs_artist            = %s,
                        discogs_master_checked_at = CASE WHEN %s THEN NULL
                                                         ELSE NOW() END,
                        discogs_checked_at        = NOW()
@@ -1002,6 +971,7 @@ def main() -> None:
                     rating_votes,
                     have,
                     want,
+                    dg_artist,
                     master_failed,
                     slug,
                 ),

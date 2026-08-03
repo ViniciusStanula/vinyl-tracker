@@ -313,9 +313,21 @@ export default async function DiscoPage({
   // already read the per-release mb_genres. Prefer mbInfo.genres (same
   // validated {name, slug} shape Ficha técnica uses) and only fall back to
   // lastfm-derived styleTags when there's no MB genre data at all.
+  //
+  // Discogs is the last resort, after MusicBrainz and Last.fm. It fills 336
+  // records that show no genre at all today — ones the other two never matched,
+  // like "A New Place 2 Drown", which Amazon credits to a documentary title so
+  // nothing else could identify it. Styles first (Experimental), then the
+  // broader genres (Electronic, Hip Hop).
+  const discogsGenreNames = (meta?.discogsStyles || meta?.discogsGenres || "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+
   const headerGenres = mbInfo && mbInfo.genres.length > 0
     ? mbInfo.genres
-    : styleTags.map((tag) => {
+    : (styleTags.length > 0 ? styleTags : discogsGenreNames).map((tag) => {
         const tagSlug = slugifyStyle(tag);
         return { name: tag, slug: validStyleSlugs.has(tagSlug) ? tagSlug : null };
       });
@@ -1230,11 +1242,14 @@ export default async function DiscoPage({
                         </dd>
                       </div>
                     )}
-                    {mbInfo.genres.length > 0 && (
+                    {/* headerGenres, not mbInfo.genres: the badge above and this
+                        row must show the same thing, and only headerGenres
+                        carries the Last.fm and Discogs fallbacks. */}
+                    {headerGenres.length > 0 && (
                       <div className="flex justify-between gap-4">
                         <dt className="text-dust">Gêneros</dt>
                         <dd className="text-cream font-medium text-right capitalize">
-                          {mbInfo.genres.map((g, i) => (
+                          {headerGenres.map((g, i) => (
                             <span key={g.name}>
                               {i > 0 && ", "}
                               {g.slug ? (
