@@ -42,6 +42,15 @@ export default async function sitemap(props: {
       { url: `${SITEMAP_BASE}/estilos`,                                 lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.7 },
       { url: `${SITEMAP_BASE}/paises`,                                  lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/artistas`,                                lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
+      // The A-Z index is one route per initial, so the letter pages need their
+      // own entries — /artistas itself only links to them, it no longer lists
+      // any artist. Individual artist pages stay in the artistas shard.
+      ...[..."abcdefghijklmnopqrstuvwxyz", "outros"].map((letra) => ({
+        url: `${SITEMAP_BASE}/artistas/${letra}`,
+        lastModified: latestUpdate,
+        changeFrequency: "weekly" as const,
+        priority: 0.5,
+      })),
       { url: `${SITEMAP_BASE}/sobre`,                                   lastModified: new Date("2026-01-01"), changeFrequency: "yearly", priority: 0.3 },
       { url: `${SITEMAP_BASE}/alertas`,                                 lastModified: new Date("2026-07-31"), changeFrequency: "monthly", priority: 0.7 },
       { url: `${SITEMAP_BASE}/guias`,                                   lastModified: ARTICLES_MODIFIED,  changeFrequency: "weekly",  priority: 0.8 },
