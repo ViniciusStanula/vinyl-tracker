@@ -38,7 +38,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 from preflight import load_dotenv_if_present
 load_dotenv_if_present()
 
-from db_retry import connect_with_retry
+from db_retry import ResilientConn, connect_with_retry
 from mb_enrich import MB_BASE, USER_AGENT
 
 # Relation types worth keeping. MusicBrainz also returns a long tail
@@ -122,7 +122,12 @@ def main() -> None:
     ap.add_argument("--delay", type=float, default=1.1, help="MB courtesy delay; keep >= 1.1")
     args = ap.parse_args()
 
-    conn = connect_with_retry()
+    # ResilientConn rather than a bare connection: this walks the catalogue at
+    # one MusicBrainz request per second, and Supabase's pooler will drop a
+    # connection held that long. A run died at 400 of 681 artists with
+    # "server closed the connection unexpectedly", which is also why the same
+    # class exists for the Discogs enrichment.
+    conn = ResilientConn()
     if args.apply:
         ensure_column(conn)
     cur = conn.cursor()
@@ -165,11 +170,10 @@ def main() -> None:
             for t in urls:
                 seen_types[t] += 1
         if args.apply:
-            cur.execute(
+            conn.write(
                 'UPDATE "ArtistMeta" SET mb_urls = %s WHERE artista = %s',
                 (json.dumps(urls, ensure_ascii=False), artista),
             )
-            conn.commit()
         if not args.apply or i <= 15:
             top = ", ".join(sorted(urls)[:4]) or "(none)"
             print(f"  {artista[:26]:26s} [{n:>3} discs] {len(urls)} types: {top}")

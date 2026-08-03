@@ -82,7 +82,7 @@ from preflight import load_dotenv_if_present
 
 load_dotenv_if_present()
 
-from db_retry import connect_with_retry
+from db_retry import ResilientConn, connect_with_retry
 from lastfm import clean_album_title
 
 log = logging.getLogger(__name__)
@@ -513,59 +513,6 @@ _COLUMNS = (
     "discogs_have",
     "discogs_want",
 )
-
-
-class ResilientConn:
-    """A connection that reopens itself when the pooler drops it.
-
-    This job holds one connection for 30+ hours. Supabase's pooler does not:
-    the first full run died after ten minutes with "server closed the
-    connection unexpectedly", 134 records in. connect_with_retry covers a
-    failure to OPEN a connection (EMAXCONN), which is a different thing —
-    nothing was reopening one that went away mid-loop.
-
-    Reads still go through .cursor(); they all happen at startup, before there
-    has been time to lose anything. Writes go through .write(), which
-    reconnects and replays the statement, because a dropped connection only
-    surfaces when the next execute runs.
-
-    autocommit stays on, so a drop can never cost more than the statement in
-    flight — every record already written stays written, and the run resumes
-    from where it stopped.
-    """
-
-    def __init__(self):
-        self._open()
-
-    def _open(self) -> None:
-        self.conn = connect_with_retry()
-        self.conn.autocommit = True
-
-    def cursor(self):
-        return self.conn.cursor()
-
-    # autocommit is on, so these are no-ops for the write path. They exist
-    # because ensure_columns() commits its DDL explicitly, and that call only
-    # runs when a column is genuinely missing — so this crashed the run the
-    # first time new columns were added, long after the class was introduced.
-    def commit(self) -> None:
-        self.conn.commit()
-
-    def rollback(self) -> None:
-        self.conn.rollback()
-
-    def write(self, sql: str, params: tuple = ()) -> None:
-        for attempt in (1, 2, 3):
-            try:
-                with self.conn.cursor() as cur:
-                    cur.execute(sql, params)
-                return
-            except (psycopg2.OperationalError, psycopg2.InterfaceError) as exc:
-                log.warning("DB connection lost (attempt %s), reopening: %s",
-                            attempt, str(exc).strip().splitlines()[0])
-                time.sleep(2 * attempt)
-                self._open()
-        raise RuntimeError("database unreachable after 3 reconnects")
 
 
 def ensure_columns(conn) -> None:
