@@ -10,6 +10,7 @@ import CopyLinkButton from "@/components/CopyLinkButton";
 import AlertaTrigger from "@/components/AlertaTrigger";
 import TabNav from "@/components/TabNav";
 import WikiExpander from "@/components/WikiExpander";
+import { formatoVinilPt } from "@/lib/formatoVinil";
 import Tracklist from "@/components/Tracklist";
 
 // Matches the flag in DiscoCard.tsx — see that file for full rationale.
@@ -227,6 +228,24 @@ export default async function DiscoPage({
   // MusicBrainz match, which hid the entire panel — tracklist included — on
   // 1,170 records that Discogs resolved and MusicBrainz never matched. Their
   // sides and original year were collected and then never rendered.
+  // The year this copy was pressed, as opposed to when the album came out.
+  // Rendered inline with Lançamento rather than as its own row: two bare dates
+  // in a list never explain how they relate, and "2024-05-03" was both
+  // over-precise (nobody chooses by the day) and the wrong date format for a
+  // Portuguese page. discogs_released is a full date on 8,439 records and a
+  // bare year on 2,129, so taking the first four characters is also what makes
+  // it render consistently.
+  //
+  // Only shown when it differs from the album year — on 4,316 records they are
+  // the same and repeating it says nothing. 15 records claim a pressing BEFORE
+  // the album, which is impossible and is dropped as bad data.
+  const pressingYear = (() => {
+    const y = Number((meta?.discogsReleased ?? "").slice(0, 4));
+    if (!y || !originalYear) return null;
+    const album = Number(originalYear);
+    return y > album ? String(y) : null;
+  })();
+
   const mbInfo = (meta?.mbMbid || discogsTracks.length > 0 || dgYear)
     ? {
         releaseYear: originalYear,
@@ -1075,6 +1094,20 @@ export default async function DiscoPage({
                     </p>
                   </div>
                   <dl className="space-y-2 text-sm">
+                    {/* Discogs describes the physical record; MusicBrainz
+                        describes the release-group it matched, which is often
+                        the wrong one. Jethro Tull "Living In The Past" is a
+                        21-track double compilation and MusicBrainz called it an
+                        EP. Same class of error as the release year, which the
+                        Discogs master already overrides. */}
+                    {(formatoVinilPt(meta?.discogsFormatDesc) || mbInfo.primaryType) && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Formato</dt>
+                        <dd className="text-cream font-medium text-right">
+                          {formatoVinilPt(meta?.discogsFormatDesc) ?? mbInfo.primaryType}
+                        </dd>
+                      </div>
+                    )}
                     {mbInfo.releaseYear && (
                       <div className="flex justify-between">
                         <dt className="text-dust">Lançamento</dt>
@@ -1095,20 +1128,12 @@ export default async function DiscoPage({
                             );
                           })()}
                           </time>
-                        </dd>
-                      </div>
-                    )}
-                    {/* Discogs describes the physical record; MusicBrainz
-                        describes the release-group it matched, which is often
-                        the wrong one. Jethro Tull "Living In The Past" is a
-                        21-track double compilation and MusicBrainz called it an
-                        EP. Same class of error as the release year, which the
-                        Discogs master already overrides. */}
-                    {(meta?.discogsFormatDesc || mbInfo.primaryType) && (
-                      <div className="flex justify-between gap-4">
-                        <dt className="text-dust">Formato</dt>
-                        <dd className="text-cream font-medium text-right">
-                          {meta?.discogsFormatDesc ?? mbInfo.primaryType}
+                          {pressingYear && (
+                            <span className="text-dust font-normal">
+                              {" · esta prensagem "}
+                              <time dateTime={pressingYear}>{pressingYear}</time>
+                            </span>
+                          )}
                         </dd>
                       </div>
                     )}
@@ -1125,17 +1150,6 @@ export default async function DiscoPage({
                         <dt className="text-dust">Gravadora</dt>
                         <dd className="text-cream font-medium text-right">
                           {meta?.discogsLabel ?? meta?.mbLabel}
-                        </dd>
-                      </div>
-                    )}
-                    {/* When this copy was pressed, as opposed to when the album
-                        came out. The pair is the useful part: a 1972 album on a
-                        2024 repress is a different buy from an original. */}
-                    {meta?.discogsReleased && meta.discogsReleased !== mbInfo.releaseYear && (
-                      <div className="flex justify-between gap-4">
-                        <dt className="text-dust">Esta prensagem</dt>
-                        <dd className="text-cream font-medium text-right">
-                          {meta.discogsReleased}
                         </dd>
                       </div>
                     )}
