@@ -435,3 +435,82 @@ const _getArtistasList = unstable_cache(
 );
 
 export const getArtistasList = cache(_getArtistasList);
+
+/** How many artists sit under each initial, for the /artistas letter tiles. */
+const _getArtistaLetterCounts = unstable_cache(
+  async (): Promise<{ letra: string; total: number }[]> => {
+    const rows = await prisma.$queryRaw<{ letra: string; total: bigint }[]>`
+      SELECT letra, COUNT(*) AS total FROM (
+        SELECT CASE
+                 WHEN upper(left(translate(artista, ${ACCENT_FROM}, ${ACCENT_TO}), 1))
+                      BETWEEN 'A' AND 'Z'
+                 THEN upper(left(translate(artista, ${ACCENT_FROM}, ${ACCENT_TO}), 1))
+                 ELSE '#'
+               END AS letra
+        FROM "Disco"
+        WHERE disponivel = TRUE AND (format IS NULL OR format = 'vinyl')
+          AND price_count >= 5
+        GROUP BY artista
+      ) t
+      GROUP BY letra
+      ORDER BY letra
+    `;
+    return rows.map((r) => ({ letra: r.letra, total: Number(r.total) }));
+  },
+  ["artistas-letter-counts"],
+  { tags: ["prices"], revalidate: 14400 },
+);
+
+export const getArtistaLetterCounts = cache(_getArtistaLetterCounts);
+
+/**
+ * One letter's slice of the A-Z index.
+ *
+ * The index used to render all 11,999 artists on a single page: 9.2 MB of HTML
+ * plus the matching RSC payload, on a route the header menu now links from
+ * every page. Filtering in SQL keeps each letter page to its own slice — the
+ * largest, T, is 1,302 artists.
+ *
+ * Accents fold before the initial is taken, so Ólafur files under O rather than
+ * its own bucket, matching how the letter counts are grouped.
+ */
+const _getArtistasByLetter = unstable_cache(
+  async (letra: string): Promise<ArtistaListItem[]> => {
+    // "#" is everything whose initial is not A-Z: numbers, symbols, and
+    // non-Latin scripts.
+    const letterFilter =
+      letra === "#"
+        ? Prisma.sql`AND upper(left(translate(artista, ${ACCENT_FROM}, ${ACCENT_TO}), 1)) NOT BETWEEN 'A' AND 'Z'`
+        : Prisma.sql`AND upper(left(translate(artista, ${ACCENT_FROM}, ${ACCENT_TO}), 1)) = ${letra}`;
+    const rows = await prisma.$queryRaw<{
+      artista: string;
+      discoCount: bigint;
+      imgUrl: string | null;
+      listeners: number | null;
+    }[]>`
+      SELECT
+        artista,
+        COUNT(*) AS "discoCount",
+        MIN("imgUrl") FILTER (WHERE "imgUrl" IS NOT NULL) AS "imgUrl",
+        MAX(lastfm_listeners) AS listeners
+      FROM "Disco"
+      WHERE disponivel = TRUE
+        AND (format IS NULL OR format = 'vinyl')
+        AND price_count >= 5
+        ${letterFilter}
+      GROUP BY artista
+      ORDER BY artista ASC
+    `;
+    return rows.map((r) => ({
+      artista: r.artista,
+      slug: slugifyArtist(r.artista),
+      discoCount: Number(r.discoCount),
+      imgUrl: r.imgUrl,
+      listeners: Number(r.listeners ?? 0),
+    }));
+  },
+  ["artistas-by-letter"],
+  { tags: ["prices"], revalidate: 14400 },
+);
+
+export const getArtistasByLetter = cache(_getArtistasByLetter);

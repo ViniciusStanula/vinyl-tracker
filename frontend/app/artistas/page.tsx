@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { HubHeader, HubTile, SectionRule, formatDiscos } from "@/components/hub/HubUI";
-import ArtistasFilter from "@/components/hub/ArtistasFilter";
-import { getArtistasList } from "@/lib/db/artista";
+import { HubHeader, HubTile, SectionRule } from "@/components/hub/HubUI";
+import { getArtistaLetterCounts, getArtistasList } from "@/lib/db/artista";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
@@ -46,24 +45,15 @@ export const metadata: Metadata = {
 
 export default async function ArtistasIndexPage() {
   let artistas: Awaited<ReturnType<typeof getArtistasList>> = [];
+  let letterCounts: Awaited<ReturnType<typeof getArtistaLetterCounts>> = [];
   try {
-    artistas = await getArtistasList();
+    [artistas, letterCounts] = await Promise.all([
+      getArtistasList(),
+      getArtistaLetterCounts(),
+    ]);
   } catch {
     // DB unavailable
   }
-
-  // Group by first letter (non-letter names go under "#")
-  const grouped = new Map<string, typeof artistas>();
-  for (const item of artistas) {
-    const first = item.artista.match(/^[A-Za-z]/)
-      ? item.artista[0].toUpperCase()
-      : "#";
-    if (!grouped.has(first)) grouped.set(first, []);
-    grouped.get(first)!.push(item);
-  }
-  const letters = Array.from(grouped.keys()).sort((a, b) =>
-    a === "#" ? 1 : b === "#" ? -1 : a.localeCompare(b)
-  );
 
   // Most-listened artists lead the mosaic — Last.fm listeners, not disc count,
   // so recognisable names surface instead of "Various Artists" (which has the
@@ -103,7 +93,6 @@ export default async function ArtistasIndexPage() {
             ? `${artistas.length.toLocaleString("pt-BR")} artistas com discos de vinil disponíveis na Amazon Brasil, com histórico de preços de 12 meses.`
             : "Catálogo de artistas com discos de vinil na Amazon Brasil."
         }
-        aside={artistas.length > 0 ? <ArtistasFilter total={artistas.length} /> : undefined}
       />
 
       {artistas.length === 0 ? (
@@ -144,46 +133,36 @@ export default async function ArtistasIndexPage() {
             id="indice-heading"
             title="Índice completo"
             aside={
-              <nav aria-label="Ir para letra" className="flex flex-wrap gap-1">
-                {letters.map((l) => (
-                  <a
-                    key={l}
-                    href={`#letra-${l}`}
-                    className="font-mono flex h-8 w-8 items-center justify-center rounded border border-groove text-[11px] font-medium text-parchment hover:border-gold hover:text-cream transition-colors"
-                  >
-                    {l}
-                  </a>
-                ))}
-              </nav>
+              <p className="text-xs text-dust">
+                {artistas.length.toLocaleString("pt-BR")} artistas
+              </p>
             }
           />
 
-          {letters.map((letter) => {
-            const group = grouped.get(letter)!;
-            return (
-              <div
-                key={letter}
-                id={`letra-${letter}`}
-                className="mb-8 scroll-mt-24"
-                data-letra-section
+          {/* Letter tiles rather than every artist. The index used to render
+              all 11,999 of them on one page — 9.2 MB of HTML plus the matching
+              RSC payload — on a route the header menu now links from every
+              page. Each letter is its own route, the largest being T at 1,302.
+
+              Artist discovery does not depend on this page: sitemap/artistas.xml
+              lists every artist page directly. */}
+          <nav aria-label="Artistas por letra" className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-3">
+            {letterCounts.map(({ letra, total }) => (
+              <Link
+                key={letra}
+                href={`/artistas/${letra === "#" ? "outros" : letra.toLowerCase()}`}
+                className="flex flex-col items-center justify-center rounded-xl border border-groove bg-sleeve py-4 hover:border-gold/50 hover:bg-groove/40 transition-colors"
               >
-                <h3 className="font-mono mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-gold">
-                  {letter}
-                </h3>
-                <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {group.map((item) => (
-                    /* data-nome is the folded name the CSS filter matches on. */
-                    <li key={item.slug} data-artista-item data-nome={fold(item.artista)}>
-                      <Link href={`/artista/${item.slug}`} className="ax-card">
-                        <span className="ax-card__name">{item.artista}</span>
-                        <span className="ax-card__count">{formatDiscos(item.discoCount)}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
+                <span className="font-display text-2xl font-black text-cream leading-none">
+                  {letra === "#" ? "#" : letra}
+                </span>
+                <span className="mt-1 text-[11px] text-dust tabular-nums">
+                  {total.toLocaleString("pt-BR")}
+                </span>
+              </Link>
+            ))}
+          </nav>
+
         </>
       )}
     </div>
