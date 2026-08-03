@@ -512,6 +512,7 @@ _COLUMNS = (
     "discogs_rating_votes",
     "discogs_have",
     "discogs_want",
+    "discogs_artist",
 )
 
 
@@ -594,7 +595,18 @@ def ensure_columns(conn) -> None:
                  -- Present on every release sampled, and a signal Amazon has no
                  -- equivalent for.
                  ADD COLUMN IF NOT EXISTS discogs_have              INTEGER,
-                 ADD COLUMN IF NOT EXISTS discogs_want              INTEGER"""
+                 ADD COLUMN IF NOT EXISTS discogs_want              INTEGER,
+                 -- The artist Discogs credits on the resolved pressing. Our
+                 -- artista column comes from the Amazon listing and is wrong
+                 -- often enough to matter: "A New Place 2 Drown" is credited
+                 -- here to '"A New Place 2 Drown" Documentary by Will Robson',
+                 -- which is a documentary title, not an artist.
+                 --
+                 -- Stored, not applied. Correcting artista changes
+                 -- /artista/<slug> URLs, so the decision needs evidence first,
+                 -- and heuristics on our own column cannot supply it — "3 Doors
+                 -- Down" and "6LACK" look like junk and are not.
+                 ADD COLUMN IF NOT EXISTS discogs_artist            TEXT"""
         )
     conn.commit()
 
@@ -848,6 +860,15 @@ def main() -> None:
         # Album-level, so it survives an ambiguous barcode the way styles do.
         genres = ", ".join(rel.get("genres") or []) or None
 
+        # Discogs credits the artist per release. Joined on ", " because a
+        # split release lists several, and stripped of the "(2)" disambiguators
+        # Discogs appends when two acts share a name.
+        dg_artist = ", ".join(
+            re.sub(r"\s*\(\d+\)$", "", (a.get("name") or "").strip())
+            for a in (rel.get("artists") or [])
+            if a.get("name")
+        ) or None
+
         community = rel.get("community") or {}
         crating = community.get("rating") or {}
         rating_avg = crating.get("average")
@@ -929,6 +950,7 @@ def main() -> None:
                        discogs_rating_votes      = %s,
                        discogs_have              = %s,
                        discogs_want              = %s,
+                       discogs_artist            = %s,
                        discogs_master_checked_at = CASE WHEN %s THEN NULL
                                                         ELSE NOW() END,
                        discogs_checked_at        = NOW()
@@ -949,6 +971,7 @@ def main() -> None:
                     rating_votes,
                     have,
                     want,
+                    dg_artist,
                     master_failed,
                     slug,
                 ),
