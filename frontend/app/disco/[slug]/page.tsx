@@ -537,6 +537,36 @@ export default async function DiscoPage({
     ? mbInfo!.genres.map((g) => g.name)
     : styleTags;
 
+  // schema.org distinguishes what the release IS (albumReleaseType) from how it
+  // was produced (albumProductionType). Discogs states both in its format
+  // descriptors — measured across the catalogue: 7,649 Album, 1,028
+  // Compilation, 347 EP, 213 Single.
+  //
+  // Only the two that are unambiguous are emitted. "Album" alone does not
+  // distinguish a studio album from a live one, and guessing StudioAlbum would
+  // assert something we did not measure.
+  const albumTypeLd = ((): Record<string, string> => {
+    const terms = new Set(
+      (meta?.discogsFormatDesc ?? "").split(",").map((t) => t.trim()),
+    );
+    if (terms.has("Compilation")) {
+      return {
+        albumReleaseType: "https://schema.org/AlbumRelease",
+        albumProductionType: "https://schema.org/CompilationAlbum",
+      };
+    }
+    if (terms.has("EP") || terms.has("Mini-Album")) {
+      return { albumReleaseType: "https://schema.org/EPRelease" };
+    }
+    if (terms.has("Single") || terms.has("Maxi-Single")) {
+      return { albumReleaseType: "https://schema.org/SingleRelease" };
+    }
+    if (terms.has("Album")) {
+      return { albumReleaseType: "https://schema.org/AlbumRelease" };
+    }
+    return {};
+  })();
+
   const musicAlbumJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "MusicAlbum",
@@ -544,8 +574,12 @@ export default async function DiscoPage({
     name: disco.titulo,
     url: `${siteUrl}/disco/${slug}`,
     ...(disco.imgUrl ? { image: disco.imgUrl } : {}),
+    // @id points at the MusicGroup the artist page already publishes, which
+    // carries sameAs to Wikidata, Spotify and MusicBrainz. Without it the two
+    // are separate nodes and none of that identity reaches the record.
     byArtist: {
       "@type": "MusicGroup",
+      "@id": `${siteUrl}/artista/${slugifyArtist(disco.artista)}#musicgroup`,
       name: disco.artista,
       url: `${siteUrl}/artista/${slugifyArtist(disco.artista)}`,
     },
@@ -556,6 +590,7 @@ export default async function DiscoPage({
     // 'other' and never reach this page), so it's always accurate here. Without
     // it nothing in the markup states that these products are records at all.
     musicReleaseFormat: "https://schema.org/VinylFormat",
+    ...albumTypeLd,
     // Label only. Catalogue number and pressing country are deliberately NOT
     // emitted even though the crawler stores them:
     //   * They come from the single-release case, and for a much-reissued album
@@ -569,8 +604,16 @@ export default async function DiscoPage({
     // most stored labels come from the safer case (every release sharing one
     // label). Asserting the wrong catalogue number tells Google this listing is
     // a different physical product.
-    ...(meta?.mbLabel
-      ? { recordLabel: { "@type": "Organization", name: meta.mbLabel } }
+    // Prefers the Discogs label, exactly as the visible Gravadora row does.
+    // Reading mb_label alone published an empty recordLabel on 10,062 records
+    // that show a label on screen — Discogs has one where MusicBrainz does not.
+    ...((meta?.discogsLabel || meta?.mbLabel)
+      ? {
+          recordLabel: {
+            "@type": "Organization",
+            name: meta?.discogsLabel ?? meta?.mbLabel,
+          },
+        }
       : {}),
     // Safe to assert now: it comes from a barcode-resolved pressing, and is
     // only stored when the barcode mapped to a single Discogs release.
@@ -583,6 +626,12 @@ export default async function DiscoPage({
             "@id": `${siteUrl}/disco/${slug}#track-${i + 1}`,
             name: t.title,
             ...(t.length ? { duration: msToIso(t.length) } : {}),
+            // The vinyl side, where Discogs gave one: "A1", "B2". Ordinal
+            // position on its own is implied by array order, so the useful
+            // thing to state is which side of which disc the track is on.
+            ...(("position" in t && t.position)
+              ? { position: String(t.position) }
+              : {}),
           })),
         }
       : {}),
@@ -592,13 +641,19 @@ export default async function DiscoPage({
     // than no sameAs). No Last.fm entry: we only store tags/wiki text for
     // this record, not a canonical last.fm/music/... URL, and that URL's
     // slug isn't reliably derivable from artista/titulo.
-    ...((meta?.sobrePtSourceUrl || meta?.mbMbid)
+    ...((meta?.sobrePtSourceUrl || meta?.mbMbid || meta?.discogsReleaseId)
       ? {
           sameAs: [
             ...(meta?.sobrePtSourceUrl ? [meta.sobrePtSourceUrl] : []),
             // mb_mbid is '' (not null) when a search ran and found no match --
             // only build the URL when there's an actual ID.
             ...(meta?.mbMbid ? [`https://musicbrainz.org/release-group/${meta.mbMbid}`] : []),
+            // The Discogs release, which unlike a MusicBrainz release-GROUP
+            // identifies the exact pressing this listing sells. Only set when
+            // a barcode resolved it, so it is never a guess.
+            ...(meta?.discogsReleaseId
+              ? [`https://www.discogs.com/release/${meta.discogsReleaseId}`]
+              : []),
           ],
         }
       : {}),
