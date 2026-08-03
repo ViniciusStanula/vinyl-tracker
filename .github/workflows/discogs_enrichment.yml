@@ -1,0 +1,88 @@
+name: Discogs Enrichment
+
+# Resolves records to their exact Discogs pressing and stores what only a
+# pressing can tell us: vinyl sides, catalogue number, label, original album
+# year, format, styles and community ratings.
+#
+# This was a manual local run. The catalogue takes ~170 new records a day, and
+# without this they would carry none of it — the same gap that left 2,600
+# artists with no sameAs because fetch_artist_urls.py was never scheduled.
+#
+# Cheap at this cadence: ~170 records needs ~375 Discogs calls, about 6 minutes.
+# The limits below are far above that so any backlog drains over a few days
+# rather than needing another manual run.
+
+on:
+  schedule:
+    - cron: '20 5 * * *'   # 05:20 UTC daily — after the 03:00/04:00 jobs, before the 06:00 crawl
+  workflow_dispatch:
+
+concurrency:
+  group: discogs-enrichment
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: crawler/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r crawler/requirements.txt
+
+      - name: Backfill barcodes from Amazon
+        # Discogs resolves by barcode, so a record with no EAN can only fall
+        # back to an artist+title search that identifies the album rather than
+        # the pressing. This asks the Creators API for the missing ones first.
+        #
+        # Writes '' rather than leaving NULL when Amazon has no barcode, so the
+        # same records are not re-asked every single day.
+        run: python crawler/backfill_ean.py --apply --limit 400
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CREATORS_CLIENT_ID: ${{ secrets.CREATORS_CLIENT_ID }}
+          CREATORS_CLIENT_SECRET: ${{ secrets.CREATORS_CLIENT_SECRET }}
+          # creators_api reads CREATORS_PARTNER_TAG first and falls back to
+          # ASSOCIATE_TAG, which is the secret that actually exists.
+          ASSOCIATE_TAG: ${{ secrets.ASSOCIATE_TAG }}
+          CREATORS_CREDENTIAL_VERSION: v3.1
+        continue-on-error: true
+
+      - name: Resolve pressings by barcode
+        # ~2.2 calls per record at 60/min with credentials. 600 is roughly 45
+        # minutes and leaves plenty of headroom over the daily intake.
+        #
+        # Resumable: every record is stamped with discogs_checked_at as it
+        # completes, so a timeout or a cancelled run costs nothing.
+        run: python crawler/discogs_enrich.py --apply --limit 600
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DISCOGS_KEY: ${{ secrets.DISCOGS_KEY }}
+          DISCOGS_SECRET: ${{ secrets.DISCOGS_SECRET }}
+
+      - name: Resolve the rest by artist and title
+        # For records Amazon has no barcode for. Stores only what every pressing
+        # of an album agrees on — styles, original year, and the master
+        # tracklist — never country, catalogue number or side layout, because a
+        # title search identifies the work and not the disc.
+        run: python crawler/discogs_enrich.py --no-barcode --apply --limit 200
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DISCOGS_KEY: ${{ secrets.DISCOGS_KEY }}
+          DISCOGS_SECRET: ${{ secrets.DISCOGS_SECRET }}
+
+      - name: Report coverage
+        run: python crawler/check_discogs_progress.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        continue-on-error: true
