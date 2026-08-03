@@ -77,6 +77,18 @@ const nextConfig: NextConfig = {
       // "ost" is just an abbreviation of "soundtrack" -- every disco tagged ost
       // is now also tagged soundtrack (backfilled), so no unique inventory left.
       { source: "/estilo/ost", destination: "/estilo/soundtrack", permanent: true },
+      // Amazon placeholder "artists" that are not artists. The crawler now
+      // rewrites these at ingest, so the pages behind them emptied out:
+      // /artista/original-soundtrack holds zero records and 404s outright,
+      // while musicas-mp3 and ost are down to one vinyl record each (their
+      // other listings are MP3s, already excluded as non-vinyl).
+      //
+      // Sent to the soundtrack style page rather than deleted: every record
+      // that ever sat under these names is a soundtrack, so that is where a
+      // visitor following an old link actually wanted to go.
+      { source: "/artista/original-soundtrack", destination: "/estilo/soundtrack", permanent: true },
+      { source: "/artista/musicas-mp3", destination: "/estilo/soundtrack", permanent: true },
+      { source: "/artista/ost", destination: "/estilo/soundtrack", permanent: true },
       // lastfm_tags leaked artist names in as if they were genres — an artist is
       // not a style, so these send to the real artist page instead of a fake genre page.
       { source: "/estilo/eric-church", destination: "/artista/eric-church", permanent: true },
