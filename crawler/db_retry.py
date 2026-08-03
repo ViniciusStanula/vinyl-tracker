@@ -65,15 +65,20 @@ class ResilientConn:
     def cursor(self):
         return self.conn.cursor()
 
-    # autocommit is on, so these are no-ops for the write path. They exist
-    # because ensure_columns() commits its DDL explicitly, and that call only
-    # runs when a column is genuinely missing — so this crashed the run the
-    # first time new columns were added, long after the class was introduced.
+    # Pass-throughs for the rest of the connection interface. autocommit is on,
+    # so commit() is a no-op for the write path, but callers still use these:
+    # ensure_columns() commits its DDL explicitly, and fetch_artist_urls closes
+    # at the end. Each was missing once and crashed a run that had otherwise
+    # done all its work — the second one after the class was already scheduled
+    # to run daily, where it would have reported failure on a successful run.
     def commit(self) -> None:
         self.conn.commit()
 
     def rollback(self) -> None:
         self.conn.rollback()
+
+    def close(self) -> None:
+        self.conn.close()
 
     def write(self, sql: str, params: tuple = ()) -> None:
         for attempt in (1, 2, 3):

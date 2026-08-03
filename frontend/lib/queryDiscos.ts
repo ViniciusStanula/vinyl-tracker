@@ -127,9 +127,19 @@ export async function queryDiscos(params: {
   const whereArtista = artista
     ? Prisma.sql`AND d.artista = ${artista}`
     : Prisma.sql``;
+  // The album's original year, reconciled the same way the record page does:
+  // the EARLIER of MusicBrainz and the Discogs master. MusicBrainz often
+  // matched a reissue release-group, which filed 506 records under the wrong
+  // decade — Jethro Tull "Living In The Past" is a 1972 album that MB dates to
+  // 2013, and Miles Davis "Milestones" (1958) that it dates to 2002. Taking
+  // only mb_first_release_date also hid 2,804 records that have a Discogs year
+  // and no MusicBrainz one from every decade page.
   const whereDecade =
     decade != null
-      ? Prisma.sql`AND substring(d.mb_first_release_date from '^[0-9]{4}')::int BETWEEN ${decade} AND ${decade + 9}`
+      ? Prisma.sql`AND LEAST(
+            NULLIF(substring(d.mb_first_release_date from '^[0-9]{4}'), '')::int,
+            d.discogs_master_year
+          ) BETWEEN ${decade} AND ${decade + 9}`
       : Prisma.sql``;
   const wherePrecoMax =
     precoMax !== null && !isNaN(precoMax)

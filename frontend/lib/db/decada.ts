@@ -8,13 +8,21 @@ export type DecadaListItem = { start: number; discoCount: number };
 const _getDecadasList = unstable_cache(
   async (): Promise<DecadaListItem[]> => {
     const rows = await prisma.$queryRaw<{ decade: number; disco_count: bigint }[]>`
-      SELECT (substring(mb_first_release_date from '^[0-9]{4}')::int / 10) * 10 AS decade,
-             COUNT(*) AS disco_count
-      FROM "Disco"
-      WHERE disponivel = TRUE
-        AND (format IS NULL OR format = 'vinyl')
-        AND price_count >= 5
-        AND mb_first_release_date ~ '^[0-9]{4}'
+      SELECT (ano / 10) * 10 AS decade, COUNT(*) AS disco_count
+      FROM (
+        -- Original album year, the earlier of MusicBrainz and the Discogs
+        -- master. Same reconciliation the record page and the listing use, so
+        -- a count here can never disagree with the page it links to.
+        SELECT LEAST(
+                 NULLIF(substring(mb_first_release_date from '^[0-9]{4}'), '')::int,
+                 discogs_master_year
+               ) AS ano
+        FROM "Disco"
+        WHERE disponivel = TRUE
+          AND (format IS NULL OR format = 'vinyl')
+          AND price_count >= 5
+      ) t
+      WHERE ano IS NOT NULL
       GROUP BY decade
     `;
     const counts = new Map<number, number>();
