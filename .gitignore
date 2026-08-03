@@ -39,3 +39,5 @@ logo-export.html
 *.docx
 *.xlsx
 *.pptx
+
+.vercel
