@@ -369,6 +369,27 @@ const _getEstiloPageData = unstable_cache(
     // any legacy paginated caller.
     pageSize: number = ESTILO_PAGE_SIZE,
   ): Promise<SerializedEstiloData | null> => {
+    // A record belongs to a style when EITHER source says so — see the OR on
+    // discogs_styles in the queries below.
+    //
+    // lastfm_tags alone left the Discogs enrichment invisible to browsing: a
+    // record could show "Indie Rock" on its own page and be missing from
+    // /estilo/indie-rock. Matching both puts 5,797 records onto 267 style pages
+    // they were absent from, and creates no page at all.
+    //
+    // Only MEMBERSHIP widens. The canonical lookup right below stays derived
+    // from lastfm_tags, which is what makes new pages impossible: Discogs
+    // carries 171 style names we have no page for, averaging ~11 records each,
+    // and one page per term is how index bloat starts. A Discogs style with no
+    // matching canonical simply never matches and is ignored.
+    //
+    // Compared on the lowercased string rather than the slug. Slug comparison
+    // would also catch "post bop" against /estilo/post-bop, but that is 306 of
+    // 15,388 pairs — 2% — and would put a regexp_replace on every row of a
+    // query that already joins price history on each style page render.
+    //
+    // Never merged into lastfm_tags. That column was clobbered by an
+    // enrichment bug once and 702 rows had to be restored; the two stay apart.
     const canonicalRow = await prisma.$queryRaw<{ tag: string }[]>`
       WITH tags AS (
         SELECT DISTINCT unnest(string_to_array(lastfm_tags, ', ')) AS tag
@@ -413,7 +434,8 @@ const _getEstiloPageData = unstable_cache(
         WHERE "discoId" = c.id
         ORDER BY "capturadoEm" DESC LIMIT 1
       ) hp_latest ON true
-      WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(c.lastfm_tags), ', '))
+      WHERE (LOWER(${canonical}) = ANY(string_to_array(LOWER(c.lastfm_tags), ', '))
+          OR LOWER(${canonical}) = ANY(string_to_array(LOWER(c.discogs_styles), ', ')))
         AND c.disponivel = TRUE
         AND (c.format IS NULL OR c.format = 'vinyl')
         AND c.price_count >= 5
@@ -482,7 +504,8 @@ const _getEstiloPageData = unstable_cache(
         WHERE "discoId" = c.id
         ORDER BY "capturadoEm" DESC LIMIT 1
       ) hp_latest ON true
-      WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(c.lastfm_tags), ', '))
+      WHERE (LOWER(${canonical}) = ANY(string_to_array(LOWER(c.lastfm_tags), ', '))
+          OR LOWER(${canonical}) = ANY(string_to_array(LOWER(c.discogs_styles), ', ')))
         AND c.disponivel = TRUE
         AND (c.format IS NULL OR c.format = 'vinyl')
         AND c.price_count >= 5
@@ -557,7 +580,8 @@ const _getRelatedEstilos = unstable_cache(
         SELECT id FROM "Disco"
         WHERE disponivel = TRUE
         AND  (format IS NULL OR format = 'vinyl')
-          AND LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
+          AND (LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
+            OR LOWER(${canonical}) = ANY(string_to_array(LOWER(discogs_styles), ', ')))
       ),
       all_tags AS (
         SELECT tag, COUNT(DISTINCT id)::float AS total
@@ -607,7 +631,8 @@ const _getTopArtistsForEstilo = unstable_cache(
     const rows = await prisma.$queryRaw<{ artista: string; disco_count: bigint }[]>`
       SELECT artista, COUNT(*) AS disco_count
       FROM "Disco"
-      WHERE LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
+      WHERE (LOWER(${canonical}) = ANY(string_to_array(LOWER(lastfm_tags), ', '))
+          OR LOWER(${canonical}) = ANY(string_to_array(LOWER(discogs_styles), ', ')))
         AND disponivel = TRUE
         AND (format IS NULL OR format = 'vinyl')
         AND price_count >= 5
@@ -632,18 +657,39 @@ export type EstiloListItem = { tag: string; slug: string; discoCount: number };
 const _getEstilosList = unstable_cache(
   async (): Promise<EstiloListItem[]> => {
     const rows = await prisma.$queryRaw<{ tag: string; disco_count: bigint }[]>`
-      SELECT tag, COUNT(*) AS disco_count
-      FROM (
-        SELECT unnest(string_to_array(lastfm_tags, ', ')) AS tag
+      WITH vocab AS (
+        -- The vocabulary stays Last.fm's. A Discogs style only counts when a
+        -- page for it already exists, so this index can never gain a row that
+        -- /estilo/<slug> would 404 on.
+        SELECT DISTINCT LOWER(unnest(string_to_array(lastfm_tags, ', '))) AS tag
+        FROM "Disco"
+        WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
+      ),
+      pairs AS (
+        SELECT LOWER(unnest(string_to_array(lastfm_tags, ', '))) AS tag, id
         FROM "Disco"
         WHERE lastfm_tags IS NOT NULL AND lastfm_tags != ''
           AND disponivel = TRUE
           AND (format IS NULL OR format = 'vinyl')
           AND price_count >= 5
-      ) t
+        UNION
+        SELECT LOWER(st.tag), d.id
+        FROM "Disco" d,
+             unnest(string_to_array(d.discogs_styles, ', ')) AS st(tag)
+        WHERE d.discogs_styles IS NOT NULL AND d.discogs_styles != ''
+          AND d.disponivel = TRUE
+          AND (d.format IS NULL OR d.format = 'vinyl')
+          AND d.price_count >= 5
+          AND LOWER(st.tag) IN (SELECT tag FROM vocab)
+      )
+      -- Grouped on the lowered tag so "Indie Rock" and "indie rock" are one
+      -- row. They slugify identically, and the previous version counted them
+      -- separately and then dropped the smaller of the two.
+      SELECT tag, COUNT(DISTINCT id) AS disco_count
+      FROM pairs
       GROUP BY tag
-      HAVING COUNT(*) > 3
-      ORDER BY COUNT(*) DESC
+      HAVING COUNT(DISTINCT id) > 3
+      ORDER BY COUNT(DISTINCT id) DESC
     `;
     const seenSlugs = new Set<string>();
     const result: EstiloListItem[] = [];
