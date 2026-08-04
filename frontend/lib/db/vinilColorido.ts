@@ -9,27 +9,53 @@ import { unstable_cache } from "next/cache";
 // substring so they also catch compound values that include them; the three
 // simplified labels are exact matches only, since e.g. "Colorido" must not
 // swallow "Splatter Colorido"'s records too.
+//
+// MUST cover every label crawler/titulo_seo.py's COLOR_MAP can produce.
+// These two lists drifted out of sync once already -- this one was
+// hand-typed against an earlier, shorter version of COLOR_MAP and silently
+// missed 17 labels added since (Translúcido: 532 records, Mesclado: 364,
+// Opaco: 180, Splatter: 140, Violeta: 76, and 12 smaller ones), each
+// producing a real 404 on an existing color hub URL until it was reported.
+// Keys are the accent-stripped, lowercase, space-to-hyphen slug; values
+// match Python's str.capitalize() exactly (only the first character
+// uppercased), since that's what compose() actually stores in vinil_cor for
+// multi-word labels ("Branco osso", not "Branco Osso").
 const SIMPLE_COLOR_SLUGS: Record<string, string> = {
   vermelho: "Vermelho",
   azul: "Azul",
-  verde: "Verde",
+  "azul-petroleo": "Azul-petróleo",
+  bordo: "Bordô",
   branco: "Branco",
-  preto: "Preto",
-  amarelo: "Amarelo",
-  laranja: "Laranja",
-  roxo: "Roxo",
-  rosa: "Rosa",
-  dourado: "Dourado",
-  prateado: "Prateado",
-  transparente: "Transparente",
+  "branco-osso": "Branco osso",
+  chocolate: "Chocolate",
   cinza: "Cinza",
-  marrom: "Marrom",
-  turquesa: "Turquesa",
-  creme: "Creme",
-  magenta: "Magenta",
+  cobre: "Cobre",
   coral: "Coral",
-  onix: "Ônix",
+  creme: "Creme",
+  dourado: "Dourado",
+  laranja: "Laranja",
+  lilas: "Lilás",
+  magenta: "Magenta",
+  marrom: "Marrom",
+  mesclado: "Mesclado",
+  opaco: "Opaco",
+  osso: "Osso",
   platina: "Platina",
+  prateado: "Prateado",
+  preto: "Preto",
+  rosa: "Rosa",
+  roxo: "Roxo",
+  splatter: "Splatter",
+  translucido: "Translúcido",
+  transparente: "Transparente",
+  "transparente-leitoso": "Transparente leitoso",
+  turquesa: "Turquesa",
+  uva: "Uva",
+  verde: "Verde",
+  "verde-oliva": "Verde-oliva",
+  violeta: "Violeta",
+  "agua-marinha": "Água-marinha",
+  onix: "Ônix",
 };
 
 const EXACT_COLOR_SLUGS: Record<string, string> = {

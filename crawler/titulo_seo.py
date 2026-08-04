@@ -139,10 +139,25 @@ _COLOR_FAMILY = {
 }
 
 
+_BUNDLE_SEPARATOR_RE = re.compile(r"\s/\s")
+
+
 def base_title(artista, titulo, discogs_title, mb_title):
     """Resolves the clean base album title, preferring verified external data
     over raw-title regex stripping -- but only when that data actually
     explains the título's real content, not just the artist's own name."""
+    # A título with 2+ " / " separators names multiple works ("Metallica
+    # Vinyl Collection: Kill 'Em All / Ride The Lightning / Master Of
+    # Puppets"). discogs_title/mb_title can only ever resolve to ONE of
+    # them, and the 2-shared-word overlap check doesn't catch this: "master"
+    # and "puppets" genuinely ARE in the bundle title, so a candidate
+    # matching just that one album passed as if it were the whole product,
+    # silently erasing the other two. No external single-album title can
+    # correctly represent a multi-album bundle, so bundles skip candidate
+    # matching entirely and keep the full, regex-cleaned listing text.
+    if titulo and len(_BUNDLE_SEPARATOR_RE.findall(titulo)) >= 2:
+        return clean_album_title(titulo, artista or "")
+
     clean = clean_album_title(titulo or "", artista or "")
     clean_words = re.findall(r"[A-Za-zÀ-ÿ0-9]+", clean)
     artista_words = {w.lower() for w in re.findall(r"[A-Za-zÀ-ÿ0-9]+", artista or "")}
