@@ -21,6 +21,7 @@ import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
 import { slugifyColor } from "@/lib/db/vinilColorido";
+import { slugifyEdition } from "@/lib/db/edicaoVinil";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, getTopBotHitSlugs, type RelatedDeal } from "@/lib/db/disco";
 import { getEstilosList } from "@/lib/db/estilo";
 import { getPaisDisplayName, ISO2_TO_SLUG } from "@/lib/paises";
@@ -1220,6 +1221,19 @@ export default async function DiscoPage({
                             className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
                           >
                             {meta.vinilCor}
+                          </Link>
+                        </dd>
+                      </div>
+                    )}
+                    {meta?.vinilEdicao && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Edição</dt>
+                        <dd className="text-cream font-medium text-right">
+                          <Link
+                            href={`/edicao/${slugifyEdition(meta.vinilEdicao)}`}
+                            className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
+                          >
+                            {meta.vinilEdicao}
                           </Link>
                         </dd>
                       </div>
