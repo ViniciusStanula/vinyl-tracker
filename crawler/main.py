@@ -2995,8 +2995,10 @@ def crawl_discovery_api(
                     "slug":        gerar_slug(titulo, asin),
                     "imgUrl":      q.get("img_url") or "",
                     "url":         affiliate_link(asin),
-                    "rating":      res.star_rating,
-                    "reviewCount": res.review_count,
+                    # The Creators API returns no review data for most BR ASINs,
+                    # so fall back to the stars the discovery search card showed.
+                    "rating":      res.star_rating if res.star_rating is not None else q.get("rating"),
+                    "reviewCount": res.review_count if res.review_count is not None else q.get("reviewCount"),
                     "precoBrl":    price,
                     "capturadoEm": now,
                     "format":      "vinyl",  # trusted from the discovery-time vinyl filter

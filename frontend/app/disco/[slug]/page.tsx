@@ -167,9 +167,16 @@ export default async function DiscoPage({
   // Everything below depends only on disco/meta, so it's one parallel wave —
   // sequential awaits here cost a full DB round trip each on cold renders.
   const [estilosList, relatedDeals, popularity, artistAlbums] = await Promise.all([
-    // Genres link to /estilo/[slug] only when a style page actually exists for
-    // that slug (style pages are derived from lastfm_tags, not MB genres).
-    meta?.mbMbid ? getEstilosList() : Promise.resolve([]),
+    // The list of slugs that have a real /estilo page, so a genre only links
+    // when its destination exists.
+    //
+    // This used to be fetched only when the record had an mb_mbid, from when
+    // genres came from MusicBrainz alone. Genres now come from lastfm_tags and
+    // Discogs too, neither of which has anything to do with that id — so 6,627
+    // records rendered every genre as dead text. Stan Getz / Oscar Peterson
+    // showed "britpop, rock, alternative" unlinked, all three of which are
+    // real style pages.
+    getEstilosList(),
     getRelatedDeals(disco.id, slug, styleTags),
     // Rank of this album among the artist's tracked vinyls, by Last.fm listeners.
     (meta?.lastfmListeners ?? 0) > 0

@@ -801,9 +801,11 @@ def fetch_pending_discovered(conn, limit: int = 50) -> list[dict]:
             # Idempotent guard for tables created before img capture existed, so
             # the SELECT below never fails on a missing column.
             cur.execute("ALTER TABLE discovered_vinyls ADD COLUMN IF NOT EXISTS img_url TEXT")
+            cur.execute("ALTER TABLE discovered_vinyls ADD COLUMN IF NOT EXISTS rating DOUBLE PRECISION")
+            cur.execute('ALTER TABLE discovered_vinyls ADD COLUMN IF NOT EXISTS "reviewCount" INTEGER')
             cur.execute(
                 """
-                SELECT asin, titulo, artist_name, price_brl, img_url, source
+                SELECT asin, titulo, artist_name, price_brl, img_url, source, rating, "reviewCount"
                 FROM discovered_vinyls
                 WHERE asin NOT IN (SELECT asin FROM "Disco")
                 ORDER BY discovered_at ASC
@@ -819,6 +821,8 @@ def fetch_pending_discovered(conn, limit: int = 50) -> list[dict]:
                     "price_brl": row[3],
                     "img_url": row[4],
                     "source": row[5],
+                    "rating": row[6],
+                    "reviewCount": row[7],
                 }
                 for row in cur.fetchall()
             ]
