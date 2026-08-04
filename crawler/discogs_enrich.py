@@ -513,6 +513,7 @@ _COLUMNS = (
     "discogs_have",
     "discogs_want",
     "discogs_artist",
+    "discogs_master_id",
 )
 
 
@@ -606,7 +607,13 @@ def ensure_columns(conn) -> None:
                  -- /artista/<slug> URLs, so the decision needs evidence first,
                  -- and heuristics on our own column cannot supply it — "3 Doors
                  -- Down" and "6LACK" look like junk and are not.
-                 ADD COLUMN IF NOT EXISTS discogs_artist            TEXT"""
+                 ADD COLUMN IF NOT EXISTS discogs_artist            TEXT,
+                 -- The master, for records resolved by title rather than
+                 -- barcode. They have no release id, so the page credited
+                 -- Discogs as plain text with nowhere to point — 2,911 records,
+                 -- 2,892 of which carried a master year, meaning the master had
+                 -- been fetched and its id discarded.
+                 ADD COLUMN IF NOT EXISTS discogs_master_id         INTEGER"""
         )
     conn.commit()
 
@@ -680,6 +687,7 @@ def album_level_fields(dg, verified: list[dict]) -> dict:
         master = dg.master(mid) or {}
         year = master.get("year")
         return {
+            "master_id": mid,
             "year": year if isinstance(year, int) and 1900 < year < 2100 else None,
             "styles": ", ".join(master.get("styles") or []) or None,
             "genres": ", ".join(master.get("genres") or []) or None,
@@ -730,12 +738,13 @@ def salvage_by_title(dg, conn, args, slug, artista, titulo) -> bool:
                    discogs_title       = COALESCE(discogs_title, %s),
                    discogs_tracklist   = COALESCE(discogs_tracklist, %s),
                    discogs_master_year = COALESCE(%s, discogs_master_year),
+                   discogs_master_id   = COALESCE(%s, discogs_master_id),
                    discogs_checked_at  = NOW()
                WHERE slug = %s""",
             (alb.get("styles"), alb.get("genres"), alb.get("title"),
              json.dumps(alb["tracks"], ensure_ascii=False)
              if alb.get("tracks") else None,
-             alb.get("year"), slug),
+             alb.get("year"), alb.get("master_id"), slug),
         )
     elif alb:
         print(f"  SALVAGE {artista[:16]:18s} | {titulo[:26]:28s} "
@@ -1072,12 +1081,13 @@ def run_no_barcode(conn, args) -> None:
                        discogs_title             = COALESCE(discogs_title, %s),
                        discogs_tracklist         = COALESCE(discogs_tracklist, %s),
                        discogs_master_year       = COALESCE(%s, discogs_master_year),
+                       discogs_master_id         = COALESCE(%s, discogs_master_id),
                        discogs_master_checked_at = NOW(),
                        discogs_checked_at        = NOW()
                    WHERE slug = %s""",
                 (styles, genres, dg_title,
                  json.dumps(tracks, ensure_ascii=False) if tracks else None,
-                 year, slug),
+                 year, alb.get("master_id"), slug),
             )
         else:
             print(
