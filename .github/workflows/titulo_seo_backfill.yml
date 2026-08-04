@@ -1,0 +1,46 @@
+name: Titulo SEO Backfill
+
+# Recomputes titulo_seo (+ vinil_cor/vinil_edicao/vinil_versao) for every
+# vinyl record from crawler/titulo_seo.py's rules: a clean base title from
+# verified discogs_title/mb_title data (falling back to regex cleanup), plus
+# a color/edition/version suffix only when real pressing data backs it.
+#
+# Runs after discogs_enrichment.yml (05:20 UTC) so same-day barcode matches
+# already have discogs_title/discogs_format_desc to draw from — a record
+# enriched today gets its titulo_seo upgraded on the very next run rather
+# than waiting a full extra day. Re-running is cheap and idempotent: it
+# recomputes every row every time rather than tracking what changed, since
+# the full 31k-record catalog computes in ~15s locally.
+
+on:
+  schedule:
+    - cron: '30 6 * * *'   # 06:30 UTC daily — after discogs enrichment finishes
+  workflow_dispatch:
+
+concurrency:
+  group: titulo-seo-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: crawler/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r crawler/requirements.txt
+
+      - name: Recompute titulo_seo for every vinyl record
+        run: python crawler/backfill_titulo_seo.py --apply
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
