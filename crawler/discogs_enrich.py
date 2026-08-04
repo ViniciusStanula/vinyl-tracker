@@ -332,6 +332,23 @@ def sibling_consensus(sibs: list[dict], key: str) -> str | None:
     return values.pop() if len(values) == 1 else None
 
 
+# Format words that change how a record is laid out across sides. Everything
+# else Discogs lists — Limited Edition, Reissue, Remastered, Repress, colours,
+# Album vs Single — describes the edition, not the physical arrangement.
+_LAYOUT_WORDS = frozenset({
+    "lp", "12\"", "10\"", "7\"", "box set", "vinyl", "acetate", "flexi-disc",
+})
+
+
+def _layout_key(result: dict) -> tuple:
+    """What a pressing looks like physically: how many discs, and of what."""
+    words = frozenset(
+        w.lower() for w in (result.get("format") or []) if w.lower() in _LAYOUT_WORDS
+    )
+    qty = str(result.get("format_quantity") or "")
+    return (qty, tuple(sorted(words)))
+
+
 def pressing_invariant(results: list[dict]) -> dict:
     """Fields every matching vinyl pressing agrees on, and nothing else.
 
@@ -854,7 +871,14 @@ def main() -> None:
         # same object — a 1LP and a 2LP variant of one album have different side
         # letters. Compared on the search result's own format list, so this
         # costs no extra calls.
-        same_format = len({tuple(sorted(r.get("format") or [])) for r in siblings}) == 1
+        #
+        # Only the parts that decide the layout count. Comparing the whole
+        # format list treated "Limited Edition" and "Reissue" as structural and
+        # threw away good data: Jack White "No Name" returns four pressings that
+        # are all Vinyl/LP/Album and differ solely by those words, and its
+        # 13-track A/B tracklist was dropped for it. 6,218 resolved records have
+        # no tracklist, 2,537 of them with this gate as the reason.
+        same_format = len({_layout_key(r) for r in siblings}) == 1
 
         catno = (
             clean_catno(next((l.get("catno") for l in (rel.get("labels") or [])), None))

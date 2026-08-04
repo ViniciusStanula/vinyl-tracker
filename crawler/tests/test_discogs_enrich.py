@@ -3,6 +3,7 @@ from discogs_enrich import (
     clean_catno,
     sibling_consensus,
     master_consensus,
+    _layout_key,
 )
 
 
@@ -234,3 +235,35 @@ class TestReissueSeriesJunk:
     def test_an_ordinary_parenthetical_is_left_alone(self):
         from discogs_enrich import _strip_series
         assert _strip_series("Greatest Hits (Live In Paris)") == "Greatest Hits (Live In Paris)"
+
+
+class TestLayoutKey:
+    """Only the physical arrangement gates the tracklist, not the edition."""
+
+    def test_edition_words_do_not_split_pressings(self):
+        # Jack White "No Name" returns four pressings, all Vinyl/LP/Album,
+        # differing only by Limited Edition and Reissue. Comparing the whole
+        # format list treated them as structurally different and dropped a
+        # perfectly good 13-track A/B tracklist.
+        sibs = [
+            {"format": ["Vinyl", "LP", "Album", "Limited Edition"], "format_quantity": 1},
+            {"format": ["Vinyl", "LP", "Album", "Limited Edition", "Reissue"], "format_quantity": 1},
+            {"format": ["Vinyl", "LP", "Album"], "format_quantity": 1},
+        ]
+        assert len({_layout_key(r) for r in sibs}) == 1
+
+    def test_disc_count_still_splits_them(self):
+        # A 1LP and a 2LP of one album have different side letters, so their
+        # tracklists are not interchangeable.
+        sibs = [
+            {"format": ["Vinyl", "LP", "Album"], "format_quantity": 1},
+            {"format": ["Vinyl", "LP", "Album"], "format_quantity": 2},
+        ]
+        assert len({_layout_key(r) for r in sibs}) == 2
+
+    def test_size_still_splits_them(self):
+        sibs = [
+            {"format": ["Vinyl", "LP"], "format_quantity": 1},
+            {"format": ["Vinyl", '7"'], "format_quantity": 1},
+        ]
+        assert len({_layout_key(r) for r in sibs}) == 2
