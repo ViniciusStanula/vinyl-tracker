@@ -60,6 +60,7 @@ export function buildOrderBy(sort: string): Prisma.Sql {
 type DiscoRow = {
   id: string;
   titulo: string;
+  tituloSeo: string | null;
   artista: string;
   slug: string;
   estilo: string | null;
@@ -84,6 +85,8 @@ export type ProcessedDisco = {
   id: string;
   slug: string;
   titulo: string;
+  /** SEO-clean title (crawler/titulo_seo.py) -- prefer over `titulo` for display. */
+  tituloSeo: string | null;
   artista: string;
   estilo: string | null;
   imgUrl: string | null;
@@ -186,6 +189,7 @@ export async function queryDiscos(params: {
         SELECT
           d.id,
           d.titulo,
+          d.titulo_seo        AS "tituloSeo",
           d.artista,
           d.slug,
           d.estilo,
@@ -291,6 +295,7 @@ export async function queryDiscos(params: {
       id:             row.id,
       slug:           row.slug,
       titulo:         row.titulo,
+      tituloSeo:      row.tituloSeo,
       artista:        row.artista,
       estilo:         row.estilo,
       imgUrl:         row.imgUrl,

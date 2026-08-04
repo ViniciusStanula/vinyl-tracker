@@ -20,6 +20,7 @@ import { slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
+import { slugifyColor } from "@/lib/db/vinilColorido";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, getTopBotHitSlugs, type RelatedDeal } from "@/lib/db/disco";
 import { getEstilosList } from "@/lib/db/estilo";
 import { getPaisDisplayName, ISO2_TO_SLUG } from "@/lib/paises";
@@ -57,7 +58,11 @@ export async function generateMetadata({
   }
   const meta = await getDiscoMeta(slug).catch(() => null);
 
-  const tituloLimpo = cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
+  // titulo_seo (crawler/titulo_seo.py) is the SEO-clean title: base album
+  // title from verified discogs/mb data plus a color/edition suffix only
+  // when a same-artist sibling actually needs disambiguating. Falls back to
+  // the old regex-only cleaner for the ~0% of rows not yet backfilled.
+  const tituloLimpo = meta?.tituloSeo || cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
   const isUnknownArtistDisco = disco.artista.toLowerCase() === "artista não identificado";
   const includeArtist = !isUnknownArtistDisco && !tituloLimpo.toLowerCase().includes(disco.artista.toLowerCase());
   const base = includeArtist ? `${tituloLimpo} em Vinil — ${disco.artista}` : `${tituloLimpo} em Vinil`;
@@ -150,6 +155,11 @@ export default async function DiscoPage({
   // Excluded non-vinyl records (CD incident, 2026-06-11) return 404 —
   // never 200 with empty content, never a redirect.
   if (disco.format && disco.format !== "vinyl") notFound();
+  // SEO-clean title (crawler/titulo_seo.py): H1, JSON-LD, alt text, and
+  // outbound-link labels all use this instead of the raw Amazon título, so
+  // structured data matches what the page visibly shows. Falls back to the
+  // regex-only cleaner for the ~0% of rows not yet backfilled.
+  const tituloSeo = meta?.tituloSeo || cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
   const albumInfo = meta?.lastfmListeners != null
     ? {
         listeners:   meta.lastfmListeners,
@@ -523,8 +533,8 @@ export default async function DiscoPage({
     "@context": "https://schema.org",
     "@type": "Product",
     "@id": `${siteUrl}/disco/${slug}`,
-    name: disco.titulo,
-    description: `Compre ${disco.titulo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}.`,
+    name: tituloSeo,
+    description: `Compre ${tituloSeo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}.`,
     sku: disco.asin,
     // Barcode from Amazon's Creators API (itemInfo.externalIds). This is the
     // identifier Google uses to match a listing to a real-world product, so it
@@ -600,7 +610,7 @@ export default async function DiscoPage({
     "@context": "https://schema.org",
     "@type": "MusicAlbum",
     "@id": `${siteUrl}/disco/${slug}#album`,
-    name: disco.titulo,
+    name: tituloSeo,
     url: `${siteUrl}/disco/${slug}`,
     ...(disco.imgUrl ? { image: disco.imgUrl } : {}),
     // @id points at the MusicGroup the artist page already publishes, which
@@ -701,15 +711,15 @@ export default async function DiscoPage({
         name: disco.artista,
         item: `${siteUrl}/artista/${slugifyArtist(disco.artista)}`,
       },
-      { "@type": "ListItem", position: 3, name: disco.titulo },
+      { "@type": "ListItem", position: 3, name: tituloSeo },
     ],
   });
 
   // Price FAQ — programmatic Q&A from the price history we already computed.
   // Rendered visibly below and mirrored in FAQPage JSON-LD (required by Google).
-  // Use the cleaned album name (same as the page title) so questions read
+  // Use the same clean title as the page's H1 so questions read
   // "... de What Color Is Love ..." not "... de LP What Color Is Love [Vinyl] ...".
-  const tituloLimpo = cleanAlbumTitle(disco.titulo, disco.artista) || disco.titulo;
+  const tituloLimpo = tituloSeo;
   const faqItems =
     valores.length >= 2
       ? [
@@ -781,7 +791,7 @@ export default async function DiscoPage({
         </Link>
         <span aria-hidden="true">›</span>
         <span className="text-parchment truncate max-w-[200px] sm:max-w-xs">
-          {disco.titulo}
+          {tituloSeo}
         </span>
       </nav>
 
@@ -804,7 +814,7 @@ export default async function DiscoPage({
                 {disco.imgUrl ? (
                   <Image
                     src={disco.imgUrl}
-                    alt={`${disco.titulo} por ${disco.artista}, capa do álbum`}
+                    alt={`${tituloSeo} por ${disco.artista}, capa do álbum`}
                     fill
                     sizes="(max-width: 1024px) 100vw, 480px"
                     className="object-cover"
@@ -859,7 +869,7 @@ export default async function DiscoPage({
               )}
             </p>
             <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-black text-cream leading-tight mb-3 [text-wrap:balance]">
-              {disco.titulo}
+              {tituloSeo}
             </h1>
           </div>
 
@@ -892,7 +902,7 @@ export default async function DiscoPage({
             {(() => {
               const alertProps = {
                 recordId:  disco.id,
-                titulo:    disco.titulo,
+                titulo:    tituloSeo,
                 artista:   disco.artista,
                 precoAtual,
                 imgUrl:    disco.imgUrl,
@@ -1039,7 +1049,7 @@ export default async function DiscoPage({
                           target="_blank"
                           rel="nofollow noopener noreferrer"
                           className="text-xs text-dust hover:text-parchment transition-colors"
-                          aria-label={`Ver ${disco.titulo} no Last.fm`}
+                          aria-label={`Ver ${tituloSeo} no Last.fm`}
                         >
                           Dados: Last.fm ↗
                         </a>
@@ -1126,7 +1136,7 @@ export default async function DiscoPage({
                       target="_blank"
                       rel="nofollow noopener noreferrer"
                       className="text-xs text-dust hover:text-parchment transition-colors"
-                      aria-label={`Ver ${disco.titulo} no Last.fm`}
+                      aria-label={`Ver ${tituloSeo} no Last.fm`}
                     >
                       Dados: Last.fm ↗
                     </a>
@@ -1144,7 +1154,7 @@ export default async function DiscoPage({
                         target="_blank"
                         rel="nofollow noopener noreferrer"
                         className="text-xs text-dust hover:text-parchment transition-colors"
-                        aria-label={`Ver ${disco.titulo} na Wikipedia`}
+                        aria-label={`Ver ${tituloSeo} na Wikipedia`}
                       >
                         Dados: Wikipedia ↗
                       </a>
@@ -1168,7 +1178,7 @@ export default async function DiscoPage({
                               target="_blank"
                               rel="nofollow noopener noreferrer"
                               className="hover:text-parchment transition-colors"
-                              aria-label={`Ver ${disco.titulo} no ${src.name}`}
+                              aria-label={`Ver ${tituloSeo} no ${src.name}`}
                             >
                               {src.name} ↗
                             </a>
@@ -1191,6 +1201,26 @@ export default async function DiscoPage({
                         <dt className="text-dust">Formato</dt>
                         <dd className="text-cream font-medium text-right">
                           {formatoVinilPt(meta?.discogsFormatDesc) ?? mbInfo.primaryType}
+                        </dd>
+                      </div>
+                    )}
+                    {/* Links to the /vinil-colorido hub for that color. A
+                        compound value ("Azul / Rosa") links via its first
+                        color -- the hub page's substring match still lists
+                        this record either way. slugifyColor just strips accents
+                        and spaces, matching the same key shape
+                        lib/db/vinilColorido.ts uses, so no reverse lookup map
+                        is needed here. */}
+                    {meta?.vinilCor && (
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-dust">Cor</dt>
+                        <dd className="text-cream font-medium text-right">
+                          <Link
+                            href={`/vinil-colorido/${slugifyColor(meta.vinilCor)}`}
+                            className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
+                          >
+                            {meta.vinilCor}
+                          </Link>
                         </dd>
                       </div>
                     )}

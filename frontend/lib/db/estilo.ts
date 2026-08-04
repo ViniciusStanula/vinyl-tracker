@@ -337,6 +337,7 @@ export type SerializedEstiloData = {
   discos: {
     id: string;
     titulo: string;
+    tituloSeo: string | null;
     artista: string;
     slug: string;
     imgUrl: string | null;
@@ -445,6 +446,7 @@ const _getEstiloPageData = unstable_cache(
     const mainQuery = prisma.$queryRaw<{
       id: string;
       titulo: string;
+      tituloSeo: string | null;
       artista: string;
       slug: string;
       imgUrl: string | null;
@@ -464,6 +466,7 @@ const _getEstiloPageData = unstable_cache(
       SELECT
         c.id,
         c.titulo,
+        c.titulo_seo AS "tituloSeo",
         c.artista,
         c.slug,
         c."imgUrl",
@@ -543,6 +546,7 @@ const _getEstiloPageData = unstable_cache(
         return {
           id: row.id,
           titulo: row.titulo,
+          tituloSeo: row.tituloSeo,
           artista: row.artista,
           slug: row.slug,
           imgUrl: row.imgUrl,

@@ -65,7 +65,7 @@ export default async function DiscosAbaixo200Page() {
       "@type": "ListItem",
       position: i + 1,
       url: `${SITE_URL}/disco/${disco.slug}`,
-      name: disco.titulo,
+      name: disco.tituloSeo || disco.titulo,
     })),
   });
 

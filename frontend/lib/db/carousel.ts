@@ -18,6 +18,7 @@ function buildOrderBy(sort: string): Prisma.Sql {
 type CarouselRow = {
   id: string;
   titulo: string;
+  tituloSeo: string | null;
   artista: string;
   slug: string;
   estilo: string | null;
@@ -75,6 +76,7 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
       SELECT DISTINCT ON (d.artista)
         d.id,
         d.titulo,
+        d.titulo_seo     AS "tituloSeo",
         d.artista,
         d.slug,
         d.estilo,
@@ -154,6 +156,7 @@ export async function queryCarouselDiscos(): Promise<ProcessedDisco[]> {
       id:              row.id,
       slug:            row.slug,
       titulo:          row.titulo,
+      tituloSeo:       row.tituloSeo,
       artista:         row.artista,
       estilo:          row.estilo,
       imgUrl:          row.imgUrl,
@@ -242,6 +245,7 @@ async function queryTopArtistAllDeals(
       SELECT
         d.id,
         d.titulo,
+        d.titulo_seo     AS "tituloSeo",
         d.artista,
         d.slug,
         d.estilo,
@@ -318,6 +322,7 @@ async function queryTopArtistAllDeals(
         id:              row.id,
         slug:            row.slug,
         titulo:          row.titulo,
+        tituloSeo:       row.tituloSeo,
         artista:         row.artista,
         estilo:          row.estilo,
         imgUrl:          row.imgUrl,

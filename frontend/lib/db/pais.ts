@@ -12,6 +12,7 @@ export type SerializedPaisData = {
   discos: {
     id: string;
     titulo: string;
+    tituloSeo: string | null;
     artista: string;
     slug: string;
     imgUrl: string | null;
@@ -62,6 +63,7 @@ const _getPaisPageData = unstable_cache(
     const mainQuery = prisma.$queryRaw<{
       id: string;
       titulo: string;
+      tituloSeo: string | null;
       artista: string;
       slug: string;
       imgUrl: string | null;
@@ -81,6 +83,7 @@ const _getPaisPageData = unstable_cache(
       SELECT
         c.id,
         c.titulo,
+        c.titulo_seo AS "tituloSeo",
         c.artista,
         c.slug,
         c."imgUrl",
@@ -139,6 +142,7 @@ const _getPaisPageData = unstable_cache(
         return {
           id: row.id,
           titulo: row.titulo,
+          tituloSeo: row.tituloSeo,
           artista: row.artista,
           slug: row.slug,
           imgUrl: row.imgUrl,

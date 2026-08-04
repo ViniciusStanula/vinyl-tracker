@@ -12,6 +12,7 @@ import re
 import json
 import time
 import logging
+import unicodedata
 import urllib.parse
 import urllib.request
 from difflib import SequenceMatcher
@@ -153,6 +154,28 @@ def enrich_new_artists(
 
 # ── Album enrichment ──────────────────────────────────────────────────────────
 
+_APOSTROPHE_VARIANTS = re.compile(r"['’´`]")
+
+
+def _fold(s: str) -> str:
+    """Normalize apostrophe variants to a single canonical form, then strip
+    accents (NFKD, drop combining marks). Each base character maps 1:1 to its
+    unaccented form, so a match position on the folded string lines up with
+    the same position in the original -- Amazon frequently drops diacritics
+    ("Bjork" for "Björk") that our own artist field keeps.
+    Apostrophes are canonicalized FIRST, not folded alongside accents: a bare
+    "´" (acute accent, U+00B4) NFKD-decomposes to a space + combining mark,
+    so accent-stripping alone silently turned it into a space and broke the
+    match ("Guns N´ Roses" no longer matching "Guns N' Roses" at all)."""
+    s = _APOSTROPHE_VARIANTS.sub("'", s)
+    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+
+def _fold_pattern(artist: str) -> str:
+    """Regex source matching an accent- and apostrophe-folded artist name."""
+    return re.escape(_fold(artist))
+
+
 _VINYL_WORDS = re.compile(
     r"\b(vinyl|vinil|\d*x?lp|gram|\d+\s*g|colored|colou?red|colorid[oa]|"
     r"remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|150|200|220|"
@@ -187,7 +210,9 @@ _TRAILING_ANNIVERSARY = re.compile(
 # or "- Vinil Disney - ...". Only media/format words — no colours — so a real
 # title word is never eaten. Leading separators/spaces allowed before the token.
 _LEADING_FORMAT = re.compile(
-    r"^[\s\-]*(?:(?:disco\s+de\s+vin(?:il|yl)(?:\s+novo)?|vinyl|vinil|\d*x?lp|cd)\b[\s\-]*)+",
+    # "de" is optional -- Amazon also lists as bare "Disco Vinil Lp ...", not
+    # just "Disco de Vinil ...".
+    r"^[\s\-]*(?:(?:disco\s+(?:de\s+)?vin(?:il|yl)(?:\s+novo)?|vinyl|vinil|\d*x?lp|cd)\b[\s\-]*)+",
     re.IGNORECASE,
 )
 
@@ -214,13 +239,23 @@ def clean_album_title(title: str, artist: str) -> str:
     # Strip leading format noise ("LP VINIL ...") before the artist-prefix pass.
     t = _LEADING_FORMAT.sub("", t)
     t = _FEATURES_CALLOUT.sub("", t)
-    prefix = re.compile(r"^" + re.escape(artist) + r"\s*[-/:]\s*", re.IGNORECASE)
-    t = prefix.sub("", t)
+    # Amazon listings drop diacritics ("Bjork" for "Björk") and mix straight
+    # ('), curly (' '), and acute (´) apostrophes ("Guns N' Roses" vs "Guns N´
+    # Roses"). A literal match on our own artist string missed both variants,
+    # left the prefix unstripped, and downstream a real subtitle or even the
+    # real title itself ("Utopia" after "Bjork - ") got mistaken for a
+    # dash-tail and dropped entirely. _fold() strips accents (NFKD, drop
+    # combining marks) one-for-one so the match position on the folded string
+    # lines up with the original -- apostrophes are handled by a char class.
+    prefix = re.compile(r"^" + _fold_pattern(artist) + r"\s*[-/:]\s*", re.IGNORECASE)
+    m = prefix.match(_fold(t))
+    if m:
+        t = t[m.end():]
     # Amazon sometimes appends the artist name after a bracketed edition/format
     # marker, e.g. "... [Vinyl] Dolly Parton". Only that exact tail shape is a
     # safe signal — a title like "Faz Igual a Cardi B [Explicit]" keeps its name.
     trailing_artist = bool(
-        re.search(r"[\]\)]\s*" + re.escape(artist) + r"\s*$", title, re.IGNORECASE)
+        re.search(r"[\]\)]\s*" + _fold_pattern(artist) + r"\s*$", _fold(title), re.IGNORECASE)
     )
     t = re.sub(r"\s*\[[^\]]*\]", "", t)
     # Amazon's bare "(X)" explicit/clean marker, e.g. "AWAKE (X) (2LP)".
@@ -231,8 +266,20 @@ def clean_album_title(title: str, artist: str) -> str:
         t,
     )
     dash = t.rfind(" - ")
-    if dash > 0 and _VINYL_WORDS.search(t[dash + 3:]):
-        t = t[:dash]
+    if dash > 0:
+        tail = t[dash + 3:]
+        tail_words = tail.split()
+        # A short tail ("Série Clássicos em Vinil", 4 words) is almost always
+        # a junk phrase in its entirety -- a reissue-series label, not real
+        # content -- so a junk word anywhere in it, even the last word, is
+        # enough to wipe the whole thing. A long tail is more likely to be a
+        # real subtitle with one incidental junk word tacked on ("Alternative
+        # Unplugged: Rare Acoustic Recordings Lp 180 G" -- "Lp" only at the
+        # very end used to nuke real content along with it), so only a junk
+        # word near the START counts there.
+        scope = tail if len(tail_words) <= 5 else " ".join(tail_words[:3])
+        if _VINYL_WORDS.search(scope):
+            t = t[:dash]
     t = _TRAILING_ANNIVERSARY.sub("", t)
     # Amazon glues an "explicit_lyrics" flag onto the title with no space,
     # e.g. "After Hoursexplicit_lyrics" → "After Hours".
@@ -241,10 +288,12 @@ def clean_album_title(title: str, artist: str) -> str:
     # shape detected above, and never empty the result (guards self-titled
     # albums like "Dua Lipa" / "Dua Lipa").
     if trailing_artist:
-        suffix = re.compile(r"\s*[-–]?\s*" + re.escape(artist) + r"\s*$", re.IGNORECASE)
-        stripped = suffix.sub("", t).strip()
-        if stripped:
-            t = stripped
+        suffix = re.compile(r"\s*[-–]?\s*" + _fold_pattern(artist) + r"\s*$", re.IGNORECASE)
+        m = suffix.search(_fold(t))
+        if m:
+            stripped = t[:m.start()].strip()
+            if stripped:
+                t = stripped
     # Drop bare trailing format tokens ("8 Letters vinyl", "posh LP", "... 45 rpm").
     # If this would empty the title (e.g. "MONO", "EP"), keep the pre-strip value.
     stripped = _TRAILING_JUNK.sub("", t).strip()

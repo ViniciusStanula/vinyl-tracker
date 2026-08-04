@@ -123,7 +123,7 @@ export default async function ArtistaPage({
       "@type": "ListItem",
       position: i + 1,
       url: `${siteUrl}/disco/${disco.slug}`,
-      name: disco.titulo,
+      name: disco.tituloSeo || disco.titulo,
     })),
   });
 

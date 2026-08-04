@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getDiscoWithPrecos } from "@/lib/db/disco";
+import { getDiscoWithPrecos, getDiscoMeta } from "@/lib/db/disco";
 
 export const revalidate = 7200;
 export const alt = "Histórico de preço do disco de vinil";
@@ -12,7 +12,11 @@ export default async function OgImage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const disco = await getDiscoWithPrecos(slug).catch(() => null);
+  const [disco, meta] = await Promise.all([
+    getDiscoWithPrecos(slug).catch(() => null),
+    getDiscoMeta(slug).catch(() => null),
+  ]);
+  const tituloSeo = meta?.tituloSeo || disco?.titulo;
 
   const valores = disco?.precos.map((p) => Number(p.precoBrl)) ?? [];
   const precoAtual = valores.at(-1) ?? null;
@@ -52,7 +56,7 @@ export default async function OgImage({
             Garimpa Vinil
           </div>
           <div style={{ color: "#f0e6d0", fontSize: 52, fontWeight: 800, lineHeight: 1.1 }}>
-            {(disco?.titulo ?? "Disco de Vinil").slice(0, 70)}
+            {(tituloSeo ?? "Disco de Vinil").slice(0, 70)}
           </div>
           {disco?.artista && (
             <div style={{ color: "#b8936a", fontSize: 34 }}>{disco.artista}</div>
