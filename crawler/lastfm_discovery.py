@@ -31,6 +31,9 @@ import psycopg2.extras
 from bs4 import BeautifulSoup
 
 from database import get_connection
+# The search-card parsers are shared with main.py rather than copied, so a
+# fix to Amazon's markup lands in both crawlers at once.
+from main import extract_rating, extract_review_count
 from scrape_lock import ScrapeLock
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -202,8 +205,10 @@ def ensure_discovery_tables(conn) -> None:
                 discovered_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
             )
         """)
-        # Backfill the column on tables created before img capture existed.
+        # Backfill the columns on tables created before each capture existed.
         cur.execute("ALTER TABLE discovered_vinyls ADD COLUMN IF NOT EXISTS img_url TEXT")
+        cur.execute("ALTER TABLE discovered_vinyls ADD COLUMN IF NOT EXISTS rating DOUBLE PRECISION")
+        cur.execute('ALTER TABLE discovered_vinyls ADD COLUMN IF NOT EXISTS "reviewCount" INTEGER')
         cur.execute("""
             CREATE TABLE IF NOT EXISTS discovery_run_state (
                 id          INTEGER     PRIMARY KEY DEFAULT 1,
@@ -277,6 +282,8 @@ def upsert_discovered(conn, rows: list[dict]) -> tuple[int, int]:
                 r.get("price_brl") or None,
                 r.get("img_url") or None,
                 r.get("source", "lastfm_artist_search"),
+                r.get("rating"),
+                r.get("reviewCount"),
             )
             for r in to_insert
         ]
@@ -284,8 +291,9 @@ def upsert_discovered(conn, rows: list[dict]) -> tuple[int, int]:
             cur,
             """
             INSERT INTO discovered_vinyls
-                (asin, titulo, artist_name, price_brl, img_url, source, discovered_at)
-            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                (asin, titulo, artist_name, price_brl, img_url, source, discovered_at,
+                 rating, "reviewCount")
+            VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s, %s)
             ON CONFLICT (asin) DO NOTHING
             """,
             data,
@@ -451,8 +459,19 @@ def _parse_page(soup) -> list[dict]:
                 if src and not src.startswith("data:"):
                     img_url = re.sub(r"\._[A-Z0-9_,]+_\.", "._AC_SL1500_.", src)
 
+        # ── Rating and review count ───────────────────────────────────────────
+        # Same sibling caution as the image: on an "outro formato" card the
+        # stars belong to card_asin (often the CD), not to the vinyl variant.
+        # Amazon rates the product, not the pressing, so borrowing them would
+        # publish the CD's score on the vinyl page.
+        rating = review_count = None
+        if vinyl_asin == card_asin:
+            rating = extract_rating(card)
+            review_count = extract_review_count(card)
+
         results.append({
             "asin": vinyl_asin, "titulo": title, "price_brl": price, "img_url": img_url,
+            "rating": rating, "reviewCount": review_count,
         })
 
     return results
