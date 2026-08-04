@@ -332,6 +332,23 @@ def sibling_consensus(sibs: list[dict], key: str) -> str | None:
     return values.pop() if len(values) == 1 else None
 
 
+# Format words that change how a record is laid out across sides. Everything
+# else Discogs lists — Limited Edition, Reissue, Remastered, Repress, colours,
+# Album vs Single — describes the edition, not the physical arrangement.
+_LAYOUT_WORDS = frozenset({
+    "lp", "12\"", "10\"", "7\"", "box set", "vinyl", "acetate", "flexi-disc",
+})
+
+
+def _layout_key(result: dict) -> tuple:
+    """What a pressing looks like physically: how many discs, and of what."""
+    words = frozenset(
+        w.lower() for w in (result.get("format") or []) if w.lower() in _LAYOUT_WORDS
+    )
+    qty = str(result.get("format_quantity") or "")
+    return (qty, tuple(sorted(words)))
+
+
 def pressing_invariant(results: list[dict]) -> dict:
     """Fields every matching vinyl pressing agrees on, and nothing else.
 
@@ -513,6 +530,7 @@ _COLUMNS = (
     "discogs_have",
     "discogs_want",
     "discogs_artist",
+    "discogs_master_id",
 )
 
 
@@ -606,7 +624,13 @@ def ensure_columns(conn) -> None:
                  -- /artista/<slug> URLs, so the decision needs evidence first,
                  -- and heuristics on our own column cannot supply it — "3 Doors
                  -- Down" and "6LACK" look like junk and are not.
-                 ADD COLUMN IF NOT EXISTS discogs_artist            TEXT"""
+                 ADD COLUMN IF NOT EXISTS discogs_artist            TEXT,
+                 -- The master, for records resolved by title rather than
+                 -- barcode. They have no release id, so the page credited
+                 -- Discogs as plain text with nowhere to point — 2,911 records,
+                 -- 2,892 of which carried a master year, meaning the master had
+                 -- been fetched and its id discarded.
+                 ADD COLUMN IF NOT EXISTS discogs_master_id         INTEGER"""
         )
     conn.commit()
 
@@ -680,6 +704,7 @@ def album_level_fields(dg, verified: list[dict]) -> dict:
         master = dg.master(mid) or {}
         year = master.get("year")
         return {
+            "master_id": mid,
             "year": year if isinstance(year, int) and 1900 < year < 2100 else None,
             "styles": ", ".join(master.get("styles") or []) or None,
             "genres": ", ".join(master.get("genres") or []) or None,
@@ -730,12 +755,13 @@ def salvage_by_title(dg, conn, args, slug, artista, titulo) -> bool:
                    discogs_title       = COALESCE(discogs_title, %s),
                    discogs_tracklist   = COALESCE(discogs_tracklist, %s),
                    discogs_master_year = COALESCE(%s, discogs_master_year),
+                   discogs_master_id   = COALESCE(%s, discogs_master_id),
                    discogs_checked_at  = NOW()
                WHERE slug = %s""",
             (alb.get("styles"), alb.get("genres"), alb.get("title"),
              json.dumps(alb["tracks"], ensure_ascii=False)
              if alb.get("tracks") else None,
-             alb.get("year"), slug),
+             alb.get("year"), alb.get("master_id"), slug),
         )
     elif alb:
         print(f"  SALVAGE {artista[:16]:18s} | {titulo[:26]:28s} "
@@ -845,7 +871,14 @@ def main() -> None:
         # same object — a 1LP and a 2LP variant of one album have different side
         # letters. Compared on the search result's own format list, so this
         # costs no extra calls.
-        same_format = len({tuple(sorted(r.get("format") or [])) for r in siblings}) == 1
+        #
+        # Only the parts that decide the layout count. Comparing the whole
+        # format list treated "Limited Edition" and "Reissue" as structural and
+        # threw away good data: Jack White "No Name" returns four pressings that
+        # are all Vinyl/LP/Album and differ solely by those words, and its
+        # 13-track A/B tracklist was dropped for it. 6,218 resolved records have
+        # no tracklist, 2,537 of them with this gate as the reason.
+        same_format = len({_layout_key(r) for r in siblings}) == 1
 
         catno = (
             clean_catno(next((l.get("catno") for l in (rel.get("labels") or [])), None))
@@ -1072,12 +1105,13 @@ def run_no_barcode(conn, args) -> None:
                        discogs_title             = COALESCE(discogs_title, %s),
                        discogs_tracklist         = COALESCE(discogs_tracklist, %s),
                        discogs_master_year       = COALESCE(%s, discogs_master_year),
+                       discogs_master_id         = COALESCE(%s, discogs_master_id),
                        discogs_master_checked_at = NOW(),
                        discogs_checked_at        = NOW()
                    WHERE slug = %s""",
                 (styles, genres, dg_title,
                  json.dumps(tracks, ensure_ascii=False) if tracks else None,
-                 year, slug),
+                 year, alb.get("master_id"), slug),
             )
         else:
             print(

@@ -28,6 +28,7 @@ export type DiscoMeta = {
   discogsCountry: string | null;
   discogsMasterYear: number | null;
   discogsReleaseId: number | null;
+  discogsMasterId: number | null;
   discogsLabel: string | null;
   discogsFormatDesc: string | null;
   discogsReleased: string | null;
@@ -148,6 +149,7 @@ export const getDiscoMeta = (slug: string) =>
         d.discogs_country      AS "discogsCountry",
         d.discogs_master_year  AS "discogsMasterYear",
         d.discogs_release_id   AS "discogsReleaseId",
+        d.discogs_master_id    AS "discogsMasterId",
         d.discogs_label        AS "discogsLabel",
         d.discogs_format_desc  AS "discogsFormatDesc",
         d.discogs_released     AS "discogsReleased",

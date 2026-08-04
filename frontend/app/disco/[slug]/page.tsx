@@ -293,14 +293,24 @@ export default async function DiscoPage({
                 url: `https://musicbrainz.org/release-group/${meta.mbMbid}`,
               }]
             : []),
+          // The release when a barcode resolved one, otherwise the master the
+          // data actually came from. Records matched by title have no release
+          // id, and 2,911 of them credited Discogs as plain text with nowhere
+          // to point — even though the master had been fetched and its id
+          // thrown away.
           ...(meta?.discogsReleaseId
             ? [{
                 name: "Discogs",
                 url: `https://www.discogs.com/release/${meta.discogsReleaseId}`,
               }]
-            : discogsTracks.length > 0 || dgYear
-              ? [{ name: "Discogs", url: null }]
-              : []),
+            : meta?.discogsMasterId
+              ? [{
+                  name: "Discogs",
+                  url: `https://www.discogs.com/master/${meta.discogsMasterId}`,
+                }]
+              : discogsTracks.length > 0 || dgYear
+                ? [{ name: "Discogs", url: null }]
+                : []),
         ],
       }
     : null;
@@ -665,7 +675,9 @@ export default async function DiscoPage({
             // a barcode resolved it, so it is never a guess.
             ...(meta?.discogsReleaseId
               ? [`https://www.discogs.com/release/${meta.discogsReleaseId}`]
-              : []),
+              : meta?.discogsMasterId
+                ? [`https://www.discogs.com/master/${meta.discogsMasterId}`]
+                : []),
           ],
         }
       : {}),
