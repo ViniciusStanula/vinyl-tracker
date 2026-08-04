@@ -5,6 +5,7 @@ import { unstable_cache } from "next/cache";
 type OfertaRow = {
   id: string;
   titulo: string;
+  tituloSeo: string | null;
   artista: string;
   slug: string;
   estilo: string | null;
@@ -37,6 +38,7 @@ export async function queryOfertas(): Promise<ProcessedDisco[]> {
       SELECT
         d.id,
         d.titulo,
+        d.titulo_seo                                                      AS "tituloSeo",
         d.artista,
         d.slug,
         d.estilo,
@@ -86,6 +88,7 @@ export async function queryOfertas(): Promise<ProcessedDisco[]> {
         id:              row.id,
         slug:            row.slug,
         titulo:          row.titulo,
+        tituloSeo:       row.tituloSeo,
         artista:         row.artista,
         estilo:          row.estilo,
         imgUrl:          row.imgUrl,

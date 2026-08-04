@@ -16,6 +16,10 @@ export interface DiscoCardProps {
   id: string;
   slug: string;
   titulo: string;
+  /** SEO-clean title (crawler/titulo_seo.py) -- preferred over `titulo` for
+   * display when present. Optional so callers that haven't been updated to
+   * select it yet still render correctly with the raw título. */
+  tituloSeo?: string | null;
   artista: string;
   estilo: string | null;
   imgUrl: string | null;
@@ -92,6 +96,7 @@ export default memo(function DiscoCard({
   const showOriginalPrice = descontoPercent > 0;
   const dealScore         = disco.dealScore ?? null;
   const artistaSlug       = slugifyArtist(disco.artista);
+  const titulo            = disco.tituloSeo || disco.titulo;
   const sparkline         = disco.sparkline ?? [];
   // Cards render at ~160-230px; the DB stores 1500px Amazon URLs (~200KB).
   // SL416 covers 2x DPR at ~30KB via Amazon's on-the-fly CDN resize.
@@ -112,7 +117,7 @@ export default memo(function DiscoCard({
       <Link
         href={`/disco/${disco.slug}`}
         className="absolute inset-0 z-10"
-        aria-label={`Ver histórico de preços de ${disco.titulo}`}
+        aria-label={`Ver histórico de preços de ${titulo}`}
       />
 
       {/* ── Album art ─────────────────────────────────────────────── */}
@@ -120,7 +125,7 @@ export default memo(function DiscoCard({
         {imgUrl ? (
           <Image
             src={imgUrl}
-            alt={`${disco.titulo} por ${disco.artista}, capa do álbum`}
+            alt={`${titulo} por ${disco.artista}, capa do álbum`}
             fill
             sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, (max-width: 1279px) 25vw, (max-width: 1535px) 20vw, 17vw"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
@@ -178,7 +183,7 @@ export default memo(function DiscoCard({
               target="_blank"
               rel="sponsored noopener noreferrer"
               className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity bg-record/80 text-cream text-xs font-medium px-2.5 py-1.5 rounded-md backdrop-blur-sm"
-              aria-label={`Ver ${disco.titulo} ${lojaComPrep}`}
+              aria-label={`Ver ${titulo} ${lojaComPrep}`}
             >
               {lojaNome} ↗
               <span className="block text-[9px] text-dust/70 leading-none mt-0.5">#anúncio</span>
@@ -203,9 +208,9 @@ export default memo(function DiscoCard({
         <p
           id={titleId}
           className="font-display text-cream text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] mt-0.5"
-          title={disco.titulo}
+          title={titulo}
         >
-          {disco.titulo}
+          {titulo}
         </p>
 
         {/* ── Price section ──────────────────────────────────────── */}

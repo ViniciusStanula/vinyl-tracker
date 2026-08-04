@@ -67,7 +67,7 @@ export default async function DecadaPage({
       "@type": "ListItem",
       position: i + 1,
       url: `${SITE_URL}/disco/${d.slug}`,
-      name: d.titulo,
+      name: d.tituloSeo || d.titulo,
     })),
   });
 

@@ -31,6 +31,7 @@ const INITIAL_SQL = Prisma.sql`upper(left(translate(artista,
 type ArtistaRow = {
   id: string;
   titulo: string;
+  tituloSeo: string | null;
   artista: string;
   slug: string;
   estilo: string | null;
@@ -67,6 +68,7 @@ export type ArtistaPageData = {
 type UnavailableRow = {
   id: string;
   titulo: string;
+  tituloSeo: string | null;
   artista: string;
   slug: string;
   estilo: string | null;
@@ -183,6 +185,7 @@ const _getArtistaPageData = unstable_cache(
         SELECT
           d.id,
           d.titulo,
+          d.titulo_seo        AS "tituloSeo",
           d.artista,
           d.slug,
           d.estilo,
@@ -263,7 +266,7 @@ const _getArtistaPageData = unstable_cache(
     `;
 
     const unavailableQuery = prisma.$queryRaw<UnavailableRow[]>`
-      SELECT id, titulo, artista, slug, estilo, "imgUrl", url, marketplace, rating, "reviewCount"
+      SELECT id, titulo, titulo_seo AS "tituloSeo", artista, slug, estilo, "imgUrl", url, marketplace, rating, "reviewCount"
       FROM "Disco"
       WHERE artista = ANY(${variants})
         AND disponivel = FALSE
@@ -288,6 +291,7 @@ const _getArtistaPageData = unstable_cache(
       id:              row.id,
       slug:            row.slug,
       titulo:          row.titulo,
+      tituloSeo:       row.tituloSeo,
       artista:         row.artista,
       estilo:          row.estilo,
       imgUrl:          row.imgUrl,
@@ -383,6 +387,7 @@ const _getArtistaPageData = unstable_cache(
         id:              row.id,
         slug:            row.slug,
         titulo:          row.titulo,
+        tituloSeo:       row.tituloSeo,
         artista:         row.artista,
         estilo:          row.estilo,
         imgUrl:          row.imgUrl,

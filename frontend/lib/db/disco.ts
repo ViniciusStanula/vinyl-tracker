@@ -42,11 +42,20 @@ export type DiscoMeta = {
   mbBarcode: string | null;
   mbReleaseCountry: string | null;
   ean: string | null;
+  // SEO-clean display title: base title (discogs_title/mb_title, gated by a
+  // meaningful-overlap guard, falling back to a regex-cleaned título) plus a
+  // color/edition/version suffix ONLY when real pressing data justifies it.
+  // See crawler/titulo_seo.py. NULL only for the ~0% of rows never backfilled.
+  tituloSeo: string | null;
+  vinilCor: string | null;
+  vinilEdicao: string | null;
+  vinilVersao: string | null;
 };
 
 export type RelatedDeal = {
   id: string;
   titulo: string;
+  tituloSeo: string | null;
   artista: string;
   slug: string;
   imgUrl: string | null;
@@ -162,7 +171,11 @@ export const getDiscoMeta = (slug: string) =>
         d.mb_catalog_number    AS "mbCatalogNumber",
         d.mb_barcode           AS "mbBarcode",
         d.mb_release_country   AS "mbReleaseCountry",
-        d.ean                  AS "ean"
+        d.ean                  AS "ean",
+        d.titulo_seo           AS "tituloSeo",
+        d.vinil_cor            AS "vinilCor",
+        d.vinil_edicao         AS "vinilEdicao",
+        d.vinil_versao         AS "vinilVersao"
       FROM "Disco" d
       LEFT JOIN "ArtistMeta" am ON am.artista = d.artista
       WHERE d.slug = ${slug}
@@ -225,7 +238,7 @@ export const getRelatedDeals = (discoId: string, slug: string, tags: string[]) =
       : Prisma.empty;
     return prisma.$queryRaw<RelatedDeal[]>`
       WITH candidates AS (
-        SELECT id, titulo, artista, slug, "imgUrl", url, marketplace, estilo, rating,
+        SELECT id, titulo, titulo_seo, artista, slug, "imgUrl", url, marketplace, estilo, rating,
                deal_score, confidence_level, avg_30d
         FROM "Disco"
         WHERE id != ${discoId}
@@ -240,6 +253,7 @@ export const getRelatedDeals = (discoId: string, slug: string, tags: string[]) =
       SELECT
         c.id,
         c.titulo,
+        c.titulo_seo AS "tituloSeo",
         c.artista,
         c.slug,
         c."imgUrl",
@@ -289,7 +303,7 @@ export const getArtistTopAlbums = (artista: string, discoId: string, slug: strin
     async (): Promise<RelatedDeal[]> => {
     return prisma.$queryRaw<RelatedDeal[]>`
       WITH candidates AS (
-        SELECT id, titulo, artista, slug, "imgUrl", url, marketplace, estilo, rating,
+        SELECT id, titulo, titulo_seo, artista, slug, "imgUrl", url, marketplace, estilo, rating,
                deal_score, confidence_level, avg_30d
         FROM "Disco"
         WHERE artista = ${artista}
@@ -301,7 +315,7 @@ export const getArtistTopAlbums = (artista: string, discoId: string, slug: strin
         LIMIT 4
       )
       SELECT
-        c.id, c.titulo, c.artista, c.slug, c."imgUrl", c.url, c.marketplace, c.estilo, c.rating,
+        c.id, c.titulo, c.titulo_seo AS "tituloSeo", c.artista, c.slug, c."imgUrl", c.url, c.marketplace, c.estilo, c.rating,
         c.deal_score                                         AS "dealScore",
         c.confidence_level                                   AS "confidenceLevel",
         l.preco                                              AS "precoAtual",
