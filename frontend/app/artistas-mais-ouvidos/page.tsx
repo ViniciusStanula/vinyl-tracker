@@ -13,16 +13,16 @@ export const revalidate = 14400;
 const RECORDS_CAP = 240;
 
 export const metadata: Metadata = {
-  title: "Artistas mais Ouvidos — Garimpa Vinil",
+  title: "Artistas Mais Ouvidos em Vinil | Garimpa Vinil",
   description:
-    "Os artistas mais ouvidos do mundo com as melhores ofertas em discos de vinil na Amazon Brasil.",
+    "Os artistas mais ouvidos do mundo, ranqueados por ouvintes no Last.fm, com as melhores ofertas em disco de vinil na Amazon Brasil hoje.",
   alternates: {
     canonical: "/artistas-mais-ouvidos",
   },
   openGraph: {
-    title: "Artistas mais Ouvidos — Garimpa Vinil",
+    title: "Artistas Mais Ouvidos em Vinil | Garimpa Vinil",
     description:
-      "Os artistas mais ouvidos do mundo com as melhores ofertas em discos de vinil na Amazon Brasil.",
+      "Os artistas mais ouvidos do mundo, ranqueados por ouvintes no Last.fm, com as melhores ofertas em disco de vinil na Amazon Brasil hoje.",
     url: "/artistas-mais-ouvidos",
     type: "website",
     images: ["/og-default.png"],

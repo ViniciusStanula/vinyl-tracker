@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Política de Privacidade — Garimpa Vinil",
-  description: "Como o Garimpa Vinil coleta, usa e protege seus dados.",
+  title: "Política de Privacidade | Garimpa Vinil",
+  description: "Como o Garimpa Vinil coleta, usa e protege seus dados: o que guardamos ao criar um alerta de preço, quais cookies usamos e como pedir a exclusão dos seus dados.",
   alternates: { canonical: "/politica-de-privacidade" },
 };
 

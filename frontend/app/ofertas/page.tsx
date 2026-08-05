@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   } catch {
     // DB unavailable — fall back to generic description
   }
-  const title = "Ofertas de Discos de Vinil — Garimpa Vinil";
+  const title = "Ofertas de Discos de Vinil | Garimpa Vinil";
   const description = count > 0
     ? `${count.toLocaleString("pt-BR")} discos de vinil em oferta na Amazon Brasil agora, separados por Melhor Preço, Ótima Oferta e Boa Oferta sobre a média histórica.`
     : "Discos de vinil em oferta na Amazon Brasil, separados por Melhor Preço, Ótima Oferta e Boa Oferta sobre a média histórica de preço.";

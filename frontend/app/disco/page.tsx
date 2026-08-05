@@ -19,12 +19,12 @@ export async function generateMetadata({
 }) {
   const { q, page } = await searchParams;
   if (q?.trim()) {
-    return { title: "Catálogo de Discos de Vinil — Garimpa Vinil", robots: { index: false, follow: true } };
+    return { title: "Catálogo de Discos de Vinil | Garimpa Vinil", robots: { index: false, follow: true } };
   }
   const pageNum = page !== undefined ? parseInt(page, 10) : 1;
   if (pageNum > 1) {
     return {
-      title: "Catálogo de Discos de Vinil — Garimpa Vinil",
+      title: "Catálogo de Discos de Vinil | Garimpa Vinil",
       robots: { index: false, follow: true },
       alternates: { canonical: `/disco?page=${pageNum}` },
     };
@@ -49,14 +49,14 @@ export async function generateMetadata({
 // Title/description target "catálogo completo" intent — the home page owns
 // the "melhores ofertas" intent. Keeps the two pages from competing.
 const metadata = {
-  title: "Catálogo de Discos de Vinil — Garimpa Vinil",
+  title: "Catálogo de Discos de Vinil | Garimpa Vinil",
   description:
     "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
   alternates: {
     canonical: "/disco",
   },
   openGraph: {
-    title: "Catálogo de Discos de Vinil — Garimpa Vinil",
+    title: "Catálogo de Discos de Vinil | Garimpa Vinil",
     description:
       "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
     url: "/disco",
@@ -65,7 +65,7 @@ const metadata = {
   },
   twitter: {
     card: "summary",
-    title: "Catálogo de Discos de Vinil — Garimpa Vinil",
+    title: "Catálogo de Discos de Vinil | Garimpa Vinil",
     description:
       "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
   },

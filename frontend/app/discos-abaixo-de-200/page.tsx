@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   } catch {
     // DB unavailable — fall back to generic description
   }
-  const title = "Discos de Vinil abaixo de R$ 200 — Garimpa Vinil";
+  const title = "Discos de Vinil abaixo de R$ 200 | Garimpa Vinil";
   const description = count > 0
     ? `${count.toLocaleString("pt-BR")} discos de vinil por menos de R$ 200 na Amazon, ordenados pelo desconto sobre a média histórica de preço.`
     : "Discos de vinil por menos de R$ 200 na Amazon, ordenados pelo desconto sobre a média histórica de preço.";

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import NotFoundSuggestions from "@/components/NotFoundSuggestions";
 
 export const metadata: Metadata = {
-  title: "Página não encontrada — Garimpa Vinil",
+  title: "Página não encontrada | Garimpa Vinil",
 };
 
 export default function NotFound() {

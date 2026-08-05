@@ -62,12 +62,12 @@ const faqJsonLd = toJsonLd({
 });
 
 export const metadata = {
-  title: "Sobre — Garimpa Vinil",
+  title: "Sobre | Garimpa Vinil",
   description:
     "Conheça o Garimpa Vinil: quem fez, como funciona o rastreamento de preços de vinil na Amazon Brasil e como usar o histórico para comprar na hora certa.",
   alternates: { canonical: "/sobre" },
   openGraph: {
-    title: "Sobre — Garimpa Vinil",
+    title: "Sobre | Garimpa Vinil",
     description:
       "Conheça o Garimpa Vinil: quem fez, como funciona o rastreamento de preços de vinil na Amazon Brasil e como usar o histórico para comprar na hora certa.",
     url: "/sobre",
@@ -76,7 +76,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary",
-    title: "Sobre — Garimpa Vinil",
+    title: "Sobre | Garimpa Vinil",
     description:
       "Conheça o Garimpa Vinil: quem fez, como funciona o rastreamento de preços de vinil na Amazon Brasil e como usar o histórico para comprar na hora certa.",
   },
