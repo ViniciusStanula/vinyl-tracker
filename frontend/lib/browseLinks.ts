@@ -10,13 +10,30 @@
  * significant: most-searched first, not alphabetical.
  */
 
-/** Hub pages for each browse dimension. */
+/**
+ * Hub pages for each browse dimension. The footer renders all of them.
+ *
+ * `menuColumn` marks a hub the mega menu already devotes a whole column to,
+ * ending in its own "Ver todos" link to this same href.
+ */
 export const BROWSE_LINKS = [
-  { label: "Estilos Musicais", href: "/estilos" },
-  { label: "Décadas",          href: "/decadas" },
-  { label: "Países",           href: "/paises" },
-  { label: "Discos até R$200", href: "/discos-abaixo-de-200" },
+  { label: "Estilos Musicais",  href: "/estilos",              menuColumn: true },
+  { label: "Décadas",           href: "/decadas",              menuColumn: true },
+  { label: "Países",            href: "/paises",               menuColumn: true },
+  { label: "Vinil Colorido",    href: "/vinil-colorido" },
+  { label: "Edições Especiais", href: "/edicao" },
+  { label: "Discos até R$200",  href: "/discos-abaixo-de-200" },
 ];
+
+/**
+ * What the mega menu's "Explorar" column lists — the hubs with no column of
+ * their own. Repeating the other three made Explorar run past the seven-item
+ * columns beside it while pointing at hubs already one click away, so the
+ * column now holds only what nothing else in the panel reaches.
+ *
+ * The footer keeps every hub: redundancy is the convention there.
+ */
+export const MENU_BROWSE_LINKS = BROWSE_LINKS.filter((l) => !l.menuColumn);
 
 /**
  * Decade pages. Must stay within DECADES in lib/decadas.ts —
