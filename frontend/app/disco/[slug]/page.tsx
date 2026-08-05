@@ -20,13 +20,15 @@ import { slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
+import { resizeAmazonImage } from "@/lib/utils/amazonImage";
 import { slugifyColor } from "@/lib/db/vinilColorido";
 import { slugifyEdition } from "@/lib/db/edicaoVinil";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, getTopBotHitSlugs, type RelatedDeal } from "@/lib/db/disco";
-import { getEstilosList } from "@/lib/db/estilo";
+import { getEstiloSlugSet } from "@/lib/db/estilo";
 import { getPaisDisplayName, ISO2_TO_SLUG } from "@/lib/paises";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
+import { originalReleaseYear, originalReleaseDatePublished } from "@/lib/originalYear";
 import type { Metadata } from "next";
 
 // Safety net only — the crawler's /api/revalidate webhook is the real trigger.
@@ -72,13 +74,14 @@ export async function generateMetadata({
   if (title.length > 60 && includeArtist) title = `${tituloLimpo} em Vinil`;
   if (title.length > 60) title = `${truncateTitle(tituloLimpo, 51)} em Vinil`;
 
-  // mb_first_release_date is the release-GROUP date, i.e. the album's ORIGINAL
-  // year — not the year this particular pressing was manufactured, which we
-  // don't know. Rendered parenthetically after the album title so it reads as
+  // The album's ORIGINAL year — not the year this particular pressing was
+  // manufactured. Rendered parenthetically after the album title so it reads as
   // the album's year rather than implying a pressing date. Applied last and
   // only when it still fits the 60-char budget, so it never costs the artist
   // name or the brand suffix; skipped entirely on the truncated variant.
-  const anoOriginal = /^(\d{4})/.exec(meta?.mbFirstReleaseDate ?? "")?.[1];
+  // Reading mb_first_release_date alone put the reissue year in the title on
+  // 658 records and left 3,852 more with no year at all — see originalYear.ts.
+  const anoOriginal = originalReleaseYear(meta?.mbFirstReleaseDate, meta?.discogsMasterYear);
   if (anoOriginal && title.includes(tituloLimpo)) {
     const comAno = title.replace(tituloLimpo, `${tituloLimpo} (${anoOriginal})`);
     if (comAno.length <= 60) title = comAno;
@@ -177,7 +180,7 @@ export default async function DiscoPage({
 
   // Everything below depends only on disco/meta, so it's one parallel wave —
   // sequential awaits here cost a full DB round trip each on cold renders.
-  const [estilosList, relatedDeals, popularity, artistAlbums] = await Promise.all([
+  const [validStyleSlugs, relatedDeals, popularity, artistAlbums] = await Promise.all([
     // The list of slugs that have a real /estilo page, so a genre only links
     // when its destination exists.
     //
@@ -187,7 +190,10 @@ export default async function DiscoPage({
     // records rendered every genre as dead text. Stan Getz / Oscar Peterson
     // showed "britpop, rock, alternative" unlinked, all three of which are
     // real style pages.
-    getEstilosList(),
+    // Only the slug set, not the full list with tags and counts — this page
+    // never reads those, and the slug set is cached separately so a record
+    // render stops re-paying the catalogue-wide aggregation after every crawl.
+    getEstiloSlugSet(),
     getRelatedDeals(disco.id, slug, styleTags),
     // Rank of this album among the artist's tracked vinyls, by Last.fm listeners.
     (meta?.lastfmListeners ?? 0) > 0
@@ -200,7 +206,6 @@ export default async function DiscoPage({
   ]);
 
   // MusicBrainz release-group facts (mb_mbid = "" means searched, no match).
-  const validStyleSlugs = new Set(estilosList.map((e) => e.slug));
   // "Single" is frequently a wrong release-group match — hide it rather than
   // surface a likely-mislabeled type. Localize the rest to pt-BR.
   const MB_TYPE_PT: Record<string, string> = { Album: "Álbum", EP: "EP", Compilation: "Coletânea" };
@@ -231,16 +236,11 @@ export default async function DiscoPage({
       }));
   })();
 
-  // Original release year. MusicBrainz sometimes matched a reissue
-  // release-group, and Discogs' master is sometimes itself a reissue master —
-  // in both cases the wrong value is the LATER one, so the earlier of the two
-  // is the album's original year. Measured on 59 records: 7 disagreed, and
-  // taking the minimum was correct in every case checked (Castle in the Sky
-  // MB 2002 / Discogs 1986; Selena LIVE MB 2026 / Discogs 1993).
-  const mbYear = Number(meta?.mbFirstReleaseDate?.slice(0, 4)) || null;
+  // Original release year — see originalYear.ts for why it is the earlier of
+  // the MusicBrainz and Discogs values. Shared with generateMetadata and the
+  // Product datePublished so all three agree on the album's year.
   const dgYear = meta?.discogsMasterYear ?? null;
-  const originalYear =
-    mbYear && dgYear ? String(Math.min(mbYear, dgYear)) : String(mbYear ?? dgYear ?? "") || null;
+  const originalYear = originalReleaseYear(meta?.mbFirstReleaseDate, dgYear);
 
   // Built from whichever source has anything to say. It was gated on a
   // MusicBrainz match, which hid the entire panel — tracklist included — on
@@ -342,23 +342,49 @@ export default async function DiscoPage({
   // validated {name, slug} shape Ficha técnica uses) and only fall back to
   // lastfm-derived styleTags when there's no MB genre data at all.
   //
-  // Discogs is the last resort, after MusicBrainz and Last.fm. It fills 336
-  // records that show no genre at all today — ones the other two never matched,
-  // like "A New Place 2 Drown", which Amazon credits to a documentary title so
-  // nothing else could identify it. Styles first (Experimental), then the
-  // broader genres (Electronic, Hip Hop).
-  const discogsGenreNames = (meta?.discogsStyles || meta?.discogsGenres || "")
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .slice(0, 3);
+  // Below MusicBrainz, Discogs and Last.fm are MERGED rather than ranked, with
+  // Discogs first. Discogs describes the barcode-resolved pressing, Last.fm's
+  // tags are crowd tags on the artist, so Discogs is both more specific and far
+  // cleaner: across the 6,605 records this branch serves, 26.6% of the Last.fm
+  // tag strings carry a non-musical tag ("usa", "seen live", "favorites")
+  // against 3.8% of Discogs styles, and 18.1% are byte-identical across every
+  // album by that artist against 6.7% for Discogs. Discogs correctly calls the
+  // "Killers of the Flower Moon" LP a Soundtrack where Last.fm inherits The
+  // Killers' "indie rock".
+  //
+  // Merged, not swapped: Discogs alone would have cost 4,417 style links and
+  // left 421 records with no linked genre at all, because the /estilo
+  // vocabulary is derived from lastfm_tags and 171 Discogs style names have no
+  // page. Taking the linkable Discogs styles first and topping up from Last.fm
+  // nets +3,195 links (+22%) and leaves exactly 1 record without one.
+  //
+  // Linkable terms sort ahead of unlinkable ones so a Discogs style with no
+  // /estilo page never displaces a Last.fm tag that has one.
+  const fallbackGenres = (() => {
+    const discogsNames = (meta?.discogsStyles || meta?.discogsGenres || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const seen = new Set<string>();
+    const merged = [...discogsNames, ...styleTags].filter((tag) => {
+      const key = tag.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const withSlugs = merged.map((tag) => {
+      const tagSlug = slugifyStyle(tag);
+      return { name: tag, slug: validStyleSlugs.has(tagSlug) ? tagSlug : null };
+    });
+    return [
+      ...withSlugs.filter((g) => g.slug),
+      ...withSlugs.filter((g) => !g.slug),
+    ].slice(0, 3);
+  })();
 
   const headerGenres = mbInfo && mbInfo.genres.length > 0
     ? mbInfo.genres
-    : (styleTags.length > 0 ? styleTags : discogsGenreNames).map((tag) => {
-        const tagSlug = slugifyStyle(tag);
-        return { name: tag, slug: validStyleSlugs.has(tagSlug) ? tagSlug : null };
-      });
+    : fallbackGenres;
 
   // Artist country of origin (from MusicBrainz via ArtistMeta), rendered as a
   // PT-BR-named link to the /pais/<slug> listing. Independent of the release
@@ -573,9 +599,13 @@ export default async function DiscoPage({
     const s = Math.round(ms / 1000);
     return `PT${Math.floor(s / 60)}M${s % 60}S`;
   };
+  // Same source and order as the genres rendered on the page — the markup
+  // asserting a genre the page doesn't show is exactly the mismatch Google
+  // penalises. Falling back to styleTags alone left `genre` absent on the 565
+  // records only Discogs identifies.
   const albumGenres = (mbInfo?.genres.map((g) => g.name) ?? []).length
     ? mbInfo!.genres.map((g) => g.name)
-    : styleTags;
+    : fallbackGenres.map((g) => g.name);
 
   // schema.org distinguishes what the release IS (albumReleaseType) from how it
   // was produced (albumProductionType). Discogs states both in its format
@@ -623,7 +653,13 @@ export default async function DiscoPage({
       name: disco.artista,
       url: `${siteUrl}/artista/${slugifyArtist(disco.artista)}`,
     },
-    ...(meta?.mbFirstReleaseDate ? { datePublished: meta.mbFirstReleaseDate } : {}),
+    // The original release, not this pressing. mb_first_release_date alone
+    // published the reissue date on 658 records — 205 of them off by 25 years
+    // or more (J.J. Johnson 1955 declared as 2024-10-25). See originalYear.ts.
+    ...((() => {
+      const datePublished = originalReleaseDatePublished(meta?.mbFirstReleaseDate, meta?.discogsMasterYear);
+      return datePublished ? { datePublished } : {};
+    })()),
     ...(albumGenres.length ? { genre: albumGenres } : {}),
     // Declare the physical format. schema.org/VinylFormat is the precise term
     // and this catalogue is vinyl-only (non-vinyl rows carry format='cd' or
@@ -814,12 +850,23 @@ export default async function DiscoPage({
               <div className="relative aspect-square bg-label rounded-2xl overflow-hidden">
                 {disco.imgUrl ? (
                   <Image
-                    src={disco.imgUrl}
+                    src={resizeAmazonImage(disco.imgUrl, 640)}
                     alt={`${tituloSeo} por ${disco.artista}, capa do álbum`}
                     fill
                     sizes="(max-width: 1024px) 100vw, 480px"
                     className="object-cover"
                     priority
+                    // Served straight from Amazon's CDN instead of through
+                    // Vercel's optimizer, same as the lazy covers in DiscoCard.
+                    // Resolution is unchanged: deviceSizes is [320, 640], and
+                    // with these `sizes` every device already resolved to the
+                    // 640 variant, so SL640 is what was being served anyway.
+                    // What goes away is a transformation of a 1500px source on
+                    // ~31k pages, plus the optimizer round-trip on a cold cache
+                    // — which is the common case out on the long tail, so LCP
+                    // should get better rather than worse. Cost is JPEG instead
+                    // of WebP/AVIF bytes.
+                    unoptimized
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">

@@ -14,7 +14,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
-export const revalidate = 14400; // safety-net; on-demand purge via revalidateTag("prices") fires first
+export const revalidate = 14400; // safety-net; on-demand purge via revalidateTag(artistaTag(slug)) fires first
 
 // Prebuilds the artists bots hit most (bot_hits-ranked); the rest still
 // render + CDN-cache on first request as before. dynamicParams stays true

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { slugifyArtist } from "@/lib/utils/slugify";
+import { artistaTag } from "@/lib/cacheTags";
 import { getTopStyles } from "@/lib/utils/styleUtils";
 import { buildOrderBy, PAGE_SIZE, type ProcessedDisco } from "@/lib/queryDiscos";
 
@@ -79,7 +80,23 @@ type UnavailableRow = {
   reviewCount: string | null;
 };
 
-const _getArtistaPageData = unstable_cache(
+// Tagged per artist rather than with the broad "prices" tag. A crawl observes
+// ~4,200 of ~31,000 records, which touch only a few hundred artists, so the
+// blanket purge was marking all ~11,000 artist pages stale and paying to
+// rebuild them from bot traffic. The crawler now posts the artist NAMES it
+// observed and /api/revalidate slugifies them here — see lib/cacheTags.ts.
+//
+// The inner function still takes every argument (rather than closing over
+// them) so Next.js includes them in the cache key; only `slug` is needed at
+// the outer level, to build the tag and to keep the key parts distinct.
+const _getArtistaPageData = (
+  slug: string,
+  page: number,
+  sort: string,
+  precoMax: number | null,
+  pageSize: number = PAGE_SIZE,
+) =>
+  unstable_cache(
   async (
     slug: string,
     page: number,
@@ -409,9 +426,9 @@ const _getArtistaPageData = unstable_cache(
 
     return { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, country, unavailableItems };
   },
-  ["artista-page"],
-  { tags: ["prices"], revalidate: 14400 }
-);
+  ["artista-page", slug],
+  { tags: [artistaTag(slug)], revalidate: 14400 },
+  )(slug, page, sort, precoMax, pageSize);
 
 export const getArtistaPageData = cache(_getArtistaPageData);
 

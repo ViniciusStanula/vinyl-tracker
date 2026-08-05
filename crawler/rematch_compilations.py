@@ -99,18 +99,23 @@ def parse_args():
     return p.parse_args()
 
 
-def revalidate_prices():
-    import requests
+def purge_changed(conn, disco_ids):
+    """Purge the pages for the rows this run actually rewrote.
+
+    Used to purge the broad 'prices' tag, which marked every record, artist and
+    listing page stale — a full-catalogue rebuild wave for a backfill that
+    typically fixes a few hundred rows. This touches only what changed."""
+    from revalidate_tags import post_purge, tags_and_artists_for_ids
+
     url = os.environ.get("REVALIDATE_URL")
     secret = os.environ.get("REVALIDATE_SECRET")
     if not url or not secret:
         log.warning("REVALIDATE_URL/SECRET not set — skipping cache purge")
         return
-    try:
-        r = requests.post(url, json={"secret": secret, "tag": "prices"}, timeout=15)
-        log.info("Revalidation: HTTP %s %s", r.status_code, r.text[:120])
-    except Exception as exc:
-        log.warning("Revalidation failed: %s", exc)
+    tags, artists = tags_and_artists_for_ids(conn, disco_ids)
+    sent = post_purge(url, secret, tags=tags, artist_names=artists)
+    log.info("Revalidation: purged %d entities (%d records, %d artists)",
+             sent, len(tags), len(artists))
 
 
 def main():
@@ -143,7 +148,7 @@ def main():
     chk = open(CHECKED_FILE, "a", encoding="utf-8")
 
     checked_n = suspect_n = fixed_n = 0
-    changed = False
+    changed_ids: set[int] = set()
     t0 = time.monotonic()
     try:
         for did, asin, artista, titulo, mbid, old_date in rows:
@@ -182,7 +187,7 @@ def main():
                                      json.dumps(tl or [], ensure_ascii=False), did),
                                 )
                             conn.commit()
-                            changed = True
+                            changed_ids.add(did)
                         fixed_n += 1
 
             chk.write(f"{did}\n")
@@ -199,8 +204,8 @@ def main():
     log.info("Done. %d checked, %d compilation-matched, %d %s.",
              checked_n, suspect_n, fixed_n,
              "fixed" if args.apply else "fixable (dry-run)")
-    if args.apply and changed:
-        revalidate_prices()
+    if args.apply and changed_ids:
+        purge_changed(conn, changed_ids)
     conn.close()
 
 

@@ -17,12 +17,16 @@ Two things that look like optimisations and are not:
     prices would freeze the "last checked" time, which is the one thing a price
     tracker must never show stale.
 
-  * Only record pages are tagged per entity. Artist pages need
-    `artista-<slug>`, where the slug comes from slugifyArtist() in TypeScript
-    (accent folding plus "LAST, FIRST" comma inversion). Reproducing that here
-    risks a silent mismatch that leaves an artist page stale, so artist and
-    aggregate surfaces stay on the broad "prices" tag, which is still purged
-    once per run. Disco is safe because Disco.slug is stored, not derived.
+  * Artist tags are NOT built here. `artista-<slug>` needs slugifyArtist() from
+    TypeScript (NFD accent folding, "LAST, FIRST" comma inversion, 60-char cut)
+    and a Python copy of those rules could drift, silently leaving an artist
+    page stale forever. So this module returns raw artist NAMES and
+    /api/revalidate slugifies them with the real function. Disco is different
+    because Disco.slug is stored, not derived, so the tag is safe to build here.
+
+    Aggregate surfaces (home, /disco, /ofertas, search, hub indexes) stay on
+    the broad "prices" tag, which is still purged once per run. That is a
+    handful of routes — the cost was never there.
 
 Mirrors lib/cacheTags.ts on the frontend.
 """
@@ -58,6 +62,51 @@ def observed_disco_tags(conn, since_iso: str) -> list[str]:
         return [DISCO_TAG_PREFIX + row[0] for row in cur.fetchall()]
 
 
+def observed_artist_names(conn, since_iso: str) -> list[str]:
+    """Raw artist names for every record observed at or after `since_iso`.
+
+    Names, not slugs — see the module docstring. Deduped here so the request
+    bodies stay small; /api/revalidate dedupes again after slugifying, since
+    two spellings can fold to the same slug.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT DISTINCT d.artista
+            FROM "HistoricoPreco" h
+            JOIN "Disco" d ON d.id = h."discoId"
+            WHERE h."capturadoEm" >= %s
+              AND d.artista IS NOT NULL AND d.artista <> ''
+            """,
+            (since_iso,),
+        )
+        return [row[0] for row in cur.fetchall()]
+
+
+def tags_and_artists_for_ids(conn, disco_ids) -> tuple[list[str], list[str]]:
+    """Same purge inputs, for the backfill scripts that work by Disco id.
+
+    Those scripts change titles, genres and tracklists rather than prices, so
+    they cannot select by observation time — they know exactly which rows they
+    touched. Returns (disco tags, artist names): a title fix shows on both the
+    record page and the artist's listing.
+    """
+    ids = list(disco_ids)
+    if not ids:
+        return [], []
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT slug, artista FROM "Disco" WHERE id = ANY(%s)
+            """,
+            (ids,),
+        )
+        rows = cur.fetchall()
+    tags = [DISCO_TAG_PREFIX + r[0] for r in rows if r[0]]
+    artists = sorted({r[1] for r in rows if r[1]})
+    return tags, artists
+
+
 def chunked(items: list[str], size: int = 200):
     """Split tags into request-sized batches.
 
@@ -66,3 +115,31 @@ def chunked(items: list[str], size: int = 200):
     """
     for i in range(0, len(items), size):
         yield items[i : i + size]
+
+
+def post_purge(url: str, secret: str, tags=(), artist_names=(), timeout: int = 20) -> int:
+    """POST entity purges in batches. Returns how many entities were accepted.
+
+    Best-effort by design: every caller still has the 4h ISR TTL underneath, so
+    a failed batch means a page is stale for up to 4h, never indefinitely.
+    Never raises — a purge failure must not fail a crawl.
+    """
+    import requests as _requests
+
+    sent = 0
+    for key, items in (("tags", list(tags)), ("artistNames", list(artist_names))):
+        for batch in chunked(items):
+            try:
+                resp = _requests.post(
+                    url, json={"secret": secret, key: batch}, timeout=timeout
+                )
+                if resp.status_code == 200:
+                    sent += len(batch)
+                else:
+                    log.warning(
+                        "Purge batch (%s) failed — HTTP %s: %s",
+                        key, resp.status_code, resp.text[:200],
+                    )
+            except Exception as exc:
+                log.warning("Purge batch (%s) failed (non-fatal): %s", key, exc)
+    return sent

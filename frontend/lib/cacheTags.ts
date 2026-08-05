@@ -18,9 +18,14 @@
  * thing a price tracker must never show stale.
  *
  * The broad "prices" tag is kept for the aggregate surfaces (home, /disco,
- * /ofertas, search, and the paginated listings whose ?page= variants cannot be
- * enumerated). Those are a handful of routes, so purging them every run is
- * cheap — the cost was never there.
+ * /ofertas, search, the hub indexes, and the paginated listings whose ?page=
+ * variants cannot be enumerated). Those are a handful of routes, so purging
+ * them every run is cheap — the cost was never there.
+ *
+ * Record pages moved off "prices" first; artist pages followed (see
+ * artistaTag below for how the slug problem was solved). Style, country and
+ * decade pages are still on "prices" — a few thousand pages, worth doing next
+ * if the bill still shows it.
  *
  * These strings are mirrored in crawler/revalidate_tags.py. Change both.
  */
@@ -28,7 +33,15 @@
 /** Per-record: /disco/[slug] and everything keyed off that record. */
 export const discoTag = (slug: string) => `disco-${slug}`;
 
-/** Per-artist: /artista/[slug]. Takes the canonical artist slug. */
+/**
+ * Per-artist: /artista/[slug]. Takes the canonical artist slug.
+ *
+ * The crawler cannot build this slug itself — slugifyArtist() folds accents via
+ * NFD, inverts "LAST, FIRST" and cuts at 60 chars, and a Python copy of those
+ * rules could drift and leave an artist page stale forever. So the crawler
+ * posts raw artist NAMES to /api/revalidate and the route slugifies them with
+ * the real function. One copy of the rule, no drift.
+ */
 export const artistaTag = (slug: string) => `artista-${slug}`;
 
 /** Per-style: /estilo/[slug]. */

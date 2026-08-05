@@ -41,13 +41,22 @@ export default function Pagination({
   totalPages,
   searchParams,
   basePath = "/disco",
+  hrefFor,
 }: {
   currentPage: number;
   totalPages: number;
   searchParams: SearchParams;
   basePath?: string;
+  /**
+   * Overrides the default `?page=N` URL builder. /ofertas paginates on the
+   * path instead, because reading a `page` searchParam would opt that route
+   * out of static rendering — it would then be re-rendered on every single
+   * request rather than served from cache.
+   */
+  hrefFor?: (page: number) => string;
 }) {
   const pages = pageRange(currentPage, totalPages);
+  const href = (p: number) => (hrefFor ? hrefFor(p) : buildUrl(p, searchParams, basePath));
 
   const btnBase =
     "flex items-center justify-center text-sm rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/30";
@@ -66,7 +75,7 @@ export default function Pagination({
       {/* Previous */}
       {currentPage > 1 ? (
         <Link
-          href={buildUrl(currentPage - 1, searchParams, basePath)}
+          href={href(currentPage - 1)}
           className={`${btnBase} ${btnIdle} px-4 py-2.5`}
         >
           ← Anterior
@@ -89,7 +98,7 @@ export default function Pagination({
         ) : (
           <Link
             key={p}
-            href={buildUrl(p, searchParams, basePath)}
+            href={href(p)}
             aria-current={p === currentPage ? "page" : undefined}
             className={`${btnBase} ${p === currentPage ? btnActive : btnIdle} w-11 h-11`}
           >
@@ -101,7 +110,7 @@ export default function Pagination({
       {/* Next */}
       {currentPage < totalPages ? (
         <Link
-          href={buildUrl(currentPage + 1, searchParams, basePath)}
+          href={href(currentPage + 1)}
           className={`${btnBase} ${btnIdle} px-4 py-2.5`}
         >
           Próxima →

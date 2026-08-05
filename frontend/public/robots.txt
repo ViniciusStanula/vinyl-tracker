@@ -19,6 +19,12 @@ Sitemap: https://www.garimpavinil.com.br/sitemap.xml
 # --- Common Crawl — block entirely --------------------------
 # Primary purpose is AI training datasets; ai-train=no isn't honored by CCBot,
 # so the only effective opt-out is Disallow.
+#
+# Other AI training crawlers (meta-externalagent, ClaudeBot, GPTBot, Bytespider)
+# are deliberately NOT blocked, despite being 58% of bot traffic in bot_hits
+# and a real share of the ISR/transfer bill. Presence in training data is what
+# makes a model name this site unprompted, and that visibility is worth more
+# here than the hosting it costs. Revisit only if the bill forces it.
 User-agent: CCBot
 Disallow: /
 
