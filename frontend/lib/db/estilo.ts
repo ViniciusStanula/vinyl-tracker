@@ -658,8 +658,10 @@ export const getTopArtistsForEstilo = cache(_getTopArtistsForEstilo);
 
 export type EstiloListItem = { tag: string; slug: string; discoCount: number };
 
-const _getEstilosList = unstable_cache(
-  async (): Promise<EstiloListItem[]> => {
+// Plain, uncached query body. Two cache wrappers read it (the full list for
+// the /estilos hub, the slug set for record pages) and neither may nest inside
+// the other, so it lives on its own.
+async function queryEstilosList(): Promise<EstiloListItem[]> {
     const rows = await prisma.$queryRaw<{ tag: string; disco_count: bigint }[]>`
       WITH vocab AS (
         -- The vocabulary stays Last.fm's. A Discogs style only counts when a
@@ -704,9 +706,39 @@ const _getEstilosList = unstable_cache(
       result.push({ tag: r.tag, slug, discoCount: Number(r.disco_count) });
     }
     return result;
-  },
+}
+
+const _getEstilosList = unstable_cache(
+  queryEstilosList,
   ["estilos-list"],
   { tags: ["prices"], revalidate: 14400 }
 );
 
 export const getEstilosList = cache(_getEstilosList);
+
+/**
+ * Just the slugs that have a real /estilo/<slug> page — nothing else.
+ *
+ * /disco/[slug] used to call getEstilosList() for this, which is the wrong
+ * shape twice over. That list is tagged "prices", so the crawler purges it
+ * eight times a day and the next record page to render re-pays a double-unnest
+ * aggregation over the whole catalogue; and it carries a tag and a count per
+ * row that the record page throws away — it only ever asks "does this style
+ * have a page?" about the ~6 tags on the record in front of it.
+ *
+ * Same query, but cached as a plain string array on its own key with a 24h TTL
+ * and no "prices" tag. The style vocabulary moves on the order of days, not
+ * crawls: being a few hours behind can at worst render a brand-new style as
+ * plain text instead of a link, which is also what happens today for any style
+ * under the >3 records threshold. No price is involved in this decision, so
+ * nothing on the page gets staler than it already was.
+ */
+const _getEstiloSlugSet = unstable_cache(
+  async (): Promise<string[]> => (await queryEstilosList()).map((e) => e.slug),
+  ["estilo-slug-set"],
+  { revalidate: 86400 },
+);
+
+export const getEstiloSlugSet = cache(
+  async (): Promise<Set<string>> => new Set(await _getEstiloSlugSet()),
+);

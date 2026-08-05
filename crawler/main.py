@@ -3178,20 +3178,21 @@ def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
 
 
 def _notify_revalidate_tags(since_iso: str) -> int:
-    """Purge the per-record cache tags for everything observed since `since_iso`.
+    """Purge the per-entity cache tags for everything observed since `since_iso`.
 
-    Replaces the blast radius of the broad "prices" purge for record pages: a
-    run observes ~4,200 of ~31,000 records, and the untouched ~27,000 no longer
-    get marked stale and rebuilt. Artist and aggregate surfaces still rely on
-    the broad purge that follows this call.
+    Replaces the blast radius of the broad "prices" purge for record AND artist
+    pages: a run observes ~4,200 of ~31,000 records belonging to a few hundred
+    artists, so the untouched ~27,000 records and ~10,000+ artist pages no
+    longer get marked stale and rebuilt. Only the aggregate surfaces still rely
+    on the broad purge that follows this call.
 
-    Best-effort by design. A failure here leaves those records on their 4h TTL
-    and the end-of-run "prices" purge still runs, so the worst case is the old
-    behaviour, never a stale page beyond what it was before.
+    Artist names are posted raw — /api/revalidate runs slugifyArtist() on them,
+    so the slug rules stay in one language. See revalidate_tags.py.
+
+    Best-effort by design. A failure here leaves those pages on their 4h TTL,
+    so the worst case is a delay, never an indefinitely stale page.
     """
-    import requests as _requests
-
-    from revalidate_tags import observed_disco_tags, chunked
+    from revalidate_tags import observed_artist_names, observed_disco_tags, post_purge
 
     url = os.environ.get("REVALIDATE_URL")
     secret = os.environ.get("REVALIDATE_SECRET")
@@ -3199,36 +3200,27 @@ def _notify_revalidate_tags(since_iso: str) -> int:
         return 0
 
     # Own short-lived connection: this runs after the pipeline has closed its
-    # own, and the query is a single indexed read.
+    # own, and the queries are single indexed reads.
     try:
         _conn = get_connection()
         try:
             tags = observed_disco_tags(_conn, since_iso)
+            artists = observed_artist_names(_conn, since_iso)
         finally:
             _conn.close()
     except Exception as exc:
-        log.warning("Per-record tag lookup failed (non-fatal): %s", exc)
+        log.warning("Per-entity tag lookup failed (non-fatal): %s", exc)
         return 0
 
-    if not tags:
-        log.info("Revalidation [per-record]: no records observed this run")
+    if not tags and not artists:
+        log.info("Revalidation [per-entity]: no records observed this run")
         return 0
 
-    sent = 0
-    for batch in chunked(tags):
-        try:
-            resp = _requests.post(url, json={"secret": secret, "tags": batch}, timeout=20)
-            if resp.status_code == 200:
-                sent += len(batch)
-            else:
-                log.warning(
-                    "Per-record purge batch failed — HTTP %s: %s",
-                    resp.status_code, resp.text[:200],
-                )
-        except Exception as exc:
-            log.warning("Per-record purge batch failed (non-fatal): %s", exc)
-
-    log.info("Revalidation [per-record]: purged %d/%d record tags", sent, len(tags))
+    sent = post_purge(url, secret, tags=tags, artist_names=artists)
+    log.info(
+        "Revalidation [per-entity]: purged %d/%d entities (%d records, %d artists)",
+        sent, len(tags) + len(artists), len(tags), len(artists),
+    )
     return sent
 
 
@@ -3802,10 +3794,10 @@ def main():
     # regardless; this gate is about predictable cache behavior on failure.)
     t_pipeline_end = time.time()
 
-    # Per-record purge first: the records this run actually observed. The broad
-    # purge below then covers artist pages and the aggregate surfaces, which
-    # stay on the "prices" tag (artist slugs are derived by slugifyArtist() in
-    # TypeScript and reproducing that here risks a silent miss).
+    # Per-entity purge first: the records and artists this run actually
+    # observed. The broad purge below then covers only the aggregate surfaces
+    # (home, /disco, /ofertas, search, hub indexes) plus the style/country/
+    # decade pages, which are still on the "prices" tag.
     _notify_revalidate_tags(run_started_iso)
 
     if _prices_purged_this_run:

@@ -218,27 +218,48 @@ class MLClient:
         return None, None
 
 
-def notify_revalidate() -> None:
-    """Purge the Next.js 'prices' cache tag so updated ML prices show immediately
-    instead of waiting on the ISR TTL. Same webhook contract as the Amazon crawler
-    (main.py _notify_revalidate). Non-fatal: a purge failure never fails the run."""
+def notify_revalidate(since_iso: str) -> None:
+    """Purge the pages for the ML records this run observed.
+
+    Used to purge the broad 'prices' tag, which marked every record, artist and
+    listing page on the site stale — a full-catalogue rebuild wave for a run
+    that touches a few dozen ML rows. Now posts per-entity tags like the Amazon
+    crawler does (main.py _notify_revalidate_tags).
+
+    The deal/listing surfaces this run may also change are covered by the
+    'deals' purge below. Non-fatal: a purge failure never fails the run."""
+    from revalidate_tags import observed_artist_names, observed_disco_tags, post_purge
+
     url = os.environ.get("REVALIDATE_URL")
     secret = os.environ.get("REVALIDATE_SECRET")
     if not url or not secret:
         log.warning("REVALIDATE_URL/SECRET not set — skipping cache purge")
         return
-    for attempt, backoff in enumerate((5, 15, 0), 1):
+
+    try:
+        conn = get_connection()
         try:
-            resp = cffi_requests.post(url, json={"secret": secret, "tag": "prices"}, timeout=10)
-            if resp.status_code == 200:
-                log.info("Revalidation: HTTP 200 (attempt %d) — 'prices' cache purged", attempt)
-                return
-            log.warning("Revalidation attempt %d — HTTP %s: %s", attempt, resp.status_code, resp.text[:120])
-        except Exception as exc:
-            log.warning("Revalidation attempt %d failed — %s", attempt, exc)
-        if backoff:
-            time.sleep(backoff)
-    log.warning("Revalidation failed after retries — ML prices will refresh on the ISR TTL.")
+            tags = observed_disco_tags(conn, since_iso)
+            artists = observed_artist_names(conn, since_iso)
+        finally:
+            conn.close()
+    except Exception as exc:
+        log.warning("Per-entity tag lookup failed (non-fatal): %s", exc)
+        return
+
+    sent = post_purge(url, secret, tags=tags, artist_names=artists)
+    log.info("Revalidation: purged %d entities (%d records, %d artists)",
+             sent, len(tags), len(artists))
+
+    # Aggregate deal surfaces (home carousel, /ofertas) are not per-record, so
+    # they still need one broad purge. 'deals' is the narrow one — it does not
+    # touch the record, artist, style, country or decade pages.
+    try:
+        resp = cffi_requests.post(url, json={"secret": secret, "tag": "deals"}, timeout=10)
+        if resp.status_code != 200:
+            log.warning("Deal-surface purge — HTTP %s: %s", resp.status_code, resp.text[:120])
+    except Exception as exc:
+        log.warning("Deal-surface purge failed (non-fatal): %s", exc)
 
 
 def _best_price(items: list[dict]) -> float | None:
@@ -449,7 +470,9 @@ def main() -> int:
                 log.info("DB write complete — %d Disco upserts, %d price rows.", d, p)
             finally:
                 conn.close()
-            notify_revalidate()   # purge 'prices' cache so new ML prices show immediately
+            # captured_at is the exact timestamp stamped on this run's price
+            # rows, so selecting >= it purges exactly what was just written.
+            notify_revalidate(captured_at.isoformat())
 
     errors = sum(1 for r in rows if r.status == "error")
     return 2 if errors else 0

@@ -1,6 +1,10 @@
 import { ImageResponse } from "next/og";
 import { getDiscoWithPrecos, getDiscoMeta } from "@/lib/db/disco";
+import { resizeAmazonImage } from "@/lib/utils/amazonImage";
 
+// Stays at 2h even though re-rendering ~31k PNGs 12x a day is a real cost:
+// this card renders the current price and the all-time-low flag, so a longer
+// TTL would put a stale price in every shared link. Price freshness wins.
 export const revalidate = 7200;
 export const alt = "Histórico de preço do disco de vinil";
 export const size = { width: 1200, height: 630 };
@@ -44,7 +48,9 @@ export default async function OgImage({
         {disco?.imgUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={disco.imgUrl}
+            // Drawn at 420px — pulling the stored 1500px original meant the
+            // function downloaded ~10x the bytes it needed on every render.
+            src={resizeAmazonImage(disco.imgUrl, 420)}
             alt=""
             width={420}
             height={420}

@@ -28,6 +28,37 @@ type OfertaRow = {
 const DEAL_FRESH_HOURS = 4;
 
 /**
+ * Cards per /ofertas page. The page used to render the whole result set — 557
+ * cards, 3.4 MB of HTML, which is a rough load on a phone and the heaviest
+ * thing the crawler's `deals` purge regenerates.
+ *
+ * Every offer is still reachable; they are split across /ofertas and
+ * /ofertas/pagina/N rather than dropped. The query is ordered by tier already,
+ * so a page holds contiguous tier runs and the section headings still make
+ * sense.
+ */
+export const OFERTAS_PAGE_SIZE = 120;
+
+/** Page 1 is /ofertas; the rest live on a path, not a query string. */
+export function ofertasHref(page: number): string {
+  return page <= 1 ? "/ofertas" : `/ofertas/pagina/${page}`;
+}
+
+/**
+ * Total pages of offers. Lives in the data layer rather than beside the view
+ * component so that generateStaticParams can import it without pulling the
+ * component tree (DiscoCard and friends) along with it.
+ */
+export async function getOfertasPageCount(): Promise<number> {
+  try {
+    const items = await queryOfertasWithCache();
+    return Math.max(1, Math.ceil(items.length / OFERTAS_PAGE_SIZE));
+  } catch {
+    return 1;
+  }
+}
+
+/**
  * Returns currently-active deal-tier vinyls (deal_score 1-3), freshest prices
  * only, ordered by tier then discount. Tier is preserved so the page can group
  * them: 3 = Melhor Preço, 2 = Ótima Oferta, 1 = Boa Oferta.
