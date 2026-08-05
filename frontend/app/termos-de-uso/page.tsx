@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Termos de Uso — Garimpa Vinil",
-  description: "Termos e condições de uso do Garimpa Vinil.",
+  title: "Termos de Uso | Garimpa Vinil",
+  description: "Termos e condições de uso do Garimpa Vinil: como usar os dados de preço do site, limites de responsabilidade e nossa participação no programa de afiliados.",
   alternates: { canonical: "/termos-de-uso" },
 };
 

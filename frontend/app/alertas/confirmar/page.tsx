@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Confirmação de alerta — Garimpa Vinil",
+  title: "Confirmação de alerta | Garimpa Vinil",
   robots: { index: false },
 };
 

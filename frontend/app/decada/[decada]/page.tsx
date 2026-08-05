@@ -26,8 +26,8 @@ export async function generateMetadata({
   const { decada } = await params;
   const start = parseDecade(decada);
   if (start === null) return {};
-  const title = `Vinis dos ${label(start)} — Garimpa Vinil`;
-  const description = `Discos de vinil lançados nos ${label(start)} (${start}–${start + 9}) disponíveis na Amazon Brasil, com preço atual e histórico. Filtre e ordene por preço, avaliação ou popularidade.`;
+  const title = `Discos de Vinil dos ${label(start)} — Ofertas | Garimpa Vinil`;
+  const description = `Discos de vinil lançados nos ${label(start)} (${start}–${start + 9}) na Amazon Brasil, com preço atual e histórico de 12 meses. Ordene pelo maior desconto.`;
   return {
     title,
     description,

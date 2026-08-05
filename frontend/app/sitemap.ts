@@ -11,12 +11,23 @@ import {
 } from "@/lib/db/sitemap";
 import { getRockSubgenres } from "@/lib/guias/rock-data";
 import { BEST_OF_ARTISTS } from "@/lib/guias/best-of-artist-data";
+import { DECADES } from "@/lib/decadas";
+import { getCoresList } from "@/lib/db/vinilColorido";
+import { getEdicoesList } from "@/lib/db/edicaoVinil";
 
 export const revalidate = 86400; // regenerate every 24 hours — sitemap staleness is fine for SEO
 
 export async function generateSitemaps() {
   const discoShards = DISCO_SHARDS.map((shard) => ({ id: `discos-${shard}` }));
-  return [{ id: "estatico" }, { id: "artistas" }, ...discoShards, { id: "estilos" }, { id: "paises" }];
+  return [
+    { id: "estatico" },
+    { id: "artistas" },
+    ...discoShards,
+    { id: "estilos" },
+    { id: "paises" },
+    { id: "cores" },
+    { id: "edicoes" },
+  ];
 }
 
 export default async function sitemap(props: {
@@ -41,6 +52,9 @@ export default async function sitemap(props: {
       { url: `${SITEMAP_BASE}/artistas-mais-ouvidos`,                   lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/estilos`,                                 lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.7 },
       { url: `${SITEMAP_BASE}/paises`,                                  lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
+      { url: `${SITEMAP_BASE}/decadas`,                                 lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
+      { url: `${SITEMAP_BASE}/vinil-colorido`,                          lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
+      { url: `${SITEMAP_BASE}/edicao`,                                  lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/artistas`,                                lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       // The A-Z index is one route per initial, so the letter pages need their
       // own entries — /artistas itself only links to them, it no longer lists
@@ -52,6 +66,9 @@ export default async function sitemap(props: {
         priority: 0.5,
       })),
       { url: `${SITEMAP_BASE}/sobre`,                                   lastModified: new Date("2026-01-01"), changeFrequency: "yearly", priority: 0.3 },
+      { url: `${SITEMAP_BASE}/sitemap`,                                 lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.3 },
+      { url: `${SITEMAP_BASE}/politica-de-privacidade`,                 lastModified: new Date("2026-01-01"), changeFrequency: "yearly", priority: 0.2 },
+      { url: `${SITEMAP_BASE}/termos-de-uso`,                           lastModified: new Date("2026-01-01"), changeFrequency: "yearly", priority: 0.2 },
       { url: `${SITEMAP_BASE}/alertas`,                                 lastModified: new Date("2026-07-31"), changeFrequency: "monthly", priority: 0.7 },
       { url: `${SITEMAP_BASE}/guias`,                                   lastModified: ARTICLES_MODIFIED,  changeFrequency: "weekly",  priority: 0.8 },
       { url: `${SITEMAP_BASE}/guias/top-artistas-spotify`,              lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.7 },
@@ -74,7 +91,7 @@ export default async function sitemap(props: {
         changeFrequency: "monthly" as const,
         priority: 0.7,
       })),
-      ...[1960, 1970, 1980, 1990, 2000, 2010, 2020].map((d) => ({
+      ...DECADES.map((d) => ({
         url: `${SITEMAP_BASE}/decada/${d}`,
         lastModified: latestUpdate,
         changeFrequency: "weekly" as const,
@@ -112,6 +129,32 @@ export default async function sitemap(props: {
   if (id === "paises") {
     try {
       return await getSitemapPaises();
+    } catch {
+      return [];
+    }
+  }
+
+  // getCoresList / getEdicoesList already drop anything at or below the
+  // 3-record noindex threshold, so these shards never list a noindexed URL.
+  if (id === "cores") {
+    try {
+      const cores = await getCoresList();
+      return cores.map((c) => ({
+        url: `${SITEMAP_BASE}/vinil-colorido/${c.slug}`,
+        lastModified: c.lastUpdated,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  if (id === "edicoes") {
+    try {
+      const edicoes = await getEdicoesList();
+      return edicoes.map((e) => ({
+        url: `${SITEMAP_BASE}/edicao/${e.slug}`,
+        lastModified: e.lastUpdated,
+      }));
     } catch {
       return [];
     }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
 import {
-  BROWSE_LINKS,
+  MENU_BROWSE_LINKS,
   MENU_PREVIEW_COUNT,
   TOP_DECADAS,
   TOP_ESTILOS,
@@ -49,9 +49,13 @@ function Column({
         {heading}
       </p>
       <ul className="flex flex-col gap-1.5 mb-2">{children}</ul>
+      {/* The heading above is a plain <p>, so it gives this link no accessible
+          context: without the aria-label the three columns read as "Ver todos",
+          "Ver todas", "Ver todos" in a screen reader's link list. */}
       <Link
         href={hubHref}
         onClick={onSelect}
+        aria-label={`${hubLabel}: ${heading}`}
         className="mt-auto pt-1 text-xs font-semibold text-gold hover:text-cream transition-colors"
       >
         {hubLabel} →
@@ -221,7 +225,7 @@ export default function MegaMenu({ isActive }: { isActive: boolean }) {
                   </p>
                   <ul className="flex flex-col gap-1.5">
                     <MenuLink href="/disco" onSelect={close}>Todos os discos</MenuLink>
-                    {BROWSE_LINKS.map(({ label, href }) => (
+                    {MENU_BROWSE_LINKS.map(({ label, href }) => (
                       <MenuLink key={href} href={href} onSelect={close}>
                         {label}
                       </MenuLink>

@@ -4,7 +4,7 @@ import BackToTop from "@/components/BackToTop";
 import StyleTags from "@/components/StyleTags";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
+import { pickTitle, truncateDesc } from "@/lib/utils/seo";
 import { getPaisDisplayName } from "@/lib/paises";
 import { toTitleCase } from "@/lib/utils/titleCase";
 import { formatDiscoCount } from "@/lib/utils/formatters";
@@ -49,16 +49,24 @@ export async function generateMetadata({
   const isThin = total <= 2 && !bioShortPt;
   const noindex = isUnknownArtist || isThin;
 
-  const discoLabel = total === 1 ? "1 disco" : `${total} discos`;
+  const discoLabel = total === 1 ? "1 disco" : `${total.toLocaleString("pt-BR")} discos`;
+  // Whole components drop out in order of value — brand, then the disc count —
+  // rather than truncateTitle severing "Histórico de Preço" mid-phrase, which
+  // is what left 1,825 of these titles ending in "— Histórico de".
   const title = isUnknownArtist
     ? "Discos de Vinil — Vários Artistas | Garimpa Vinil"
-    : truncateTitle(`${artista} em Vinil (${discoLabel}) — Histórico de Preço | Garimpa Vinil`);
+    : pickTitle([
+        `${artista} em Vinil (${discoLabel}) — Histórico de Preço | Garimpa Vinil`,
+        `${artista} em Vinil (${discoLabel}) — Histórico de Preço`,
+        `${artista} em Vinil — Histórico de Preço`,
+        `${artista} em Vinil`,
+      ]);
   const description = isUnknownArtist
     ? truncateDesc("Discos de vinil de vários artistas na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.")
     : truncateDesc(
         total === 1
           ? `Vinil de ${artista} na Amazon Brasil com histórico de preço de 12 meses. Veja se está com desconto hoje antes de comprar.`
-          : `${total} vinis de ${artista} na Amazon Brasil, cada um com histórico de preço de 12 meses. Veja qual está com desconto hoje antes de comprar.`
+          : `${total.toLocaleString("pt-BR")} vinis de ${artista} na Amazon Brasil, cada um com histórico de preço de 12 meses. Veja qual está com desconto hoje antes de comprar.`
       );
   const firstImage = items.find((d) => d.imgUrl)?.imgUrl ?? unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
   const canonicalUrl = `${SITE_URL}/artista/${slug}`;

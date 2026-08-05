@@ -3,10 +3,10 @@ import BackToTop from "@/components/BackToTop";
 import GuiasRelacionados from "@/components/GuiasRelacionados";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
+import { pickTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getPaisPageData, type SerializedPaisData } from "@/lib/db/pais";
-import { SLUG_TO_ISO2, getPaisDisplayName } from "@/lib/paises";
+import { SLUG_TO_ISO2, getPaisDisplayName, paisComPreposicao } from "@/lib/paises";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
@@ -36,11 +36,20 @@ export async function generateMetadata({
   const total = data?.total ?? 0;
   const noindex = total <= 3;
 
-  const title = truncateTitle(`Discos de Vinil de Artistas ${nome === "Brasil" ? "do Brasil" : `de ${nome}`} — Ofertas | Garimpa Vinil`);
+  // "dos Estados Unidos", "do Japão", "da Alemanha", "de Portugal" — see
+  // PAIS_PREPOSICAO. Used identically in the title and the description so the
+  // two can't disagree the way "do Brasil" / "de Brasil" used to.
+  const doPais = paisComPreposicao(iso2, nome);
+  const title = pickTitle([
+    `Discos de Vinil de Artistas ${doPais} — Ofertas | Garimpa Vinil`,
+    `Discos de Vinil de Artistas ${doPais} — Ofertas`,
+    `Discos de Vinil de Artistas ${doPais}`,
+    `Vinis ${doPais} — Ofertas`,
+  ]);
   const description = truncateDesc(
     total >= 4
-      ? `${total} discos de vinil de artistas de ${nome} com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
-      : `Discos de vinil de artistas de ${nome} com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
+      ? `${total.toLocaleString("pt-BR")} discos de vinil de artistas ${doPais} na Amazon, com preço monitorado diariamente e histórico de 12 meses.`
+      : `Discos de vinil de artistas ${doPais} com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
   );
   const firstImage = data?.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
   const canonicalUrl = `${SITE_URL}/pais/${slug}`;
@@ -93,6 +102,7 @@ export default async function PaisPage({
   if (!data || data.total === 0) notFound();
 
   const nome = getPaisDisplayName(iso2)!;
+  const doPais = paisComPreposicao(iso2, nome);
   const { discos, total } = data;
 
   const discosProcessados = discos.map((disco) => {
@@ -125,7 +135,7 @@ export default async function PaisPage({
   const itemListJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: `Discos de vinil de artistas de ${nome}`,
+    name: `Discos de vinil de artistas ${doPais}`,
     url: `${siteUrl}/pais/${slug}`,
     numberOfItems: total,
     itemListElement: discos.slice(0, 10).map((disco, i) => ({
@@ -153,14 +163,14 @@ export default async function PaisPage({
 
       <header className="mb-6">
         <h1 className="font-display text-3xl font-bold text-cream">
-          Discos de {nome}
+          Discos {doPais}
         </h1>
         <p className="mt-1 text-dust text-sm">{formatDiscoCount(total)}</p>
       </header>
 
       {discosProcessados.length > 0 ? (
         <section aria-labelledby="discos-pais-heading">
-          <h2 id="discos-pais-heading" className="sr-only">Discos de artistas de {nome} em vinil</h2>
+          <h2 id="discos-pais-heading" className="sr-only">Discos de artistas {doPais} em vinil</h2>
           <ArtistaRecords items={discosProcessados} slug={slug} basePath="/pais" />
         </section>
       ) : (

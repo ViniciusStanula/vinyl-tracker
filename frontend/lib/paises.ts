@@ -47,6 +47,56 @@ export const PAIS_PT: Record<string, string> = {
   ZA: "África do Sul", ZM: "Zâmbia", ZW: "Zimbábue",
 };
 
+/**
+ * The preposition that introduces each country in PT-BR: "discos de artistas
+ * ___ Estados Unidos". Most country names take a definite article contracted
+ * onto "de" (dos Estados Unidos, do Japão, da Alemanha); a minority take none
+ * (de Portugal, de Cuba, de Israel).
+ *
+ * Only "Brasil" was special-cased before, so the other 52 live country pages
+ * read "de Estados Unidos", "de Reino Unido", "de Alemanha" — broken Portuguese
+ * on the title of the biggest country page on the site.
+ *
+ * Covers every country that currently has a page plus the plausible next
+ * entrants. Anything missing falls back to bare "de", which is correct for the
+ * article-less names and merely plain for the rest — never ungrammatical-
+ * looking the way a wrong article would be.
+ */
+const PAIS_PREPOSICAO: Record<string, string> = {
+  // dos / das — plural names
+  US: "dos", NL: "dos", PH: "das",
+  // do — masculine
+  BR: "do",
+  GB: "do", CA: "do", JP: "do", MX: "do", CL: "do", PE: "do", UY: "do",
+  PY: "do", EC: "do", ML: "do", SN: "do", NE: "do", EG: "do", MA: "do",
+  IQ: "do", IR: "do", NP: "do", VN: "do", CM: "do", TD: "do", CG: "do",
+  // da — feminine
+  DE: "da", AU: "da", SE: "da", FR: "da", IE: "da", IT: "da", NO: "da",
+  FI: "da", JM: "da", ES: "da", IS: "da", DK: "da", NZ: "da", KR: "da",
+  CH: "da", BE: "da", AR: "da", CO: "da", AT: "da", PL: "da", NG: "da",
+  GR: "da", RU: "da", UA: "da", HU: "da", ZA: "da", BG: "da", CZ: "da",
+  BY: "da", ID: "da", HR: "da", IN: "da", TR: "da", TH: "da", CN: "da",
+  VE: "da", RO: "da", RS: "da", SI: "da", SK: "da", EE: "da", LV: "da",
+  LT: "da", KE: "da", ET: "da", TZ: "da", MY: "da", BO: "da", CR: "da",
+  NI: "da", GT: "da", HN: "da", PA: "da", DO: "da", SY: "da", JO: "da",
+  LB: "da", TN: "da", DZ: "da", LY: "da", CI: "da", AO: "da",
+  MZ: "da", NA: "da", ZM: "da", ZW: "da", UG: "da", MG: "da", BA: "da",
+  MK: "da", AL: "da", MD: "da", GE: "da", AM: "da", MN: "da", KH: "da",
+  LK: "da", BD: "da", PK: "da", SA: "da",
+  // Everything else: bare "de" (Portugal, Cuba, Israel, Porto Rico, Gana,
+  // Hong Kong, Singapura, Taiwan, Cabo Verde, Timor-Leste, Malta, …)
+};
+
+/** "de" / "do" / "da" / "dos" for a country, e.g. "dos Estados Unidos". */
+export function prepPais(iso2: string): string {
+  return PAIS_PREPOSICAO[iso2] ?? "de";
+}
+
+/** Country name with its preposition: "dos Estados Unidos", "de Portugal". */
+export function paisComPreposicao(iso2: string, nome: string): string {
+  return `${prepPais(iso2)} ${nome}`;
+}
+
 const ACCENTS = /[̀-ͯ]/g;
 
 // Slugify a PT-BR country name: fold accents, lowercase, hyphenate.
