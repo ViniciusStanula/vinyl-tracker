@@ -15,23 +15,16 @@ export const SITEMAP_BASE = SITE_URL;
 const ACCENT_FROM = Prisma.raw(`'áàâãäåéèêëíìîïóòôõöúùûüçñý'`);
 const ACCENT_TO   = Prisma.raw(`'aaaaaaeeeeiiiiooooouuuucny'`);
 
+// Styles only. The mapa do site used to list every artist here too, but it now
+// links the 27 /artistas/[letra] routes instead, so pulling ~12k artist names
+// out of the database on every regeneration would be work thrown away.
 export type SitemapPageData = {
-  artists: { nome: string; slug: string }[];
   styles:  { slug: string; nome: string }[];
 };
 
 export const getSitemapData = unstable_cache(
   async (): Promise<SitemapPageData> => {
-    const [artistaRows, styleRows] = await Promise.all([
-      prisma.$queryRaw<{ artista: string }[]>`
-        SELECT DISTINCT artista
-        FROM   "Disco"
-        WHERE  disponivel = TRUE
-        AND  (format IS NULL OR format = 'vinyl')
-          AND  price_count >= 5
-        ORDER  BY artista
-      `,
-      prisma.$queryRaw<{ slug: string; nome: string; cnt: bigint }[]>`
+    const styleRows = await prisma.$queryRaw<{ slug: string; nome: string; cnt: bigint }[]>`
         WITH tags AS (
           SELECT unnest(string_to_array(lastfm_tags, ', ')) AS tag
           FROM   "Disco"
@@ -59,23 +52,13 @@ export const getSitemapData = unstable_cache(
         GROUP  BY slug
         HAVING COUNT(*) > 3
         ORDER  BY slug
-      `,
-    ]);
-
-    const seenSlug = new Set<string>();
-    const artists: { nome: string; slug: string }[] = [];
-    for (const { artista } of artistaRows) {
-      const slug = slugifyArtist(artista);
-      if (!slug || seenSlug.has(slug)) continue;
-      seenSlug.add(slug);
-      artists.push({ nome: artista, slug });
-    }
+      `;
 
     const styles = styleRows
       .filter(({ slug }) => !REDIRECTED_ESTILO_SLUGS.has(slug) && !COUNTRY_TAG_TO_PAIS_SLUG[slug])
       .map(({ slug, nome }) => ({ slug, nome }));
 
-    return { artists, styles };
+    return { styles };
   },
   ["sitemap-page"],
   // No prices here — just the URL inventory. The 1h TTL is the right cadence;

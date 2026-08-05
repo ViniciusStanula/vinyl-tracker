@@ -38,7 +38,7 @@ export async function generateMetadata({
   const title = truncateTitle(`Discos em Vinil ${label} — Ofertas | Garimpa Vinil`);
   const description = truncateDesc(
     total >= 4
-      ? `${total} discos em vinil ${label.toLowerCase()} com preço monitorado diariamente na Amazon. Ordene por desconto real sobre a média, não promoção inventada.`
+      ? `${total.toLocaleString("pt-BR")} discos prensados em vinil ${label.toLowerCase()} na Amazon Brasil, com histórico de preço de 12 meses e o desconto real sobre a média.`
       : `Discos em vinil ${label.toLowerCase()} com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
   );
   const firstImage = data.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
@@ -128,6 +128,10 @@ export default async function VinilColoridoPage({
         <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
           <Link href="/" className="hover:text-cream transition-colors">
             Início
+          </Link>
+          <span aria-hidden="true">›</span>
+          <Link href="/vinil-colorido" className="hover:text-cream transition-colors">
+            Vinil Colorido
           </Link>
           <span aria-hidden="true">›</span>
           <span className="text-parchment">Vinil {label}</span>

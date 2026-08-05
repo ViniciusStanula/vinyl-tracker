@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { Prisma } from "@prisma/client";
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 
 // vinil_cor (crawler/titulo_seo.py) stores a short display label like
@@ -255,3 +256,63 @@ const _getVinilColoridoPageData = unstable_cache(
 
 export const getVinilColoridoPageData = (colorSlug: string) =>
   _getVinilColoridoPageData(colorSlug);
+
+export type CorListItem = {
+  slug: string;
+  label: string;
+  discoCount: number;
+  lastUpdated: Date;
+};
+
+const _getCoresList = unstable_cache(
+  async (): Promise<CorListItem[]> => {
+    // One GROUP BY over the stored labels (a few dozen distinct values), then
+    // fold them into hub slugs in JS. A per-slug SQL count would be ~38 round
+    // trips, and the substring rule can't be expressed as a plain GROUP BY
+    // anyway since one stored "Azul / Rosa" feeds both the azul and rosa hubs.
+    const rows = await prisma.$queryRaw<
+      { cor: string; disco_count: bigint; last_updated: Date }[]
+    >`
+      SELECT vinil_cor AS cor, COUNT(*) AS disco_count, MAX("updatedAt") AS last_updated
+      FROM "Disco"
+      WHERE disponivel = TRUE
+        AND (format IS NULL OR format = 'vinyl')
+        AND price_count >= 5
+        AND vinil_cor IS NOT NULL
+        AND vinil_cor != ''
+      GROUP BY vinil_cor
+    `;
+
+    // Mirrors whereColor above: EXACT slugs compare the whole value, SIMPLE
+    // ones match as a substring, same as the page's ILIKE '%label%'.
+    const tally = (matches: (cor: string) => boolean) => {
+      let discoCount = 0;
+      let lastUpdated: Date | null = null;
+      for (const r of rows) {
+        if (!matches(r.cor)) continue;
+        discoCount += Number(r.disco_count);
+        if (!lastUpdated || r.last_updated > lastUpdated) lastUpdated = r.last_updated;
+      }
+      return { discoCount, lastUpdated };
+    };
+
+    const result: CorListItem[] = [];
+    // > 3 mirrors the noindex gate in vinil-colorido/[cor]/page.tsx (total <= 3),
+    // so the hub and the XML sitemap never point at a noindexed color page.
+    for (const [slug, label] of Object.entries(SIMPLE_COLOR_SLUGS)) {
+      const needle = label.toLowerCase();
+      const { discoCount, lastUpdated } = tally((cor) => cor.toLowerCase().includes(needle));
+      if (discoCount > 3 && lastUpdated) result.push({ slug, label, discoCount, lastUpdated });
+    }
+    for (const [slug, label] of Object.entries(EXACT_COLOR_SLUGS)) {
+      const { discoCount, lastUpdated } = tally((cor) => cor === label);
+      if (discoCount > 3 && lastUpdated) result.push({ slug, label, discoCount, lastUpdated });
+    }
+
+    return result.sort((a, b) => b.discoCount - a.discoCount);
+  },
+  ["cores-list"],
+  { tags: ["prices"], revalidate: 14400 },
+);
+
+export const getCoresList = cache(_getCoresList);

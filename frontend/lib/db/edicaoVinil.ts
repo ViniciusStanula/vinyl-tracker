@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 
 // vinil_edicao (crawler/titulo_seo.py) stores an exact edition label like
@@ -190,3 +191,45 @@ const _getEdicaoVinilPageData = unstable_cache(
 
 export const getEdicaoVinilPageData = (editionSlug: string) =>
   _getEdicaoVinilPageData(editionSlug);
+
+export type EdicaoListItem = {
+  slug: string;
+  label: string;
+  discoCount: number;
+  lastUpdated: Date;
+};
+
+const _getEdicoesList = unstable_cache(
+  async (): Promise<EdicaoListItem[]> => {
+    const rows = await prisma.$queryRaw<
+      { edicao: string; disco_count: bigint; last_updated: Date }[]
+    >`
+      SELECT vinil_edicao AS edicao, COUNT(*) AS disco_count, MAX("updatedAt") AS last_updated
+      FROM "Disco"
+      WHERE disponivel = TRUE
+        AND (format IS NULL OR format = 'vinyl')
+        AND price_count >= 5
+        AND vinil_edicao IS NOT NULL
+        AND vinil_edicao != ''
+      GROUP BY vinil_edicao
+    `;
+
+    const byLabel = new Map(rows.map((r) => [r.edicao, r]));
+    const result: EdicaoListItem[] = [];
+    // > 3 mirrors the noindex gate in edicao/[tipo]/page.tsx (total <= 3), so
+    // the hub and the XML sitemap never point at a noindexed edition page.
+    for (const [slug, label] of Object.entries(EDITION_SLUGS)) {
+      const row = byLabel.get(label);
+      if (!row) continue;
+      const discoCount = Number(row.disco_count);
+      if (discoCount <= 3) continue;
+      result.push({ slug, label, discoCount, lastUpdated: row.last_updated });
+    }
+
+    return result.sort((a, b) => b.discoCount - a.discoCount);
+  },
+  ["edicoes-list"],
+  { tags: ["prices"], revalidate: 14400 },
+);
+
+export const getEdicoesList = cache(_getEdicoesList);
