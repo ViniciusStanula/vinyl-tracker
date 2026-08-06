@@ -38,6 +38,19 @@ export async function proxy(request: NextRequest) {
   const ua = request.headers.get("user-agent") ?? "";
   const bot = detectBot(ua);
 
+  // meta-externalagent ignores `Disallow: /*_rsc=` in robots.txt: 255,288 of its
+  // 286,878 hits in the last 30 days were ?_rsc= fetches (bot_hits). Those return
+  // the RSC payload for HTML it has already crawled — no content it doesn't have,
+  // one serverless invocation each. Blocking the param leaves its 31,590 HTML
+  // fetches untouched, so its view of the site is unchanged. Real browser
+  // prefetches never reach here (the matcher's `missing` conditions exclude them).
+  if (
+    request.nextUrl.searchParams.has("_rsc") &&
+    ua.toLowerCase().includes("meta-externalagent")
+  ) {
+    return new Response("", { status: 403 });
+  }
+
   // noindex for thin artista/estilo pages is handled by the page's own
   // <meta name="robots"> tag (same thresholds). No serial pre-flight needed.
 
