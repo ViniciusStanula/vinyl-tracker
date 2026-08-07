@@ -49,7 +49,8 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 // both paths the Prisma adapter uses.
 export function withConnectRetry(pool: Pool): Pool {
   const baseConnect = pool.connect.bind(pool) as () => Promise<PoolClient>
-  pool.connect = (async () => {
+
+  const acquire = async (): Promise<PoolClient> => {
     let last: unknown
     for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt++) {
       try {
@@ -66,7 +67,26 @@ export function withConnectRetry(pool: Pool): Pool {
       }
     }
     throw last
-  }) as typeof pool.connect
+  }
+
+  // Both call signatures must be honoured. Pool.query() acquires its client
+  // through the CALLBACK form -- `this.connect((err, client) => ...)` -- so an
+  // override that only returns a promise silently never calls back and every
+  // pool.query() hangs forever.
+  pool.connect = function (
+    cb?: (
+      err: Error | undefined,
+      client?: PoolClient,
+      done?: (release?: boolean | Error) => void
+    ) => void
+  ): Promise<PoolClient> | void {
+    if (typeof cb !== 'function') return acquire()
+    acquire().then(
+      (client) => cb(undefined, client, client.release.bind(client)),
+      (err) => cb(err as Error, undefined, () => {})
+    )
+  } as typeof pool.connect
+
   return pool
 }
 
