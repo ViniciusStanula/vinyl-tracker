@@ -22,6 +22,8 @@ import psycopg2
 import psycopg2.extras
 import requests
 
+from database import pooler_saturated
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
@@ -77,13 +79,20 @@ def connect() -> psycopg2.extensions.connection:
     if not DATABASE_URL:
         log.error("DATABASE_URL not set")
         sys.exit(1)
-    try:
-        conn = psycopg2.connect(DATABASE_URL, connect_timeout=10)
-        conn.autocommit = False
-        return conn
-    except psycopg2.OperationalError as exc:
-        log.error("Supabase connection failed: %s", exc)
-        sys.exit(1)
+    # The pooler caps clients at 400 across all consumers; saturation is
+    # transient, so retry instead of failing the run.
+    for attempt in range(6):
+        try:
+            conn = psycopg2.connect(DATABASE_URL, connect_timeout=10)
+            conn.autocommit = False
+            return conn
+        except psycopg2.OperationalError as exc:
+            if not pooler_saturated(exc) or attempt == 5:
+                log.error("Supabase connection failed: %s", exc)
+                sys.exit(1)
+            wait = 4.0 * (attempt + 1)
+            log.warning("pooler saturated — retry %d/6 in %.0fs", attempt + 1, wait)
+            time.sleep(wait)
 
 
 def ensure_schema(conn) -> None:

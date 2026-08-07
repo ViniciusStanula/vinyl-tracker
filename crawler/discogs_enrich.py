@@ -531,6 +531,7 @@ _COLUMNS = (
     "discogs_want",
     "discogs_artist",
     "discogs_master_id",
+    "discogs_community_checked_at",
 )
 
 
@@ -630,7 +631,20 @@ def ensure_columns(conn) -> None:
                  -- Discogs as plain text with nowhere to point — 2,911 records,
                  -- 2,892 of which carried a master year, meaning the master had
                  -- been fetched and its id discarded.
-                 ADD COLUMN IF NOT EXISTS discogs_master_id         INTEGER"""
+                 ADD COLUMN IF NOT EXISTS discogs_master_id         INTEGER,
+                 -- Whether the community block (rating, have, want) has been
+                 -- looked up for a record resolved to a master rather than a
+                 -- pressing. A master carries no community block at all, so
+                 -- those 2,859 records showed no Discogs rating while the
+                 -- Discogs page for the same album showed one — it lives on the
+                 -- master's main_release.
+                 --
+                 -- Its own stamp because neither existing one can stand in:
+                 -- discogs_rating stays NULL when nobody has rated the album,
+                 -- which is indistinguishable from never having asked, and
+                 -- discogs_master_checked_at is already set by the no-barcode
+                 -- path for 881 of these before any community lookup existed.
+                 ADD COLUMN IF NOT EXISTS discogs_community_checked_at TIMESTAMPTZ"""
         )
     conn.commit()
 
@@ -649,6 +663,13 @@ def fetch_candidates(conn, limit: int | None) -> list[tuple]:
                 -- Rows resolved before master-year lookup existed: pick them up
                 -- instead of needing a separate backfill pass.
                 OR (discogs_release_id IS NOT NULL AND discogs_master_checked_at IS NULL)
+                -- Same idea for the community lookup: rows that fell to the
+                -- title salvage carry a master but no rating, because a master
+                -- has no community block. Stamped either way once asked, so a
+                -- genuinely unrated album is not retried forever.
+                OR (discogs_master_id IS NOT NULL
+                    AND discogs_release_id IS NULL
+                    AND discogs_community_checked_at IS NULL)
               )
             ORDER BY price_count DESC NULLS LAST
             {'LIMIT %s' if limit else ''}
@@ -678,13 +699,32 @@ def fetch_noBarcode_candidates(conn, limit: int | None) -> list[tuple]:
               AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
               AND artista !~* 'artista n[ãa]o identificad'
-              AND discogs_checked_at IS NULL
+              AND (
+                discogs_checked_at IS NULL
+                -- Master-resolved rows predating the community lookup; see the
+                -- matching clause in fetch_candidates.
+                OR (discogs_master_id IS NOT NULL
+                    AND discogs_release_id IS NULL
+                    AND discogs_community_checked_at IS NULL)
+              )
             ORDER BY price_count DESC NULLS LAST
             {'LIMIT %s' if limit else ''}
             """,
             (limit,) if limit else (),
         )
         return cur.fetchall()
+
+
+def community_fields(rel: dict) -> tuple:
+    """(rating, votes, have, want) from a release's community block."""
+    community = rel.get("community") or {}
+    crating = community.get("rating") or {}
+    rating_avg = crating.get("average")
+    rating_votes = crating.get("count") or 0
+    # A rating of 0.0 means nobody has rated it, not that it is terrible.
+    if not rating_votes or not rating_avg:
+        rating_avg = rating_votes = None
+    return rating_avg, rating_votes, community.get("have"), community.get("want")
 
 
 def album_level_fields(dg, verified: list[dict]) -> dict:
@@ -703,9 +743,37 @@ def album_level_fields(dg, verified: list[dict]) -> dict:
     if mid:
         master = dg.master(mid) or {}
         year = master.get("year")
+        # A master has no community block, so a record resolved this way showed
+        # no rating at all while Discogs showed one for the same album: it hangs
+        # off the master's main_release, which is the release Discogs itself
+        # displays for the master. One extra call, only when a master exists.
+        #
+        # This is the one pressing-level value the album path takes, and it is
+        # taken deliberately: unlike country, catalogue number or side layout,
+        # a rating is a judgement of the album, not of the pressing.
+        rating = votes = have = want = None
+        # Stamped whenever the question was actually answered, including when
+        # the answer is "this master has no main_release" or "nobody has rated
+        # it" — both are permanent, and only a failed call is worth retrying.
+        community_checked = True
+        main_release = master.get("main_release")
+        if main_release:
+            try:
+                rating, votes, have, want = community_fields(
+                    dg.release(main_release) or {}
+                )
+            except DiscogsUnavailable:
+                # The master answered, so keep everything it gave us and leave
+                # the row unstamped for community — only this lookup failed.
+                community_checked = False
         return {
             "master_id": mid,
             "year": year if isinstance(year, int) and 1900 < year < 2100 else None,
+            "rating": rating,
+            "rating_votes": votes,
+            "have": have,
+            "want": want,
+            "community_checked": community_checked,
             "styles": ", ".join(master.get("styles") or []) or None,
             "genres": ", ".join(master.get("genres") or []) or None,
             "title": (master.get("title") or "").strip() or None,
@@ -750,18 +818,27 @@ def salvage_by_title(dg, conn, args, slug, artista, titulo) -> bool:
     if args.apply:
         conn.write(
             """UPDATE "Disco"
-               SET discogs_styles      = COALESCE(%s, discogs_styles),
-                   discogs_genres      = COALESCE(%s, discogs_genres),
-                   discogs_title       = COALESCE(discogs_title, %s),
-                   discogs_tracklist   = COALESCE(discogs_tracklist, %s),
-                   discogs_master_year = COALESCE(%s, discogs_master_year),
-                   discogs_master_id   = COALESCE(%s, discogs_master_id),
-                   discogs_checked_at  = NOW()
+               SET discogs_styles       = COALESCE(%s, discogs_styles),
+                   discogs_genres       = COALESCE(%s, discogs_genres),
+                   discogs_title        = COALESCE(discogs_title, %s),
+                   discogs_tracklist    = COALESCE(discogs_tracklist, %s),
+                   discogs_master_year  = COALESCE(%s, discogs_master_year),
+                   discogs_master_id    = COALESCE(%s, discogs_master_id),
+                   discogs_rating       = COALESCE(%s, discogs_rating),
+                   discogs_rating_votes = COALESCE(%s, discogs_rating_votes),
+                   discogs_have         = COALESCE(%s, discogs_have),
+                   discogs_want         = COALESCE(%s, discogs_want),
+                   discogs_community_checked_at = CASE WHEN %s THEN NOW()
+                                                       ELSE discogs_community_checked_at END,
+                   discogs_checked_at   = NOW()
                WHERE slug = %s""",
             (alb.get("styles"), alb.get("genres"), alb.get("title"),
              json.dumps(alb["tracks"], ensure_ascii=False)
              if alb.get("tracks") else None,
-             alb.get("year"), alb.get("master_id"), slug),
+             alb.get("year"), alb.get("master_id"),
+             alb.get("rating"), alb.get("rating_votes"),
+             alb.get("have"), alb.get("want"),
+             bool(alb.get("community_checked")), slug),
         )
     elif alb:
         print(f"  SALVAGE {artista[:16]:18s} | {titulo[:26]:28s} "
@@ -902,15 +979,7 @@ def main() -> None:
             if a.get("name")
         ) or None
 
-        community = rel.get("community") or {}
-        crating = community.get("rating") or {}
-        rating_avg = crating.get("average")
-        rating_votes = crating.get("count") or 0
-        # A rating of 0.0 means nobody has rated it, not that it is terrible.
-        if not rating_votes or not rating_avg:
-            rating_avg = rating_votes = None
-        have = community.get("have")
-        want = community.get("want")
+        rating_avg, rating_votes, have, want = community_fields(rel)
 
         # The manufacturing date and the physical description are the fields
         # that genuinely differ between pressings sharing a barcode (siblings
@@ -1106,12 +1175,21 @@ def run_no_barcode(conn, args) -> None:
                        discogs_tracklist         = COALESCE(discogs_tracklist, %s),
                        discogs_master_year       = COALESCE(%s, discogs_master_year),
                        discogs_master_id         = COALESCE(%s, discogs_master_id),
+                       discogs_rating            = COALESCE(%s, discogs_rating),
+                       discogs_rating_votes      = COALESCE(%s, discogs_rating_votes),
+                       discogs_have              = COALESCE(%s, discogs_have),
+                       discogs_want              = COALESCE(%s, discogs_want),
+                       discogs_community_checked_at = CASE WHEN %s THEN NOW()
+                                                           ELSE discogs_community_checked_at END,
                        discogs_master_checked_at = NOW(),
                        discogs_checked_at        = NOW()
                    WHERE slug = %s""",
                 (styles, genres, dg_title,
                  json.dumps(tracks, ensure_ascii=False) if tracks else None,
-                 year, alb.get("master_id"), slug),
+                 year, alb.get("master_id"),
+                 alb.get("rating"), alb.get("rating_votes"),
+                 alb.get("have"), alb.get("want"),
+                 bool(alb.get("community_checked")), slug),
             )
         else:
             print(

@@ -252,15 +252,31 @@ def resolve_variant(artista, titulo, fmt_desc):
     field with no data -- never guesses. `cor` is a short display label like
     "Vermelho" or "Splatter Colorido", suitable for both the H1 suffix and
     grouping records for a /vinil-colorido/<cor> hub page."""
-    color_src = fmt_desc or extract_junk(titulo, artista)
+    title_src = extract_junk(titulo, artista)
+    color_src = fmt_desc or title_src
     colors = parse_colors(color_src)
+
+    # Having a discogs_format_desc is not the same as its having said anything
+    # about colour. It is often silent ("LP, Album, Reissue") and sometimes
+    # names a shade this vocabulary does not carry ("Tangerine", "Oxblood"),
+    # and in both cases the pressing data contributes no hue -- so the title
+    # becomes the source rather than the colour being dropped. 542 records had
+    # an explicit "Black Vinyl" or "ORANGE VINYL" discarded this way.
+    #
+    # Once that happens the claim rests on the title alone, so it is held to
+    # the title-only rules below, exactly as if there were no format_desc.
+    title_only = not fmt_desc
+    if fmt_desc and not colors:
+        color_src = title_src
+        colors = parse_colors(title_src)
+        title_only = True
 
     # A title-only color claim (no discogs_format_desc to confirm the actual
     # pressing) needs the color word to sit near an actual vinyl-word.
     # "Weezer (Red Album)" is the record's own cover-art nickname -- not
     # necessarily red vinyl -- and asserting "Vinil Vermelho" would be a
     # wrong, checkable claim about the physical product.
-    if not fmt_desc and colors and _NICKNAME_SHAPED.search(titulo or "") and not _VINYL_ADJACENT.search(titulo or ""):
+    if title_only and colors and _NICKNAME_SHAPED.search(titulo or "") and not _VINYL_ADJACENT.search(titulo or ""):
         colors = []
 
     # discogs_format_desc isn't infallible -- a barcode can resolve to the
@@ -271,8 +287,8 @@ def resolve_variant(artista, titulo, fmt_desc):
     # listing -- downgrade to a generic "colored" claim rather than
     # confidently assert either side.
     fmt_desc_had_conflict = False
-    if fmt_desc and colors:
-        title_colors = parse_colors(extract_junk(titulo, artista))
+    if not title_only and colors:
+        title_colors = parse_colors(title_src)
         title_families = {_COLOR_FAMILY.get(c) for c in title_colors} - {None}
         fmt_families = {_COLOR_FAMILY.get(c) for c in colors} - {None}
         if title_families and fmt_families and not (title_families & fmt_families):
@@ -285,8 +301,15 @@ def resolve_variant(artista, titulo, fmt_desc):
         cor = " / ".join(c.capitalize() for c in colors[:2])
     elif fmt_desc_had_conflict:
         cor = "Colorido"
+    elif fmt_desc and GENERIC_COLOR_RE.search(fmt_desc):
+        # Discogs says the pressing is coloured without naming a hue this
+        # vocabulary knows ("Coloured", "Tri-Colour", "Eco Mix Colored"). That
+        # is still verified pressing data, so it holds on its own even when the
+        # title contributed nothing -- checked separately because the fallback
+        # above may have pointed color_src at the title.
+        cor = "Colorido"
     elif GENERIC_COLOR_RE.search(color_src or "") and not (
-        not fmt_desc and _NICKNAME_SHAPED.search(titulo or "") and not _VINYL_ADJACENT.search(titulo or "")
+        title_only and _NICKNAME_SHAPED.search(titulo or "") and not _VINYL_ADJACENT.search(titulo or "")
     ):
         cor = "Colorido"
     else:

@@ -526,10 +526,15 @@ export default async function DiscoPage({
   const ratingParts: { label: string; value: number; count: number }[] = [
     ...(rating && disco.reviewCount ? [{ label: "Amazon", value: rating, count: disco.reviewCount }] : []),
     ...(mbInfo?.rating ? [{ label: "MusicBrainz", value: mbInfo.rating.value, count: mbInfo.rating.votes }] : []),
-    // Discogs clears the 10-vote bar far more often than MusicBrainz does: on a
-    // 12-release sample, 8 versus the 1,739 records site-wide that qualify on
-    // MusicBrainz. Same 5-point scale, so it blends without conversion.
-    ...(meta?.discogsRating && (meta.discogsRatingVotes ?? 0) >= 10
+    // Same 5-point scale, so it blends without conversion.
+    //
+    // No vote floor, unlike MusicBrainz above: a real Discogs rating is better
+    // shown than withheld, and the blend is count-weighted, so a low-vote entry
+    // is diluted wherever another source exists — which is 5,958 of the 7,288
+    // records rated by under ten people. On the 1,330 where Discogs is the only
+    // source the count travels with the value into ratingCount, so a thin
+    // rating is presented as exactly that rather than hidden.
+    ...(meta?.discogsRating && (meta.discogsRatingVotes ?? 0) >= 1
       ? [{ label: "Discogs", value: Number(meta.discogsRating), count: meta.discogsRatingVotes as number }]
       : []),
   ];
@@ -757,8 +762,103 @@ export default async function DiscoPage({
   // Use the same clean title as the page's H1 so questions read
   // "... de What Color Is Love ..." not "... de LP What Color Is Love [Vinyl] ...".
   const tituloLimpo = tituloSeo;
-  const faqItems =
-    valores.length >= 2
+
+  // How the 90-day window is bounded: from the newest capture, not from now.
+  // Reading the clock during render is impure (the same rule the eslint config
+  // enforces) and it also measures the wrong thing — a record last crawled
+  // three weeks ago would report an empty window rather than its real last
+  // ninety days of trading.
+  const ultimaCaptura = disco.precos.at(-1)?.capturadoEm ?? null;
+  const precos90d = ultimaCaptura
+    ? disco.precos.filter(
+        (p) =>
+          p.capturadoEm.getTime() >= ultimaCaptura.getTime() - 90 * 24 * 60 * 60 * 1000
+      )
+    : [];
+  const valores90d = precos90d.map((p) => Number(p.precoBrl));
+  const min90d = valores90d.length ? Math.min(...valores90d) : 0;
+  const max90d = valores90d.length ? Math.max(...valores90d) : 0;
+
+  // Enumerations read as Portuguese, not as a CSV: "vinil amarelo, 2 LPs e
+  // edição limitada".
+  const listaPt = (items: string[]) =>
+    items.length > 1
+      ? `${items.slice(0, -1).join(", ")} e ${items.at(-1)}`
+      : items[0] ?? "";
+
+  // One composite question about the pressing, rather than one question per
+  // field. Seven single-field Q&As over 31.5k pages generate 79.7%
+  // byte-identical answers -- "Esta edição traz 10 faixas." lands on 4,084
+  // records -- which is the templated-content pattern Google's scaled content
+  // abuse policy targets, and it restates the Ficha técnica line for line.
+  // Folding the fields into one sentence drops exact-duplicate answers to 0.3%
+  // because the combination varies even where each field does not.
+  //
+  // Pressing country is deliberately absent, for the same reason there is no
+  // "Prensado em" row above: 41% of discogs_country is a region or a shrug.
+  const labelName = meta?.discogsLabel ?? meta?.mbLabel ?? null;
+  const lpCount = (meta?.discogsFormatDesc ?? "").match(/(\d+)\s*x\s*LP/i)?.[1] ?? null;
+  const edicaoFisica = [
+    meta?.vinilCor ? `vinil ${meta.vinilCor.toLowerCase()}` : null,
+    lpCount ? `${lpCount} LPs` : null,
+    meta?.vinilEdicao ? meta.vinilEdicao.toLowerCase() : null,
+  ].filter(Boolean) as string[];
+  const edicaoFrases: string[] = [];
+  if (edicaoFisica.length > 0) {
+    edicaoFrases.push(`Esta edição vem em ${listaPt(edicaoFisica)}`);
+  }
+  if (labelName) {
+    edicaoFrases.push(
+      `${edicaoFisica.length > 0 ? "Foi lançada" : "Esta edição foi lançada"} pelo selo ${labelName}`
+    );
+  }
+  if (originalYear) {
+    edicaoFrases.push(
+      `O álbum saiu originalmente em ${originalYear}${pressingYear ? `, e esta prensagem é de ${pressingYear}` : ""}`
+    );
+  }
+  // Asked about the album, not about the H1. tituloSeo already carries the
+  // variant, so asking with it made the answer restate the question: "O que vem
+  // na edição de Live In Arena (Vinil Branco / Azul, Edição Deluxe)? Esta edição
+  // vem em vinil branco / azul...". The suffix is only dropped when it actually
+  // matches this record's variant fields, so an album whose real title ends in
+  // parentheses keeps it.
+  const tituloAlbum = (() => {
+    const m = tituloLimpo.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+    if (!m) return tituloLimpo;
+    const dentro = m[2].toLowerCase();
+    const variantes = [meta?.vinilCor, meta?.vinilEdicao, meta?.vinilVersao]
+      .filter(Boolean)
+      .map((v) => (v as string).toLowerCase());
+    return variantes.some((v) => dentro.includes(v)) ? m[1] : tituloLimpo;
+  })();
+
+  // Two facts minimum: a lone "Foi lançada pelo selo Columbia" is the thin
+  // one-field answer this question exists to avoid.
+  const faqEdicao =
+    edicaoFrases.length >= 2
+      ? [
+          {
+            q: `O que vem na edição em vinil de ${tituloAlbum}?`,
+            a: `${edicaoFrases.join(". ")}.`,
+          },
+        ]
+      : [];
+
+  // Price movement is the one answer nobody else can give: it comes from our
+  // own capture history rather than from a catalogue every other site also has.
+  const faqVariacao =
+    valores90d.length >= 5 && max90d > min90d
+      ? [
+          {
+            q: `Quanto o preço de ${tituloLimpo} variou nos últimos 90 dias?`,
+            a: `Nos últimos 90 dias o preço oscilou entre ${fmt(min90d)} e ${fmt(max90d)}, uma diferença de ${fmtPct(((max90d - min90d) / min90d) * 100)} entre o menor e o maior valor registrado.`,
+          },
+        ]
+      : [];
+
+  const faqItems = [
+    ...(valores.length >= 2
       ? [
           {
             q: `Qual o menor preço já registrado de ${tituloLimpo} em vinil?`,
@@ -786,7 +886,10 @@ export default async function DiscoPage({
               ]
             : []),
         ]
-      : [];
+      : []),
+    ...faqVariacao,
+    ...faqEdicao,
+  ];
 
   const faqJsonLd =
     faqItems.length > 0
