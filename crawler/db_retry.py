@@ -21,19 +21,13 @@ log = logging.getLogger(__name__)
 
 
 def connect_with_retry(attempts: int = 8, base_delay: float = 4.0):
-    """get_connection() retrying on pooler saturation, with linear backoff."""
-    last = None
-    for i in range(attempts):
-        try:
-            return get_connection()
-        except Exception as exc:
-            last = exc
-            if "EMAXCONN" not in str(exc) and "max client connections" not in str(exc):
-                raise
-            wait = base_delay * (i + 1)
-            print(f"  pooler saturated, retry {i + 1}/{attempts} in {wait:.0f}s")
-            time.sleep(wait)
-    raise last
+    """get_connection() retrying on pooler saturation, with linear backoff.
+
+    The retry now lives in database.get_connection() so every caller gets it,
+    not only the scripts that import this module. Kept as a thin delegate so
+    existing callers keep working.
+    """
+    return get_connection(attempts=attempts, base_delay=base_delay)
 
 
 class ResilientConn:

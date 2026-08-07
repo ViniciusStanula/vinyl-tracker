@@ -19,7 +19,7 @@ Two severities:
 import os
 import sys
 
-import psycopg2
+from database import get_connection
 
 WINDOW_HOURS = float(os.environ.get("POST_CRAWL_WINDOW_HOURS", "26"))
 # Rows inserted before the allowlist gate deployed are exempt — they predate
@@ -43,7 +43,7 @@ VINYL_TITLE_SQL = (
 
 
 def main() -> None:
-    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    conn = get_connection()
     with conn.cursor() as cur:
         cur.execute(
             """

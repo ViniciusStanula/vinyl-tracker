@@ -10,6 +10,7 @@ Responsabilities:
 import os
 import socket
 import logging
+import time
 import urllib.parse
 
 import contextlib
@@ -34,7 +35,33 @@ def _cursor(conn):
         yield cur
 
 
-def get_connection():
+def _resolve_ipv4(database_url: str) -> str | None:
+    """Resolves the DATABASE_URL host to an IPv4 address, or None if it can't.
+
+    Kept separate from the connect call so that a *connection* failure is never
+    mislabelled as a resolution failure (and silently retried over DNS, which
+    fails the same way).
+    """
+    try:
+        hostname = urllib.parse.urlparse(database_url).hostname
+        if hostname:
+            ipv4_results = socket.getaddrinfo(hostname, None, socket.AF_INET)
+            if ipv4_results:
+                ipv4 = ipv4_results[0][4][0]
+                log.debug("Resolved %s → %s (IPv4)", hostname, ipv4)
+                return ipv4
+    except Exception as exc:
+        log.warning("IPv4 resolution failed (%s) — falling back to default DNS", exc)
+    return None
+
+
+def pooler_saturated(exc: Exception) -> bool:
+    """True when the failure is Supabase's shared 400-client pooler cap."""
+    msg = str(exc)
+    return "EMAXCONN" in msg or "max client connections" in msg
+
+
+def get_connection(attempts: int = 8, base_delay: float = 4.0):
     """
     Returns a psycopg2 connection using DATABASE_URL from environment.
     Use the Transaction Pooler URL from Supabase (port 6543).
@@ -43,6 +70,12 @@ def get_connection():
     ``hostaddr`` parameter so GitHub Actions (which can't reach Supabase
     over IPv6) connects successfully.  The original hostname is kept in
     ``host`` for SSL certificate validation (SNI).
+
+    The pooler caps clients at 400 across *all* consumers (crawler jobs,
+    Vercel, admin scripts), so a busy moment surfaces as
+    ``FATAL: (EMAXCONN) max client connections reached``.  That clears on its
+    own within seconds-to-minutes, so retry with linear backoff instead of
+    crashing the job.
     """
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
@@ -54,34 +87,31 @@ def get_connection():
 
     # Force IPv4 to avoid IPv6 connectivity failures on GitHub Actions.
     # libpq's hostaddr overrides DNS resolution while host= still handles SSL SNI.
-    try:
-        parsed = urllib.parse.urlparse(database_url)
-        hostname = parsed.hostname
-        if hostname:
-            ipv4_results = socket.getaddrinfo(hostname, None, socket.AF_INET)
-            if ipv4_results:
-                ipv4 = ipv4_results[0][4][0]
-                log.debug("Resolved %s → %s (IPv4)", hostname, ipv4)
-                return psycopg2.connect(
-                    database_url,
-                    hostaddr=ipv4,
-                    options="-c statement_timeout=0 -c idle_in_transaction_session_timeout=60000",
-                    keepalives=1,
-                    keepalives_idle=60,
-                    keepalives_interval=10,
-                    keepalives_count=5,
-                )
-    except Exception as exc:
-        log.warning("IPv4 resolution failed (%s) — falling back to default DNS", exc)
+    ipv4 = _resolve_ipv4(database_url)
+    kwargs = {
+        "options": "-c statement_timeout=0 -c idle_in_transaction_session_timeout=60000",
+        "keepalives": 1,
+        "keepalives_idle": 60,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    }
+    if ipv4:
+        kwargs["hostaddr"] = ipv4
 
-    return psycopg2.connect(
-        database_url,
-        options="-c statement_timeout=0 -c idle_in_transaction_session_timeout=60000",
-        keepalives=1,
-        keepalives_idle=60,
-        keepalives_interval=10,
-        keepalives_count=5,
-    )
+    last = None
+    for i in range(attempts):
+        try:
+            return psycopg2.connect(database_url, **kwargs)
+        except psycopg2.OperationalError as exc:
+            if not pooler_saturated(exc):
+                raise
+            last = exc
+            if i == attempts - 1:
+                break
+            wait = base_delay * (i + 1)
+            log.warning("pooler saturated — retry %d/%d in %.0fs", i + 1, attempts, wait)
+            time.sleep(wait)
+    raise last
 
 
 def upsert_batch(conn, items: list[dict]) -> int:
