@@ -817,13 +817,29 @@ export default async function DiscoPage({
       `O álbum saiu originalmente em ${originalYear}${pressingYear ? `, e esta prensagem é de ${pressingYear}` : ""}`
     );
   }
+  // Asked about the album, not about the H1. tituloSeo already carries the
+  // variant, so asking with it made the answer restate the question: "O que vem
+  // na edição de Live In Arena (Vinil Branco / Azul, Edição Deluxe)? Esta edição
+  // vem em vinil branco / azul...". The suffix is only dropped when it actually
+  // matches this record's variant fields, so an album whose real title ends in
+  // parentheses keeps it.
+  const tituloAlbum = (() => {
+    const m = tituloLimpo.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+    if (!m) return tituloLimpo;
+    const dentro = m[2].toLowerCase();
+    const variantes = [meta?.vinilCor, meta?.vinilEdicao, meta?.vinilVersao]
+      .filter(Boolean)
+      .map((v) => (v as string).toLowerCase());
+    return variantes.some((v) => dentro.includes(v)) ? m[1] : tituloLimpo;
+  })();
+
   // Two facts minimum: a lone "Foi lançada pelo selo Columbia" is the thin
   // one-field answer this question exists to avoid.
   const faqEdicao =
     edicaoFrases.length >= 2
       ? [
           {
-            q: `O que vem na edição em vinil de ${tituloLimpo}?`,
+            q: `O que vem na edição em vinil de ${tituloAlbum}?`,
             a: `${edicaoFrases.join(". ")}.`,
           },
         ]
