@@ -191,6 +191,13 @@ def search_release_group(artist: str, album: str) -> dict | None:
         "title":              rg.get("title") or None,
         "first_release_date": rg.get("first-release-date") or None,
         "primary_type":       rg.get("primary-type") or None,
+        # Already fetched for the demotion ranking above, and worth keeping:
+        # "Soundtrack" is an official MB secondary type, so this is the one
+        # authoritative answer to "is this record a soundtrack?" that does not
+        # depend on the title saying so or on a crowd tag. Stored verbatim,
+        # comma-joined, because the other values (Compilation, Live, Remix)
+        # explain a match that otherwise looks wrong.
+        "secondary_types":    ", ".join(rg.get("secondary-types") or []) or None,
         "genres":             ", ".join(genres),
     }
 
@@ -243,6 +250,7 @@ def main():
                 "mbid":               hit["mbid"] if hit else "",   # "" = searched, no match
                 "first_release_date": hit["first_release_date"] if hit else None,
                 "primary_type":       hit["primary_type"] if hit else None,
+                "secondary_types":    hit["secondary_types"] if hit else None,
                 "genres":             hit["genres"] if hit else None,
                 "title":              hit["title"] if hit else None,
             })
