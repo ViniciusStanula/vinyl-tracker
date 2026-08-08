@@ -1182,10 +1182,10 @@ def ensure_mb_columns(conn) -> None:
             WHERE table_name = 'Disco'
               AND column_name IN
                 ('mb_mbid','mb_first_release_date','mb_primary_type','mb_genres',
-                 'mb_title')
+                 'mb_title','mb_secondary_types')
             """
         )
-        if cur.fetchone()[0] == 5:
+        if cur.fetchone()[0] == 6:
             log.debug("ensure_mb_columns: columns already present, skipping DDL.")
             return
         cur.execute("SET LOCAL lock_timeout = '10s'")
@@ -1200,7 +1200,8 @@ def ensure_mb_columns(conn) -> None:
                 ADD COLUMN IF NOT EXISTS mb_first_release_date TEXT,
                 ADD COLUMN IF NOT EXISTS mb_primary_type       TEXT,
                 ADD COLUMN IF NOT EXISTS mb_genres             TEXT,
-                ADD COLUMN IF NOT EXISTS mb_title              TEXT
+                ADD COLUMN IF NOT EXISTS mb_title              TEXT,
+                ADD COLUMN IF NOT EXISTS mb_secondary_types    TEXT
             """
         )
     conn.commit()
@@ -1232,7 +1233,8 @@ def bulk_update_mb(conn, updates: list[dict]) -> int:
     """
     Writes MusicBrainz fields for album IDs.
     Each item: {"id", "mbid", "first_release_date", "primary_type", "genres",
-    "title"}. mbid="" marks a searched-but-unmatched row so it is not re-queried.
+    "title", "secondary_types"}. mbid="" marks a searched-but-unmatched row so
+    it is not re-queried.
     """
     if not updates:
         return 0
@@ -1244,7 +1246,8 @@ def bulk_update_mb(conn, updates: list[dict]) -> int:
                    mb_first_release_date = %(first_release_date)s,
                    mb_primary_type       = %(primary_type)s,
                    mb_genres             = %(genres)s,
-                   mb_title              = %(title)s
+                   mb_title              = %(title)s,
+                   mb_secondary_types    = %(secondary_types)s
                WHERE id = %(id)s""",
             updates,
             page_size=200,
@@ -1731,6 +1734,19 @@ def check_alert_crossings(
             (str(disco_id),),
         )
         rows = cur.fetchall()
+    # End the read transaction here, before the early return and before any
+    # email goes out. psycopg2 opens one implicitly on the SELECT, and this
+    # function is called for every price update — so the `if not rows` path
+    # (the common one: nobody subscribed to this record) used to hand back a
+    # pooled connection still inside a transaction. They accumulated as
+    # "idle in transaction" until the pooler hit its 400-connection ceiling and
+    # the crawler could no longer connect at all (EMAXCONN), and while they sat
+    # there they blocked every ALTER on "Disco".
+    #
+    # The alert path was worse: it sent SMTP mail inside that same transaction,
+    # holding it open for the length of a network round trip — one was observed
+    # idle in transaction for 215 seconds.
+    conn.commit()
 
     if not rows:
         return

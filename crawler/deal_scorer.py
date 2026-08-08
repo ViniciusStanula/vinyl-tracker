@@ -508,6 +508,16 @@ def score_deals(conn) -> dict:
             disco_id,
         ))
 
+    # Row locks are taken in the order the batch presents them, so two writers
+    # touching the same rows in different orders deadlock — and Postgres kills
+    # one of them, which failed three crawl runs when a MusicBrainz backfill was
+    # updating "Disco" in listener order at the same time. Sorting every batch by
+    # id gives all writers a single, agreed lock order; any other job that does
+    # the same can no longer deadlock against this one.
+    all_updates.sort(key=lambda row: row[-1])
+    flag_updates.sort(key=lambda row: row[-1])
+    stale_clear_updates.sort(key=lambda row: row[-1])
+
     # Batch write 1: update benchmark stats + deal_score for all products
     with conn.cursor() as cur:
         cur.execute("SET LOCAL statement_timeout = 0")
