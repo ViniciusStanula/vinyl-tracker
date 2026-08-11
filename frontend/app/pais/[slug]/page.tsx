@@ -1,5 +1,6 @@
 import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
+import FacetHubs from "@/components/FacetHubs";
 import FacetIntro from "@/components/FacetIntro";
 import GuiasRelacionados from "@/components/GuiasRelacionados";
 import { getFacetStats } from "@/lib/db/facetStats";
@@ -193,6 +194,8 @@ export default async function PaisPage({
           <p className="text-dust text-sm">Tente ajustar os filtros.</p>
         </section>
       )}
+
+      <FacetHubs atual="paises" className="mt-10" />
 
       <GuiasRelacionados className="mt-8" />
 

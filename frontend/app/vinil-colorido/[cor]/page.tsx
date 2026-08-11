@@ -1,5 +1,6 @@
 import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
+import FacetHubs from "@/components/FacetHubs";
 import FacetIntro from "@/components/FacetIntro";
 import { getFacetStats } from "@/lib/db/facetStats";
 import Link from "next/link";
@@ -173,6 +174,7 @@ export default async function VinilColoridoPage({
             <p className="text-sm">Ainda não há discos em vinil {label.toLowerCase()} catalogados.</p>
           </section>
         )}
+        <FacetHubs atual="vinil-colorido" className="mt-10" />
       </div>
       <BackToTop />
     </>

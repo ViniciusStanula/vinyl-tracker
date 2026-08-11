@@ -25,6 +25,7 @@ import { slugifyColor } from "@/lib/db/vinilColorido";
 import { slugifyEdition } from "@/lib/db/edicaoVinil";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, getTopBotHitSlugs, type RelatedDeal } from "@/lib/db/disco";
 import { getEstiloSlugSet } from "@/lib/db/estilo";
+import { getGravadoraSlugSet, slugifyLabel } from "@/lib/db/gravadora";
 import { getPaisDisplayName, ISO2_TO_SLUG } from "@/lib/paises";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
@@ -204,6 +205,11 @@ export default async function DiscoPage({
       ? Promise.resolve([])
       : getArtistTopAlbums(disco.artista, disco.id, slug),
   ]);
+
+  // Label slugs with a real /gravadora page. Cached on its own 24h key with no
+  // "prices" tag: the label vocabulary moves on the order of days, and being a
+  // few hours behind only renders a new label as text instead of a link.
+  const gravadoraSlugs = await getGravadoraSlugSet().catch(() => new Set<string>());
 
   // MusicBrainz release-group facts (mb_mbid = "" means searched, no match).
   // "Single" is frequently a wrong release-group match — hide it rather than
@@ -1429,7 +1435,19 @@ export default async function DiscoPage({
                       <div className="flex justify-between gap-4">
                         <dt className="text-dust">Gravadora</dt>
                         <dd className="text-cream font-medium text-right">
-                          {meta?.discogsLabel ?? meta?.mbLabel}
+                          {(() => {
+                            // Links only when the label has a page of its own —
+                            // same rule the genre chips follow.
+                            const nome = (meta?.discogsLabel ?? meta?.mbLabel) as string;
+                            const gSlug = slugifyLabel(nome);
+                            return gravadoraSlugs.has(gSlug) ? (
+                              <Link href={`/gravadora/${gSlug}`} className="hover:text-gold transition-colors">
+                                {nome}
+                              </Link>
+                            ) : (
+                              nome
+                            );
+                          })()}
                         </dd>
                       </div>
                     )}

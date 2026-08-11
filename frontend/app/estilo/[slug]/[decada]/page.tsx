@@ -1,5 +1,6 @@
 import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
+import FacetHubs from "@/components/FacetHubs";
 import FacetIntro from "@/components/FacetIntro";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -242,6 +243,7 @@ export default async function EstiloDecadaPage({
           </Link>
           .
         </p>
+        <FacetHubs atual="estilos" className="mt-10" />
       </div>
       <BackToTop />
     </>

@@ -1,15 +1,10 @@
 import Link from "next/link";
 import { getEstiloSlugSet, getEstiloDisplayName } from "@/lib/db/estilo";
+import { decadaLabel } from "@/lib/decadas";
 import type { FacetStats } from "@/lib/db/facetStats";
 
 const brl = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-
-/** The site's decadaLabel() renders 2020 as "anos 20", which is fine as a hub
- *  title but ambiguous mid-sentence on a page spanning 1955–2026 — it reads as
- *  the 1920s. Only this prose uses the four-digit form; the /decada hubs and
- *  their titles keep the short label. */
-const decadaPorExtenso = (d: number) => (d >= 2000 ? `anos ${d}` : `anos ${String(d).slice(2)}`);
 
 /** "a, b e c" — Portuguese list, serial "e" instead of a trailing comma. */
 function listaPt(nodes: React.ReactNode[]): React.ReactNode[] {
@@ -111,7 +106,7 @@ export default async function FacetIntro({
             {sujeito} vão de {anoMin} a {anoMax}
             {decadaTop && decadaTop.count > 1 ? (
               <>
-                , com o maior bloco nos {decadaPorExtenso(decadaTop.decada)} ({decadaTop.count.toLocaleString("pt-BR")}{" "}
+                , com o maior bloco nos {decadaLabel(decadaTop.decada)} ({decadaTop.count.toLocaleString("pt-BR")}{" "}
                 {decadaTop.count === 1 ? "título" : "títulos"})
               </>
             ) : null}
