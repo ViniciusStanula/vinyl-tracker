@@ -1353,11 +1353,14 @@ export default async function DiscoPage({
                         21-track double compilation and MusicBrainz called it an
                         EP. Same class of error as the release year, which the
                         Discogs master already overrides. */}
-                    {(formatoVinilPt(meta?.discogsFormatDesc) || mbInfo.primaryType) && (
+                    {/* Passing vinil_edicao drops the descriptors the Edição
+                        row below already states, so the same fact is not
+                        printed twice under two different labels. */}
+                    {(formatoVinilPt(meta?.discogsFormatDesc, meta?.vinilEdicao) || mbInfo.primaryType) && (
                       <div className="flex justify-between gap-4">
                         <dt className="text-dust">Formato</dt>
                         <dd className="text-cream font-medium text-right">
-                          {formatoVinilPt(meta?.discogsFormatDesc) ?? mbInfo.primaryType}
+                          {formatoVinilPt(meta?.discogsFormatDesc, meta?.vinilEdicao) ?? mbInfo.primaryType}
                         </dd>
                       </div>
                     )}
