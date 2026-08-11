@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ArtistaRecords from "@/components/ArtistaRecords";
+import FacetHubs from "@/components/FacetHubs";
 import FacetIntro from "@/components/FacetIntro";
 import { getFacetStats } from "@/lib/db/facetStats";
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
@@ -127,6 +128,8 @@ export default async function DecadaPage({
       ) : (
         <ArtistaRecords items={items} slug={String(start)} basePath="/decada" />
       )}
+
+      <FacetHubs atual="decadas" className="mt-10" />
     </div>
   );
 }

@@ -11,7 +11,7 @@ export const revalidate = 14400;
 export const metadata: Metadata = {
   title: "Discos de Vinil por Década | Garimpa Vinil",
   description:
-    "Explore discos de vinil por década de lançamento. Anos 50 a anos 20 — cada década com histórico de preços de 12 meses na Amazon Brasil.",
+    "Explore discos de vinil por década de lançamento. Anos 50 a anos 2020 — cada década com histórico de preços de 12 meses na Amazon Brasil.",
   alternates: { canonical: "/decadas" },
   openGraph: {
     title: "Discos de Vinil por Década | Garimpa Vinil",

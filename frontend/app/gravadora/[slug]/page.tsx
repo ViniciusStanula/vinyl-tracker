@@ -1,5 +1,6 @@
 import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
+import FacetHubs from "@/components/FacetHubs";
 import FacetIntro from "@/components/FacetIntro";
 import GuiasRelacionados from "@/components/GuiasRelacionados";
 import Link from "next/link";
@@ -176,6 +177,8 @@ export default async function GravadoraPage({
             <p className="text-sm">Ainda não há discos da {label} catalogados.</p>
           </section>
         )}
+
+        <FacetHubs atual="gravadoras" className="mt-10" />
 
         <GuiasRelacionados className="mt-8" />
       </div>

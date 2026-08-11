@@ -1,6 +1,7 @@
 import GuiasRelacionados from "@/components/GuiasRelacionados";
 import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
+import FacetHubs from "@/components/FacetHubs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
@@ -297,6 +298,8 @@ export default async function EstiloPage({
           </ul>
         </nav>
       )}
+
+      <FacetHubs atual="estilos" className="mt-10" />
 
       <GuiasRelacionados className="mt-8" />
 

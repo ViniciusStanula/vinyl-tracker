@@ -59,6 +59,7 @@ export default async function sitemap(props: {
       { url: `${SITEMAP_BASE}/decadas`,                                 lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/vinil-colorido`,                          lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/edicao`,                                  lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
+      { url: `${SITEMAP_BASE}/gravadoras`,                              lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/artistas`,                                lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       // The A-Z index is one route per initial, so the letter pages need their
       // own entries — /artistas itself only links to them, it no longer lists

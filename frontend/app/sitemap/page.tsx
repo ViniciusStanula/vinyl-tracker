@@ -4,6 +4,7 @@ import { getSitemapData } from "@/lib/db/sitemap";
 import { getPaisesList } from "@/lib/db/pais";
 import { getCoresList } from "@/lib/db/vinilColorido";
 import { getEdicoesList } from "@/lib/db/edicaoVinil";
+import { getGravadorasList } from "@/lib/db/gravadora";
 import { getArtistaLetterCounts } from "@/lib/db/artista";
 import { BEST_OF_ARTISTS } from "@/lib/guias/best-of-artist-data";
 import { getRockSubgenres } from "@/lib/guias/rock-data";
@@ -33,6 +34,7 @@ const STATIC_PAGES = [
   { nome: "Estilos Musicais",        href: "/estilos" },
   { nome: "Países de Origem",        href: "/paises" },
   { nome: "Discos por Década",       href: "/decadas" },
+  { nome: "Gravadoras",              href: "/gravadoras" },
   { nome: "Vinil Colorido",          href: "/vinil-colorido" },
   { nome: "Edições Especiais",       href: "/edicao" },
   { nome: "Artistas (A–Z)",          href: "/artistas" },
@@ -67,18 +69,26 @@ export default async function SitemapPage() {
   let cores: Awaited<ReturnType<typeof getCoresList>> = [];
   let edicoes: Awaited<ReturnType<typeof getEdicoesList>> = [];
   let letras: Awaited<ReturnType<typeof getArtistaLetterCounts>> = [];
+  let gravadoras: Awaited<ReturnType<typeof getGravadorasList>> = [];
 
-  try {
-    [{ styles }, paises, cores, edicoes, letras] = await Promise.all([
-      getSitemapData(),
-      getPaisesList(),
-      getCoresList(),
-      getEdicoesList(),
-      getArtistaLetterCounts(),
-    ]);
-  } catch {
-    // DB unavailable — render with only static pages
-  }
+  // Settled independently rather than one Promise.all in a try/catch: this page
+  // is a crawl surface, and a single slow or failing query used to blank every
+  // section on it — one saturated pool and the whole map rendered as nothing
+  // but the static links. Each section now stands or falls on its own.
+  const [stylesR, paisesR, coresR, edicoesR, letrasR, gravadorasR] = await Promise.allSettled([
+    getSitemapData(),
+    getPaisesList(),
+    getCoresList(),
+    getEdicoesList(),
+    getArtistaLetterCounts(),
+    getGravadorasList(),
+  ]);
+  if (stylesR.status === "fulfilled") styles = stylesR.value.styles;
+  if (paisesR.status === "fulfilled") paises = paisesR.value;
+  if (coresR.status === "fulfilled") cores = coresR.value;
+  if (edicoesR.status === "fulfilled") edicoes = edicoesR.value;
+  if (letrasR.status === "fulfilled") letras = letrasR.value;
+  if (gravadorasR.status === "fulfilled") gravadoras = gravadorasR.value;
 
   // Reads enriched_data.json off disk, so it fails independently of the DB.
   let rockSubgenres: ReturnType<typeof getRockSubgenres> = [];
@@ -242,6 +252,34 @@ export default async function SitemapPage() {
                   className="text-dust hover:text-cream transition-colors text-sm capitalize"
                 >
                   {nome}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ── Gravadoras ──────────────────────────────────────────── */}
+      {/* Only labels at or above the listing threshold, which is the same set
+          sitemap/gravadoras.xml draws from. The genre × decade cells are
+          deliberately absent: 921 links would double this page's link count for
+          pages that are already linked from the style they belong to. */}
+      {gravadoras.length > 0 && (
+        <section className="mb-8 bg-sleeve border border-groove rounded-xl p-6">
+          <h2 className="font-display text-xl font-bold text-cream mb-4">
+            Gravadoras{" "}
+            <span className="text-dust text-sm font-normal font-sans ml-1">
+              ({gravadoras.length})
+            </span>
+          </h2>
+          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2">
+            {gravadoras.map(({ label, slug }) => (
+              <li key={slug}>
+                <Link
+                  href={`/gravadora/${slug}`}
+                  className="text-dust hover:text-cream transition-colors text-sm"
+                >
+                  {label}
                 </Link>
               </li>
             ))}
