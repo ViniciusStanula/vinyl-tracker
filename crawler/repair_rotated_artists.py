@@ -63,7 +63,7 @@ def verify(candidate: str) -> dict | None:
     return None
 
 
-def load_targets(conn, limit: int) -> list[tuple[str, int]]:
+def load_targets(conn, limit: int, offset: int = 0) -> list[tuple[str, int]]:
     """Artists MusicBrainz could not resolve, worst-affected first."""
     with conn.cursor() as cur:
         cur.execute("""
@@ -76,9 +76,24 @@ def load_targets(conn, limit: int) -> list[tuple[str, int]]:
               AND c.price_count >= 5
             GROUP BY c.artista
             ORDER BY n DESC, c.artista
-            LIMIT %s
-        """, (limit,))
+            LIMIT %s OFFSET %s
+        """, (limit, offset))
         return cur.fetchall()
+
+
+def apply_from_csv(conn, path: str) -> int:
+    """
+    Write exactly the rows in a reviewed CSV — no MusicBrainz calls, no
+    re-deciding. What was read is what gets written, so a row deleted from the
+    file during review is a row that never reaches the database.
+    """
+    with open(path, newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    log.info("Applying %d reviewed repairs from %s.", len(rows), path)
+    for r in rows:
+        apply_repair(conn, r["old"], r["new"], r["mbid"], r["country"] or None)
+        log.info("  %r -> %r (%s discos)", r["old"], r["new"], r["discos"])
+    return len(rows)
 
 
 def apply_repair(conn, old: str, new: str, mbid: str, country: str | None) -> None:
@@ -105,12 +120,24 @@ def main():
                         datefmt="%H:%M:%S")
     p = argparse.ArgumentParser(description="Repair comma-rotated artist names")
     p.add_argument("--limit", type=int, default=600)
+    p.add_argument("--offset", type=int, default=0,
+                   help="Skip this many artists — for scanning past an earlier run")
     p.add_argument("--apply", action="store_true", help="Write the repairs (default: dry run)")
+    p.add_argument("--from-csv", metavar="PATH",
+                   help="Write exactly the rows in a reviewed CSV, without re-querying")
     args = p.parse_args()
 
     conn = get_connection()
     try:
-        targets = load_targets(conn, args.limit)
+        if args.from_csv:
+            if not args.apply:
+                log.info("--from-csv is a write; pass --apply to confirm.")
+                return
+            n = apply_from_csv(conn, args.from_csv)
+            log.info("Done — applied %d reviewed repairs.", n)
+            return
+
+        targets = load_targets(conn, args.limit, args.offset)
         log.info("Checking %d unresolved artists (%s).", len(targets),
                  "APPLYING" if args.apply else "dry run")
 
