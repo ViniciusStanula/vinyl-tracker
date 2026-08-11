@@ -72,9 +72,26 @@ def refresh_existing(conn) -> int:
 
     log.info("Phase A — %d artists with mbid but no country.", len(rows))
     filled = 0
+    cleared = 0
     for i, (artista, mbid) in enumerate(rows, 1):
-        country = fetch_country(mbid, expect=artista)
+        data = _mb_get(f"artist/{mbid}", {"fmt": "json", "inc": "aliases"})
         time.sleep(RATE_LIMIT)
+        country = None
+        if data and not _accept(data, artista):
+            # The stored id belongs to someone else, so clear it. Leaving it in
+            # place strands the artist for good: phase C only picks up rows with
+            # a NULL mbid, so a wrong-but-present id is never revisited and the
+            # right entity is never found. "Leadbelly" pointed at "Luke
+            # Leadbelly" while MusicBrainz holds Leadbelly as an alias of "Lead
+            # Belly", which phase C can now resolve on the next run.
+            log.info("  mbid %s resolves to %r, not %r — clearing it",
+                     mbid, data.get("name"), artista)
+            with conn.cursor() as cur:
+                cur.execute('UPDATE "ArtistMeta" SET mbid = NULL WHERE artista = %s', (artista,))
+            conn.commit()
+            cleared += 1
+        elif data:
+            country = data.get("country")
         if country:
             with conn.cursor() as cur:
                 cur.execute(
@@ -84,8 +101,8 @@ def refresh_existing(conn) -> int:
             conn.commit()
             filled += 1
         if i % 50 == 0:
-            log.info("  A: %d/%d checked, %d filled.", i, len(rows), filled)
-    log.info("Phase A done — filled %d countries.", filled)
+            log.info("  A: %d/%d checked, %d filled, %d cleared.", i, len(rows), filled, cleared)
+    log.info("Phase A done — filled %d countries, cleared %d wrong mbids.", filled, cleared)
     return filled
 
 

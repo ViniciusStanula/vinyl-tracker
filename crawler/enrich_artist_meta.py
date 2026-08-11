@@ -109,8 +109,14 @@ def _norm_name(s: str) -> str:
     s = "".join(c for c in s if not unicodedata.combining(c))
     s = s.lower().replace("&", " and ")
     s = re.sub(r"[^a-z0-9]+", " ", s).strip()
-    s = re.sub(r"^(the|los|las|os|as) ", "", s)
-    return re.sub(r"\s+", " ", s).strip()
+    # Portuguese "a"/"o" belong here as much as "the": MusicBrainz files
+    # "A Turma Da Mônica" where we hold "Turma da Mônica", and without them
+    # that pair was rejected as two different artists.
+    s = re.sub(r"^(the|los|las|os|as|a|o) ", "", s)
+    # Spaces go last. Punctuation has already become whitespace, so dropping it
+    # makes "The B-52's" and "The B‐52s" (typographic hyphen, no apostrophe)
+    # the same string instead of "b 52 s" versus "b 52s".
+    return re.sub(r"\s+", "", s)
 
 
 def _accept(artist: dict, wanted: str) -> bool:
