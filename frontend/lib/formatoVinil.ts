@@ -66,14 +66,50 @@ const TERMS: [RegExp, string][] = [
 /** Beyond four the row wraps and stops being scannable. */
 const MAX_TERMS = 4;
 
-export function formatoVinilPt(raw: string | null | undefined): string | null {
+/**
+ * Discogs descriptors the Edição row already states, keyed by vinil_edicao.
+ *
+ * The two rows come from different places — Edição is parsed from the Amazon
+ * title, Formato from Discogs' descriptors for the pressing — and nothing
+ * deduplicated them, so 1,684 records printed the same fact twice. Numbered and
+ * Picture Disc printed the identical word in both rows; Deluxe Edition was
+ * worse, because the collapse below renders it as "Edição limitada" while the
+ * row underneath says "Edição Deluxe", which reads as two separate claims.
+ *
+ * Matched against the RAW Discogs term, not the translated label. A record that
+ * carries "Deluxe Edition" AND "Limited Edition" keeps the second one: the
+ * Edição row accounts for the first, and being a limited run is a fact it does
+ * not state. Filtering after translation would have dropped both, since they
+ * collapse to the same string.
+ *
+ * Record Store Day, Box Set and Zoetrope have no entry: RSD is a release event
+ * rather than a physical trait, and the other two have no Discogs equivalent in
+ * TERMS, so neither can duplicate anything.
+ */
+const COBERTO_PELA_EDICAO: Record<string, RegExp> = {
+  "Edição Deluxe": /^Deluxe Edition$/i,
+  "Edição Especial": /^Special Edition$/i,
+  "Edição de Aniversário": /^\d+(st|nd|rd|th) Anniversary( Edition)?$/i,
+  Numerado: /^Numbered$/i,
+  "Picture Disc": /^Picture Disc$/i,
+};
+
+export function formatoVinilPt(
+  raw: string | null | undefined,
+  /** vinil_edicao, when the page renders an Edição row too. Descriptors that
+   *  row already states are dropped here rather than printed twice. */
+  edicao?: string | null,
+): string | null {
   if (!raw) return null;
+
+  const jaNaEdicao = edicao ? COBERTO_PELA_EDICAO[edicao] : undefined;
 
   const out: string[] = [];
   for (const [pattern, replacement] of TERMS) {
     for (const part of raw.split(",")) {
       const term = part.trim();
       if (!term || !pattern.test(term)) continue;
+      if (jaNaEdicao?.test(term)) continue;
       const label = term.replace(pattern, replacement);
       if (!out.includes(label)) out.push(label);
     }
