@@ -11,7 +11,7 @@ export const revalidate = 14400;
 export const metadata: Metadata = {
   title: "Discos de Vinil por Década | Garimpa Vinil",
   description:
-    "Explore discos de vinil por década de lançamento. Anos 60 a anos 20 — cada década com histórico de preços de 12 meses na Amazon Brasil.",
+    "Explore discos de vinil por década de lançamento. Anos 50 a anos 20 — cada década com histórico de preços de 12 meses na Amazon Brasil.",
   alternates: { canonical: "/decadas" },
   openGraph: {
     title: "Discos de Vinil por Década | Garimpa Vinil",
@@ -62,7 +62,7 @@ export default async function DecadasIndexPage() {
         } na Amazon Brasil.`}
       />
 
-      {/* Only seven decades, so the mosaic is the whole page — no filter or
+      {/* Only eight decades, so the mosaic is the whole page — no filter or
           A–Z index, which would be noise at this size. Ordered newest first;
           the decade with the most records carries the badge. */}
       <ul className="grid grid-cols-2 lg:grid-cols-4 gap-4">

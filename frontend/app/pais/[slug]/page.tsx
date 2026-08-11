@@ -1,6 +1,8 @@
 import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
+import FacetIntro from "@/components/FacetIntro";
 import GuiasRelacionados from "@/components/GuiasRelacionados";
+import { getFacetStats } from "@/lib/db/facetStats";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pickTitle, truncateDesc } from "@/lib/utils/seo";
@@ -101,6 +103,8 @@ export default async function PaisPage({
   }
   if (!data || data.total === 0) notFound();
 
+  const stats = await getFacetStats("pais", slug).catch(() => null);
+
   const nome = getPaisDisplayName(iso2)!;
   const doPais = paisComPreposicao(iso2, nome);
   const { discos, total } = data;
@@ -167,6 +171,14 @@ export default async function PaisPage({
         </h1>
         <p className="mt-1 text-dust text-sm">{formatDiscoCount(total)}</p>
       </header>
+
+      {stats && (
+        <FacetIntro
+          stats={stats}
+          sujeito={`Os ${stats.total.toLocaleString("pt-BR")} discos de artistas ${doPais}`}
+          className="mb-6"
+        />
+      )}
 
       {discosProcessados.length > 0 ? (
         <section aria-labelledby="discos-pais-heading">

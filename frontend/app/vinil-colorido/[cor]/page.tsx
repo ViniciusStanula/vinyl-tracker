@@ -1,5 +1,7 @@
 import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
+import FacetIntro from "@/components/FacetIntro";
+import { getFacetStats } from "@/lib/db/facetStats";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
@@ -73,7 +75,10 @@ export default async function VinilColoridoPage({
   const { cor } = await params;
   if (!resolveColorSlug(cor)) notFound();
 
-  const data = await getVinilColoridoPageData(cor).catch(() => null);
+  const [data, stats] = await Promise.all([
+    getVinilColoridoPageData(cor).catch(() => null),
+    getFacetStats("cor", cor).catch(() => null),
+  ]);
   if (!data) notFound();
   const { label, total, discos } = data;
 
@@ -143,6 +148,14 @@ export default async function VinilColoridoPage({
           </h1>
           <p className="mt-1 text-dust text-sm">{formatDiscoCount(total)}</p>
         </header>
+
+        {stats && (
+          <FacetIntro
+            stats={stats}
+            sujeito={`Os ${stats.total.toLocaleString("pt-BR")} discos prensados em vinil ${label.toLowerCase()}`}
+            className="mb-6"
+          />
+        )}
 
         {discosProcessados.length > 0 ? (
           <section aria-labelledby="discos-cor-heading">

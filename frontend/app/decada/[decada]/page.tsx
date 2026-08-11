@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ArtistaRecords from "@/components/ArtistaRecords";
+import FacetIntro from "@/components/FacetIntro";
+import { getFacetStats } from "@/lib/db/facetStats";
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
 import { toJsonLd } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -47,14 +49,17 @@ export default async function DecadaPage({
 
   // Top records, default sort, no filter → static/cacheable; ArtistaRecords
   // does sort/filter/pagination in the browser.
-  const { items, total } = await queryDiscosWithCache({
-    searchTerm: "",
-    sort: "desconto",
-    precoMax: null,
-    page: 1,
-    decade: start,
-    pageSize: RECORDS_CAP,
-  });
+  const [{ items, total }, stats] = await Promise.all([
+    queryDiscosWithCache({
+      searchTerm: "",
+      sort: "desconto",
+      precoMax: null,
+      page: 1,
+      decade: start,
+      pageSize: RECORDS_CAP,
+    }),
+    getFacetStats("decada", String(start)).catch(() => null),
+  ]);
   if (total === 0) notFound();
 
   const jsonLd = toJsonLd({
@@ -107,6 +112,15 @@ export default async function DecadaPage({
           </Link>
         ))}
       </nav>
+
+      {stats && (
+        <FacetIntro
+          stats={stats}
+          sujeito={`Os ${stats.total.toLocaleString("pt-BR")} vinis dos ${label(start)}`}
+          mostrarAno={false}
+          className="mb-5"
+        />
+      )}
 
       {items.length === 0 ? (
         <p className="text-dust text-sm py-12 text-center">Nenhum disco encontrado nesta década com os filtros atuais.</p>

@@ -7,6 +7,8 @@ import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getEstiloPageData, getRelatedEstilos, getTopArtistsForEstilo, getEstiloDisplayName, REDIRECTED_ESTILO_SLUGS, type SerializedEstiloData, type RelatedEstilo, type TopArtistForEstilo } from "@/lib/db/estilo";
 import { getTopBotHitSlugs } from "@/lib/db/disco";
+import { getDecadasForEstilo } from "@/lib/db/estiloDecada";
+import { decadaLabel } from "@/lib/decadas";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
@@ -109,6 +111,8 @@ export default async function EstiloPage({
 
   const { canonical, discos, bioShortPt, bioPt, total } = data;
   const displayName = getEstiloDisplayName(canonical);
+
+  const decadas = await getDecadasForEstilo(slug).catch(() => []);
 
   let relatedEstilos: RelatedEstilo[] = [];
   let topArtists: TopArtistForEstilo[] = [];
@@ -227,6 +231,28 @@ export default async function EstiloPage({
           </p>
           <p className="text-dust text-sm">Tente ajustar os filtros.</p>
         </section>
+      )}
+
+      {/* Decade cuts of this genre. Only decades with enough records to carry a
+          page of their own appear, so this never links to a noindexed cell. */}
+      {decadas.length > 1 && (
+        <nav aria-labelledby="decadas-estilo-heading" className="mt-8">
+          <p id="decadas-estilo-heading" className="text-dust text-xs font-semibold uppercase tracking-widest mb-2">
+            {displayName} por década
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {decadas.map((c) => (
+              <li key={c.decada}>
+                <Link
+                  href={`/estilo/${slug}/${c.decada}`}
+                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full bg-groove border border-wax/40 text-parchment hover:text-cream hover:border-wax/70 transition-colors"
+                >
+                  {decadaLabel(c.decada)} ({c.discoCount})
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       )}
 
       {/* Top artists in this genre — internal link equity to artist pages.

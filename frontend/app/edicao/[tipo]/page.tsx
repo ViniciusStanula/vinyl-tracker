@@ -1,5 +1,7 @@
 import ArtistaRecords from "@/components/ArtistaRecords";
 import BackToTop from "@/components/BackToTop";
+import FacetIntro from "@/components/FacetIntro";
+import { getFacetStats } from "@/lib/db/facetStats";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
@@ -71,7 +73,10 @@ export default async function EdicaoVinilPage({
   const { tipo } = await params;
   if (!resolveEditionSlug(tipo)) notFound();
 
-  const data = await getEdicaoVinilPageData(tipo).catch(() => null);
+  const [data, stats] = await Promise.all([
+    getEdicaoVinilPageData(tipo).catch(() => null),
+    getFacetStats("edicao", tipo).catch(() => null),
+  ]);
   if (!data) notFound();
   const { label, total, discos } = data;
 
@@ -141,6 +146,14 @@ export default async function EdicaoVinilPage({
           </h1>
           <p className="mt-1 text-dust text-sm">{formatDiscoCount(total)}</p>
         </header>
+
+        {stats && (
+          <FacetIntro
+            stats={stats}
+            sujeito={`Os ${stats.total.toLocaleString("pt-BR")} discos em vinil ${label.toLowerCase()}`}
+            className="mb-6"
+          />
+        )}
 
         {discosProcessados.length > 0 ? (
           <section aria-labelledby="discos-edicao-heading">
