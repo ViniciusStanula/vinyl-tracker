@@ -14,6 +14,8 @@ import { BEST_OF_ARTISTS } from "@/lib/guias/best-of-artist-data";
 import { DECADES } from "@/lib/decadas";
 import { getCoresList } from "@/lib/db/vinilColorido";
 import { getEdicoesList } from "@/lib/db/edicaoVinil";
+import { getEstiloDecadaCells, ESTILO_DECADA_SITEMAP_LIMIT } from "@/lib/db/estiloDecada";
+import { getGravadorasList, GRAVADORA_SITEMAP_LIMIT } from "@/lib/db/gravadora";
 
 export const revalidate = 86400; // regenerate every 24 hours — sitemap staleness is fine for SEO
 
@@ -27,6 +29,8 @@ export async function generateSitemaps() {
     { id: "paises" },
     { id: "cores" },
     { id: "edicoes" },
+    { id: "estilos-decadas" },
+    { id: "gravadoras" },
   ];
 }
 
@@ -142,6 +146,40 @@ export default async function sitemap(props: {
       return cores.map((c) => ({
         url: `${SITEMAP_BASE}/vinil-colorido/${c.slug}`,
         lastModified: c.lastUpdated,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  // Label pages, biggest first, capped to the batch being rolled out.
+  // getGravadorasList only returns labels at or above the noindex threshold.
+  if (id === "gravadoras") {
+    try {
+      const [gravadoras, latestUpdate] = await Promise.all([getGravadorasList(), getLatestDiscoUpdate()]);
+      return gravadoras.slice(0, GRAVADORA_SITEMAP_LIMIT).map((g) => ({
+        url: `${SITEMAP_BASE}/gravadora/${g.slug}`,
+        lastModified: latestUpdate,
+        changeFrequency: "weekly" as const,
+        priority: 0.5,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  // Genre × decade cells, biggest first, capped to the batch currently being
+  // rolled out (ESTILO_DECADA_SITEMAP_LIMIT). getEstiloDecadaCells already
+  // drops anything below the noindex threshold, so no cell listed here is a
+  // page that tells crawlers not to index it.
+  if (id === "estilos-decadas") {
+    try {
+      const [cells, latestUpdate] = await Promise.all([getEstiloDecadaCells(), getLatestDiscoUpdate()]);
+      return cells.slice(0, ESTILO_DECADA_SITEMAP_LIMIT).map((c) => ({
+        url: `${SITEMAP_BASE}/estilo/${c.slug}/${c.decada}`,
+        lastModified: latestUpdate,
+        changeFrequency: "weekly" as const,
+        priority: 0.5,
       }));
     } catch {
       return [];
