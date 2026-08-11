@@ -178,6 +178,19 @@ class TestNormalizeArtist:
         # ABBA has 4 alpha chars — threshold is > 4, so ABBA stays
         assert normalize_artist("ABBA") == "ABBA"
 
+    def test_band_name_with_comma_is_not_rotated(self):
+        # Rotating on any comma turned these into "The Creator Tyler",
+        # "New Road Black Country" and "Lake & Palmer Emerson" in the catalogue.
+        assert normalize_artist("Tyler, The Creator") == "Tyler, The Creator"
+        assert normalize_artist("Black Country, New Road") == "Black Country, New Road"
+        assert normalize_artist("Emerson, Lake & Palmer") == "Emerson, Lake & Palmer"
+
+    def test_multiple_commas_never_rotate(self):
+        assert normalize_artist("Crosby, Stills, Nash & Young") == "Crosby, Stills, Nash & Young"
+
+    def test_two_word_given_name_still_inverts(self):
+        assert normalize_artist("Wilson, Mary Jane") == "Mary Jane Wilson"
+
     def test_unknown_artist_preserved(self):
         assert normalize_artist(UNKNOWN_ARTIST) == UNKNOWN_ARTIST
 
