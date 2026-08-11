@@ -30,15 +30,32 @@ except ImportError:
     pass
 
 from database import get_connection
-from enrich_artist_meta import _mb_get, find_mbid, RATE_LIMIT
+from enrich_artist_meta import _mb_get, find_mbid, RATE_LIMIT, _accept
 
 log = logging.getLogger(__name__)
 
 
-def fetch_country(mbid: str) -> str | None:
-    """Return the ISO-3166 country code for an artist MBID, or None."""
-    data = _mb_get(f"artist/{mbid}", {"fmt": "json"})
+def fetch_country(mbid: str, expect: str | None = None) -> str | None:
+    """
+    Return the ISO-3166 country code for an artist MBID, or None.
+
+    When `expect` is given the entity is checked against it first. Phase A reads
+    mbids that were written by the previous matcher, which fell back to
+    MusicBrainz's first search result whenever nothing matched by name — so an
+    unknown number of those ids point at the wrong artist. Taking a country from
+    a wrong id would file records under a country the artist has nothing to do
+    with, and nothing downstream would ever flag it.
+
+    Costs no extra request: inc=aliases rides along with the fetch we already
+    make, and gives _accept the alias list it needs to clear names like
+    "Jackson 5" against the entity actually called "The Jacksons".
+    """
+    data = _mb_get(f"artist/{mbid}", {"fmt": "json", "inc": "aliases"})
     if not data:
+        return None
+    if expect and not _accept(data, expect):
+        log.info("  mbid %s resolves to %r, not %r — leaving country NULL",
+                 mbid, data.get("name"), expect)
         return None
     return data.get("country")
 
@@ -56,7 +73,7 @@ def refresh_existing(conn) -> int:
     log.info("Phase A — %d artists with mbid but no country.", len(rows))
     filled = 0
     for i, (artista, mbid) in enumerate(rows, 1):
-        country = fetch_country(mbid)
+        country = fetch_country(mbid, expect=artista)
         time.sleep(RATE_LIMIT)
         if country:
             with conn.cursor() as cur:
