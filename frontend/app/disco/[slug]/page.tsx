@@ -382,10 +382,19 @@ export default async function DiscoPage({
       const tagSlug = slugifyStyle(tag);
       return { name: tag, slug: validStyleSlugs.has(tagSlug) ? tagSlug : null };
     });
-    return [
-      ...withSlugs.filter((g) => g.slug),
-      ...withSlugs.filter((g) => !g.slug),
-    ].slice(0, 3);
+    // Only three fit in the header, so the sort decides what survives. The
+    // soundtrack taxonomy sorts first: Discogs describes a Ghibli record with
+    // six styles ("Modern Classical, Contemporary, Ambient, Soundtrack, Theme,
+    // Anison") and Last.fm's "anime" lands seventh, so Princess Mononoke lost
+    // the one label a visitor actually browses by. These five are the terms
+    // the discovery crawler curates and the ones with real listing pages.
+    const CATEGORY_FIRST = new Set(["soundtrack", "anime", "game", "movie", "tv"]);
+    const isCategory = (g: { name: string }) => CATEGORY_FIRST.has(g.name.toLowerCase());
+    const rank = (g: { name: string; slug: string | null }) =>
+      (g.slug ? 0 : 2) + (isCategory(g) ? 0 : 1);
+    return [...withSlugs]
+      .sort((a, b) => rank(a) - rank(b))
+      .slice(0, 3);
   })();
 
   const headerGenres = mbInfo && mbInfo.genres.length > 0
