@@ -1,19 +1,20 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 
+// enriched_data.json holds only the rock artists this file reads, and only the
+// fields below. The other genres and the mbid/discogs_id/match_strategy fields
+// were dropped to get the file from 8.2MB to 3.2MB; git history has the full
+// version if a future guia needs them.
 interface RawAlbum {
   title: string;
   year: number;
   mb_rgid: string;
-  match_strategy: string;
-  discogs_id: number;
   discogs_reviews: number;
   discogs_rating: number;
   cover_path: string;
 }
 
 interface RawArtist {
-  mbid: string;
   name: string;
   genre: string;
   sub_genre: string;

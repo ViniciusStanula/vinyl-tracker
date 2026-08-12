@@ -13,15 +13,43 @@ __pycache__/
 
 # Logs
 *.log
+crawler/logs/
 
 # Untracked data files
 compact_list.txt
 disco_records.json
 
-.vercel
-
 # Claude Code local settings (may contain credentials in Bash permission strings)
 .claude/
+
+# Agent/skill tooling installed into the repo. .github/skills/ matters most:
+# it sits inside .github/ where a `git add -A` would sweep it up.
+.agents/
+.github/skills/
+skills-lock.json
+
+# One-off scratch scripts and their output. Written to answer a single question
+# during a debugging session and never meant to be part of the crawler.
+crawler/_*
+crawler/*.err
+crawler/*.pkl
+crawler/*.png
+crawler/*_dryrun.csv
+crawler/*_applied.csv
+crawler/*_backup*.json
+crawler/*_proposals.csv
+crawler/wiki_candidates_*.json
+crawler/wiki_bio_context*.json
+crawler/bio_bundle*.json
+crawler/run2_batch_*
+crawler/run3_batch_*
+crawler/sobre_*
+crawler/disco_bios_*.json
+
+# Local scratch
+supabase/.temp/
+frontend/pp.html
+frontend/_tmp_*
 
 # Debug / tooling artifacts
 .bug-hunter/
