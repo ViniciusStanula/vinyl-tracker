@@ -21,6 +21,7 @@ const ESTILO_DISPLAY_PT: Record<string, string> = {
   game: "Trilha Sonora de Jogos",
   movie: "Trilha Sonora de Filme",
   anime: "Trilha Sonora de Anime",
+  tv: "Trilha Sonora de Série e Novela",
 };
 
 export function getEstiloDisplayName(canonical: string): string {

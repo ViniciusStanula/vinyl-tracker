@@ -8,8 +8,8 @@ or a franchise name, not under an artist with listeners.
 
 Seeds live in soundtrack_seeds.json and come in two kinds:
 
-  titles — a franchise carrying its own category (game/anime/movie). Every ASIN
-    the seed finds inherits that category, subject to a title cross-check.
+  titles — a franchise carrying its own category (game/anime/movie/tv). Every
+    ASIN the seed finds inherits that category, subject to a title cross-check.
   labels — boutique OST pressers (Mondo, Waxwork, Data Discs…). High-yield and
     low-noise: they press almost nothing but soundtracks, so searching the label
     name finds pressings no title seed would think to ask for. They imply no
@@ -63,7 +63,7 @@ from lastfm_discovery import (
 SEEDS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           "soundtrack_seeds.json")
 
-CATEGORIES = ("game", "anime", "movie")
+CATEGORIES = ("game", "anime", "movie", "tv")
 SOUNDTRACK_TAG = "soundtrack"
 
 # Positive evidence that a product IS a soundtrack, independent of which seed
@@ -72,7 +72,7 @@ SOUNDTRACK_TAG = "soundtrack"
 # own. Deliberately narrow: an unproven record is queued untagged, which costs
 # nothing, while a wrong tag pollutes a genre page.
 _OST_EVIDENCE_RE = re.compile(
-    r"\bsoundtrack[s]?\b|\bo\.s\.t\.?\b|\bost\b|\bscore\b"
+    r"\bsound[\s-]?track[s]?\b|\bo\.s\.t\.?\b|\bost\b|\bscore\b"
     r"|\btrilha[s]?\s+sonora[s]?\b|\bbanda\s+sonora\b"
     r"|\boriginal\s+motion\s+picture\b|\bmotion\s+picture\b"
     r"|\bmusic\s+from\b|\bmúsica[s]?\s+d[eo]\s+filme\b"
@@ -106,7 +106,7 @@ MAX_SEARCH_PAGES = 2
 #
 # The floor that matters: TIER_DORMANT is 28 days, so the whole seed list must
 # be reachable within 28 runs or the coldest seeds never come up at all. At 30/run
-# the ~336 seeds take ~12 days for a full pass — 2.4x headroom over the dormant
+# the ~650 seeds take ~22 days for a full pass — 1.3x headroom over the dormant
 # floor, which is what lets hot seeds jump the queue without starving the rest.
 # Raise this if the seed list grows past ~800.
 SEEDS_PER_RUN    = int(os.environ.get("SOUNDTRACK_SEEDS_PER_RUN", "30"))
@@ -169,11 +169,21 @@ class Seed:
     """One search seed. kind is "title" (carries a category) or "label"."""
 
     def __init__(self, name: str, kind: str, category: str | None = None,
-                 aliases: list[str] | None = None, ambiguous: bool = False):
+                 aliases: list[str] | None = None, ambiguous: bool = False,
+                 person_aliases: list[str] | None = None):
         self.name      = name
         self.kind      = kind
         self.category  = category
         self.aliases   = aliases or []
+        # Composers, bands and performers attached to this franchise. Kept out
+        # of the shared classifier vocabulary, because a person is not a
+        # franchise: "Daft Punk" as a Tron Legacy alias labelled all 17 Daft
+        # Punk records a movie soundtrack, "Tubular Bells" did the same to Mike
+        # Oldfield's catalogue, and "Goblin" caught Tyler, The Creator's album.
+        # They still let THIS seed claim its own proven soundtrack via
+        # seed_named_in_title — a Tron record credited to Daft Punk is still a
+        # Tron record.
+        self.person_aliases = person_aliases or []
         # Name is an ordinary word or a common title ("Doom", "Journey",
         # "Psycho"). The seed is still searched; it just never joins the
         # classifier vocabulary, where it would mislabel unrelated records.
@@ -213,7 +223,8 @@ def load_seeds(path: str = SEEDS_PATH) -> list[Seed]:
                 f"expected one of {CATEGORIES}."
             )
         seeds.append(Seed(name, "title", cat, entry.get("aliases") or [],
-                          bool(entry.get("ambiguous", False))))
+                          bool(entry.get("ambiguous", False)),
+                          entry.get("person_aliases") or []))
 
     for entry in raw.get("labels", []):
         name = (entry.get("name") or "").strip()
@@ -276,7 +287,7 @@ def seed_named_in_title(title: str, seed: Seed) -> bool:
     of the shared vocabulary is right (it must not label OTHER seeds' results),
     but the seed that actually ran the search may still claim its own name.
     """
-    for name in [seed.name] + seed.aliases:
+    for name in [seed.name] + seed.aliases + seed.person_aliases:
         if re.search(r"\b" + re.escape(name) + r"\b", title, re.IGNORECASE):
             return True
     return False
