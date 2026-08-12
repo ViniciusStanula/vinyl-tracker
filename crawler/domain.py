@@ -293,13 +293,49 @@ def _to_title_case(name: str) -> str:
     return " ".join(result)
 
 
+def _looks_inverted(before: str, after: str) -> bool:
+    """
+    True only for a personal name written surname-first: "SWIFT,TAYLOR".
+
+    Rotating on any comma at all is what turned "Tyler, The Creator" into
+    "The Creator Tyler", "Black Country, New Road" into "New Road Black Country"
+    and "Emerson, Lake & Palmer" into "Lake & Palmer Emerson". Those names are
+    then wrong everywhere they appear — on the artist page, in the slug, and to
+    MusicBrainz, which cannot match them at all.
+
+    A surname-first inversion is narrow: one surname before the comma, a given
+    name after it. Anything wider is a band that happens to contain a comma.
+    """
+    if not before or not after:
+        return False
+    # A surname is one word. "Black Country, New Road" is not a person.
+    if len(before.split()) != 1:
+        return False
+    # A given name is one or two words ("Taylor", "Mary Jane").
+    if len(after.split()) > 2:
+        return False
+    # Band grammar, not a name: "Emerson, Lake & Palmer".
+    if "&" in name_joined(before, after) or re.search(r"\band\b", after, re.IGNORECASE):
+        return False
+    # "Tyler, The Creator" — an article after the comma is never a given name.
+    if re.match(r"^(the|a|an|os|as|los|las|el|la|le|les)\b", after, re.IGNORECASE):
+        return False
+    return True
+
+
+def name_joined(before: str, after: str) -> str:
+    return f"{before}, {after}"
+
+
 def normalize_artist(name: str) -> str:
     if not name or name == UNKNOWN_ARTIST:
         return name
 
-    if "," in name:
+    # Only a single comma can be an inversion; "Crosby, Stills, Nash & Young"
+    # has two and is a band.
+    if name.count(",") == 1:
         parts = [p.strip() for p in name.split(",", 1)]
-        if len(parts) == 2 and all(parts):
+        if len(parts) == 2 and all(parts) and _looks_inverted(parts[0], parts[1]):
             candidate = f"{parts[1]} {parts[0]}"
             return _to_title_case(candidate)
 

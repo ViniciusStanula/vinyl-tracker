@@ -89,6 +89,22 @@ const nextConfig: NextConfig = {
       { source: "/artista/original-soundtrack", destination: "/estilo/soundtrack", permanent: true },
       { source: "/artista/musicas-mp3", destination: "/estilo/soundtrack", permanent: true },
       { source: "/artista/ost", destination: "/estilo/soundtrack", permanent: true },
+      // Artist names repaired by crawler/repair_rotated_artists.py. The old
+      // normalize_artist() rotated on any comma, so "Cruz, Celia" was stored as
+      // "Cruz Celia" and indexed under a slug that reads backwards. Only the
+      // ten whose slug actually moved are here — where the repair restored a
+      // comma, slugifyArtist() un-inverts it and lands on the same slug, so
+      // "Tyler, The Creator" still answers on /artista/the-creator-tyler.
+      { source: "/artista/nash-young-crosby-stills", destination: "/artista/stills-nash-young-crosby", permanent: true },
+      { source: "/artista/inc-masta-ace", destination: "/artista/masta-ace-incorporated", permanent: true },
+      { source: "/artista/animate-invent", destination: "/artista/invent-animate", permanent: true },
+      { source: "/artista/brel-jacques", destination: "/artista/jacques-brel", permanent: true },
+      { source: "/artista/bunyan-vashti", destination: "/artista/vashti-bunyan", permanent: true },
+      { source: "/artista/cruz-celia", destination: "/artista/celia-cruz", permanent: true },
+      { source: "/artista/d-kat-von", destination: "/artista/kat-von-d", permanent: true },
+      { source: "/artista/doma-molchat", destination: "/artista/molchat-doma", permanent: true },
+      { source: "/artista/fraites-jeremiah", destination: "/artista/jeremiah-fraites", permanent: true },
+      { source: "/artista/g-gus", destination: "/artista/gus-g", permanent: true },
       // lastfm_tags leaked artist names in as if they were genres — an artist is
       // not a style, so these send to the real artist page instead of a fake genre page.
       { source: "/estilo/eric-church", destination: "/artista/eric-church", permanent: true },
