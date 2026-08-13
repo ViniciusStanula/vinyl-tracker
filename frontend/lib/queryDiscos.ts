@@ -218,7 +218,7 @@ export async function queryDiscos(params: {
               SELECT "precoBrl", "capturadoEm"
               FROM   "HistoricoPreco"
               WHERE  "discoId" = d.id
-                AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
+                AND  "capturadoEm" >= date_trunc('day', NOW()) - INTERVAL '30 days'
                 AND  "precoBrl" >= 30
               ORDER  BY "capturadoEm" DESC
               LIMIT  10

@@ -31,6 +31,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import { originalReleaseYear, originalReleaseDatePublished } from "@/lib/originalYear";
 import UltimaVerificacao from "@/components/UltimaVerificacao";
+import { reduzirSeriePrecos } from "@/lib/priceSeries";
 import type { Metadata } from "next";
 
 // Offer validity horizon for the Product schema: the 1st of the month after
@@ -101,15 +102,19 @@ export async function generateMetadata({
     if (comAno.length <= 60) title = comAno;
   }
 
-  const valores = disco.precos.map((p) => Number(p.precoBrl));
+  // Same reduced series the page renders, so the description can't disagree
+  // with the chart — and so an observation that changed nothing can't rewrite
+  // the metadata either. See lib/priceSeries.ts.
+  const serieMeta = reduzirSeriePrecos(disco.precos);
+  const valores = serieMeta.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;
   const precoMin = valores.length ? Math.min(...valores) : precoAtual;
   const media = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : precoAtual;
   // Average comparison uses avg_30d (recent), not the 12-month mean — the latter is
   // skewed high by old outlier prices. Matches the on-page Média line and FAQ.
   const avg30d = disco.avg30d != null ? Number(disco.avg30d) : media;
-  const minRecord = disco.precos.length > 0
-    ? disco.precos.reduce((a, b) => Number(a.precoBrl) < Number(b.precoBrl) ? a : b)
+  const minRecord = serieMeta.length > 0
+    ? serieMeta.reduce((a, b) => Number(a.precoBrl) < Number(b.precoBrl) ? a : b)
     : null;
   const statusPreco: "menor" | "aumento" | "estavel" | null =
     valores.length >= 2
@@ -422,7 +427,14 @@ export default async function DiscoPage({
       ? { nome: getPaisDisplayName(meta.artistCountry)!, slug: ISO2_TO_SLUG[meta.artistCountry] }
       : null;
 
-  const valores = disco.precos.map((p) => Number(p.precoBrl));
+  // Everything below reads the reduced series rather than every observation:
+  // one point per BRT day plus one per price change. Current/min/max are
+  // unchanged by this — a distinct price always enters the series where it
+  // first appears. See lib/priceSeries.ts for why the page has to stop
+  // changing on observations that changed nothing.
+  const precosSerie = reduzirSeriePrecos(disco.precos);
+
+  const valores = precosSerie.map((p) => Number(p.precoBrl));
   const precoAtual = valores.at(-1) ?? 0;
   const precoMin = valores.length ? Math.min(...valores) : precoAtual;
   const precoMax = valores.length ? Math.max(...valores) : precoAtual;
@@ -439,14 +451,14 @@ export default async function DiscoPage({
 
   // Record when the historical min and max occurred
   const minRecord =
-    disco.precos.length > 0
-      ? disco.precos.reduce((a, b) =>
+    precosSerie.length > 0
+      ? precosSerie.reduce((a, b) =>
           Number(a.precoBrl) < Number(b.precoBrl) ? a : b
         )
       : null;
   const maxRecord =
-    disco.precos.length > 0
-      ? disco.precos.reduce((a, b) =>
+    precosSerie.length > 0
+      ? precosSerie.reduce((a, b) =>
           Number(a.precoBrl) > Number(b.precoBrl) ? a : b
         )
       : null;
@@ -489,7 +501,7 @@ export default async function DiscoPage({
 
   const rating = disco.rating ? Number(disco.rating) : null;
 
-  const chartPrecos = disco.precos.map((p) => ({
+  const chartPrecos = precosSerie.map((p) => ({
     data: p.capturadoEm.toLocaleDateString("pt-BR", {
       timeZone: BRT,
       day: "2-digit",
@@ -500,7 +512,7 @@ export default async function DiscoPage({
   }));
 
   // Price history displayed newest-first, with delta vs. previous capture
-  const precosDisplay = [...disco.precos].reverse();
+  const precosDisplay = [...precosSerie].reverse();
   const priceTableRows = precosDisplay.map((p) => ({
     dataFormatada: fmtDateTime(p.capturadoEm),
     preco: Number(p.precoBrl),
@@ -794,9 +806,9 @@ export default async function DiscoPage({
   // enforces) and it also measures the wrong thing — a record last crawled
   // three weeks ago would report an empty window rather than its real last
   // ninety days of trading.
-  const ultimaCaptura = disco.precos.at(-1)?.capturadoEm ?? null;
+  const ultimaCaptura = precosSerie.at(-1)?.capturadoEm ?? null;
   const precos90d = ultimaCaptura
-    ? disco.precos.filter(
+    ? precosSerie.filter(
         (p) =>
           p.capturadoEm.getTime() >= ultimaCaptura.getTime() - 90 * 24 * 60 * 60 * 1000
       )

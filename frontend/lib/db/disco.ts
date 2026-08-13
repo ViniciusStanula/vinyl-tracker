@@ -287,7 +287,7 @@ export const getRelatedDeals = (discoId: string, slug: string, tags: string[]) =
             SELECT "precoBrl", "capturadoEm"
             FROM   "HistoricoPreco"
             WHERE  "discoId" = c.id
-              AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
+              AND  "capturadoEm" >= date_trunc('day', NOW()) - INTERVAL '30 days'
             ORDER  BY "capturadoEm" ASC
             LIMIT  10
           ) sp
@@ -338,7 +338,7 @@ export const getArtistTopAlbums = (artista: string, discoId: string, slug: strin
           FROM (
             SELECT "precoBrl", "capturadoEm"
             FROM   "HistoricoPreco"
-            WHERE  "discoId" = c.id AND "capturadoEm" >= NOW() - INTERVAL '30 days'
+            WHERE  "discoId" = c.id AND "capturadoEm" >= date_trunc('day', NOW()) - INTERVAL '30 days'
             ORDER  BY "capturadoEm" ASC LIMIT 10
           ) sp
         ) AS sparkline
