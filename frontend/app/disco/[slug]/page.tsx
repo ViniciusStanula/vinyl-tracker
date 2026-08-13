@@ -30,7 +30,20 @@ import { getPaisDisplayName, ISO2_TO_SLUG } from "@/lib/paises";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 import { originalReleaseYear, originalReleaseDatePublished } from "@/lib/originalYear";
+import UltimaVerificacao from "@/components/UltimaVerificacao";
 import type { Metadata } from "next";
+
+// Offer validity horizon for the Product schema: the 1st of the month after
+// next, so it lands 30-60 days out and only changes once a month. The rolling
+// `Date.now() + 30d` it replaces produced a new string every midnight, which
+// made every product page differ from its cached copy daily — and Vercel bills
+// an ISR write whenever the regenerated output differs.
+function priceValidUntilQuantised(): string {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 1))
+    .toISOString()
+    .slice(0, 10);
+}
 
 // Safety net only — the crawler's /api/revalidate webhook is the real trigger.
 // 1800 matches the data-layer TTL so the HTML cache never outlives its data.
@@ -467,19 +480,12 @@ export default async function DiscoPage({
 
   const fmtDateTime = (d: Date) => `${fmtDate(d)}, ${fmtTime(d)}`;
 
-  // Label for the "Atual" stat card — compare dates in BRT
-  const dataAtual = disco.precos.at(-1)?.capturadoEm;
-
-  const isHoje =
-    dataAtual
-      ? dataAtual.toLocaleDateString("pt-BR", { timeZone: BRT }) ===
-        new Date().toLocaleDateString("pt-BR", { timeZone: BRT })
-      : false;
-  const dataAtualLabel = isHoje
-    ? `Hoje, ${fmtTime(dataAtual!)}`
-    : dataAtual
-    ? fmtDateTime(dataAtual)
-    : "—";
+  // The "Atual" label moved to <UltimaVerificacao>, which fetches the timestamp
+  // client-side. Rendering it here stamped an observation time into the cached
+  // HTML, so every crawl changed the page even when the price had not moved —
+  // and Vercel bills an ISR write only when the output differs. 89% of
+  // observations record an unchanged price.
+  const temPrecos = disco.precos.length > 0;
 
   const rating = disco.rating ? Number(disco.rating) : null;
 
@@ -601,11 +607,16 @@ export default async function DiscoPage({
       priceCurrency: "BRL",
       price: precoAtual.toFixed(2),
       itemCondition: "https://schema.org/NewCondition",
-      // +30d horizon: the crawler refreshes prices daily, but a short window
-      // forced Google to re-crawl every product just to keep the offer's
-      // priceValidUntil from lapsing. The price is still current (revalidated on
-      // change); this only bounds the schema's validity claim conservatively.
-      priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      // Horizon of 30-60 days, quantised to the 1st of the month after next.
+      // A rolling `now + 30d` changed this string at every midnight, which made
+      // every product page in the catalogue differ from its cached copy once a
+      // day no matter what the data did — and a differing page is a billed ISR
+      // write. Quantised, it changes once a month instead of 365 times a year.
+      //
+      // The horizon exists because a short window forced Google to re-crawl
+      // every product just to keep the offer from lapsing. The price itself is
+      // still revalidated on change; this only bounds the validity claim.
+      priceValidUntil: priceValidUntilQuantised(),
       availability: disponivel
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
@@ -1100,8 +1111,8 @@ export default async function DiscoPage({
                   <div className="flex items-center justify-center bg-groove text-dust font-bold text-sm py-4 rounded-xl cursor-not-allowed border border-wax/50">
                     Indisponível {lojaComPrep}
                   </div>
-                  {dataAtual && (
-                    <p className="text-xs text-dust pl-1">Último registro em {dataAtual ? <time dateTime={dataAtual.toISOString()}>{dataAtualLabel}</time> : dataAtualLabel}</p>
+                  {temPrecos && (
+                    <p className="text-xs text-dust pl-1">Último registro em <UltimaVerificacao slug={slug} /></p>
                   )}
                   <AlertaTrigger {...alertProps} variant="primary" label="Avise-me quando voltar" />
                   <div className="flex justify-end">
@@ -1117,7 +1128,7 @@ export default async function DiscoPage({
                 <div className="flex-1 px-3 py-3 min-w-0">
                   <dt className="text-[9px] text-dust uppercase tracking-wide mb-1">Atual</dt>
                   <dd className="font-bold text-gold tabular-nums text-xs sm:text-sm">{fmt(precoAtual)}</dd>
-                  <dd className="text-[9px] text-dust mt-0.5 truncate">{dataAtual ? <time dateTime={dataAtual.toISOString()}>{dataAtualLabel}</time> : dataAtualLabel}</dd>
+                  <dd className="text-[9px] text-dust mt-0.5 truncate"><UltimaVerificacao slug={slug} /></dd>
                 </div>
                 <div className="w-px bg-groove self-stretch" aria-hidden="true" />
                 <div className="flex-1 px-3 py-3 min-w-0">
