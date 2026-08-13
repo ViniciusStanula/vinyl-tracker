@@ -188,7 +188,7 @@ const _getGravadoraData = unstable_cache(
             SELECT "precoBrl", "capturadoEm"
             FROM "HistoricoPreco"
             WHERE "discoId" = c.id
-              AND "capturadoEm" >= NOW() - INTERVAL '30 days'
+              AND "capturadoEm" >= date_trunc('day', NOW()) - INTERVAL '30 days'
             ORDER BY "capturadoEm" ASC
             LIMIT 10
           ) sp

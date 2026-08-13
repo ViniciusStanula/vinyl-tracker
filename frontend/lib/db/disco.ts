@@ -83,7 +83,15 @@ export type RelatedDeal = {
 const _getDiscoWithPrecos = (slug: string) =>
   unstable_cache(
     async () => {
-      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+      // Quantised to midnight UTC: a rolling `Date.now() - 365d` slid the
+      // window forward on every call, so the oldest price row could drop out
+      // between two otherwise identical renders and make the page differ from
+      // its cached copy for no reason. Vercel bills a write whenever it does.
+      const today = new Date();
+      const oneYearAgo = new Date(
+        Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()) -
+          365 * 24 * 60 * 60 * 1000,
+      );
       return prisma.disco.findUnique({
         where: { slug },
         include: {
@@ -279,7 +287,7 @@ export const getRelatedDeals = (discoId: string, slug: string, tags: string[]) =
             SELECT "precoBrl", "capturadoEm"
             FROM   "HistoricoPreco"
             WHERE  "discoId" = c.id
-              AND  "capturadoEm" >= NOW() - INTERVAL '30 days'
+              AND  "capturadoEm" >= date_trunc('day', NOW()) - INTERVAL '30 days'
             ORDER  BY "capturadoEm" ASC
             LIMIT  10
           ) sp
@@ -330,7 +338,7 @@ export const getArtistTopAlbums = (artista: string, discoId: string, slug: strin
           FROM (
             SELECT "precoBrl", "capturadoEm"
             FROM   "HistoricoPreco"
-            WHERE  "discoId" = c.id AND "capturadoEm" >= NOW() - INTERVAL '30 days'
+            WHERE  "discoId" = c.id AND "capturadoEm" >= date_trunc('day', NOW()) - INTERVAL '30 days'
             ORDER  BY "capturadoEm" ASC LIMIT 10
           ) sp
         ) AS sparkline
