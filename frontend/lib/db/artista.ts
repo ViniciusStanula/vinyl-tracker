@@ -60,6 +60,7 @@ export type ArtistaPageData = {
   totalPages: number;
   topStyles: string[];
   sameAs: string[];
+  mbid: string | null;
   bioShortPt: string | null;
   bioPt: string | null;
   country: string | null;
@@ -424,7 +425,7 @@ const _getArtistaPageData = (
       }];
     });
 
-    return { canonical, items, total, totalPages, topStyles, sameAs, bioShortPt, bioPt, country, unavailableItems };
+    return { canonical, items, total, totalPages, topStyles, sameAs, mbid: meta?.mbid ?? null, bioShortPt, bioPt, country, unavailableItems };
   },
   ["artista-page", slug],
   { tags: [artistaTag(slug)], revalidate: 14400 },

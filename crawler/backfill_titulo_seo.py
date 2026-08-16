@@ -11,7 +11,16 @@ New columns:
     vinil_cor                TEXT        -- e.g. "Vermelho", "Splatter Colorido"; NULL if unknown
     vinil_edicao              TEXT        -- e.g. "Edição Deluxe", "Record Store Day"; NULL if unknown
     vinil_versao              TEXT        -- e.g. "Ao Vivo", "Remix"; NULL if unknown
-    titulo_seo_atualizado_em TIMESTAMPTZ -- when this row's titulo_seo was last computed
+    vinil_gramatura          TEXT        -- "180g" / "200g"; NULL if unknown
+    vinil_reedicao           BOOLEAN     -- TRUE repress, FALSE original, NULL unknown
+    titulo_seo_atualizado_em TIMESTAMPTZ -- when this row's values last CHANGED
+
+Every vinyl row is recomputed on each run, but only rows whose computed values
+differ from the stored ones are written -- rewriting a page with the values it
+already holds costs a Vercel ISR write and buys nothing. So the timestamp marks
+the last change, not the last computation, and a row can sit indefinitely with
+an older timestamp than the enrichment that fed it. That is the no-op case, not
+a backlog.
 
 Re-running is safe and cheap: only rows where discogs_title / mb_title /
 discogs_format_desc changed since titulo_seo_atualizado_em need recomputing,
@@ -33,11 +42,15 @@ import psycopg2
 from db_retry import connect_with_retry
 from titulo_seo import compose
 
-_COLUMNS = {"titulo_seo", "vinil_cor", "vinil_edicao", "vinil_versao", "titulo_seo_atualizado_em"}
+_COLUMNS = {
+    "titulo_seo", "vinil_cor", "vinil_edicao", "vinil_versao",
+    "vinil_gramatura", "vinil_reedicao", "titulo_seo_atualizado_em",
+}
 CHUNK_SIZE = 500
 
 _UPDATE_SQL = """UPDATE "Disco"
                  SET titulo_seo = %s, vinil_cor = %s, vinil_edicao = %s, vinil_versao = %s,
+                     vinil_gramatura = %s, vinil_reedicao = %s,
                      titulo_seo_atualizado_em = now()
                  WHERE slug = %s"""
 
@@ -80,6 +93,8 @@ def ensure_columns(conn) -> None:
                  ADD COLUMN IF NOT EXISTS vinil_cor                TEXT,
                  ADD COLUMN IF NOT EXISTS vinil_edicao             TEXT,
                  ADD COLUMN IF NOT EXISTS vinil_versao             TEXT,
+                 ADD COLUMN IF NOT EXISTS vinil_gramatura          TEXT,
+                 ADD COLUMN IF NOT EXISTS vinil_reedicao           BOOLEAN,
                  ADD COLUMN IF NOT EXISTS titulo_seo_atualizado_em TIMESTAMPTZ"""
         )
     conn.commit()
@@ -95,7 +110,13 @@ def main() -> None:
     ensure_columns(conn)
 
     cur = conn.cursor()
-    query = """SELECT slug, artista, titulo, discogs_title, mb_title, discogs_format_desc
+    # The stored values come back too: a run that rewrites all ~40k rows with
+    # the values they already hold costs a Vercel ISR write for every page whose
+    # output it touches, for nothing. Only rows the rules now answer differently
+    # are written.
+    query = """SELECT slug, artista, titulo, discogs_title, mb_title, discogs_format_desc,
+                      titulo_seo, vinil_cor, vinil_edicao, vinil_versao,
+                      vinil_gramatura, vinil_reedicao
                FROM "Disco"
                WHERE disponivel = TRUE AND (format IS NULL OR format = 'vinyl')"""
     if args.limit:
@@ -104,14 +125,22 @@ def main() -> None:
     rows = cur.fetchall()
     print(f"candidates: {len(rows)} | mode: {'APPLY' if args.apply else 'DRY RUN'}")
 
-    updates = []
-    for slug, artista, titulo, dt, mt, fdesc in rows:
-        h1, base, cor, edicao, versao = compose(artista, titulo, dt, mt, fdesc)
-        updates.append((h1, cor, edicao, versao, slug))
+    updates, changes = [], []
+    for (slug, artista, titulo, dt, mt, fdesc,
+         old_h1, old_cor, old_ed, old_ver, old_gram, old_reed) in rows:
+        h1, base, cor, edicao, versao, gramatura, reedicao = compose(artista, titulo, dt, mt, fdesc)
+        if (h1, cor, edicao, versao, gramatura, reedicao) == (
+            old_h1, old_cor, old_ed, old_ver, old_gram, old_reed
+        ):
+            continue
+        updates.append((h1, cor, edicao, versao, gramatura, reedicao, slug))
+        changes.append((slug, old_h1, h1))
+
+    print(f"changed: {len(updates)} of {len(rows)}")
 
     if not args.apply:
-        for h1, cor, edicao, versao, slug in updates[:20]:
-            print(f"  {slug[:45]:47s} -> {h1}")
+        for slug, old_h1, h1 in changes[:20]:
+            print(f"  {slug[:45]:47s}\n      was: {old_h1}\n      now: {h1}")
         print(f"\n(dry run -- {len(updates)} rows would be written; re-run with --apply)")
         return
 
@@ -119,7 +148,7 @@ def main() -> None:
     # updates the same rows in its own order. Write in slug-sorted chunks so
     # both sides take row locks in a consistent order, and retry the chunk on
     # the deadlocks that consistent ordering can't rule out.
-    updates.sort(key=lambda u: u[4])
+    updates.sort(key=lambda u: u[-1])
     written = 0
     for start in range(0, len(updates), CHUNK_SIZE):
         written += write_chunk(conn, updates[start:start + CHUNK_SIZE])

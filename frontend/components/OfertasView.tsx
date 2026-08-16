@@ -3,7 +3,7 @@ import DiscoCard from "@/components/DiscoCard";
 import Pagination from "@/components/Pagination";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
 import { DEAL_TIERS } from "@/lib/dealTiers";
 
@@ -76,12 +76,7 @@ export default async function OfertasView({ page }: { page: number }) {
     name: "Ofertas de Discos de Vinil",
     url: `${SITE_URL}${canonicalPath}`,
     numberOfItems: total,
-    itemListElement: items.slice(0, 10).map((disco, i) => ({
-      "@type": "ListItem",
-      position: start + i + 1,
-      url: `${SITE_URL}/disco/${disco.slug}`,
-      name: disco.tituloSeo || disco.titulo,
-    })),
+    itemListElement: discoListItems(items, SITE_URL, { startPosition: start + 1 }),
   });
 
   return (

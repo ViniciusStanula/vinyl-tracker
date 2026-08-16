@@ -11,7 +11,7 @@ import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getPaisPageData, type SerializedPaisData } from "@/lib/db/pais";
 import { SLUG_TO_ISO2, getPaisDisplayName, paisComPreposicao } from "@/lib/paises";
 import { SITE_URL } from "@/lib/siteUrl";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 export const revalidate = 14400; // safety-net; on-demand purge via revalidateTag("prices") fires first
@@ -143,12 +143,24 @@ export default async function PaisPage({
     name: `Discos de vinil de artistas ${doPais}`,
     url: `${siteUrl}/pais/${slug}`,
     numberOfItems: total,
-    itemListElement: discos.slice(0, 10).map((disco, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${siteUrl}/disco/${disco.slug}`,
-      name: disco.tituloSeo || disco.titulo,
-    })),
+    itemListElement: discoListItems(discos, siteUrl),
+  });
+
+  // The country as an entity, with the ISO code as its identifier. The artist
+  // pages already publish foundingLocation as a Place with the same PT-BR
+  // name; this gives that name a node and an ISO code to resolve against
+  // instead of leaving it as loose text on both ends.
+  const countryJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "Country",
+    "@id": `${siteUrl}/pais/${slug}#country`,
+    name: nome,
+    url: `${siteUrl}/pais/${slug}`,
+    identifier: {
+      "@type": "PropertyValue",
+      propertyID: "ISO 3166-1 alpha-2",
+      value: iso2,
+    },
   });
 
   return (
@@ -157,6 +169,8 @@ export default async function PaisPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: countryJsonLd }} />
 
       <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
         <Link href="/" className="hover:text-cream transition-colors">Início</Link>

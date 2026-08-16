@@ -105,10 +105,24 @@ export default async function BestOfArtistPage({
     name: `Melhores álbuns ${artist.article} ${artist.name}`,
     url: `${SITE_URL}/guias/melhores-discos/${slug}`,
     numberOfItems: albums.length,
+    // Each entry as the album it ranks, not a bare string. The ranking already
+    // holds the release year, the cover, the MusicBrainz id and — for the ones
+    // this catalogue sells — the record page, and published none of it.
     itemListElement: albums.map((album, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      name: album.title,
+      item: {
+        "@type": "MusicAlbum",
+        // The record page's album node where we have one, so a ranked entry
+        // and the product it links to are the same entity.
+        ...(album.discoSlug ? { "@id": `${SITE_URL}/disco/${album.discoSlug}#album` } : {}),
+        name: album.title,
+        byArtist: { "@type": "MusicGroup", name: artist.name },
+        ...(album.discoSlug ? { url: `${SITE_URL}/disco/${album.discoSlug}` } : {}),
+        ...(album.imgUrl ? { image: album.imgUrl } : {}),
+        ...(album.year ? { datePublished: String(album.year) } : {}),
+        ...(album.mbid ? { sameAs: `https://musicbrainz.org/release-group/${album.mbid}` } : {}),
+      },
     })),
   });
 

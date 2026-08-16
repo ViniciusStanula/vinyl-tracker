@@ -11,7 +11,7 @@ import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getArtistaPageData } from "@/lib/db/artista";
 import { getTopBotHitSlugs } from "@/lib/db/disco";
 import { SITE_URL } from "@/lib/siteUrl";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 export const revalidate = 14400; // safety-net; on-demand purge via revalidateTag(artistaTag(slug)) fires first
@@ -106,7 +106,7 @@ export default async function ArtistaPage({
   const data = await getArtistaPageData(slug, 1, "desconto", null, RECORDS_CAP);
   if (!data) notFound();
 
-  const { canonical, items, total, topStyles, sameAs, bioShortPt, bioPt, country, unavailableItems } = data;
+  const { canonical, items, total, topStyles, sameAs, mbid, bioShortPt, bioPt, country, unavailableItems } = data;
   const artista = toTitleCase(canonical);
   const isUnknownArtist = canonical.toLowerCase() === "artista não identificado";
   const siteUrl = SITE_URL;
@@ -127,12 +127,7 @@ export default async function ArtistaPage({
     name: `Discos de ${artista}`,
     url: `${siteUrl}/artista/${slug}`,
     numberOfItems: total,
-    itemListElement: items.slice(0, 10).map((disco, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${siteUrl}/disco/${disco.slug}`,
-      name: disco.tituloSeo || disco.titulo,
-    })),
+    itemListElement: discoListItems(items, siteUrl),
   });
 
   const musicArtistJsonLd = toJsonLd({
@@ -156,6 +151,33 @@ export default async function ArtistaPage({
             "@type": "Place",
             name: getPaisDisplayName(country),
           },
+        }
+      : {}),
+    // The MBID as an identifier, not only as a musicbrainz.org URL inside
+    // sameAs. Same fact, but a consumer resolving entities reads the ID here
+    // without having to parse it back out of a URL.
+    ...(mbid
+      ? {
+          identifier: {
+            "@type": "PropertyValue",
+            propertyID: "MusicBrainz",
+            value: mbid,
+          },
+        }
+      : {}),
+    // The artist's records, as node references into the MusicAlbum each disco
+    // page already publishes. The link was one-way: every record declares its
+    // byArtist @id pointing here, and nothing here pointed back, so the artist
+    // node was a leaf. Capped at the first 50 by the page's default sort —
+    // enough to state the relationship without shipping a 200-entry array into
+    // every artist page's HTML (the ItemList above already carries the top 10
+    // as full products for the listing itself).
+    ...(items.length > 0
+      ? {
+          album: items.slice(0, 50).map((disco) => ({
+            "@type": "MusicAlbum",
+            "@id": `${siteUrl}/disco/${disco.slug}#album`,
+          })),
         }
       : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),

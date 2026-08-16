@@ -105,7 +105,24 @@ EDITION_PRIORITY = [
     (r"\bpicture\s+disc\b", "Picture Disc"),
     (r"\bbox\s?set\b", "Box Set"),
     (r"\bnumbered\b", "Numerado"),
+    # Last: the vaguest of the edition claims. Any of the labels above says
+    # something more specific about the same pressing, so "Limited Edition"
+    # only speaks when nothing else does.
+    (r"\blimited\s+edition\b", "Edição Limitada"),
 ]
+# Pressing weight is a spec, not an edition -- a record is routinely both
+# "Limited Edition" AND 180g, and vinil_edicao holds one value. Kept apart so
+# neither fact evicts the other.
+GRAMATURA_PRIORITY = [
+    (r"\b200\s?g(?:ram)?\b", "200g"),
+    (r"\b180\s?g(?:ram)?\b", "180g"),
+]
+# Provenance, again orthogonal to both: this is about whether the pressing is
+# the original run or a later one. Deliberately absent from the title suffix
+# (see compose) -- it powers the original-vs-repress split on the decade and
+# catalog pages, where it is useful, rather than the H1, where it reads as a
+# demerit.
+REISSUE_RE = re.compile(r"\b(reissue|repress|re-?edition)\b", re.IGNORECASE)
 VERSION_PRIORITY = [
     (r"\bhalf[\s-]?speed\b", "Masterização Half-Speed"),
     (r"\bacoustic\b", "Acústico"),
@@ -247,11 +264,36 @@ def parse_single(text, priority_list):
     return None
 
 
+# "Limited Edition" is the vaguest label in EDITION_PRIORITY and appears on
+# roughly one listed pressing in six, so unlike the others it is weak enough to
+# be worth overruling when the título names something concrete.
+_VAGUE_EDITIONS = {"Edição Limitada"}
+
+
+def parse_edition(fmt_desc, title_src):
+    """Edition label, preferring the verified pressing data -- except when all
+    it offers is the vague one and the título names a specific edition.
+
+    The plain `fmt_desc or title_src` fallback lets ANY fmt_desc match suppress
+    the título, which was harmless while every label was specific. Once
+    "Limited Edition" was recognised it began shadowing better answers the
+    título still held: the Rolling Stones' "7\" Singles 1966-1971" went from
+    "Box Set" to "Edição Limitada", and a Major League 2 pressing from "Edição
+    Deluxe" to the same. Both títulos say so outright; only the Discogs string
+    was vague. Source trust is otherwise unchanged.
+    """
+    from_fmt = parse_single(fmt_desc, EDITION_PRIORITY)
+    from_title = parse_single(title_src, EDITION_PRIORITY)
+    if from_fmt in _VAGUE_EDITIONS and from_title and from_title not in _VAGUE_EDITIONS:
+        return from_title
+    return from_fmt or from_title
+
+
 def resolve_variant(artista, titulo, fmt_desc):
-    """Resolves (cor, edicao, versao) for a record. Returns None for any
-    field with no data -- never guesses. `cor` is a short display label like
-    "Vermelho" or "Splatter Colorido", suitable for both the H1 suffix and
-    grouping records for a /vinil-colorido/<cor> hub page."""
+    """Resolves (cor, edicao, versao, gramatura, reedicao) for a record.
+    Returns None for any field with no data -- never guesses. `cor` is a short
+    display label like "Vermelho" or "Splatter Colorido", suitable for both the
+    H1 suffix and grouping records for a /vinil-colorido/<cor> hub page."""
     title_src = extract_junk(titulo, artista)
     color_src = fmt_desc or title_src
     colors = parse_colors(color_src)
@@ -315,17 +357,28 @@ def resolve_variant(artista, titulo, fmt_desc):
     else:
         cor = None
 
-    edicao = parse_single(fmt_desc, EDITION_PRIORITY) or parse_single(extract_junk(titulo, artista), EDITION_PRIORITY)
-    versao = parse_single(fmt_desc, VERSION_PRIORITY) or parse_single(extract_junk(titulo, artista), VERSION_PRIORITY)
-    return cor, edicao, versao
+    edicao = parse_edition(fmt_desc, title_src)
+    versao = parse_single(fmt_desc, VERSION_PRIORITY) or parse_single(title_src, VERSION_PRIORITY)
+    # Weight falls back to the título the same way: "Killers[180g LP]" is the
+    # seller's own claim about the physical disc, checkable and worth keeping.
+    gramatura = parse_single(fmt_desc, GRAMATURA_PRIORITY) or parse_single(title_src, GRAMATURA_PRIORITY)
+
+    # Tri-state, and deliberately fmt_desc-only. Amazon titles say "Reissue"
+    # too rarely and too loosely to trust, and more importantly: a record with
+    # no pressing data is UNKNOWN, not original. Collapsing that to False would
+    # let the 7k rows Discogs never resolved be counted as original pressings
+    # on the decade pages, which is the one number those pages exist to get
+    # right.
+    reedicao = None if not fmt_desc else bool(REISSUE_RE.search(fmt_desc))
+    return cor, edicao, versao, gramatura, reedicao
 
 
 def compose(artista, titulo, discogs_title, mb_title, fmt_desc):
-    """Returns (h1, base, cor, edicao, versao). `h1` is the final display
-    title -- base plus a disambiguating suffix only when variant data
-    exists."""
+    """Returns (h1, base, cor, edicao, versao, gramatura, reedicao). `h1` is
+    the final display title -- base plus a disambiguating suffix only when
+    variant data exists."""
     base = base_title(artista, titulo, discogs_title, mb_title)
-    cor, edicao, versao = resolve_variant(artista, titulo, fmt_desc)
+    cor, edicao, versao, gramatura, reedicao = resolve_variant(artista, titulo, fmt_desc)
 
     bits = []
     if cor:
@@ -334,5 +387,10 @@ def compose(artista, titulo, discogs_title, mb_title, fmt_desc):
         bits.append(edicao)
     if versao:
         bits.append(versao)
+    # Weight last: it qualifies the disc rather than naming the release, so it
+    # reads as a spec at the end of the suffix. `reedicao` is intentionally not
+    # here -- it is a facet, not a title claim.
+    if gramatura:
+        bits.append(gramatura)
     suffix = f" ({', '.join(bits)})" if bits else ""
-    return f"{base}{suffix}", base, cor, edicao, versao
+    return f"{base}{suffix}", base, cor, edicao, versao, gramatura, reedicao

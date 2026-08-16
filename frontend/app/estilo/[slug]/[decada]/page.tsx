@@ -16,7 +16,7 @@ import { getEstiloDisplayName } from "@/lib/db/estilo";
 import { getFacetStats } from "@/lib/db/facetStats";
 import { decadaLabel, parseDecade } from "@/lib/decadas";
 import { SITE_URL } from "@/lib/siteUrl";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import type { Metadata } from "next";
 import type { ProcessedDisco } from "@/lib/queryDiscos";
 
@@ -152,12 +152,19 @@ export default async function EstiloDecadaPage({
     name: `Discos de ${nome} dos ${anos}`,
     url: `${SITE_URL}/estilo/${slug}/${start}`,
     numberOfItems: total,
-    itemListElement: discos.slice(0, 10).map((disco, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${SITE_URL}/disco/${disco.slug}`,
-      name: disco.tituloSeo || disco.titulo,
-    })),
+    itemListElement: discoListItems(discos, SITE_URL),
+  });
+
+  // Same genre node the parent /estilo/[slug] page publishes, by @id. These
+  // pages named the style only in prose; nothing in the markup said the list
+  // was a genre at all, so the decade slices were disconnected from the style
+  // hub they belong to.
+  const musicGenreJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "MusicGenre",
+    "@id": `${SITE_URL}/estilo/${slug}#genre`,
+    name: nome,
+    url: `${SITE_URL}/estilo/${slug}`,
   });
 
   return (
@@ -165,6 +172,7 @@ export default async function EstiloDecadaPage({
       <div className="max-w-7xl mx-auto px-4 py-8">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: musicGenreJsonLd }} />
 
         <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
           <Link href="/" className="hover:text-cream transition-colors">Início</Link>

@@ -50,6 +50,8 @@ export type DiscoMeta = {
   vinilCor: string | null;
   vinilEdicao: string | null;
   vinilVersao: string | null;
+  vinilGramatura: string | null;
+  vinilReedicao: boolean | null;
 };
 
 export type RelatedDeal = {
@@ -183,7 +185,12 @@ export const getDiscoMeta = (slug: string) =>
         d.titulo_seo           AS "tituloSeo",
         d.vinil_cor            AS "vinilCor",
         d.vinil_edicao         AS "vinilEdicao",
-        d.vinil_versao         AS "vinilVersao"
+        d.vinil_versao         AS "vinilVersao",
+        -- "180g"/"200g", and TRUE repress / FALSE original / NULL unknown.
+        -- Separate columns because vinil_edicao is single-valued and a record
+        -- can be both a reissue and 180g. See crawler/backfill_titulo_seo.py.
+        d.vinil_gramatura      AS "vinilGramatura",
+        d.vinil_reedicao       AS "vinilReedicao"
       FROM "Disco" d
       LEFT JOIN "ArtistMeta" am ON am.artista = d.artista
       WHERE d.slug = ${slug}

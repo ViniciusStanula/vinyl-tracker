@@ -2,7 +2,7 @@ import { queryTopArtistAllDealsWithCache } from "@/lib/db/carousel";
 import ArtistaRecords from "@/components/ArtistaRecords";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
 
 export const revalidate = 14400;
@@ -44,10 +44,22 @@ export default async function ArtistasPage() {
     ],
   });
 
+  // This page listed records in the markup nowhere at all — only a breadcrumb.
+  const itemListJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Vinis dos artistas mais ouvidos",
+    url: `${SITE_URL}/artistas-mais-ouvidos`,
+    numberOfItems: total,
+    itemListElement: discoListItems(items, SITE_URL),
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
       <header className="mb-4">
         <Link
           href="/"
