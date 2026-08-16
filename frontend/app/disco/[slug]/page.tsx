@@ -594,6 +594,58 @@ export default async function DiscoPage({
         }
       : null;
 
+  // The barcode, from Amazon's Creators API (itemInfo.externalIds) and falling
+  // back to MusicBrainz's. This is the identifier Google uses to match a
+  // listing to a real-world product, so it is worth more than sku/brand alone.
+  // Length-gated: a malformed GTIN is worse than none, since it would assert
+  // this listing IS some other product. Digits only, since both sources store
+  // the odd separator-laden value.
+  //
+  // mb_barcode as fallback because ean is Amazon-only: the EAN-13 form goes to
+  // gtin13 and the 12-digit UPC form to gtin12, which is the property Google
+  // documents for it.
+  const gtinLd = ((): Record<string, string> => {
+    for (const raw of [meta?.ean, meta?.mbBarcode]) {
+      const digits = (raw ?? "").replace(/\D/g, "");
+      if (digits.length === 13) return { gtin13: digits };
+      if (digits.length === 12) return { gtin12: digits };
+    }
+    return {};
+  })();
+
+  // Pressing facts as Product properties. Every one of these is already stored
+  // and already shown on the page (Ficha técnica / título), but until now none
+  // of it reached the markup — nothing told a consumer that this is a blue
+  // 180g reissue rather than a plain black repress.
+  //
+  // color/weight/material are first-class Product properties; the rest have no
+  // dedicated property and go to additionalProperty, which is where
+  // schema.org puts product attributes it does not model itself.
+  const lpCount = (meta?.discogsFormatDesc ?? "").match(/(\d+)\s*x\s*LP/i)?.[1] ?? null;
+  const gramaturaGrams = Number((meta?.vinilGramatura ?? "").replace(/\D/g, "")) || null;
+  const additionalProperties = [
+    ...(meta?.vinilEdicao
+      ? [{ "@type": "PropertyValue", name: "Edição", value: meta.vinilEdicao }]
+      : []),
+    ...(meta?.vinilVersao
+      ? [{ "@type": "PropertyValue", name: "Versão", value: meta.vinilVersao }]
+      : []),
+    // Tri-state on purpose: NULL means nobody checked, and "unknown" must not
+    // be published as "original". Only the two decided states are emitted.
+    ...(meta?.vinilReedicao != null
+      ? [{
+          "@type": "PropertyValue",
+          name: "Prensagem",
+          value: meta.vinilReedicao ? "Reedição" : "Prensagem original",
+        }]
+      : []),
+    ...(lpCount
+      ? [{ "@type": "PropertyValue", name: "Discos", value: Number(lpCount) }]
+      : []),
+  ];
+
+  const offerId = `${siteUrl}/disco/${slug}#offer`;
+
   const productJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "Product",
@@ -601,17 +653,22 @@ export default async function DiscoPage({
     name: tituloSeo,
     description: `Compre ${tituloSeo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}.`,
     sku: disco.asin,
-    // Barcode from Amazon's Creators API (itemInfo.externalIds). This is the
-    // identifier Google uses to match a listing to a real-world product, so it
-    // is worth more than sku/brand alone. Guarded on exactly 13 digits: a
-    // malformed gtin13 is worse than none, since it would assert this listing
-    // IS some other product.
-    ...(meta?.ean && /^\d{13}$/.test(meta.ean) ? { gtin13: meta.ean } : {}),
+    ...gtinLd,
     image: disco.imgUrl ?? undefined,
     brand: { "@type": "Brand", name: disco.artista },
     url: `${siteUrl}/disco/${slug}`,
+    category: "Discos de Vinil",
+    // Safe to assert for every page that renders: non-vinyl rows carry
+    // format='cd'/'other' and notFound() above them.
+    material: "Vinil",
+    ...(meta?.vinilCor ? { color: meta.vinilCor } : {}),
+    ...(gramaturaGrams
+      ? { weight: { "@type": "QuantitativeValue", value: gramaturaGrams, unitCode: "GRM" } }
+      : {}),
+    ...(additionalProperties.length ? { additionalProperty: additionalProperties } : {}),
     offers: {
       "@type": "Offer",
+      "@id": offerId,
       // Route through affiliateUrl() like the buy button does: the stored
       // Disco.url can carry a stale/wrong Associates tag, and the raw value
       // would leak it into the schema.
@@ -677,7 +734,61 @@ export default async function DiscoPage({
     if (terms.has("Album")) {
       return { albumReleaseType: "https://schema.org/AlbumRelease" };
     }
+    // MusicBrainz as fallback: discogs_format_desc is the better source (it
+    // describes the exact pressing) but is absent on records Discogs never
+    // resolved, which left albumReleaseType off entirely there.
+    if (meta?.mbPrimaryType === "Album") {
+      return { albumReleaseType: "https://schema.org/AlbumRelease" };
+    }
+    if (meta?.mbPrimaryType === "EP") {
+      return { albumReleaseType: "https://schema.org/EPRelease" };
+    }
     return {};
+  })();
+
+  // The prose the page already shows under "Sobre o álbum", in the same
+  // precedence the visible section uses (translated Last.fm wiki first, then
+  // the Claude-written sobre_pt, which is only populated where the wiki is
+  // absent). It was rendered for humans and withheld from the markup, which is
+  // the text an AI summariser would otherwise have to scrape out of the HTML.
+  const albumDescription = albumInfo?.wikiSummary ?? meta?.sobrePt ?? null;
+
+  // sobre_pt_source_url records where the bio's FACTS were grounded, which is
+  // not the same claim as "this album is that page's subject". Measured over
+  // the 1,728 records that carry one, ~7% point at a different album — White
+  // Light/White Heat is grounded on the Wikipedia article for The Velvet
+  // Underground & Nico. Publishing those in sameAs asserts the record IS that
+  // other album, which is worse than saying nothing.
+  //
+  // So the URL only enters sameAs when the article slug and the album title
+  // agree; otherwise it goes to `citation`, which says "this text draws on that
+  // source" and is true in both cases. Nothing is dropped either way.
+  const sourceUrlIsSameEntity = ((): boolean => {
+    const raw = meta?.sobrePtSourceUrl;
+    if (!raw) return false;
+    const fold = (s: string) =>
+      s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    let seg: string;
+    try {
+      seg = decodeURIComponent(raw.replace(/\/+$/, "").split("/").pop() ?? "");
+    } catch {
+      return false; // malformed percent-encoding stored upstream
+    }
+    // Equality, not prefix. A prefix test reads "The Velvet Underground &
+    // Nico" as a match for the self-titled "The Velvet Underground", which is
+    // exactly the false identity claim this gate exists to stop — the extra
+    // words are a different album, not a longer name for the same one. The
+    // only permitted difference is a leading article, which is how
+    // "The Beach Boys' Christmas Album" and our "Beach Boys Christmas Album"
+    // are the same record.
+    const stripLeadingArticle = (s: string) => s.replace(/^(the|a|an|o|os|a|as|um|uma)/, "");
+    // Wikipedia disambiguates with a trailing "_(album)" / "_(Iced Earth
+    // album)" that the title never carries; our title carries a variant suffix
+    // Wikipedia never carries.
+    const article = stripLeadingArticle(fold(seg.replace(/_\([^()]*\)$/, "")));
+    const title = stripLeadingArticle(fold(tituloSeo.replace(/\s*\([^()]*\)\s*$/, "")));
+    if (!article || !title) return false;
+    return article === title;
   })();
 
   const musicAlbumJsonLd = toJsonLd({
@@ -704,39 +815,57 @@ export default async function DiscoPage({
       return datePublished ? { datePublished } : {};
     })()),
     ...(albumGenres.length ? { genre: albumGenres } : {}),
-    // Declare the physical format. schema.org/VinylFormat is the precise term
-    // and this catalogue is vinyl-only (non-vinyl rows carry format='cd' or
-    // 'other' and never reach this page), so it's always accurate here. Without
-    // it nothing in the markup states that these products are records at all.
-    musicReleaseFormat: "https://schema.org/VinylFormat",
+    ...(albumDescription ? { description: albumDescription } : {}),
     ...albumTypeLd,
-    // Label only. Catalogue number and pressing country are deliberately NOT
-    // emitted even though the crawler stores them:
-    //   * They come from the single-release case, and for a much-reissued album
-    //     "MusicBrainz has one release" means MB's coverage is thin, not that
-    //     one pressing exists — Queen "Greatest Hits" resolves to a Russian
-    //     Hollywood Records pressing that Amazon Brasil plainly is not selling.
-    //   * mb_release_country is 41% XW/XE, which are MusicBrainz pseudo-codes
-    //     for Worldwide/Europe, not countries, and the rest are ISO codes
-    //     rather than names.
-    // A label survives across pressings far better than a catalogue number, and
-    // most stored labels come from the safer case (every release sharing one
-    // label). Asserting the wrong catalogue number tells Google this listing is
-    // a different physical product.
-    // Prefers the Discogs label, exactly as the visible Gravadora row does.
-    // Reading mb_label alone published an empty recordLabel on 10,062 records
-    // that show a label on screen — Discogs has one where MusicBrainz does not.
-    ...((meta?.discogsLabel || meta?.mbLabel)
-      ? {
-          recordLabel: {
-            "@type": "Organization",
-            name: meta?.discogsLabel ?? meta?.mbLabel,
-          },
-        }
-      : {}),
-    // Safe to assert now: it comes from a barcode-resolved pressing, and is
-    // only stored when the barcode mapped to a single Discogs release.
-    ...(meta?.discogsCatno ? { catalogNumber: meta.discogsCatno } : {}),
+    // The pressing, as its own node. musicReleaseFormat, recordLabel and
+    // catalogNumber are properties of MusicRelease, NOT of MusicAlbum — they
+    // were emitted directly on the album, where a validator rejects them as
+    // not-valid-for-type, so all three facts were being published and ignored.
+    // The album is the abstract work; this is the physical object Amazon sells,
+    // which is also the thing the Offer is an offer FOR.
+    //
+    // Label and catalogue number are on the release for the same reason:
+    // pressing country is deliberately NOT here even though the crawler stores
+    // it, because mb_release_country is 41% XW/XE, which are MusicBrainz
+    // pseudo-codes for Worldwide/Europe rather than countries.
+    albumRelease: {
+      "@type": "MusicRelease",
+      "@id": `${siteUrl}/disco/${slug}#release`,
+      name: tituloSeo,
+      releaseOf: { "@id": `${siteUrl}/disco/${slug}#album` },
+      // schema.org/VinylFormat is the precise term and this catalogue is
+      // vinyl-only (non-vinyl rows carry format='cd' or 'other' and never reach
+      // this page), so it's always accurate here. Without it nothing in the
+      // markup states that these products are records at all.
+      musicReleaseFormat: "https://schema.org/VinylFormat",
+      creditedTo: { "@id": `${siteUrl}/artista/${slugifyArtist(disco.artista)}#musicgroup` },
+      // Binds the work to the thing on sale, so the Offer, the Product and the
+      // album are one graph rather than three unconnected nodes on a page.
+      offers: { "@id": offerId },
+      // A label survives across pressings far better than a catalogue number,
+      // and most stored labels come from the safer case (every release sharing
+      // one label).
+      // Prefers the Discogs label, exactly as the visible Gravadora row does.
+      // Reading mb_label alone published an empty recordLabel on 10,062 records
+      // that show a label on screen — Discogs has one where MusicBrainz does not.
+      ...((meta?.discogsLabel || meta?.mbLabel)
+        ? {
+            recordLabel: {
+              "@type": "Organization",
+              name: meta?.discogsLabel ?? meta?.mbLabel,
+            },
+          }
+        : {}),
+      // Safe to assert: it comes from a barcode-resolved pressing, and is only
+      // stored when the barcode mapped to a single Discogs release. The
+      // MusicBrainz catalogue number is still withheld — it comes from the
+      // single-release case, and for a much-reissued album "MusicBrainz has one
+      // release" means MB's coverage is thin, not that one pressing exists
+      // (Queen "Greatest Hits" resolves to a Russian Hollywood Records pressing
+      // that Amazon Brasil plainly is not selling). Asserting the wrong
+      // catalogue number tells Google this listing is a different product.
+      ...(meta?.discogsCatno ? { catalogNumber: meta.discogsCatno } : {}),
+    },
     ...(mbInfo && mbInfo.tracklist.length
       ? {
           numTracks: mbInfo.tracklist.length,
@@ -755,15 +884,31 @@ export default async function DiscoPage({
         }
       : {}),
     ...(aggregateRatingLd ? { aggregateRating: aggregateRatingLd } : {}),
+    // Last.fm audience size, the one popularity signal on this page that isn't
+    // a rating. Already rendered in the Popularidade card; InteractionCounter
+    // is how schema.org states "this many people did this to this thing".
+    ...(albumInfo && albumInfo.listeners > 0
+      ? {
+          interactionStatistic: [
+            {
+              "@type": "InteractionCounter",
+              interactionType: "https://schema.org/ListenAction",
+              userInteractionCount: albumInfo.listeners,
+            },
+          ],
+        }
+      : {}),
     // Entity-linking to the canonical record on each source -- only where we
     // hold a verified URL/ID, never a guessed slug (a wrong sameAs is worse
     // than no sameAs). No Last.fm entry: we only store tags/wiki text for
     // this record, not a canonical last.fm/music/... URL, and that URL's
     // slug isn't reliably derivable from artista/titulo.
-    ...((meta?.sobrePtSourceUrl || meta?.mbMbid || meta?.discogsReleaseId)
+    ...(((sourceUrlIsSameEntity && meta?.sobrePtSourceUrl) || meta?.mbMbid || meta?.discogsReleaseId || meta?.discogsMasterId)
       ? {
           sameAs: [
-            ...(meta?.sobrePtSourceUrl ? [meta.sobrePtSourceUrl] : []),
+            // Only when the article is about THIS album -- see
+            // sourceUrlIsSameEntity above. Otherwise it is a citation, below.
+            ...(sourceUrlIsSameEntity && meta?.sobrePtSourceUrl ? [meta.sobrePtSourceUrl] : []),
             // mb_mbid is '' (not null) when a search ran and found no match --
             // only build the URL when there's an actual ID.
             ...(meta?.mbMbid ? [`https://musicbrainz.org/release-group/${meta.mbMbid}`] : []),
@@ -777,6 +922,12 @@ export default async function DiscoPage({
                 : []),
           ],
         }
+      : {}),
+    // The grounding source for the description, whichever album it is about.
+    // True of both the matched and the unmatched case, so it is emitted for
+    // every record that has one.
+    ...(meta?.sobrePtSourceUrl
+      ? { citation: { "@type": "CreativeWork", url: meta.sobrePtSourceUrl } }
       : {}),
   });
 
@@ -835,7 +986,6 @@ export default async function DiscoPage({
   // Pressing country is deliberately absent, for the same reason there is no
   // "Prensado em" row above: 41% of discogs_country is a region or a shrug.
   const labelName = meta?.discogsLabel ?? meta?.mbLabel ?? null;
-  const lpCount = (meta?.discogsFormatDesc ?? "").match(/(\d+)\s*x\s*LP/i)?.[1] ?? null;
   const edicaoFisica = [
     meta?.vinilCor ? `vinil ${meta.vinilCor.toLowerCase()}` : null,
     lpCount ? `${lpCount} LPs` : null,
