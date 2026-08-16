@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   },
 };
 
+/** Entries listed in this hub's ItemList JSON-LD. */
+const HUB_LIST_CAP = 100;
+
 export default async function DecadasIndexPage() {
   let decadas: Awaited<ReturnType<typeof getDecadasList>> = [];
   try {
@@ -43,10 +46,34 @@ export default async function DecadasIndexPage() {
     ],
   });
 
+  // The hub's own links, as a list. These pages carried a breadcrumb and
+  // nothing else, so the markup said a page existed here and never that it
+  // indexes the whole facet — the counts and destinations were visible to a
+  // reader and invisible to a parser.
+  const itemListJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Discos de vinil por década",
+    url: `${SITE_URL}/decadas`,
+    numberOfItems: decadas.length,
+    // numberOfItems stays the true total; the entries themselves are capped.
+    // Listing all 688 styles cost 77KB of markup on one page — a parser needs
+    // the shape of the list and the count, not every row, and the visible page
+    // and the sitemap both still carry the full set.
+    itemListElement: decadas.slice(0, HUB_LIST_CAP).map((d, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: `Vinis dos ${d.start}`,
+      url: `${SITE_URL}/decada/${d.start}`,
+    })),
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
 
       <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6">
         <Link href="/" className="hover:text-cream transition-colors">Início</Link>

@@ -88,10 +88,22 @@ export default async function RockSubgenrePage({
     name: `Melhores álbuns de ${displayName}`,
     url: `${SITE_URL}/guias/rock/${slug}`,
     numberOfItems: cardAlbums.length,
+    // Album entities rather than "Title - Artist" strings: the ranking carries
+    // the year and the MusicBrainz release-group id for every entry, and a
+    // parser had to guess where the title ended and the artist began.
     itemListElement: cardAlbums.map((album, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      name: `${album.title} - ${album.artist}`,
+      item: {
+        "@type": "MusicAlbum",
+        name: album.title,
+        byArtist: { "@type": "MusicGroup", name: album.artist },
+        ...(album.year ? { datePublished: String(album.year) } : {}),
+        ...(album.mb_rgid
+          ? { sameAs: `https://musicbrainz.org/release-group/${album.mb_rgid}` }
+          : {}),
+        genre: displayName,
+      },
     })),
   });
 

@@ -2,7 +2,7 @@ import { queryPriceUnder200WithCache } from "@/lib/db/promos";
 import ArtistaRecords from "@/components/ArtistaRecords";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
 
 export const revalidate = 14400;
@@ -61,12 +61,7 @@ export default async function DiscosAbaixo200Page() {
     name: "Discos de Vinil Abaixo de R$ 200",
     url: `${SITE_URL}/discos-abaixo-de-200`,
     numberOfItems: totalItems,
-    itemListElement: items.slice(0, 10).map((disco, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${SITE_URL}/disco/${disco.slug}`,
-      name: disco.tituloSeo || disco.titulo,
-    })),
+    itemListElement: discoListItems(items, SITE_URL),
   });
 
   return (

@@ -9,7 +9,7 @@ import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getVinilColoridoPageData, resolveColorSlug, allColorSlugs } from "@/lib/db/vinilColorido";
 import { SITE_URL } from "@/lib/siteUrl";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import type { Metadata } from "next";
 import type { ProcessedDisco } from "@/lib/queryDiscos";
 
@@ -116,12 +116,7 @@ export default async function VinilColoridoPage({
     name: `Discos em Vinil ${label}`,
     url: `${siteUrl}/vinil-colorido/${cor}`,
     numberOfItems: total,
-    itemListElement: discos.slice(0, 10).map((disco, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${siteUrl}/disco/${disco.slug}`,
-      name: disco.tituloSeo || disco.titulo,
-    })),
+    itemListElement: discoListItems(discos, siteUrl),
   });
 
   return (

@@ -10,7 +10,7 @@ import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getGravadoraData, GRAVADORA_MIN, type GravadoraData } from "@/lib/db/gravadora";
 import { getFacetStats } from "@/lib/db/facetStats";
 import { SITE_URL } from "@/lib/siteUrl";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import type { Metadata } from "next";
 import type { ProcessedDisco } from "@/lib/queryDiscos";
 
@@ -131,12 +131,20 @@ export default async function GravadoraPage({
     name: `Discos de vinil da ${label}`,
     url: `${SITE_URL}/gravadora/${slug}`,
     numberOfItems: total,
-    itemListElement: discos.slice(0, 10).map((disco, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${SITE_URL}/disco/${disco.slug}`,
-      name: disco.tituloSeo || disco.titulo,
-    })),
+    itemListElement: discoListItems(discos, SITE_URL),
+  });
+
+  // The label itself, as an entity. The page is ABOUT a record company and
+  // said so nowhere in the markup — only that a list of records existed at
+  // this URL. The @id matches the recordLabel node each record page emits
+  // inside its MusicRelease, so a consumer reading a record and this hub sees
+  // one company rather than two unrelated strings.
+  const organizationJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${SITE_URL}/gravadora/${slug}#organization`,
+    name: label,
+    url: `${SITE_URL}/gravadora/${slug}`,
   });
 
   return (
@@ -144,6 +152,7 @@ export default async function GravadoraPage({
       <div className="max-w-7xl mx-auto px-4 py-8">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJsonLd }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJsonLd }} />
 
         <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-sm text-dust mb-6 flex-wrap">
           <Link href="/" className="hover:text-cream transition-colors">Início</Link>

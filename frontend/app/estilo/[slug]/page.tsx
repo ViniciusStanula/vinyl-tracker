@@ -11,7 +11,7 @@ import { getTopBotHitSlugs } from "@/lib/db/disco";
 import { getDecadasForEstilo } from "@/lib/db/estiloDecada";
 import { decadaLabel } from "@/lib/decadas";
 import { SITE_URL } from "@/lib/siteUrl";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 export const revalidate = 14400; // safety-net; on-demand purge via revalidateTag("prices") fires first
@@ -163,19 +163,19 @@ export default async function EstiloPage({
     name: `Discos de ${displayName}`,
     url: `${siteUrl}/estilo/${slug}`,
     numberOfItems: total,
-    itemListElement: discos.slice(0, 10).map((disco, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${siteUrl}/disco/${disco.slug}`,
-      name: disco.tituloSeo || disco.titulo,
-    })),
+    itemListElement: discoListItems(discos, siteUrl),
   });
 
   const musicGenreJsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "MusicGenre",
+    // @id so the per-decade pages under this style can reference the same
+    // genre rather than declaring an unrelated one of their own.
+    "@id": `${siteUrl}/estilo/${slug}#genre`,
     name: displayName,
     url: `${siteUrl}/estilo/${slug}`,
+    // The style blurb the page already renders above the grid.
+    ...(bioShortPt ? { description: bioShortPt } : {}),
   });
 
   return (

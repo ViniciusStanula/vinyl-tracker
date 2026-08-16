@@ -6,7 +6,7 @@ import FacetHubs from "@/components/FacetHubs";
 import FacetIntro from "@/components/FacetIntro";
 import { getFacetStats } from "@/lib/db/facetStats";
 import { queryDiscosWithCache } from "@/lib/queryDiscos";
-import { toJsonLd } from "@/lib/jsonld";
+import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import { SITE_URL } from "@/lib/siteUrl";
 import { DECADES, decadaLabel as label, parseDecade } from "@/lib/decadas";
 
@@ -63,22 +63,33 @@ export default async function DecadaPage({
   ]);
   if (total === 0) notFound();
 
+  // Two levels, matching the visible trail exactly: this page's nav goes
+  // Início › Vinis dos X with no hub link in between, and breadcrumb markup
+  // that claims a step the page does not show is the mismatch Google rejects.
+  // Every other facet page emits one of these; the decade pages were the only
+  // listing route with none.
+  const breadcrumbJsonLd = toJsonLd({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: `Vinis dos ${label(start)}`, item: `${SITE_URL}/decada/${start}` },
+    ],
+  });
+
   const jsonLd = toJsonLd({
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `Vinis dos ${label(start)}`,
     url: `${SITE_URL}/decada/${start}`,
     numberOfItems: total,
-    itemListElement: items.slice(0, 10).map((d, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      url: `${SITE_URL}/disco/${d.slug}`,
-      name: d.tituloSeo || d.titulo,
-    })),
+    itemListElement: discoListItems(items, SITE_URL),
   });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJsonLd }} />
       {/* eslint-disable-next-line react/no-danger */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
 
