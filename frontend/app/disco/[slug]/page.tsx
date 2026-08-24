@@ -1277,6 +1277,21 @@ export default async function DiscoPage({
                     <p className="text-xs text-dust pl-1">Último registro em <UltimaVerificacao slug={slug} /></p>
                   )}
                   <AlertaTrigger {...alertProps} variant="primary" label="Avise-me quando voltar" />
+                  {/* Secondary, deliberately quiet: our stock flag can lag the
+                      marketplace, and a record that is back gets no buy link
+                      until the next crawl purges this page. Dropping the link
+                      turns our own stale data into a dead end for the visitor;
+                      keeping it costs nothing and still reads as unavailable,
+                      since the disabled box above says so. JSON-LD keeps
+                      OutOfStock either way — linking does not contradict it. */}
+                  <a
+                    href={affiliateUrl(disco.url, disco.marketplace)}
+                    target="_blank"
+                    rel="sponsored noopener noreferrer"
+                    className="text-xs text-dust hover:text-parchment underline underline-offset-2 text-center py-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
+                  >
+                    Conferir {lojaComPrep} mesmo assim
+                  </a>
                   <div className="flex justify-end">
                     <CopyLinkButton />
                   </div>

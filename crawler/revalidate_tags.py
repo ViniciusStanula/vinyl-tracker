@@ -41,7 +41,22 @@ DISCO_TAG_PREFIX = "disco-"
 
 
 def observed_disco_tags(conn, since_iso: str) -> list[str]:
-    """Tags for every record with a price observation at or after `since_iso`.
+    """Tags for every record observed at or after `since_iso`.
+
+    Two sources, because a price observation alone does not cover everything the
+    page renders:
+
+    1. A new HistoricoPreco row — the record was seen with a price.
+    2. A record that went out of stock. mark_unavailable() writes NO price row
+       (there is no price to record), so such records are invisible to (1). They
+       were therefore never purged, and the page kept serving a working "Ver na
+       Amazon" button for something nobody can buy. Observed 2026-08-24 on
+       dynasty-disco-de-vinil-gfijm8, stale for over a day in the other
+       direction. mark_unavailable() does bump updatedAt, which is what (2) keys
+       off.
+
+    Coming back in stock is already covered by (1): the record is re-crawled with
+    a price, so a HistoricoPreco row is written.
 
     `since_iso` should be the timestamp taken just before the run's first price
     write. Slightly over-selecting is harmless — an extra purge costs one
@@ -56,8 +71,16 @@ def observed_disco_tags(conn, since_iso: str) -> list[str]:
             JOIN "Disco" d ON d.id = h."discoId"
             WHERE h."capturadoEm" >= %s
               AND d.slug IS NOT NULL AND d.slug <> ''
+
+            UNION
+
+            SELECT DISTINCT d.slug
+            FROM "Disco" d
+            WHERE d."updatedAt" >= %s
+              AND d.disponivel = FALSE
+              AND d.slug IS NOT NULL AND d.slug <> ''
             """,
-            (since_iso,),
+            (since_iso, since_iso),
         )
         return [DISCO_TAG_PREFIX + row[0] for row in cur.fetchall()]
 
@@ -68,6 +91,10 @@ def observed_artist_names(conn, since_iso: str) -> list[str]:
     Names, not slugs — see the module docstring. Deduped here so the request
     bodies stay small; /api/revalidate dedupes again after slugifying, since
     two spellings can fold to the same slug.
+
+    Same two sources as observed_disco_tags(), for the same reason: the artist
+    page renders its unavailable records in a separate greyed-out block, so a
+    record going out of stock changes that page too and must purge it.
     """
     with conn.cursor() as cur:
         cur.execute(
@@ -77,8 +104,16 @@ def observed_artist_names(conn, since_iso: str) -> list[str]:
             JOIN "Disco" d ON d.id = h."discoId"
             WHERE h."capturadoEm" >= %s
               AND d.artista IS NOT NULL AND d.artista <> ''
+
+            UNION
+
+            SELECT DISTINCT d.artista
+            FROM "Disco" d
+            WHERE d."updatedAt" >= %s
+              AND d.disponivel = FALSE
+              AND d.artista IS NOT NULL AND d.artista <> ''
             """,
-            (since_iso,),
+            (since_iso, since_iso),
         )
         return [row[0] for row in cur.fetchall()]
 
