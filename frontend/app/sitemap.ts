@@ -45,7 +45,6 @@ export default async function sitemap(props: {
       getLatestDiscoUpdate(),
     ]);
     // Articles with known update dates; listing pages use latestUpdate (real price-change signal).
-    // top-artistas-spotify updates daily with Spotify data, so latestUpdate is used there too.
     const ARTICLES_MODIFIED = new Date("2026-06-25");
     const ROCK_GUIDE_DATE   = new Date("2026-05-26");
     return [
@@ -76,7 +75,6 @@ export default async function sitemap(props: {
       { url: `${SITEMAP_BASE}/termos-de-uso`,                           lastModified: new Date("2026-01-01"), changeFrequency: "yearly", priority: 0.2 },
       { url: `${SITEMAP_BASE}/alertas`,                                 lastModified: new Date("2026-07-31"), changeFrequency: "monthly", priority: 0.7 },
       { url: `${SITEMAP_BASE}/guias`,                                   lastModified: ARTICLES_MODIFIED,  changeFrequency: "weekly",  priority: 0.8 },
-      { url: `${SITEMAP_BASE}/guias/top-artistas-spotify`,              lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.7 },
       { url: `${SITEMAP_BASE}/guias/como-cuidar-de-discos-de-vinil`,   lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },
       { url: `${SITEMAP_BASE}/guias/vinil-colorido-e-picture-disc`,    lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },
       { url: `${SITEMAP_BASE}/guias/vinil-180g-vale-a-pena`,           lastModified: ARTICLES_MODIFIED,  changeFrequency: "monthly", priority: 0.8 },

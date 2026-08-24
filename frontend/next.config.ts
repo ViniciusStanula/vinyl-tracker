@@ -41,7 +41,6 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, ".."),
   // Ensure JSON data files are bundled in the serverless functions that need them
   outputFileTracingIncludes: {
-    "/guias/top-artistas-spotify": ["./data/top_artists.json"],
     "/guias/rock": ["../enriched_data.json"],
     "/guias/rock/[slug]": ["../enriched_data.json"],
   },
@@ -68,6 +67,11 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // The Spotify chart guide was removed: it drew 29 bot hits and zero human
+      // visits in 30 days, while its daily data commit forced a production deploy
+      // every morning — and each deploy starts a fresh ISR cache, so the whole
+      // catalogue was rebuilt at full price daily.
+      { source: "/guias/top-artistas-spotify", destination: "/guias", permanent: true },
       // Thin/duplicate estilo pages merged into /estilo/game — every disco tagged
       // valve or video-game-music that clears the price_count>=5 listing gate is
       // already double-tagged "game", so these pages had no unique inventory.

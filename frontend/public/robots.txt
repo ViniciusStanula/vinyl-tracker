@@ -28,6 +28,17 @@ Sitemap: https://www.garimpavinil.com.br/sitemap.xml
 User-agent: CCBot
 Disallow: /
 
+# --- Yandex — block entirely --------------------------------
+# Russian search engine with no meaningful audience for a pt-BR vinyl site:
+# 7 referrals in 90 days against 9,518 crawl hits in 7 days. Measured 2026-08-24
+# at ~33,000 ISR write units/day — 2.3x what Googlebot costs us — which made it
+# the single most expensive crawler we gain nothing from.
+#
+# "User-agent: Yandex" is Yandex's own documented token for all of their robots,
+# not just YandexBot. They honor robots.txt.
+User-agent: Yandex
+Disallow: /
+
 # --- SEO-tool crawlers — block entirely ---------------------
 # Backlink/competitor scrapers that out-crawl Googlebot ~3:1 while providing
 # zero value to us (they feed competitors' tools) and cost serverless

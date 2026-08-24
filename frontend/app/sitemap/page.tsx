@@ -55,7 +55,6 @@ const GUIAS_PAGES = [
   { nome: "Toca-Discos para Iniciantes",             href: "/guias/toca-discos-para-iniciantes" },
   { nome: "Pré-Amplificador Phono",                  href: "/guias/pre-amplificador-phono" },
   { nome: "Melhores Discos de Rock por Subgênero",   href: "/guias/rock" },
-  { nome: "Top Artistas do Spotify por País",        href: "/guias/top-artistas-spotify" },
   // Best-of-artist rankings — kept in sync with the XML sitemap via BEST_OF_ARTISTS.
   ...BEST_OF_ARTISTS.map((a) => ({
     nome: `Melhores Discos ${a.article} ${a.name}`,

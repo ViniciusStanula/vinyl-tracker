@@ -54,7 +54,6 @@ Long-form editorial guides about vinyl records in Brazilian Portuguese:
 - [Vinil Colorido e Picture Disc Valem a Pena?](${SITE}/guias/vinil-colorido-e-picture-disc) — Diferenças de qualidade sonora entre vinil preto, colorido e picture disc, e quando cada um vale a compra.
 - [Vinil 180g Vale a Pena?](${SITE}/guias/vinil-180g-vale-a-pena) — O que o peso do disco realmente muda em som, durabilidade e preço — mitos e fatos sobre prensagens de 180 gramas.
 - [Melhores Discos de Rock por Subgênero](${SITE}/guias/rock) — Ranking Bayesiano de álbuns de rock por subgênero (18 subgêneros) baseado em avaliações Discogs de mais de 11.000 álbuns de 1.000+ artistas.
-- [Top Artistas do Spotify por País](${SITE}/guias/top-artistas-spotify) — Ranking diário dos 10 artistas mais ouvidos no Spotify em 20 países. Atualizado às 8h UTC.
 
 Full article text available at: ${SITE}/llms-full.txt
 

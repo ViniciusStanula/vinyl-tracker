@@ -25,7 +25,6 @@ interface Guide {
   description: string;
   date: string;
   tag: "ranking" | "guia" | "dicas";
-  updated?: boolean;
 }
 
 const TAG_LABEL: Record<Guide["tag"], string> = {
@@ -138,15 +137,6 @@ const GUIDES: Guide[] = [
     date: "2026-05-25",
     tag: "ranking",
   },
-  {
-    slug: "top-artistas-spotify",
-    title: "Top Artistas do Spotify por País",
-    description:
-      "Ranking diário dos 10 artistas mais ouvidos no Spotify em 20 países. Atualizado automaticamente todo dia às 8h UTC.",
-    date: "2026-05-20",
-    tag: "ranking",
-    updated: true,
-  },
 ];
 
 export default function GuiasPage() {
@@ -231,7 +221,7 @@ export default function GuiasPage() {
           >
             <span className={`shrink-0 text-[10px] font-bold border rounded-full px-2 py-0.5 ${TAG_COLOR[guide.tag]}`}>{TAG_LABEL[guide.tag]}</span>
             <span className="font-display text-sm font-black text-cream group-hover:text-gold transition-colors flex-1 leading-snug">{guide.title}</span>
-            <span className="text-xs text-dust shrink-0 hidden sm:block tabular-nums">{guide.updated ? "Diário" : new Date(guide.date).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}</span>
+            <span className="text-xs text-dust shrink-0 hidden sm:block tabular-nums">{new Date(guide.date).toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}</span>
             <svg className="text-groove group-hover:text-gold transition-colors shrink-0" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </Link>
         ))}

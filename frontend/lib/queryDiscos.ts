@@ -88,7 +88,7 @@ export type ProcessedDisco = {
   /** SEO-clean title (crawler/titulo_seo.py) -- prefer over `titulo` for display. */
   tituloSeo: string | null;
   artista: string;
-  estilo: string | null;
+  estilo?: string | null;
   imgUrl: string | null;
   url: string;
   /** Price/link source: "amazon" or "mercadolivre" — drives the buy-button label + affiliate tagging */
@@ -97,17 +97,17 @@ export type ProcessedDisco = {
   reviewCount: number | null;
   precoAtual: number;
   mediaPreco: number;
-  emPromocao: boolean;
+  emPromocao?: boolean;
   desconto: number;
   sparkline: number[];
   /** Scoring tier: 1 = Boa Oferta, 2 = Ótima Oferta, 3 = Melhor Preço, null = no deal */
   dealScore: number | null;
   /** Backend confidence tier identifier; use CONFIDENCE_LABELS in the frontend for display */
-  confidenceLevel: string | null;
+  confidenceLevel?: string | null;
   /** Days of price history available (used to render trust indicators) */
-  historyDays: number | null;
+  historyDays?: number | null;
   /** Comma-separated Last.fm genre tags, e.g. "rock, classic rock, hard rock" */
-  lastfmTags: string | null;
+  lastfmTags?: string | null;
   /** When false, record is no longer listed on Amazon. Renders as greyed-out on artist page. */
   disponivel?: boolean;
 };
