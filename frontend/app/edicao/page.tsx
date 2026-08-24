@@ -104,6 +104,49 @@ export default async function EdicaoIndexPage() {
           ))}
         </ul>
       )}
+
+      {/* Prose below the grid: eight tiles left this hub at 70 words, thin
+          enough that the 24 Aug crawl flagged it. */}
+      <section aria-labelledby="sobre-edicoes" className="mt-14 max-w-2xl">
+        <h2 id="sobre-edicoes" className="font-display text-xl font-black text-cream mb-4">
+          O que cada tipo de edição significa
+        </h2>
+        <div className="flex flex-col gap-4 text-parchment text-sm leading-relaxed">
+          <p>
+            <strong className="text-cream">Edição limitada</strong> é a mais comum e a
+            mais vaga: indica uma tiragem fechada, mas a gravadora nem sempre diz de
+            quantas cópias. Quando o número aparece impresso na capa ou na bolacha, o
+            disco costuma vir também como{" "}
+            <strong className="text-cream">numerado</strong>, e aí a tiragem é
+            verificável.
+          </p>
+          <p>
+            <strong className="text-cream">Picture disc</strong> traz a arte impressa
+            no próprio vinil, sobre uma base de material diferente do preto comum —
+            bonito de olhar, historicamente pior de ouvir.{" "}
+            <strong className="text-cream">Zoetrope</strong> é o mesmo princípio levado
+            ao movimento: a arte anima enquanto o disco gira.
+          </p>
+          <p>
+            <strong className="text-cream">Record Store Day</strong> marca os
+            lançamentos feitos para as duas datas anuais que abastecem lojas
+            independentes; são as tiragens que somem mais rápido e as que mais
+            oscilam de preço depois.{" "}
+            <strong className="text-cream">Edição de aniversário</strong> e{" "}
+            <strong className="text-cream">edição deluxe</strong> costumam trazer
+            remasterização, faixas extras ou um encarte maior, e{" "}
+            <strong className="text-cream">box set</strong> reúne vários discos numa
+            caixa única.
+          </p>
+          <p>
+            A classificação vem da descrição do produto e da ficha do Discogs, não de
+            um campo declarado pela loja. Cada página lista o que está disponível na
+            Amazon Brasil agora, com o preço acompanhado todo dia e o gráfico de 12
+            meses — útil justamente aqui, onde a tiragem fechada faz o preço subir
+            depois do lançamento em vez de cair.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

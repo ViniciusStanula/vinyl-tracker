@@ -117,7 +117,23 @@ export default async function AlertasPage() {
           (which used to provide one) is gone. The form lives in its own client
           component so this route can stay a server component and export metadata —
           a "use client" page cannot. */}
-      <Suspense fallback={<div className="max-w-xl mx-auto px-4 py-8" />}>
+      {/* The fallback carries the page's <h1>. An empty fallback left the
+          served HTML with no heading at all -- the crawl of 24 Aug flagged
+          /alertas as one of only two pages missing an H1. */}
+      <Suspense
+        fallback={
+          <div className="max-w-xl mx-auto px-4 py-8">
+            <header className="mb-8">
+              <h1 className="font-display text-3xl font-black text-cream leading-tight">
+                Alerta de preço
+              </h1>
+              <p className="mt-2 text-dust text-sm">
+                Avise-me quando o preço de um disco cair.
+              </p>
+            </header>
+          </div>
+        }
+      >
         <AlertasForm />
       </Suspense>
 

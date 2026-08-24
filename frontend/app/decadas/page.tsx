@@ -104,6 +104,34 @@ export default async function DecadasIndexPage() {
           </li>
         ))}
       </ul>
+
+      {/* Prose below the grid: the tiles alone left this hub at 74 words, thin
+          enough that the 24 Aug crawl flagged it. */}
+      <section aria-labelledby="sobre-decadas" className="mt-14 max-w-2xl">
+        <h2 id="sobre-decadas" className="font-display text-xl font-black text-cream mb-4">
+          Como a década é definida aqui
+        </h2>
+        <div className="flex flex-col gap-4 text-parchment text-sm leading-relaxed">
+          <p>
+            A década vem do ano de lançamento original do álbum, não do ano em que
+            a prensagem à venda foi fabricada. Um <em>Rumours</em> reprensado em 2023
+            aparece nos anos 70, junto do disco que ele reedita. Sem isso, todo
+            catálogo de vinil novo se amontoaria nas duas décadas mais recentes.
+          </p>
+          <p>
+            O ano vem do MusicBrainz e do Discogs, cruzados: quando as duas fontes
+            discordam, vale a data mais antiga de lançamento do álbum. Discos sem ano
+            confiável ficam de fora destas páginas em vez de entrar na década errada.
+          </p>
+          <p>
+            Cada página de década lista os vinis disponíveis na Amazon Brasil com o
+            preço acompanhado todo dia e o gráfico de 12 meses. Serve para duas
+            buscas diferentes: garimpar um período inteiro sem ter um título em
+            mente, e comparar quanto custa hoje uma reedição contra o que ela custava
+            há alguns meses.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
