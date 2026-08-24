@@ -9,6 +9,11 @@ import { fetchLastfmAlbumCover } from "@/lib/external/lastfmAlbum";
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
 const CARD_COUNT = 20;
+// The table used to render every scored album in the subgenre, which pushed
+// /guias/rock/hard-rock and /guias/rock/alternative-rock past 2 MB of HTML.
+// Ranked lists have a long tail nobody reads; 300 rows keeps the page useful
+// and well under 500 KB.
+const TABLE_LIMIT = 300;
 
 export function generateStaticParams() {
   return getRockSubgenres().map((sg) => ({ slug: sg.slug }));
@@ -63,7 +68,7 @@ export default async function RockSubgenrePage({
 
   const displayName = capitalize(sg.name);
   const cardAlbums = sg.topAlbums.slice(0, CARD_COUNT);
-  const tableAlbums = sg.topAlbums.slice(CARD_COUNT);
+  const tableAlbums = sg.topAlbums.slice(CARD_COUNT, CARD_COUNT + TABLE_LIMIT);
   const fullIntro = SUBGENRE_FULL[sg.slug];
 
   const covers = await Promise.all(
@@ -146,7 +151,7 @@ export default async function RockSubgenrePage({
           os melhores: álbuns com mais avaliações têm mais peso, mas discos menores também aparecem quando
           a qualidade justifica. Os {CARD_COUNT} melhores estão em destaque abaixo;{" "}
           {tableAlbums.length > 0
-            ? `os demais ${tableAlbums.length.toLocaleString("pt-BR")} seguem na tabela.`
+            ? `os ${tableAlbums.length.toLocaleString("pt-BR")} seguintes melhor avaliados seguem na tabela.`
             : "a lista completa está abaixo."}
         </p>
       </header>
@@ -177,9 +182,9 @@ export default async function RockSubgenrePage({
 
       {/* Remaining albums — table */}
       {tableAlbums.length > 0 && (
-        <section aria-label={`Todos os álbuns de ${displayName}`} className="mb-12">
+        <section aria-label={`Melhores álbuns de ${displayName}`} className="mb-12">
           <h2 className="font-display text-lg font-bold text-cream mb-4">
-            Todos os {sg.albumCount.toLocaleString("pt-BR")} álbuns
+            Os {(CARD_COUNT + tableAlbums.length).toLocaleString("pt-BR")} melhores álbuns
           </h2>
           <div className="overflow-x-auto rounded-xl border border-groove">
             <table className="w-full text-sm">
