@@ -57,6 +57,7 @@ const SIMPLE_COLOR_SLUGS: Record<string, string> = {
   violeta: "Violeta",
   "agua-marinha": "Água-marinha",
   onix: "Ônix",
+  amarelo: "Amarelo",
 };
 
 const EXACT_COLOR_SLUGS: Record<string, string> = {
@@ -84,14 +85,17 @@ const COMBINING_MARKS_RE = new RegExp("[\\u0300-\\u036f]", "g");
 /** Inverse of resolveColorSlug's label lookup -- turns a stored vinil_cor
  * value ("Azul", "Splatter Colorido", "Azul / Rosa") into the hub page slug
  * for the ficha técnica link. A compound value links via its first color;
- * the hub page's substring match still lists the record either way. */
-export function slugifyColor(cor: string): string {
+ * the hub page's substring match still lists the record either way. Returns
+ * null for a color with no hub page, so the caller renders plain text instead
+ * of a link the route would 404 on. */
+export function slugifyColor(cor: string): string | null {
   const primeira = cor.split(" / ")[0];
-  return primeira
+  const slug = primeira
     .normalize("NFD")
     .replace(COMBINING_MARKS_RE, "")
     .toLowerCase()
     .replace(/\s+/g, "-");
+  return resolveColorSlug(slug) ? slug : null;
 }
 
 type ColorRow = {

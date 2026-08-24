@@ -163,6 +163,36 @@ export default async function ArtistasIndexPage() {
             ))}
           </nav>
 
+          {/* Prose below the index: the mosaic and the letter grid left this
+              hub at 50 words, the thinnest page in the 24 Aug crawl after
+              /estilo/future-garage. */}
+          <section aria-labelledby="sobre-artistas" className="mt-14 max-w-2xl">
+            <h2 id="sobre-artistas" className="font-display text-xl font-black text-cream mb-4">
+              Como este catálogo é montado
+            </h2>
+            <div className="flex flex-col gap-4 text-parchment text-sm leading-relaxed">
+              <p>
+                Um artista entra nesta lista quando tem pelo menos um vinil à venda
+                na Amazon Brasil com histórico de preço já acumulado. Discos que
+                acabaram de entrar no catálogo ficam de fora até juntarem
+                observações suficientes para o gráfico dizer alguma coisa — sem
+                isso, o preço apareceria sem nada com que compará-lo.
+              </p>
+              <p>
+                Os nomes vêm da página do produto e são conferidos contra o
+                MusicBrainz e o Discogs, que corrigem grafias invertidas, variações
+                de acentuação e créditos de coletânea listados como se fossem banda.
+                Álbuns de vários intérpretes ficam sob o nome que a ficha do
+                lançamento traz como principal.
+              </p>
+              <p>
+                A página de cada artista reúne os vinis disponíveis, os que estão
+                fora de estoque no momento e os estilos que o catálogo dele
+                atravessa. Use o índice A–Z acima para navegar, ou a busca no topo
+                do site quando já souber o nome.
+              </p>
+            </div>
+          </section>
         </>
       )}
     </div>

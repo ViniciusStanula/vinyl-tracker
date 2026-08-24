@@ -1,7 +1,7 @@
 import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { slugifyArtist } from "@/lib/utils/slugify";
+import { artistaHref } from "@/lib/utils/slugify";
 import { affiliateUrl } from "@/lib/affiliateUrl";
 import { resizeAmazonImage } from "@/lib/utils/amazonImage";
 
@@ -95,7 +95,7 @@ export default memo(function DiscoCard({
   const descontoPercent   = Math.round(disco.desconto * 100);
   const showOriginalPrice = descontoPercent > 0;
   const dealScore         = disco.dealScore ?? null;
-  const artistaSlug       = slugifyArtist(disco.artista);
+  const artistaUrl        = artistaHref(disco.artista);
   const titulo            = disco.tituloSeo || disco.titulo;
   const sparkline         = disco.sparkline ?? [];
   // Cards render at ~160-230px; the DB stores 1500px Amazon URLs (~200KB).
@@ -113,12 +113,10 @@ export default memo(function DiscoCard({
 
   return (
     <article aria-labelledby={titleId} className={`relative group bg-sleeve rounded-xl overflow-hidden flex flex-col border border-groove hover:border-wax transition-colors duration-200${cardRing}${isUnavailable ? " opacity-60 grayscale" : ""}`}>
-      {/* Full-card link */}
-      <Link
-        href={`/disco/${disco.slug}`}
-        className="absolute inset-0 z-10"
-        aria-label={`Ver histórico de preços de ${titulo}`}
-      />
+      {/* The card-wide click target lives on the title link's ::after (below),
+          not on a bare overlay <a>. An overlay carries no anchor text, so every
+          internal link to every /disco page was sending Google an empty anchor
+          -- from the card grid, which is the site's main internal-link surface. */}
 
       {/* ── Album art ─────────────────────────────────────────────── */}
       <div className="relative aspect-square bg-label shrink-0 overflow-hidden">
@@ -195,23 +193,38 @@ export default memo(function DiscoCard({
       {/* ── Info ──────────────────────────────────────────────────── */}
       <div className="p-4 flex flex-col flex-1">
 
-        {/* Artist — z-20 to sit above the full-card overlay link */}
-        <Link
-          href={`/artista/${artistaSlug}`}
-          className="relative z-20 block text-parchment text-[10px] truncate font-bold uppercase tracking-widest hover:text-cream transition-colors"
-        >
-          {disco.artista}
-        </Link>
+        {/* Artist — z-20 to sit above the title link's ::after click layer */}
+        {artistaUrl ? (
+          <Link
+            href={artistaUrl}
+            className="relative z-20 block text-parchment text-[10px] truncate font-bold uppercase tracking-widest hover:text-cream transition-colors"
+          >
+            {disco.artista}
+          </Link>
+        ) : (
+          <span className="block text-parchment text-[10px] truncate font-bold uppercase tracking-widest">
+            {disco.artista}
+          </span>
+        )}
 
-        {/* Title — Fraunces for editorial character. <p>, not a heading:
-            dozens of cards per page would flood the document outline. */}
-        <p
-          id={titleId}
-          className="font-display text-cream text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] mt-0.5"
-          title={titulo}
+        {/* Title — Fraunces for editorial character. Not a heading: dozens of
+            cards per page would flood the document outline. This is the card's
+            only link to the record, so the album title is its anchor text, and
+            ::after stretches the hit area back over the whole card the way the
+            removed overlay <a> did. The clamped text sits in the span so the
+            link box itself never becomes a -webkit-box. */}
+        <Link
+          href={`/disco/${disco.slug}`}
+          className="mt-0.5 block after:absolute after:inset-0 after:z-10 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
         >
-          {titulo}
-        </p>
+          <span
+            id={titleId}
+            className="font-display text-cream text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem]"
+            title={titulo}
+          >
+            {titulo}
+          </span>
+        </Link>
 
         {/* ── Price section ──────────────────────────────────────── */}
         {isUnavailable ? (

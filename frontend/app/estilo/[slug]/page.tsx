@@ -99,14 +99,11 @@ export default async function EstiloPage({
   } catch (err) {
     console.error("[EstiloPage] getEstiloPageData failed for slug=%s", slug);
     if (process.env.NODE_ENV === "development") console.error(err);
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-24 text-center">
-        <p className="font-display text-parchment text-lg font-semibold mb-2">
-          Erro ao carregar página de estilo
-        </p>
-        <p className="text-dust text-sm">Tente novamente em alguns instantes.</p>
-      </div>
-    );
+    // Re-thrown, not rendered as a friendly 200: a soft error page is a
+    // successful response, so ISR cached it and one transient failure left the
+    // route serving a headingless stub until revalidation. app/error.tsx shows
+    // the same message on an uncached 500 instead.
+    throw err;
   }
   if (!data) notFound();
 

@@ -9,6 +9,7 @@ const EDITION_SLUGS: Record<string, string> = {
   "picture-disc": "Picture Disc",
   "edicao-de-aniversario": "Edição de Aniversário",
   "edicao-deluxe": "Edição Deluxe",
+  "edicao-limitada": "Edição Limitada",
   numerado: "Numerado",
   "record-store-day": "Record Store Day",
   "edicao-especial": "Edição Especial",
@@ -28,13 +29,16 @@ const COMBINING_MARKS_RE = new RegExp("[\\u0300-\\u036f]", "g");
 
 /** Inverse of resolveEditionSlug -- turns a stored vinil_edicao value
  * ("Picture Disc") into its hub page slug ("picture-disc"), for the ficha
- * técnica link. */
-export function slugifyEdition(edicao: string): string {
-  return edicao
+ * técnica link. Returns null when the value has no hub page: the route would
+ * notFound() on it, and "Edição Limitada" -- 55% of every stored edition --
+ * was doing exactly that from 3,823 disco pages before it was mapped. */
+export function slugifyEdition(edicao: string): string | null {
+  const slug = edicao
     .normalize("NFD")
     .replace(COMBINING_MARKS_RE, "")
     .toLowerCase()
     .replace(/\s+/g, "-");
+  return slug in EDITION_SLUGS ? slug : null;
 }
 
 type EditionRow = {

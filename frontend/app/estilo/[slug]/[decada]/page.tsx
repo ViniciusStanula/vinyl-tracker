@@ -3,7 +3,7 @@ import BackToTop from "@/components/BackToTop";
 import FacetHubs from "@/components/FacetHubs";
 import FacetIntro from "@/components/FacetIntro";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { formatDiscoCount } from "@/lib/utils/formatters";
 import {
@@ -12,7 +12,7 @@ import {
   ESTILO_DECADA_MIN,
   type EstiloDecadaData,
 } from "@/lib/db/estiloDecada";
-import { getEstiloDisplayName } from "@/lib/db/estilo";
+import { getEstiloDisplayName, getEstiloSlugSet } from "@/lib/db/estilo";
 import { getFacetStats } from "@/lib/db/facetStats";
 import { decadaLabel, parseDecade } from "@/lib/decadas";
 import { SITE_URL } from "@/lib/siteUrl";
@@ -94,16 +94,22 @@ export default async function EstiloDecadaPage({
   } catch (err) {
     console.error("[EstiloDecadaPage] getEstiloDecadaData failed for slug=%s decada=%s", slug, start);
     if (process.env.NODE_ENV === "development") console.error(err);
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-24 text-center">
-        <p className="font-display text-parchment text-lg font-semibold mb-2">
-          Erro ao carregar página de estilo
-        </p>
-        <p className="text-dust text-sm">Tente novamente em alguns instantes.</p>
-      </div>
-    );
+    // Re-thrown, not rendered as a friendly 200: a soft error page is a
+    // successful response, so ISR cached it and one transient failure left the
+    // route serving a headingless stub until revalidation. app/error.tsx shows
+    // the same message on an uncached 500 instead.
+    throw err;
   }
-  if (!data) notFound();
+  // The parent /estilo/<slug> renders its decade chips from getEstiloDecadaCells,
+  // cached separately from this page's own lookup -- when the two disagree the
+  // parent kept linking to a child that 404ed (every decade of art-rock,
+  // post-hardcore and soft-rock in the 24 Aug crawl). Send the reader up to the
+  // style hub instead: a parent link should never be able to break its child.
+  if (!data) {
+    const parentExists = (await getEstiloSlugSet().catch(() => null))?.has(slug) ?? false;
+    if (parentExists) permanentRedirect(`/estilo/${slug}`);
+    notFound();
+  }
 
   const { canonical, total, discos } = data;
   const nome = getEstiloDisplayName(canonical);

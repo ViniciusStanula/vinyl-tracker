@@ -26,8 +26,8 @@ export const GRAVADORA_SITEMAP_LIMIT = 100;
 const RECORDS_CAP = 240;
 
 // Same accent table as estilo.ts's canonical lookup.
-const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
-const ACCENT_TO = "aaaaaaeeeeiiiiooooouuuucny";
+const ACCENT_FROM = "àáâãäåçèéêëìíîïñòóôõöùúûüýÿāćčėńōşšūžḥẓọ";
+const ACCENT_TO = "aaaaaaceeeeiiiinooooouuuuyyaccenossuzhzo";
 
 /**
  * Discogs disambiguates same-named labels with a numeric suffix — "Rhino
