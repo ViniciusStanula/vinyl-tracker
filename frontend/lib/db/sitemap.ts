@@ -12,8 +12,8 @@ import { SITE_URL } from "@/lib/siteUrl";
 export const SITEMAP_BASE = SITE_URL;
 
 // Must match the translate() expression in estilo/[slug]/page.tsx
-const ACCENT_FROM = Prisma.raw(`'áàâãäåéèêëíìîïóòôõöúùûüçñý'`);
-const ACCENT_TO   = Prisma.raw(`'aaaaaaeeeeiiiiooooouuuucny'`);
+const ACCENT_FROM = Prisma.raw(`'àáâãäåçèéêëìíîïñòóôõöùúûüýÿāćčėńōşšūžḥẓọ'`);
+const ACCENT_TO   = Prisma.raw(`'aaaaaaceeeeiiiinooooouuuuyyaccenossuzhzo'`);
 
 // Styles only. The mapa do site used to list every artist here too, but it now
 // links the 27 /artistas/[letra] routes instead, so pulling ~12k artist names

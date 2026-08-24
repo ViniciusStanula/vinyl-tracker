@@ -39,8 +39,8 @@ export const ESTILO_DECADA_SITEMAP_LIMIT = 100;
 const RECORDS_CAP = 240;
 
 // Same accent table as estilo.ts's canonical lookup.
-const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
-const ACCENT_TO = "aaaaaaeeeeiiiiooooouuuucny";
+const ACCENT_FROM = "àáâãäåçèéêëìíîïñòóôõöùúûüýÿāćčėńōşšūžḥẓọ";
+const ACCENT_TO = "aaaaaaceeeeiiiinooooouuuuyyaccenossuzhzo";
 
 const ANO = Prisma.sql`LEAST(
   NULLIF(substring(c.mb_first_release_date from '^[0-9]{4}'), '')::int,

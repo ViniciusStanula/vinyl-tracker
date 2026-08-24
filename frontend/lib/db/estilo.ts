@@ -7,8 +7,8 @@ import { slugifyArtist } from "@/lib/utils/slugify";
 import { COUNTRY_TAG_TO_PAIS_SLUG } from "@/lib/paises";
 
 // Same accent-normalization constants as the artist page SQL slug matching
-const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
-const ACCENT_TO   = "aaaaaaeeeeiiiiooooouuuucny";
+const ACCENT_FROM = "àáâãäåçèéêëìíîïñòóôõöùúûüýÿāćčėńōşšūžḥẓọ";
+const ACCENT_TO   = "aaaaaaceeeeiiiinooooouuuuyyaccenossuzhzo";
 
 const ESTILO_PAGE_SIZE = 60;
 

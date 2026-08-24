@@ -8,8 +8,8 @@ import { getTopStyles } from "@/lib/utils/styleUtils";
 import { buildOrderBy, PAGE_SIZE, type ProcessedDisco } from "@/lib/queryDiscos";
 
 // translate() constant strings — same character table as slugifyArtist() NFD normalization
-const ACCENT_FROM = "áàâãäåéèêëíìîïóòôõöúùûüçñý";
-const ACCENT_TO   = "aaaaaaeeeeiiiiooooouuuucny";
+const ACCENT_FROM = "àáâãäåçèéêëìíîïñòóôõöùúûüýÿāćčėńōşšūžḥẓọ";
+const ACCENT_TO   = "aaaaaaceeeeiiiinooooouuuuyyaccenossuzhzo";
 
 // Uppercase forms too, for the A-Z bucketing below. Folding only the lowercase
 // ones left "Ávila" starting with a literal Á, and Postgres collation makes
@@ -17,8 +17,8 @@ const ACCENT_TO   = "aaaaaaeeeeiiiiooooouuuucny";
 // to /artistas/á, and that route 404s because it only accepts ASCII A-Z.
 // Three such buckets existed (Á, Å, É) holding five artists reachable from no
 // letter page at all.
-const ACCENT_FROM_UPPER = "ÁÀÂÃÄÅÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑÝ";
-const ACCENT_TO_UPPER   = "AAAAAAEEEEIIIIOOOOOUUUUCNY";
+const ACCENT_FROM_UPPER = "ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝŸĀĆČĖŃŌŞŠŪŽḤẒỌ";
+const ACCENT_TO_UPPER   = "AAAAAACEEEEIIIINOOOOOUUUUYYACCENOSSUZHZO";
 
 /** First letter of an artist name, accent-folded, or NULL when it is not A-Z.
  *
@@ -456,13 +456,17 @@ const _getArtistasList = unstable_cache(
       GROUP BY artista
       ORDER BY artista ASC
     `;
-    return rows.map((r) => ({
-      artista: r.artista,
-      slug: slugifyArtist(r.artista),
-      discoCount: Number(r.discoCount),
-      imgUrl: r.imgUrl,
-      listeners: Number(r.listeners ?? 0),
-    }));
+    // A name with no ASCII left after slugifying (久石譲, ディアフーフ, †††) has no
+    // artist page to link to -- listing it produced a bare /artista/ that 404s.
+    return rows
+      .map((r) => ({
+        artista: r.artista,
+        slug: slugifyArtist(r.artista),
+        discoCount: Number(r.discoCount),
+        imgUrl: r.imgUrl,
+        listeners: Number(r.listeners ?? 0),
+      }))
+      .filter((a) => a.slug !== "");
   },
   ["artistas-list"],
   { tags: ["prices"], revalidate: 14400 }
@@ -533,13 +537,17 @@ const _getArtistasByLetter = unstable_cache(
       GROUP BY artista
       ORDER BY artista ASC
     `;
-    return rows.map((r) => ({
-      artista: r.artista,
-      slug: slugifyArtist(r.artista),
-      discoCount: Number(r.discoCount),
-      imgUrl: r.imgUrl,
-      listeners: Number(r.listeners ?? 0),
-    }));
+    // A name with no ASCII left after slugifying (久石譲, ディアフーフ, †††) has no
+    // artist page to link to -- listing it produced a bare /artista/ that 404s.
+    return rows
+      .map((r) => ({
+        artista: r.artista,
+        slug: slugifyArtist(r.artista),
+        discoCount: Number(r.discoCount),
+        imgUrl: r.imgUrl,
+        listeners: Number(r.listeners ?? 0),
+      }))
+      .filter((a) => a.slug !== "");
   },
   ["artistas-by-letter"],
   { tags: ["prices"], revalidate: 14400 },

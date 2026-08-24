@@ -16,13 +16,14 @@ import Tracklist from "@/components/Tracklist";
 // Matches the flag in DiscoCard.tsx — see that file for full rationale.
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
 import { affiliateUrl } from "@/lib/affiliateUrl";
-import { slugifyArtist } from "@/lib/utils/slugify";
+import { artistaHref, slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
 import { cleanAlbumTitle } from "@/lib/external/lastfmAlbum";
 import { resizeAmazonImage } from "@/lib/utils/amazonImage";
 import { slugifyColor } from "@/lib/db/vinilColorido";
 import { slugifyEdition } from "@/lib/db/edicaoVinil";
+import { estiloHref } from "@/lib/redirectTargets";
 import { getDiscoWithPrecos, getDiscoMeta, getRelatedDeals, getArtistPopularity, getArtistTopAlbums, getTopBotHitSlugs, type RelatedDeal } from "@/lib/db/disco";
 import { getEstiloSlugSet } from "@/lib/db/estilo";
 import { getGravadoraSlugSet, slugifyLabel } from "@/lib/db/gravadora";
@@ -160,6 +161,26 @@ export async function generateMetadata({
   };
 }
 
+/** Artist name, linked to its hub when the name has a slug. A handful of
+ * non-Latin names (久石譲, ディアフーフ, †††) slugify to nothing, and linking
+ * them produced a bare /artista/ that 404s. */
+function ArtistaLink({
+  href,
+  className,
+  children,
+}: {
+  href: string | null;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  if (!href) return <span className={className}>{children}</span>;
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
+  );
+}
+
 export default async function DiscoPage({
   params,
 }: {
@@ -287,6 +308,12 @@ export default async function DiscoPage({
     const album = Number(originalYear);
     return y > album ? String(y) : null;
   })();
+
+  // null when the stored value has no hub page -- the ficha técnica then shows
+  // the label as plain text rather than linking to a route that notFound()s.
+  const corSlug = meta?.vinilCor ? slugifyColor(meta.vinilCor) : null;
+  const edicaoSlug = meta?.vinilEdicao ? slugifyEdition(meta.vinilEdicao) : null;
+  const artistaUrl = artistaHref(disco.artista);
 
   const mbInfo = (meta?.mbMbid || discogsTracks.length > 0 || dgYear)
     ? {
@@ -1111,12 +1138,9 @@ export default async function DiscoPage({
           Início
         </Link>
         <span aria-hidden="true">›</span>
-        <Link
-          href={`/artista/${slugifyArtist(disco.artista)}`}
-          className="hover:text-cream transition-colors"
-        >
+        <ArtistaLink href={artistaUrl} className="hover:text-cream transition-colors">
           {disco.artista}
-        </Link>
+        </ArtistaLink>
         <span aria-hidden="true">›</span>
         <span className="text-parchment truncate max-w-[200px] sm:max-w-xs">
           {tituloSeo}
@@ -1180,12 +1204,9 @@ export default async function DiscoPage({
           <div>
             {/* Single meta line: artist · genre */}
             <p className="text-dust text-[11px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2 flex-wrap">
-              <Link
-                href={`/artista/${slugifyArtist(disco.artista)}`}
-                className="hover:text-parchment transition-colors"
-              >
+              <ArtistaLink href={artistaUrl} className="hover:text-parchment transition-colors">
                 {disco.artista}
-              </Link>
+              </ArtistaLink>
               {headerGenres.length > 0 && (
                 <>
                   <span aria-hidden="true" className="opacity-40">·</span>
@@ -1194,7 +1215,7 @@ export default async function DiscoPage({
                       {i > 0 && <span aria-hidden="true" className="opacity-40">/</span>}
                       {g.slug ? (
                         <Link
-                          href={`/estilo/${g.slug}`}
+                          href={estiloHref(g.slug)}
                           className="hover:text-parchment transition-colors"
                         >
                           {g.name}
@@ -1413,12 +1434,12 @@ export default async function DiscoPage({
                           <p className="font-display font-black text-cream text-3xl leading-none">#{popularity.rank}</p>
                           <p className="text-xs text-dust mt-1 mb-3">
                             {popularity.rank === 1 ? "disco mais ouvido" : "mais ouvido"} de{" "}
-                            <Link
-                              href={`/artista/${slugifyArtist(disco.artista)}`}
+                            <ArtistaLink
+                              href={artistaUrl}
                               className="text-parchment hover:text-cream underline decoration-dotted decoration-dust/40 underline-offset-2 transition-colors"
                             >
                               {disco.artista}
-                            </Link>
+                            </ArtistaLink>
                           </p>
                         </>
                       )}
@@ -1572,12 +1593,16 @@ export default async function DiscoPage({
                       <div className="flex justify-between gap-4">
                         <dt className="text-dust">Cor</dt>
                         <dd className="text-cream font-medium text-right">
-                          <Link
-                            href={`/vinil-colorido/${slugifyColor(meta.vinilCor)}`}
-                            className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
-                          >
-                            {meta.vinilCor}
-                          </Link>
+                          {corSlug ? (
+                            <Link
+                              href={`/vinil-colorido/${corSlug}`}
+                              className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
+                            >
+                              {meta.vinilCor}
+                            </Link>
+                          ) : (
+                            meta.vinilCor
+                          )}
                         </dd>
                       </div>
                     )}
@@ -1585,12 +1610,16 @@ export default async function DiscoPage({
                       <div className="flex justify-between gap-4">
                         <dt className="text-dust">Edição</dt>
                         <dd className="text-cream font-medium text-right">
-                          <Link
-                            href={`/edicao/${slugifyEdition(meta.vinilEdicao)}`}
-                            className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
-                          >
-                            {meta.vinilEdicao}
-                          </Link>
+                          {edicaoSlug ? (
+                            <Link
+                              href={`/edicao/${edicaoSlug}`}
+                              className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
+                            >
+                              {meta.vinilEdicao}
+                            </Link>
+                          ) : (
+                            meta.vinilEdicao
+                          )}
                         </dd>
                       </div>
                     )}
@@ -1685,7 +1714,7 @@ export default async function DiscoPage({
                               {i > 0 && ", "}
                               {g.slug ? (
                                 <Link
-                                  href={`/estilo/${g.slug}`}
+                                  href={estiloHref(g.slug)}
                                   className="text-gold underline decoration-dotted decoration-gold/40 underline-offset-2 hover:decoration-gold transition-colors"
                                 >
                                   {g.name}
@@ -1752,12 +1781,12 @@ export default async function DiscoPage({
             <h2 id="mais-artista-heading" className="font-display text-2xl font-black text-cream italic">
               Mais de {disco.artista}
             </h2>
-            <Link
-              href={`/artista/${slugifyArtist(disco.artista)}`}
+            <ArtistaLink
+              href={artistaUrl}
               className="text-[11px] font-bold uppercase tracking-widest text-dust hover:text-gold transition-colors"
             >
               Ver Todos
-            </Link>
+            </ArtistaLink>
           </div>
           <ul className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {processedArtistAlbums.map((album) => (

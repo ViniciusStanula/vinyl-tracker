@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { slugifyArtist } from "@/lib/utils/slugify";
+import { artistaHref } from "@/lib/utils/slugify";
 import { resizeAmazonImage } from "@/lib/utils/amazonImage";
 import type { SearchSuggestion } from "@/lib/db/search";
 
@@ -90,7 +90,7 @@ export default function SearchDropdown({ query, onClose }: Props) {
         <Link
           key={r.id}
           role="menuitem"
-          href={`/artista/${slugifyArtist(r.artista)}`}
+          href={artistaHref(r.artista) ?? `/disco/${r.slug}`}
           onClick={onClose}
           className={`flex items-center gap-3 px-4 py-2.5 hover:bg-groove transition-colors${
             idx < results.length - 1 ? " border-b border-groove/40" : ""
