@@ -104,13 +104,27 @@ export default async function GravadoraPage({
     const crawledAt = disco.lastCrawledAt ? new Date(disco.lastCrawledAt).getTime() : null;
     const dealIsStale = crawledAt === null || agora - crawledAt > DEAL_STALE_MS;
     const dealScore = disco.dealScore !== null && !dealIsStale ? disco.dealScore : null;
+    // Listed field by field rather than spread: the spread also shipped
+    // `lastCrawledAt`, which moves on every crawl even when the price does not,
+    // so this page's output changed on every observation and Vercel billed a
+    // full ISR write for it. estilo/emPromocao/confidenceLevel/historyDays/
+    // lastfmTags have no reader on this route and were pure bytes.
     return {
-      ...disco,
+      id: disco.id,
+      slug: disco.slug,
+      titulo: disco.titulo,
+      tituloSeo: disco.tituloSeo,
+      artista: disco.artista,
+      imgUrl: disco.imgUrl,
+      url: disco.url,
+      marketplace: disco.marketplace,
       rating: disco.rating ? Number(disco.rating) : null,
-      emPromocao: dealScore !== null,
+      reviewCount: disco.reviewCount,
+      precoAtual: disco.precoAtual,
+      mediaPreco: disco.mediaPreco,
+      desconto: disco.desconto,
+      sparkline: disco.sparkline,
       dealScore,
-      historyDays: null,
-      lastfmTags: null,
       disponivel: true,
     };
   });

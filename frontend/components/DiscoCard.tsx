@@ -21,7 +21,7 @@ export interface DiscoCardProps {
    * select it yet still render correctly with the raw título. */
   tituloSeo?: string | null;
   artista: string;
-  estilo: string | null;
+  estilo?: string | null;
   imgUrl: string | null;
   url: string;
   /** Price/link source: "amazon" or "mercadolivre" — drives buy-button label + affiliate tagging */
@@ -29,7 +29,7 @@ export interface DiscoCardProps {
   rating: number | null;
   precoAtual: number;
   mediaPreco: number;
-  emPromocao: boolean;
+  emPromocao?: boolean;
   desconto: number;
   sparkline?: number[];
   /** Scoring tier: 1 = Boa Oferta, 2 = Ótima Oferta, 3 = Melhor Preço, null = no deal */

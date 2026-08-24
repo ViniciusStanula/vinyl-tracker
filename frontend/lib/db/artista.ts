@@ -311,7 +311,6 @@ const _getArtistaPageData = (
       titulo:          row.titulo,
       tituloSeo:       row.tituloSeo,
       artista:         row.artista,
-      estilo:          row.estilo,
       imgUrl:          row.imgUrl,
       url:             row.url,
       marketplace:     row.marketplace,
@@ -319,13 +318,9 @@ const _getArtistaPageData = (
       reviewCount:     row.reviewCount !== null ? Number(row.reviewCount) : null,
       precoAtual:      0,
       mediaPreco:      0,
-      emPromocao:      false,
       desconto:        0,
       sparkline:       [],
       dealScore:       null,
-      confidenceLevel: null,
-      historyDays:     null,
-      lastfmTags:      null,
       disponivel:      false,
     }));
 
@@ -370,6 +365,9 @@ const _getArtistaPageData = (
     const bioPt      = meta?.bioPt ?? null;
 
     const DEAL_STALE_MS = 4 * 60 * 60 * 1000;
+    // Read once, outside the map: one wall-clock value per generation instead
+    // of one per row.
+    const agora = Date.now();
 
     const items = rows.flatMap((row): ProcessedDisco[] => {
       const precoAtual = Number(row.precoAtual);
@@ -398,7 +396,7 @@ const _getArtistaPageData = (
           ? Number(row.dealScore)
           : null;
       const crawledAt = row.lastCrawledAt ? new Date(row.lastCrawledAt).getTime() : null;
-      const dealIsStale = crawledAt === null || Date.now() - crawledAt > DEAL_STALE_MS;
+      const dealIsStale = crawledAt === null || agora - crawledAt > DEAL_STALE_MS;
       const dealScore = rawDealScore !== null && !dealIsStale ? rawDealScore : null;
 
       return [{
@@ -407,7 +405,6 @@ const _getArtistaPageData = (
         titulo:          row.titulo,
         tituloSeo:       row.tituloSeo,
         artista:         row.artista,
-        estilo:          row.estilo,
         imgUrl:          row.imgUrl,
         url:             row.url,
         marketplace:     row.marketplace,
@@ -415,13 +412,9 @@ const _getArtistaPageData = (
         reviewCount:     row.reviewCount !== null && row.reviewCount !== undefined ? Number(row.reviewCount) : null,
         precoAtual,
         mediaPreco,
-        emPromocao:      dealScore !== null,
         desconto,
         sparkline,
         dealScore,
-        confidenceLevel: row.confidenceLevel ?? null,
-        historyDays:     row.historyDays !== null && row.historyDays !== undefined ? Number(row.historyDays) : null,
-        lastfmTags:      row.lastfmTags ?? null,
       }];
     });
 
