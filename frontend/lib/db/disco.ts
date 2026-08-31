@@ -262,7 +262,16 @@ export const getRelatedDeals = (discoId: string, slug: string, tags: string[]) =
           AND (format IS NULL OR format = 'vinyl')
           AND price_count >= 5
           ${tagFilter}
-        ORDER BY deal_score DESC, RANDOM()
+        -- Deterministic tiebreak, NOT RANDOM(). deal_score holds three distinct
+        -- values (3/2/1) over a pool of ~739 records, 287 of them tied at the
+        -- top, so RANDOM() was the effective sort key: four different albums on
+        -- every render. Vercel bills an ISR write only when the regenerated page
+        -- differs from the cached copy, so this rail alone made every rebuild of
+        -- all ~35k record pages billable even when the record had not moved —
+        -- measured on prod, it was the ONLY difference between two consecutive
+        -- regenerations. Hashing against the page's own id keeps the mix varied
+        -- from record to record while holding it stable for a given record.
+        ORDER BY deal_score DESC, md5(id::text || ${discoId}::text)
         LIMIT 4
       )
       SELECT
@@ -326,7 +335,11 @@ export const getArtistTopAlbums = (artista: string, discoId: string, slug: strin
           AND disponivel = TRUE
           AND (format IS NULL OR format = 'vinyl')
           AND price_count >= 5
-        ORDER BY lastfm_listeners DESC NULLS LAST, RANDOM()
+        -- Deterministic tiebreak — same reason as getRelatedDeals above. 29,690
+        -- records have at least one same-artist sibling with NULL listeners, so
+        -- those all fell through to RANDOM() and this rail reordered on every
+        -- render too.
+        ORDER BY lastfm_listeners DESC NULLS LAST, md5(id::text || ${discoId}::text)
         LIMIT 4
       )
       SELECT
