@@ -7,6 +7,11 @@ export const ARTIST_ALIASES: Record<string, Record<string, string>> = {
   metallica: {
     "the black album": "metallica",
   },
+  megadeth: {
+    // Two listings of the same 1986 album spell the title differently, and
+    // which one is in stock decides the key. Pin both to the canonical one.
+    "peace sells...but who's buying": "peace sells but who's buying",
+  },
 };
 
 // Releases that are technically mb_primary_type='Album' in our data but
@@ -19,7 +24,13 @@ export const ARTIST_EXCLUDE: Record<string, Set<string>> = {
     "s&m2", // orchestral live album w/ SF Symphony — not a studio album
   ]),
   "iron-maiden": new Set([
-    "lp vinil iron maiden",                                          // "LP VINIL Iron Maiden - Live After Death" (live album)
+    // Was keyed "lp vinil iron maiden": the title "LP VINIL Iron Maiden - Live
+    // After Death" used to survive the prefix stripper intact, so the format
+    // tag became the dedup key. Now that stripArtistPrefix handles a format tag
+    // before the artist name, the key is the album's real name — and this
+    // exclusion silently stopped matching, putting a live album back in the
+    // ranking. Retitle an exclusion whenever the key rules change.
+    "live after death",                                              // live album
     "nights of the dead, legacy of the beast: live in mexico city",  // live album
     "japan 81",                                                       // live album
   ]),
@@ -38,6 +49,13 @@ export const ARTIST_EXCLUDE: Record<string, Set<string>> = {
   ]),
   "alice-in-chains": new Set([
     "freak show: california broadcasts 1990 & 1992", // MB secondary-type "Live" — radio broadcast bootleg reissue, not a studio LP
+  ]),
+  "linkin-park": new Set([
+    "papercuts: singles collection", // hits compilation, redundant with the albums it draws from
+    "lost demos",                    // demo/outtake collection, not a studio LP
+  ]),
+  radiohead: new Set([
+    "kid a mnesia", // Kid A + Amnesiac reissue box, both already ranked on their own
   ]),
 };
 
@@ -89,6 +107,22 @@ export const ARTIST_VIDEOS: Record<string, Record<string, string>> = {
     "the final frontier": "uibUIN4nzYk",           // El Dorado
     "the book of souls": "-F7A24f6gNc",            // Speed of Light
     senjutsu: "FhBnW7bZHEE",                       // The Writing on the Wall
+  },
+
+  "linkin-park": {
+    "hybrid theory": "eVTXPUF4Oz4",      // In the End
+    "meteora": "kXYiU_JCYtU",            // Numb
+    "minutes to midnight": "8sgycukafqQ", // What I've Done
+    reanimation: "GgxcvmkPD-I",  // Pts.Of.Athrty
+    "living things": "dxytyRy-O1k",      // Burn It Down
+    "the hunting party": "oM-XJD4J36U",  // Until It's Gone
+    "from zero": "SRXH9AbT280",          // The Emptiness Machine
+  },
+
+  radiohead: {
+    "pablo honey": "XFkzRNyygfk",  // Creep
+    "ok computer": "fHiGbolFFGw",  // Paranoid Android
+    "in rainbows": "GoLJJRIWCLU",  // Jigsaw Falling Into Place
   },
 
   megadeth: {

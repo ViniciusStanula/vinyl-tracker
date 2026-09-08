@@ -8,18 +8,47 @@ import { ALBUM_BLURBS } from "./best-of-artist-content";
 // listing's full ad copy). Keyed by [artist slug][dedup key] -> display title.
 const ARTIST_DISPLAY_NAMES: Record<string, Record<string, string>> = {
   metallica: {
+    "master of puppets": "Master of Puppets",
+    "ride the lightning": "Ride the Lightning",
+    "...and justice for all": "...And Justice for All",
+    "kill em all": "Kill 'Em All",
+    "st anger": "St. Anger",
+    "garage inc": "Garage Inc.",
+    "hardwired to self-destruct": "Hardwired... to Self-Destruct",
     "metallica 72 seasons vinil edição limitada lp colorido amarelo e preto exclusivo walmart": "72 Seasons",
+    "72 seasons 2lp": "72 Seasons",
   },
   megadeth: {
+    "countdown to extinction": "Countdown to Extinction",
+    "the world needs a hero": "The World Needs a Hero",
+    "the sick, the dying. and the dead!": "The Sick, the Dying... and the Dead!",
     "so far so good: so what": "So Far, So Good... So What!",
+    "peace sells but who's buying": "Peace Sells... but Who's Buying?",
     megadeth: "Megadeth",
   },
   nirvana: {
     "vinyl style in utero": "In Utero",
   },
   "alice-in-chains": {
+    "black gives way to blue": "Black Gives Way to Blue",
     "alice in chains - (30th anniversary reissue) (translucent highlighter yellow vinyl)": "Alice in Chains",
   },
+  "linkin-park": {
+    "minutes to midnight": "Minutes to Midnight",
+    "from zero": "From Zero",
+  },
+  radiohead: {
+    "hail to the thief": "Hail to the Thief",
+    "the king of limbs": "The King of Limbs",
+    "ok computer": "OK Computer",
+  },
+  "iron-maiden": {
+    "dance of death": "Dance of Death",
+    "a matter of life and death": "A Matter of Life and Death",
+    "the book of souls": "The Book of Souls",
+    "virtual xi": "Virtual XI",
+  },
+
 };
 
 // Corrects mb_first_release_date for catalog rows whose matched MusicBrainz
@@ -69,15 +98,21 @@ interface ExtraAlbum {
 
 const ARTIST_EXTRA_ALBUMS: Record<string, ExtraAlbum[]> = {
   metallica: [
+    { mbid: "e389b7df-862d-3d91-a612-acca150f6e71", title: "Load", year: 1996, mbRating: 3.3, mbRatingVotes: 46 },
     { mbid: "8fd32554-02a7-3788-a761-7012e0e75e55", title: "ReLoad", year: 1997, mbRating: 3.25, mbRatingVotes: 45 },
+    // Credited on MusicBrainz to Metallica, so it belongs in a ranking of the
+    // band's albums even though it is a Lou Reed collaboration and carries the
+    // lowest rating of the discography.
+    { mbid: "38d1077e-c270-49a8-92ca-87e7eb8d9fe4", title: "Lulu", year: 2011, mbRating: 1.95, mbRatingVotes: 25 },
   ],
   "iron-maiden": [
     { mbid: "169361b5-af6f-34ca-b8f2-13605a7f9691", title: "Piece of Mind", year: 1983, mbRating: 4.4, mbRatingVotes: 29 },
     { mbid: "c4a2262d-08bf-35ba-846c-79209b1121c9", title: "Virtual XI", year: 1998, mbRating: 2.45, mbRatingVotes: 15 },
     { mbid: "2220348e-c3f7-4da7-9cad-d84530077234", title: "The Book of Souls", year: 2015, mbRating: 4.0, mbRatingVotes: 12 },
+    { mbid: "153c0331-41b2-33b9-b86e-c6717761aa80", title: "Fear of the Dark", year: 1992, mbRating: 3.75, mbRatingVotes: 21 },
   ],
   megadeth: [
-    { mbid: "5410e871-d248-384b-ad73-0cb23a543cef", title: "Killing Is My Business... And Business Is Good!", year: 1985, mbRating: 3.5, mbRatingVotes: 12 },
+    { mbid: "5410e871-d248-384b-ad73-0cb23a543cef", title: "Killing Is My Business... and Business Is Good!", year: 1985, mbRating: 3.5, mbRatingVotes: 12 },
     { mbid: "8f37e58c-0ab8-3393-88c0-fdb41488f233", title: "Cryptic Writings", year: 1997, mbRating: 3.75, mbRatingVotes: 11 },
     { mbid: "49e5d092-0e76-3d60-a994-160a50bd2b7e", title: "Risk", year: 1999, mbRating: 2.9, mbRatingVotes: 9 },
     { mbid: "e165f024-3fab-4002-aad9-18da9c515d2a", title: "Endgame", year: 2009, mbRating: 3.7, mbRatingVotes: 10 },
@@ -86,6 +121,14 @@ const ARTIST_EXTRA_ALBUMS: Record<string, ExtraAlbum[]> = {
   "alice-in-chains": [
     { mbid: "7f925584-7f01-4965-addf-e5d254f875d1", title: "The Devil Put Dinosaurs Here", year: 2013, mbRating: 4.0, mbRatingVotes: 7 },
     { mbid: "66a00e64-afa2-409f-a5b0-8b5eaaa3f14b", title: "Rainier Fog", year: 2018, mbRating: 4.15, mbRatingVotes: 6 },
+  ],
+  // Both absent from our vinyl catalog, and a ranking that skipped them would
+  // read as an error to anyone who knows the discography.
+  "linkin-park": [
+    { mbid: "af682b63-021e-4806-afac-9aa4380fc6bd", title: "Living Things", year: 2012, mbRating: 4.0, mbRatingVotes: 27 },
+  ],
+  radiohead: [
+    { mbid: "b8048f24-c026-3398-b23a-b5e50716cbc7", title: "The Bends", year: 1995, mbRating: 4.15, mbRatingVotes: 67 },
   ],
 };
 
@@ -110,6 +153,8 @@ export const BEST_OF_ARTISTS: ArtistProfile[] = [
   { slug: "megadeth", name: "Megadeth", artistaLike: "%Megadeth%", article: "do" },
   { slug: "nirvana", name: "Nirvana", artistaLike: "%Nirvana%", article: "do" },
   { slug: "alice-in-chains", name: "Alice in Chains", artistaLike: "%Alice in Chains%", article: "do" },
+  { slug: "linkin-park", name: "Linkin Park", artistaLike: "%Linkin Park%", article: "do" },
+  { slug: "radiohead", name: "Radiohead", artistaLike: "%Radiohead%", article: "do" },
 ];
 
 export function getArtistProfile(slug: string): ArtistProfile | undefined {
@@ -130,6 +175,10 @@ export interface RankedAlbum {
   discoSlug: string | null;
   videoId: string | null;
   blurb: string | null;
+  discogsRating: number | null;
+  discogsVotes: number;
+  discogsHave: number | null;
+  discogsWant: number | null;
 }
 
 // Escapes a string for safe use inside a RegExp.
@@ -142,7 +191,16 @@ function escapeRegExp(s: string): string {
 // that leading "{artist} - " prefix first so the trailing-junk stripper below
 // doesn't mistake the real album name for a dash-tail to discard.
 function stripArtistPrefix(titulo: string, artistName: string): string {
-  const re = new RegExp(`^${escapeRegExp(artistName)}\\s*[-:]\\s*`, "i");
+  // The format tag often comes BEFORE the artist name ("LP VINIL Iron Maiden -
+  // The Number of the Beast"). Anchoring on the artist alone missed those, the
+  // prefix survived, and the trailing-junk stripper below then discarded the
+  // real album name — putting "LP VINIL Iron Maiden" at #1 of the Iron Maiden
+  // guide instead of "The Number of the Beast", with no blurb or video, since
+  // neither is keyed under that.
+  const re = new RegExp(
+    `^(?:(?:lp|vinil|vinyl|cd|disco de vinil)\\s+)*${escapeRegExp(artistName)}\\s*[-:]\\s*`,
+    "i",
+  );
   return titulo.replace(re, "");
 }
 
@@ -182,6 +240,10 @@ interface AlbumRow {
   listeners: number | null; // null = no Last.fm data available (album outside our catalog)
   amzrating: number | null;
   reviews: number | null;
+  dhave: number | null; // Discogs collection counts — null = release not matched
+  dwant: number | null;
+  drating: number | null;
+  dvotes: number | null;
 }
 
 async function fetchRankedAlbums(artist: ArtistProfile): Promise<RankedAlbum[]> {
@@ -196,7 +258,28 @@ async function fetchRankedAlbums(artist: ArtistProfile): Promise<RankedAlbum[]> 
       MAX(mb_rating_votes) AS votes,
       MAX(lastfm_listeners) AS listeners,
       MAX(rating::float)  AS amzrating,
-      SUM("reviewCount")  AS reviews
+      SUM("reviewCount")  AS reviews,
+      -- All four Discogs fields from the SAME catalog row. They were MAX()ed
+      -- independently, which on any album with more than one listing paired
+      -- the owner count of one pressing with the wantlist count of another:
+      -- Nirvana's "Bleach" read 7,041 have / 7,384 want when the pressing with
+      -- 7,041 owners actually has 1,250 wants. Discogs community counts belong
+      -- to a single release — a master carries no community block at all — so
+      -- mixing two of them describes no record that exists.
+      -- ALBUM-level counts, summed across every pressing of the Discogs master
+      -- by crawler/discogs_master_stats.py. Discogs exposes have/want only per
+      -- release, so ranking on the pressing we happen to stock measured our own
+      -- stock rather than the record: Iron Maiden's "Piece of Mind" read 1,415
+      -- owners against the master's 130,120, and Metallica's "Kill 'Em All"
+      -- 1,584 against 182,037. Identical for every row of an mb_mbid (the
+      -- backfill writes per album), so MAX cannot mix two pressings the way the
+      -- per-release columns could.
+      MAX(discogs_master_have) AS dhave,
+      MAX(discogs_master_want) AS dwant,
+      -- Rating stays per-pressing: Discogs has no album-level rating, and this
+      -- one is displayed only, never ranked on.
+      (array_agg(discogs_rating::float ORDER BY discogs_have DESC NULLS LAST))[1] AS drating,
+      (array_agg(discogs_rating_votes ORDER BY discogs_have DESC NULLS LAST))[1] AS dvotes
     FROM "Disco"
     WHERE artista ILIKE ${artist.artistaLike}
       AND disponivel = TRUE
@@ -231,31 +314,47 @@ async function fetchRankedAlbums(artist: ArtistProfile): Promise<RankedAlbum[]> 
   // rating/Last.fm enrichment hasn't landed yet, so they'd otherwise fail
   // the popularity threshold below and vanish instead of just ranking low.
   const forceInclude = ARTIST_FORCE_INCLUDE[artist.slug] ?? new Set<string>();
-  const fromCatalog = [...byKey.values()].filter((r) => {
-    const key = dedupKey(r.best_titulo, artist.name);
+  // Carry the ALIASED key (the map key) rather than recomputing dedupKey from
+  // the title at every lookup below. A row whose title spelling differs from
+  // the canonical one — "Peace Sells...But Who's Buying" vs "Peace Sells But
+  // Who's Buying" — grouped correctly here but then missed its blurb, video
+  // and display-name overrides, because those were keyed off the raw title.
+  const fromCatalog = [...byKey.entries()].filter(([key, r]) => {
     if (excluded.has(key)) return false;
     return (r.votes ?? 0) > 0 || (r.listeners ?? 0) >= 1000 || forceInclude.has(key);
   });
 
   // Add real albums we don't have a vinyl listing for, skipping any that
   // somehow already matched from the catalog (avoids a double entry).
-  const catalogKeys = new Set(fromCatalog.map((r) => dedupKey(r.best_titulo, artist.name)));
-  const extras: AlbumRow[] = (ARTIST_EXTRA_ALBUMS[artist.slug] ?? [])
-    .filter((e) => !catalogKeys.has(dedupKey(e.title, artist.name)))
-    .map((e) => ({
-      mb_mbid: e.mbid,
-      best_titulo: e.title,
-      best_slug: null,
-      best_img: null,
-      year: String(e.year),
-      rating: e.mbRating,
-      votes: e.mbRatingVotes,
-      listeners: null, // no Last.fm data for albums outside our catalog — not "zero popularity"
-      amzrating: null,
-      reviews: 0,
-    }));
+  const catalogKeys = new Set(fromCatalog.map(([key]) => key));
+  const extras: [string, AlbumRow][] = (ARTIST_EXTRA_ALBUMS[artist.slug] ?? [])
+    .map((e) => {
+      const rawKey = dedupKey(e.title, artist.name);
+      return [aliases[rawKey] ?? rawKey, e] as const;
+    })
+    .filter(([key]) => !catalogKeys.has(key))
+    .map(([key, e]) => [
+      key,
+      {
+        mb_mbid: e.mbid,
+        best_titulo: e.title,
+        best_slug: null,
+        best_img: null,
+        year: String(e.year),
+        rating: e.mbRating,
+        votes: e.mbRatingVotes,
+        listeners: null, // no Last.fm data for albums outside our catalog — not "zero popularity"
+        amzrating: null,
+        reviews: 0,
+        dhave: null, // no Discogs release matched either — same "unknown", not "unwanted"
+        dwant: null,
+        drating: null,
+        dvotes: null,
+      },
+    ]);
 
-  const candidates = [...fromCatalog, ...extras];
+  const keyed = [...fromCatalog, ...extras];
+  const candidates = keyed.map(([, r]) => r);
 
   const rated = candidates.filter((r) => (r.votes ?? 0) > 0 && (r.rating ?? -1) > 0);
   const C = rated.length
@@ -284,18 +383,70 @@ async function fetchRankedAlbums(artist: ArtistProfile): Promise<RankedAlbum[]> 
     ? knownListenerScores[Math.floor(knownListenerScores.length / 2)]
     : 2.5;
 
+  // Collector demand: how many people have this record on a Discogs wantlist.
+  // Log-scaled against this artist's own most-wanted record, exactly like the
+  // listener signal above, so the three components share a range.
+  //
+  // This is the album across every pressing, not the copy we sell. Albums we
+  // could not resolve a master for fall to the neutral score rather than to
+  // their own per-pressing count: the two live on scales ~50x apart, so mixing
+  // them would bury the unresolved album instead of admitting it is unknown.
+  //
+  // Deliberately the ABSOLUTE want count, not want/(want+have). The ratio
+  // looks like the better metric and is not: it punishes ubiquity, because a
+  // record that everyone already owns scores low precisely for being
+  // everywhere. Tried and rejected — it put Alice in Chains' "Black Gives Way
+  // to Blue" (99 wants, 248 owners) at #1 and dropped "Dirt" (1,401 wants,
+  // 17,871 owners) to #6, and lifted a 92-owner pressing of Megadeth's
+  // "Endgame" to #2. Bayesian shrinkage toward the artist mean did not fix it:
+  // any above-average ratio survives the shrink and still outranks the
+  // below-average ratio of a record ten thousand people own.
+  //
+  // NOT discogs_rating either. That rates the PRESSING a buyer received, not
+  // the album, and its range is compressed to the point of uselessness here
+  // (every Metallica album sits between 4.44 and 5.00, St. Anger within a
+  // rounding error of Master of Puppets). It is shown on the page as a
+  // datapoint, but it does not move the ranking.
+  const withDemand = candidates.filter((r) => r.dwant !== null);
+  const maxWant = Math.max(1, ...withDemand.map((r) => r.dwant ?? 0));
+  const demandScore = (want: number) => 5 * (Math.log(want + 1) / Math.log(maxWant + 1));
+  const knownDemandScores = withDemand
+    .map((r) => demandScore(r.dwant ?? 0))
+    .sort((a, b) => a - b);
+  // Same neutral-stand-in rule as the listener signal: an album with no
+  // matched Discogs release is "demand unknown", not "nobody wants it".
+  const neutralDemandScore = knownDemandScores.length
+    ? knownDemandScores[Math.floor(knownDemandScores.length / 2)]
+    : 2.5;
+
   const videoMap = ARTIST_VIDEOS[artist.slug] ?? {};
   const blurbMap = ALBUM_BLURBS[artist.slug] ?? {};
   const displayNameMap = ARTIST_DISPLAY_NAMES[artist.slug] ?? {};
   const yearOverrideMap = ARTIST_YEAR_OVERRIDES[artist.slug] ?? {};
   const scoreBoostMap = ARTIST_SCORE_BOOST[artist.slug] ?? {};
 
-  const ranked: RankedAlbum[] = candidates.map((r) => {
+  const ranked: RankedAlbum[] = keyed.map(([key, r]) => {
     const hasRating = (r.votes ?? 0) > 0 && (r.rating ?? -1) > 0;
     const ratingComponent = hasRating ? bayesian(r.votes!, r.rating!, m, C) : C;
     const listenerComponent = r.listeners === null ? neutralListenerScore : listenerScore(r.listeners);
-    const key = dedupKey(r.best_titulo, artist.name);
-    const score = 0.6 * ratingComponent + 0.4 * listenerComponent + (scoreBoostMap[key] ?? 0);
+    const demandComponent = r.dwant === null ? neutralDemandScore : demandScore(r.dwant);
+    // 0.10 on demand. Swept 0.00/0.10/0.20/0.30 across all five pages on the
+    // album-level counts: the order is stable from 0.00 to 0.20 everywhere
+    // except Alice in Chains, where Dirt passes Facelift. That agreement is
+    // the point — it says collector demand mostly corroborates the other two
+    // signals rather than fighting them, so a small weight is enough and a
+    // large one buys nothing.
+    //
+    // Worth knowing why this looks so different from the first attempt: ranked
+    // on PER-PRESSING counts the same sweep thrashed (Ride the Lightning moved
+    // between #1 and #4 depending on which listing was picked). That was noise
+    // from our own stock, not signal, and it disappeared once the counts became
+    // album-level.
+    const score =
+      0.55 * ratingComponent +
+      0.35 * listenerComponent +
+      0.1 * demandComponent +
+      (scoreBoostMap[key] ?? 0);
     return {
       mbid: r.mb_mbid,
       title: displayNameMap[key] ?? cleanDisplayTitle(r.best_titulo, artist.name),
@@ -310,6 +461,10 @@ async function fetchRankedAlbums(artist: ArtistProfile): Promise<RankedAlbum[]> 
       discoSlug: r.best_slug,
       videoId: videoMap[key] ?? null,
       blurb: blurbMap[key] ?? null,
+      discogsRating: r.drating && r.drating > 0 ? r.drating : null,
+      discogsVotes: r.dvotes ?? 0,
+      discogsHave: r.dhave,
+      discogsWant: r.dwant,
     };
   });
 

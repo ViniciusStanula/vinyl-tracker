@@ -51,7 +51,7 @@ export async function generateMetadata({
   if (!artist) return {};
 
   const title = `Os Melhores Discos ${artist.article} ${artist.name} | Garimpa Vinil`;
-  const description = `Ranking dos melhores álbuns ${artist.article} ${artist.name} em vinil, com nota do MusicBrainz e popularidade no Last.fm, vídeo de cada disco e preço monitorado na Amazon Brasil.`;
+  const description = `Ranking dos melhores álbuns ${artist.article} ${artist.name} em vinil, com nota do MusicBrainz, popularidade no Last.fm e procura entre colecionadores do Discogs, vídeo de cada disco e preço monitorado na Amazon Brasil.`;
   const albums = await getBestAlbums(slug);
   const ogImage = albums[0]?.imgUrl ?? null;
 
@@ -151,6 +151,7 @@ export default async function BestOfArtistPage({
             `${albums.length} álbuns`,
             "nota via MusicBrainz",
             "popularidade via Last.fm",
+            "procura via Discogs",
           ].map((s) => (
             <span key={s} className="text-xs text-parchment bg-sleeve border border-groove rounded-full px-3 py-1">
               {s}
@@ -167,8 +168,8 @@ export default async function BestOfArtistPage({
         ) : (
           <p className="text-parchment text-sm leading-relaxed">
             Ranking dos álbuns de estúdio {artist.article} {artist.name} disponíveis em vinil no nosso catálogo,
-            usando uma média bayesiana da nota do MusicBrainz combinada com o número de ouvintes no
-            Last.fm.
+            usando uma média bayesiana da nota do MusicBrainz, combinada com o número de ouvintes no
+            Last.fm e com a procura entre colecionadores do Discogs.
           </p>
         )}
       </header>
@@ -204,6 +205,19 @@ export default async function BestOfArtistPage({
                   )}
                   {album.lastfmListeners > 0 && (
                     <span>{album.lastfmListeners.toLocaleString("pt-BR")} ouvintes no Last.fm</span>
+                  )}
+                  {album.discogsRating && (
+                    <span>
+                      <span className="text-gold/90 font-semibold">{album.discogsRating.toFixed(2)}</span> Discogs
+                      {album.discogsVotes > 0 && ` (${album.discogsVotes} votos)`}
+                    </span>
+                  )}
+                  {album.discogsHave !== null && album.discogsWant !== null && (
+                    <span>
+                      {album.discogsWant.toLocaleString("pt-BR")} querem
+                      {" / "}
+                      {album.discogsHave.toLocaleString("pt-BR")} têm no Discogs
+                    </span>
                   )}
                   {album.discoSlug ? (
                     <Link href={`/disco/${album.discoSlug}`} className="text-gold hover:underline">
