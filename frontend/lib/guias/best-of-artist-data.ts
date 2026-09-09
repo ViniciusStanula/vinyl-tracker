@@ -35,6 +35,9 @@ const ARTIST_DISPLAY_NAMES: Record<string, Record<string, string>> = {
   },
   "linkin-park": {
     "minutes to midnight": "Minutes to Midnight",
+    // The listing that wins is titled "Reanimation Vinyl"; the alias pins the
+    // key, this pins what the reader sees.
+    reanimation: "Reanimation",
     "from zero": "From Zero",
   },
   radiohead: {

@@ -12,6 +12,13 @@ export const ARTIST_ALIASES: Record<string, Record<string, string>> = {
     // which one is in stock decides the key. Pin both to the canonical one.
     "peace sells...but who's buying": "peace sells but who's buying",
   },
+  "linkin-park": {
+    // Same trap, and this one already flipped once: whichever listing has the
+    // most reviews wins the title, and the crawler moves that daily. When
+    // "Reanimation Vinyl" took over from "Reanimation" the album silently lost
+    // its blurb and its video.
+    "reanimation vinyl": "reanimation",
+  },
 };
 
 // Releases that are technically mb_primary_type='Album' in our data but
@@ -116,13 +123,22 @@ export const ARTIST_VIDEOS: Record<string, Record<string, string>> = {
     reanimation: "GgxcvmkPD-I",  // Pts.Of.Athrty
     "living things": "dxytyRy-O1k",      // Burn It Down
     "the hunting party": "oM-XJD4J36U",  // Until It's Gone
+    "a thousand suns": "5qF_qbaWt3Q",    // Waiting for the End
+    "one more light": "5dmQ3QWpy1Q",     // Heavy (feat. Kiiara)
     "from zero": "SRXH9AbT280",          // The Emptiness Machine
   },
 
   radiohead: {
-    "pablo honey": "XFkzRNyygfk",  // Creep
-    "ok computer": "fHiGbolFFGw",  // Paranoid Android
-    "in rainbows": "GoLJJRIWCLU",  // Jigsaw Falling Into Place
+    "pablo honey": "XFkzRNyygfk",       // Creep
+    "the bends": "n5h0qHwNrHk",         // Fake Plastic Trees
+    "ok computer": "fHiGbolFFGw",       // Paranoid Android
+    // Kid A fica sem vídeo de propósito: o disco não teve single e não existe
+    // clipe oficial no canal da banda, só reuploads de terceiros.
+    amnesiac: "3M_Gg1xAHE4",             // Pyramid Song
+    "hail to the thief": "7AQSLozK7aA", // There, There
+    "in rainbows": "GoLJJRIWCLU",       // Jigsaw Falling Into Place
+    "the king of limbs": "cfOa1a8hYP8", // Lotus Flower
+    "a moon shaped pool": "yI2oS2hoL0k", // Burn the Witch
   },
 
   megadeth: {
