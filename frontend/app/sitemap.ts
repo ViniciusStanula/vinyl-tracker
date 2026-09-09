@@ -46,6 +46,7 @@ export default async function sitemap(props: {
     ]);
     // Articles with known update dates; listing pages use latestUpdate (real price-change signal).
     const ARTICLES_MODIFIED = new Date("2026-06-25");
+const BEST_OF_DATE = new Date("2026-09-08");
     const ROCK_GUIDE_DATE   = new Date("2026-05-26");
     return [
       { url: SITEMAP_BASE,                                              lastModified: latestUpdate,       changeFrequency: "daily",   priority: 1.0 },
@@ -90,7 +91,9 @@ export default async function sitemap(props: {
       })),
       ...BEST_OF_ARTISTS.map((a) => ({
         url: `${SITEMAP_BASE}/guias/melhores-discos/${a.slug}`,
-        lastModified: new Date("2026-07-14"),
+        // Every ranking changed when Discogs demand joined the score and the
+        // discographies were completed; two of them are new pages entirely.
+        lastModified: BEST_OF_DATE,
         changeFrequency: "monthly" as const,
         priority: 0.7,
       })),

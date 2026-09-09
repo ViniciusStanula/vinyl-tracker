@@ -42,10 +42,26 @@ const TAG_COLOR: Record<Guide["tag"], string> = {
 // Add new guides here — most recent first
 const GUIDES: Guide[] = [
   {
+    slug: "melhores-discos/radiohead",
+    title: "Os Melhores Discos do Radiohead",
+    description:
+      "Ranking dos nove álbuns de estúdio do Radiohead, de Pablo Honey a A Moon Shaped Pool, com nota do MusicBrainz, popularidade no Last.fm e a procura entre colecionadores do Discogs.",
+    date: "2026-09-08",
+    tag: "ranking",
+  },
+  {
+    slug: "melhores-discos/linkin-park",
+    title: "Os Melhores Discos do Linkin Park",
+    description:
+      "Ranking dos álbuns do Linkin Park, de Hybrid Theory a From Zero, com nota do MusicBrainz, popularidade no Last.fm e a procura entre colecionadores do Discogs.",
+    date: "2026-09-08",
+    tag: "ranking",
+  },
+  {
     slug: "melhores-discos/alice-in-chains",
     title: "Os Melhores Discos do Alice in Chains",
     description:
-      "Ranking dos álbuns do Alice in Chains em vinil, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+      "Ranking dos álbuns do Alice in Chains em vinil, com nota do MusicBrainz, popularidade no Last.fm, a procura entre colecionadores do Discogs e um vídeo de cada disco.",
     date: "2026-07-21",
     tag: "ranking",
   },
@@ -53,7 +69,7 @@ const GUIDES: Guide[] = [
     slug: "melhores-discos/nirvana",
     title: "Os Melhores Discos do Nirvana",
     description:
-      "Ranking dos três álbuns de estúdio do Nirvana em vinil, mais a coletânea Incesticide, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+      "Ranking dos três álbuns de estúdio do Nirvana em vinil, mais a coletânea Incesticide, com nota do MusicBrainz, popularidade no Last.fm, a procura entre colecionadores do Discogs e um vídeo de cada disco.",
     date: "2026-07-21",
     tag: "ranking",
   },
@@ -61,7 +77,7 @@ const GUIDES: Guide[] = [
     slug: "melhores-discos/megadeth",
     title: "Os Melhores Discos do Megadeth",
     description:
-      "Ranking dos álbuns de estúdio do Megadeth em vinil, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+      "Ranking dos álbuns de estúdio do Megadeth em vinil, com nota do MusicBrainz, popularidade no Last.fm, a procura entre colecionadores do Discogs e um vídeo de cada disco.",
     date: "2026-07-14",
     tag: "ranking",
   },
@@ -69,7 +85,7 @@ const GUIDES: Guide[] = [
     slug: "melhores-discos/iron-maiden",
     title: "Os Melhores Discos do Iron Maiden",
     description:
-      "Ranking dos álbuns de estúdio do Iron Maiden em vinil, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+      "Ranking dos álbuns de estúdio do Iron Maiden em vinil, com nota do MusicBrainz, popularidade no Last.fm, a procura entre colecionadores do Discogs e um vídeo de cada disco.",
     date: "2026-07-14",
     tag: "ranking",
   },
@@ -77,7 +93,7 @@ const GUIDES: Guide[] = [
     slug: "melhores-discos/metallica",
     title: "Os Melhores Discos do Metallica",
     description:
-      "Ranking dos álbuns de estúdio do Metallica em vinil, com nota do MusicBrainz, popularidade no Last.fm e um vídeo de cada disco.",
+      "Ranking dos álbuns de estúdio do Metallica em vinil, com nota do MusicBrainz, popularidade no Last.fm, a procura entre colecionadores do Discogs e um vídeo de cada disco.",
     date: "2026-07-14",
     tag: "ranking",
   },
