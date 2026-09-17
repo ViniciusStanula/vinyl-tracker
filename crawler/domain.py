@@ -369,3 +369,36 @@ def _is_plausible_artist(text: str) -> bool:
     if _EMBEDDED_PRICE_RE.search(text):
         return False
     return True
+
+
+# A listing that bundles SEVERAL DIFFERENT ALBUMS. Not the same as a multi-disc
+# edition of one album: Motörhead's 7" singles box, a Kinks deluxe box and a
+# Moby 2LP set are each a single release and must not match here.
+#
+# Every enrichment path resolves a listing to one album. Given a bundle, the
+# matchers picked one of the albums inside and attached its title, its
+# TRACKLIST and its description to the product page -- a five-album Panic! At
+# The Disco box listed ten tracks. 149 rows were in that state before this
+# guard; see crawler/_clear_bundle_album_data.py for the one-off cleanup.
+_BUNDLE_TITLE_RE = re.compile(
+    r"(?i)("
+    r"complete\s+\w[\w\s.'-]*\b(discography|collection|studio albums?)"  # "Complete X Discography"
+    r"|\bdiscography\b"                                                   # "Vinyl Discography: A / B"
+    r"|(collection|bundle|set)\s*:\s*[^/]+/"                              # "Collection: A / B"
+    r"|\b\d+\s*(lp|vinyl|album)s?\s+collection\b"                         # "5 Vinyl Album Collection"
+    r")"
+)
+
+# An album may legitimately be TITLED "Discography" -- Pet Shop Boys' 1991
+# singles compilation is the case in this catalogue.
+_BUNDLE_FALSE_POSITIVES = ("discography (2023 remaster)",)
+
+
+def is_multi_album_bundle(title: str) -> bool:
+    """True when the listing sells several different albums as one product."""
+    if not title:
+        return False
+    low = title.lower()
+    if any(x in low for x in _BUNDLE_FALSE_POSITIVES):
+        return False
+    return bool(_BUNDLE_TITLE_RE.search(title))
