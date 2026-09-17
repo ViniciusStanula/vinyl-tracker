@@ -1,11 +1,24 @@
 import { ARTISTA_REDIRECT_TARGETS } from "@/lib/redirectTargets";
 
 /**
- * Normalizes an inverted "LAST, FIRST" artist name to "First Last".
+ * Normalizes an inverted "LAST,FIRST" artist name to "First Last".
  * Amazon sometimes stores names in this format (e.g., "SWIFT,TAYLOR").
+ *
+ * Only the no-space-after-comma shape is inverted. Inverting on ANY comma
+ * mangled every band name that legitimately contains one: "Earth, Wind & Fire"
+ * became /artista/wind-fire-earth, "Blood, Sweat & Tears" became
+ * /artista/sweat-tears-blood, "Tyler, The Creator" became
+ * /artista/the-creator-tyler. That was 340 artist names across 406 records
+ * reading backwards, and it also SPLIT pages: "Tyler, The Creator" and
+ * "Tyler The Creator" resolved to two different slugs for one artist.
+ *
+ * The two shapes separate cleanly in the catalogue: 11 names carry the
+ * Amazon "Vaughan,stevie Ray" form with no space, and 345 are band names or
+ * multi-artist credits written with ", ". Digit groups are excluded too, so
+ * "10,000 Maniacs" is left alone.
  */
 function uninvertName(name: string): string {
-  if (!name.includes(",")) return name;
+  if (!/(?<!\d),(?!\s)(?!\d)/.test(name)) return name;
   const [last, ...rest] = name.split(",");
   const first = rest.join(",").trim();
   return first ? `${first} ${last.trim()}` : name;

@@ -95,10 +95,7 @@ const nextConfig: NextConfig = {
       { source: "/artista/ost", destination: "/estilo/soundtrack", permanent: true },
       // Artist names repaired by crawler/repair_rotated_artists.py. The old
       // normalize_artist() rotated on any comma, so "Cruz, Celia" was stored as
-      // "Cruz Celia" and indexed under a slug that reads backwards. Only the
-      // ten whose slug actually moved are here — where the repair restored a
-      // comma, slugifyArtist() un-inverts it and lands on the same slug, so
-      // "Tyler, The Creator" still answers on /artista/the-creator-tyler.
+      // "Cruz Celia" and indexed under a slug that reads backwards.
       { source: "/artista/nash-young-crosby-stills", destination: "/artista/stills-nash-young-crosby", permanent: true },
       { source: "/artista/inc-masta-ace", destination: "/artista/masta-ace-incorporated", permanent: true },
       { source: "/artista/animate-invent", destination: "/artista/invent-animate", permanent: true },
@@ -109,6 +106,81 @@ const nextConfig: NextConfig = {
       { source: "/artista/doma-molchat", destination: "/artista/molchat-doma", permanent: true },
       { source: "/artista/fraites-jeremiah", destination: "/artista/jeremiah-fraites", permanent: true },
       { source: "/artista/g-gus", destination: "/artista/gus-g", permanent: true },
+      // slugifyArtist() used to un-invert on ANY comma, so every band name
+      // containing one was indexed backwards: "Earth, Wind & Fire" answered on
+      // /artista/wind-fire-earth and "Tyler, The Creator" on
+      // /artista/the-creator-tyler. That was 340 names over 406 records, and it
+      // split pages too — "Tyler, The Creator" and "Tyler The Creator" resolved
+      // to two different slugs for one artist. uninvertName() now only inverts
+      // the "Vaughan,stevie Ray" shape (no space after the comma), which merged
+      // 16 artist pages. These send the old backwards URLs to the real ones;
+      // listed are those Googlebot crawled in the last 90 days or holding 2+
+      // records.
+      { source: "/artista/abbey-lincoln-max-roach-plus-four", destination: "/artista/max-roach-plus-four-abbey-lincoln", permanent: true },
+      { source: "/artista/agnetha-anni-frid-bjorn-benny", destination: "/artista/bjorn-benny-agnetha-anni-frid", permanent: true },
+      { source: "/artista/alan-walker-hans-zimmer", destination: "/artista/hans-zimmer-alan-walker", permanent: true },
+      { source: "/artista/albert-castiglia-mike-zito", destination: "/artista/mike-zito-albert-castiglia", permanent: true },
+      { source: "/artista/anne-belanger-vincent-bisson", destination: "/artista/vincent-bisson-anne-belanger", permanent: true },
+      { source: "/artista/bogert-appice-beck", destination: "/artista/beck-bogert-appice", permanent: true },
+      { source: "/artista/buddy-wells-junior-guy", destination: "/artista/junior-guy-buddy-wells", permanent: true },
+      { source: "/artista/c-j-smith-dojo-cuts", destination: "/artista/dojo-cuts-c-j-smith", permanent: true },
+      { source: "/artista/chaeyoung-jeongyeon-jihyo", destination: "/artista/jihyo-chaeyoung-jeongyeon", permanent: true },
+      { source: "/artista/chalart58-manu-chao", destination: "/artista/manu-chao-chalart58", permanent: true },
+      { source: "/artista/charlie-byrd-stan-getz", destination: "/artista/stan-getz-charlie-byrd", permanent: true },
+      { source: "/artista/chet-lackerschmid-wolfgang-baker", destination: "/artista/wolfgang-baker-chet-lackerschmid", permanent: true },
+      { source: "/artista/chris-verdi-freni-mirella-ludwig", destination: "/artista/mirella-ludwig-chris-verdi-freni", permanent: true },
+      { source: "/artista/dave-armstrong-louis-brubeck", destination: "/artista/louis-brubeck-dave-armstrong", permanent: true },
+      { source: "/artista/dizzy-carter-benny-gillespie", destination: "/artista/benny-gillespie-dizzy-carter", permanent: true },
+      { source: "/artista/dog-slaughter-beach", destination: "/artista/slaughter-beach-dog", permanent: true },
+      { source: "/artista/duke-lanegan-mark-garwood", destination: "/artista/mark-garwood-duke-lanegan", permanent: true },
+      { source: "/artista/geoff-barrow-ben-salisbury", destination: "/artista/ben-salisbury-geoff-barrow", permanent: true },
+      { source: "/artista/geordie-hook-k-division-coleman-jaz-walker", destination: "/artista/jaz-walker-geordie-hook-k-division-coleman", permanent: true },
+      { source: "/artista/gigi-d-agostino-alex-megane-and-more-rocco-bass-t-the-hitmen", destination: "/artista/the-hitmen-gigi-d-agostino-alex-megane-and-more-rocco-bass-t", permanent: true },
+      { source: "/artista/giona-ostinelli-sonya-belousova", destination: "/artista/sonya-belousova-giona-ostinelli", permanent: true },
+      { source: "/artista/j-peter-schwalm-brian-eno-holger-czukay", destination: "/artista/holger-czukay-j-peter-schwalm-brian-eno", permanent: true },
+      { source: "/artista/jabber-lipstick-homicide-the-ergs-the-steinways-house-boat-t", destination: "/artista/whimsyland-jabber-lipstick-homicide-the-ergs-the-steinways-h", permanent: true },
+      { source: "/artista/jason-graves-marcin-przyby-owicz", destination: "/artista/marcin-przyby-owicz-jason-graves", permanent: true },
+      { source: "/artista/jason-mcarthur-mike-barnes-randy-armstrong-rob-graves-anthon", destination: "/artista/anthony-armstrong-jason-mcarthur-mike-barnes-randy-armstrong", permanent: true },
+      { source: "/artista/john-gallagher-liam-squire", destination: "/artista/liam-squire-john-gallagher", permanent: true },
+      { source: "/artista/johnny-smith-beverly-kenney", destination: "/artista/beverly-kenney-johnny-smith", permanent: true },
+      { source: "/artista/jr-grover-washington", destination: "/artista/grover-washington-jr", permanent: true },
+      { source: "/artista/jr-hank-williams", destination: "/artista/hank-williams-jr", permanent: true },
+      { source: "/artista/judas-priest-twisted-sister-blue-oyster-cult-accept-y-t-vari", destination: "/artista/stryper-judas-priest-twisted-sister-blue-oyster-cult-accept-", permanent: true },
+      { source: "/artista/kenshi-hisaishi-joe-yonezu", destination: "/artista/joe-yonezu-kenshi-hisaishi", permanent: true },
+      { source: "/artista/lake-palmer-emerson", destination: "/artista/emerson-lake-palmer", permanent: true },
+      { source: "/artista/lake-powell-emerson", destination: "/artista/emerson-lake-powell", permanent: true },
+      { source: "/artista/larry-gus-eric-copeland", destination: "/artista/eric-copeland-larry-gus", permanent: true },
+      { source: "/artista/lo-borges-milton-nascimento", destination: "/artista/milton-nascimento-lo-borges", permanent: true },
+      { source: "/artista/louis-armstrong-ella-fitzgerald", destination: "/artista/ella-fitzgerald-louis-armstrong", permanent: true },
+      { source: "/artista/lowell-brams-sufjan-stevens", destination: "/artista/sufjan-stevens-lowell-brams", permanent: true },
+      { source: "/artista/m-anna-prohaska-meryl-streep", destination: "/artista/meryl-streep-m-anna-prohaska", permanent: true },
+      { source: "/artista/mac-quayle-gustavo-santaolalla", destination: "/artista/gustavo-santaolalla-mac-quayle", permanent: true },
+      { source: "/artista/max-quintet-brown-clifford-roach", destination: "/artista/clifford-roach-max-quintet-brown", permanent: true },
+      { source: "/artista/michael-stein-kyle-dixon", destination: "/artista/kyle-dixon-michael-stein", permanent: true },
+      { source: "/artista/nat-king-cole-ella-fitzgerald-dean-martin-louis-armstrong-fr", destination: "/artista/bing-crosby-nat-king-cole-ella-fitzgerald-dean-martin-louis-", permanent: true },
+      { source: "/artista/new-road-black-country", destination: "/artista/black-country-new-road", permanent: true },
+      { source: "/artista/nils-frahm-olafur-arnalds", destination: "/artista/olafur-arnalds-nils-frahm", permanent: true },
+      { source: "/artista/olafur-arnalds-loreen-sages", destination: "/artista/sages-olafur-arnalds-loreen", permanent: true },
+      { source: "/artista/oscar-armstrong-louis-peterson", destination: "/artista/louis-peterson-oscar-armstrong", permanent: true },
+      { source: "/artista/paul-and-mary-peter", destination: "/artista/peter-paul-and-mary", permanent: true },
+      { source: "/artista/paul-peacock-annette-bley", destination: "/artista/annette-bley-paul-peacock", permanent: true },
+      { source: "/artista/rikki-patten-arthur-brown", destination: "/artista/arthur-brown-rikki-patten", permanent: true },
+      { source: "/artista/sam-slater-hildur-gu-nadottir", destination: "/artista/hildur-gu-nadottir-sam-slater", permanent: true },
+      { source: "/artista/sarah-her-trio-vaughan", destination: "/artista/vaughan-sarah-her-trio", permanent: true },
+      { source: "/artista/selector-dub-narcotic-white-rainbow", destination: "/artista/white-rainbow-selector-dub-narcotic", permanent: true },
+      { source: "/artista/steve-earle-shawn-colvin", destination: "/artista/shawn-colvin-steve-earle", permanent: true },
+      { source: "/artista/stills-nash-crosby", destination: "/artista/crosby-stills-nash", permanent: true },
+      { source: "/artista/stills-nash-young-crosby", destination: "/artista/crosby-stills-nash-young", permanent: true },
+      { source: "/artista/sweat-tears-blood", destination: "/artista/blood-sweat-tears", permanent: true },
+      { source: "/artista/termanology-mac-miller-statik-selektah", destination: "/artista/statik-selektah-termanology-mac-miller", permanent: true },
+      { source: "/artista/the-bad-the-queen-the-good", destination: "/artista/the-good-the-bad-the-queen", permanent: true },
+      { source: "/artista/the-bluey-music-team-joff-bush", destination: "/artista/joff-bush-the-bluey-music-team", permanent: true },
+      { source: "/artista/the-creator-tyler", destination: "/artista/tyler-the-creator", permanent: true },
+      { source: "/artista/the-night-tripper-dr-john", destination: "/artista/dr-john-the-night-tripper", permanent: true },
+      { source: "/artista/the-oscar-peterson-trio-stan-getz", destination: "/artista/stan-getz-the-oscar-peterson-trio", permanent: true },
+      { source: "/artista/thirty-seconds-to-mars-friends-electric-birdy", destination: "/artista/birdy-thirty-seconds-to-mars-friends-electric", permanent: true },
+      { source: "/artista/willie-nelson-jessi-colter-tompall-glaser-waylon-jennings", destination: "/artista/waylon-jennings-willie-nelson-jessi-colter-tompall-glaser", permanent: true },
+      { source: "/artista/wind-fire-earth", destination: "/artista/earth-wind-fire", permanent: true },
       // lastfm_tags leaked artist names in as if they were genres — an artist is
       // not a style, so these send to the real artist page instead of a fake genre page.
       { source: "/estilo/eric-church", destination: "/artista/eric-church", permanent: true },
