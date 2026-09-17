@@ -20,6 +20,17 @@ import psycopg2.extras
 
 log = logging.getLogger(__name__)
 
+# Listings that bundle SEVERAL DIFFERENT ALBUMS ("Complete X Discography",
+# "5 Vinyl Album Collection: A / B"). Every enrichment path resolves a listing
+# to ONE album, so a bundle got one of its albums' title, TRACKLIST and
+# description attached -- a five-album box listing ten tracks. Excluded from
+# every candidate query that matches by title. Mirrors
+# domain.is_multi_album_bundle(); a multi-disc edition of ONE album is not a
+# bundle and is deliberately not matched here.
+NOT_A_BUNDLE_SQL = r"""
+              AND titulo !~* '(complete[[:space:]]+[[:alnum:]][[:alnum:][:space:].''-]*(discography|collection|studio albums?)|discography|(collection|bundle|set)[[:space:]]*:[^/]+/|[0-9]+[[:space:]]*(lp|vinyl|album)s?[[:space:]]+collection)'
+"""
+
 
 @contextlib.contextmanager
 def _cursor(conn):
@@ -1115,6 +1126,7 @@ def fetch_albums_needing_lastfm_enrichment(
             WHERE lastfm_listeners IS NULL
               AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
+              {NOT_A_BUNDLE_SQL}
               {unident_clause}
             ORDER BY price_count DESC
             LIMIT %s
@@ -1215,11 +1227,12 @@ def fetch_albums_needing_mb(conn, limit: int = 200) -> list[dict]:
     """
     with _cursor(conn) as cur:
         cur.execute(
-            """
+            f"""
             SELECT id, titulo, artista FROM "Disco"
             WHERE mb_mbid IS NULL
               AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
+              {NOT_A_BUNDLE_SQL}
               AND artista !~* 'artista n[ãa]o identificad'
             ORDER BY lastfm_listeners DESC NULLS LAST
             LIMIT %s
@@ -1286,12 +1299,13 @@ def fetch_records_needing_llm_recovery(conn, limit: int = 200) -> list[dict]:
     """
     with _cursor(conn) as cur:
         cur.execute(
-            """
+            f"""
             SELECT id, titulo, artista FROM "Disco"
             WHERE lastfm_listeners = 0
               AND lookup_artist IS NULL
               AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
+              {NOT_A_BUNDLE_SQL}
               AND artista !~* 'artista n[ãa]o identificad'
             ORDER BY price_count DESC
             LIMIT %s

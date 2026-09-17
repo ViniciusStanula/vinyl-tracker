@@ -2,6 +2,7 @@ import pytest
 from bs4 import BeautifulSoup
 from domain import (
     is_vinyl,
+    is_multi_album_bundle,
     detect_format,
     normalize_artist,
     parse_price_br,
@@ -250,3 +251,39 @@ class TestIsPlausibleArtist:
 
     def test_embedded_price_not_plausible(self):
         assert _is_plausible_artist("preco 49,90") is False
+
+
+# ─── is_multi_album_bundle ───────────────────────────────────────────────────
+
+class TestIsMultiAlbumBundle:
+    """Several DIFFERENT albums sold as one product.
+
+    Every enrichment path resolves a listing to one album, so a bundle used to
+    get one of its albums' title, tracklist and description attached -- a
+    five-album box listing ten tracks.
+    """
+
+    @pytest.mark.parametrize("title", [
+        "Panic At The Disco 5 Vinyl Album Collection: A Fever You Can't Sweat Out / Vices",
+        "The Complete Bruno Mars Vinyl Collection: Doo-Wops & Hooligans / Unorthodox Jukebox",
+        "Harry Styles Complete Discography: Self Titled / Fine Line",
+        "Lorde Vinyl Discography ( Pure Heroine / Melodrama )",
+        "21 Twenty One Pilots Studio Album Vinyl Collection: Vessel / Blurryface",
+    ])
+    def test_bundles_are_detected(self, title):
+        assert is_multi_album_bundle(title) is True
+
+    @pytest.mark.parametrize("title", [
+        # A multi-DISC edition of ONE album is a single release, not a bundle.
+        'We Take No Prisoners (The Singles 1995 - 2006) [7" Singles Boxset]',
+        "Lola Versus Powerman and the Moneygoround, Pt. 1 - Box Set",
+        "Vinil Moby - Resound Nyc (2lp Set) - Importado",
+        "The Dark Side Of The Moon (50th Anniversary)",
+        # Pet Shop Boys' 1991 compilation is an album literally titled that.
+        "DISCOGRAPHY (2023 REMASTER) (2LP)",
+    ])
+    def test_single_releases_are_not_bundles(self, title):
+        assert is_multi_album_bundle(title) is False
+
+    def test_empty_title(self):
+        assert is_multi_album_bundle("") is False
