@@ -81,6 +81,13 @@ const nextConfig: NextConfig = {
       // "ost" is just an abbreviation of "soundtrack" -- every disco tagged ost
       // is now also tagged soundtrack (backfilled), so no unique inventory left.
       { source: "/estilo/ost", destination: "/estilo/soundtrack", permanent: true },
+      // Merged into /estilo/rock — 43 records carry the "album rock" tag and 35
+      // of them (81%) are also tagged "rock", leaving 8 unique. Same no-unique-
+      // inventory test as the /estilo/game merges above. It was also competing
+      // with /estilo/rock on the same queries and losing badly: GSC 90d had
+      // album-rock at pos 40-50 for "vinil rock" / "discos de vinil rock" while
+      // /estilo/rock sat at pos 8.2.
+      { source: "/estilo/album-rock", destination: "/estilo/rock", permanent: true },
       // Amazon placeholder "artists" that are not artists. The crawler now
       // rewrites these at ingest, so the pages behind them emptied out:
       // /artista/original-soundtrack holds zero records and 404s outright,
