@@ -1397,6 +1397,11 @@ def fetch_albums_needing_translation(conn, min_listeners: int = 500_000, limit: 
               AND lastfm_wiki_en IS NOT NULL
               AND length(trim(lastfm_wiki_en)) >= 40
               AND lastfm_wiki_pt IS NULL
+              -- A row with a hand-written sobre_pt already has better prose:
+              -- Wikipedia-grounded, source-attributed and rule-checked. Writing
+              -- a machine translation next to it buried 461 of them before this
+              -- filter existed, because the record page showed the wiki first.
+              AND sobre_pt IS NULL
             ORDER BY lastfm_listeners DESC
             LIMIT %s
             """,

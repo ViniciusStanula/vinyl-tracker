@@ -774,11 +774,11 @@ export default async function DiscoPage({
   })();
 
   // The prose the page already shows under "Sobre o álbum", in the same
-  // precedence the visible section uses (translated Last.fm wiki first, then
-  // the Claude-written sobre_pt, which is only populated where the wiki is
-  // absent). It was rendered for humans and withheld from the markup, which is
-  // the text an AI summariser would otherwise have to scrape out of the HTML.
-  const albumDescription = albumInfo?.wikiSummary ?? meta?.sobrePt ?? null;
+  // precedence the visible section uses (hand-written sobre_pt first, then the
+  // translated Last.fm wiki). It was rendered for humans and withheld from the
+  // markup, which is the text an AI summariser would otherwise have to scrape
+  // out of the HTML.
+  const albumDescription = meta?.sobrePt ?? albumInfo?.wikiSummary ?? null;
 
   // sobre_pt_source_url records where the bio's FACTS were grounded, which is
   // not the same claim as "this album is that page's subject". Measured over
@@ -1355,11 +1355,20 @@ export default async function DiscoPage({
           // Section is independent of Last.fm now: show it if there's anything
           // worth showing — listener stats (>0), wiki, MB facts, or Amazon rating.
           const hasLastfm = albumInfo != null && albumInfo.listeners > 0;
-          const wikiSummary = albumInfo?.wikiSummary ?? null;
-          // sobrePt is Claude-written (claude_disco_bio_helper.py), only populated
-          // where lastfm_wiki_pt was null — the two never coexist, so this is a
-          // fallback, not a merge.
-          const sobrePt = !wikiSummary ? (meta?.sobrePt ?? null) : null;
+          // sobre_pt is hand-written: grounded on a named source, carrying
+          // sobre_pt_source_url, and checked against the writing rules before
+          // it is saved. lastfm_wiki_pt is a machine translation of Last.fm /
+          // AllMusic review copy, which often opens on something other than the
+          // record (one began on the fury of Kurt Cobain fans in retail-site
+          // reviews). So sobre_pt wins where a row has both.
+          //
+          // An earlier comment here asserted the two never coexist. They do:
+          // the crawler's translation job only skipped rows that already had
+          // lastfm_wiki_pt, so it kept writing alongside sobre_pt and hid 461
+          // hand-written descriptions. database.py now also filters on
+          // sobre_pt IS NULL, but the rows already written still need this.
+          const sobrePt = meta?.sobrePt ?? null;
+          const wikiSummary = sobrePt ? null : (albumInfo?.wikiSummary ?? null);
           const sobrePtSourceUrl = sobrePt ? (meta?.sobrePtSourceUrl ?? null) : null;
           const hasMb = mbInfo != null && Boolean(
             mbInfo.releaseYear || mbInfo.primaryType ||
