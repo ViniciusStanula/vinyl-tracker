@@ -69,3 +69,7 @@ logo-export.html
 *.pptx
 
 .vercel
+
+# Google OAuth client secrets — never commit
+client_secret*.json
+*.apps.googleusercontent.com.json

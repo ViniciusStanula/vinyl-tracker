@@ -16,6 +16,13 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: "Mapa do Site | Garimpa Vinil",
   description: DESCRIPTION,
+  // noindex, follow: in 90 days this page drew 8,677 impressions and 12 clicks
+  // (0.14% CTR), almost all of it Google barrel-scraping ultra-rare queries —
+  // only 128 impressions were even reportable, the rest sat in the anonymized
+  // bucket. "follow" is load-bearing: this page links 271 gravadora routes and
+  // the XML sitemap only submits 100, so it is the sole discovery path for the
+  // other 171.
+  robots: { index: false, follow: true },
   alternates: { canonical: "/sitemap" },
   openGraph: {
     title: "Mapa do Site | Garimpa Vinil",

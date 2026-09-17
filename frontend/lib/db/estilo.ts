@@ -40,6 +40,8 @@ export const REDIRECTED_ESTILO_SLUGS = new Set([
   "game-remixes",
   // merged into /estilo/soundtrack — "ost" is just an abbreviation of it
   "ost",
+  // merged into /estilo/rock — 35 of its 43 records are already tagged "rock"
+  "album-rock",
   // artist names, not genres — redirected to /artista/<slug>
   "eric-church",
   "shania-twain",

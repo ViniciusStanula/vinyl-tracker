@@ -280,6 +280,17 @@ const _getArtistaPageData = (
              country       AS "country"
       FROM "ArtistMeta"
       WHERE artista = ANY(${variants})
+      -- Several spellings of the same artist can slugify to one page ("Tyler,
+      -- The Creator" and "Tyler The Creator" both land on /artista/tyler-the-
+      -- creator). Without an ORDER BY, LIMIT 1 took an arbitrary row, so a page
+      -- could render with no bio while a populated row sat right next to it.
+      -- 31 slugs currently have both a populated and an empty variant. Prefer
+      -- the richest row, and break ties on artista so the choice is stable
+      -- across renders.
+      ORDER BY (bio_pt IS NOT NULL) DESC,
+               (bio_short_pt IS NOT NULL) DESC,
+               (mbid IS NOT NULL) DESC,
+               artista
       LIMIT 1
     `;
 
