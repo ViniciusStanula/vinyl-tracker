@@ -3,6 +3,9 @@ import Link from "next/link";
 export const metadata = {
   title: "Política de Privacidade | Garimpa Vinil",
   description: "Como o Garimpa Vinil coleta, usa e protege seus dados: o que guardamos ao criar um alerta de preço, quais cookies usamos e como pedir a exclusão dos seus dados.",
+  // Mesmo motivo de /termos-de-uso: 20 impressões e 0 cliques como sitelink da
+  // marca em 90 dias. Sai do índice, continua no rodapé e acessível.
+  robots: { index: false, follow: true },
   alternates: { canonical: "/politica-de-privacidade" },
 };
 

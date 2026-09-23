@@ -29,7 +29,20 @@ _BANNED = [
     "ao longo de sua carreira", "ao longo da carreira",
     "no cenário musical", "marco na história", "obra-prima",
 ]
-_BANNED_RE = [(b, re.compile(r"(?<![a-zA-ZÀ-ÿ])" + re.escape(b), re.I)) for b in _BANNED]
+
+# A few entries need a right-hand guard as well as the left one. "ao longo dos
+# anos" is filler only when it stands alone; followed by a decade it is a plain
+# date -- "ao longo dos anos 1990" is "throughout the 1990s" and says something
+# the rewrite would lose. The substring rule cannot tell those apart and was
+# rejecting 12 correct bios for every 8 padded ones.
+_BANNED_SUFFIX_GUARD = {
+    "ao longo dos anos": r"(?!\s*\d)",
+}
+_BANNED_RE = [
+    (b, re.compile(r"(?<![a-zA-ZÀ-ÿ])" + re.escape(b)
+                   + _BANNED_SUFFIX_GUARD.get(b, ""), re.I))
+    for b in _BANNED
+]
 
 _MIN_CHARS = 250          # below this the row did not support a page
 _TWO_PARA_ABOVE = 700     # padding a short source into two paragraphs is worse

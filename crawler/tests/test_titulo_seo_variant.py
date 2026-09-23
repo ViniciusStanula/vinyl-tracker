@@ -7,7 +7,7 @@ common discogs_format_desc on the catalog is the shape
 """
 import pytest
 
-from titulo_seo import compose, resolve_variant
+from titulo_seo import base_title, compose, resolve_variant
 
 
 def variant(fmt_desc, titulo="Some Album", artista="Some Artist"):
@@ -130,3 +130,31 @@ class TestSuffix:
 
     def test_plain_record_unchanged(self):
         assert compose("Some Artist", "Some Album", "Some Album", None, "LP, Album")[0] == "Some Album"
+
+
+def test_exact_candidate_beats_prefixed_candidate():
+    # Discogs matched Paramore's "This Is Why" listing to the separate remix
+    # album "Re: This Is Why". Both candidates share every meaningful word of
+    # the título, so the loose rule took Discogs; mb_title explains it exactly
+    # and must win.
+    assert base_title(
+        "Paramore", "This Is Why [Vinyl] Paramore", "Re: This Is Why", "This Is Why"
+    ) == "This Is Why"
+
+
+def test_exact_discogs_still_wins_over_exact_mb():
+    assert base_title(
+        "Paramore", "This Is Why [Vinyl] Paramore", "This Is Why", "This is why"
+    ) == "This Is Why"
+
+
+def test_blue_note_series_is_not_a_vinyl_color():
+    # "Blue Note" is the label/series name, not the pressing's color -- and it
+    # sits next to "Vinyl", so the vinyl-adjacency guard alone let it through.
+    h1, _base, cor, *_rest = compose(
+        "Frank Sinatra",
+        "In The Wee Small Hours (Blue Note Tone Poet Vinyl Edition)[180g LP]",
+        "In The Wee Small Hours", "In the Wee Small Hours",
+        "LP, Album, Reissue, Mono, 180g, Gatefold")
+    assert cor is None
+    assert "Azul" not in h1

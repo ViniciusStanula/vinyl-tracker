@@ -185,6 +185,24 @@ def base_title(artista, titulo, discogs_title, mb_title):
     titulo_tokens = _tokens(titulo)
     meaningful = _light_tokens(clean) - _light_tokens(artista)
 
+    # A candidate that explains the real content EXACTLY beats one that
+    # explains it and adds words of its own. Paramore's "This Is Why [Vinyl]"
+    # listing had discogs_title "Re: This Is Why" -- the separate remix album
+    # -- and mb_title "This Is Why". Both share every meaningful word, so the
+    # loose 2-shared-word rule below returned the first candidate and put the
+    # wrong album's name on the page. Priority still decides between two
+    # equally exact candidates.
+    # Accents are folded for this comparison only: Amazon titles drop them
+    # constantly ("Ton Guerrier Massai" for "Ton Guerrier Massaï"), and an
+    # accent-only difference was enough to reject the exact candidate and hand
+    # the page to a "(Remixes)" release instead.
+    if not all_junk and meaningful:
+        meaningful_folded = {_fold(w) for w in meaningful}
+        for cand in (discogs_title, mb_title):
+            if cand and _is_latin_comparable(cand) and _tokens(cand):
+                if {_fold(w) for w in _light_tokens(cand)} == meaningful_folded:
+                    return cand
+
     for cand in (discogs_title, mb_title):
         if cand and _is_latin_comparable(cand):
             theirs = _tokens(cand)
@@ -246,9 +264,18 @@ def extract_junk(raw, artista=None):
     return " ".join(parts)
 
 
+# Label and series names that contain a color word but say nothing about the
+# vinyl's color. "In The Wee Small Hours (Blue Note Tone Poet Vinyl Edition)"
+# was read as blue vinyl: the word sits next to "Vinyl", so the vinyl-adjacency
+# guard passed it through, and the page claimed a color the pressing may not
+# have.
+_COLOR_WORD_IN_NAME_RE = re.compile(r"\bblue\s+note\b", re.IGNORECASE)
+
+
 def parse_colors(text):
     if not text:
         return []
+    text = _COLOR_WORD_IN_NAME_RE.sub(" ", text)
     low, found = text.lower(), []
     for pat, label in COLOR_MAP:
         if re.search(pat, low) and label not in found:

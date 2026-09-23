@@ -3,6 +3,11 @@ import Link from "next/link";
 export const metadata = {
   title: "Termos de Uso | Garimpa Vinil",
   description: "Termos e condições de uso do Garimpa Vinil: como usar os dados de preço do site, limites de responsabilidade e nossa participação no programa de afiliados.",
+  // Fora do índice, mas segue linkada no rodapé de todas as páginas. O Google
+  // monta os sitelinks da marca a partir do que está indexado, e em 90 dias
+  // esta página rendeu 48 impressões e 0 cliques ocupando um desses espaços.
+  // Precisa continuar acessível (afiliados, LGPD) — indexada, não.
+  robots: { index: false, follow: true },
   alternates: { canonical: "/termos-de-uso" },
 };
 
