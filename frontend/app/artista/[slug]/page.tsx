@@ -11,6 +11,7 @@ import { formatDiscoCount } from "@/lib/utils/formatters";
 import { getArtistaPageData } from "@/lib/db/artista";
 import { getTopBotHitSlugs } from "@/lib/db/disco";
 import { SITE_URL } from "@/lib/siteUrl";
+import { TITLE_TEST_VARIANT } from "@/lib/artistTitleTest";
 import { toJsonLd, discoListItems } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
@@ -53,8 +54,15 @@ export async function generateMetadata({
   // Whole components drop out in order of value — brand, then the disc count —
   // rather than truncateTitle severing "Histórico de Preço" mid-phrase, which
   // is what left 1,825 of these titles ending in "— Histórico de".
+  const lpLabel = total === 1 ? "1 LP" : `${total.toLocaleString("pt-BR")} LPs`;
   const title = isUnknownArtist
     ? "Discos de Vinil — Vários Artistas | Garimpa Vinil"
+    : TITLE_TEST_VARIANT.has(slug)
+    ? pickTitle([
+        `${artista} em Vinil: ${lpLabel} na Amazon | Garimpa Vinil`,
+        `${artista} em Vinil: ${lpLabel} na Amazon`,
+        `${artista} em Vinil`,
+      ])
     : pickTitle([
         `${artista} em Vinil (${discoLabel}) — Histórico de Preço | Garimpa Vinil`,
         `${artista} em Vinil (${discoLabel}) — Histórico de Preço`,
