@@ -66,13 +66,13 @@ def _x_len(text: str, url: str) -> int:
     return len(text) - len(url) + 23
 
 
-def test_x_text_fits_and_discloses():
+def test_x_text_fits_and_links_to_site():
     from x_post import build_text
-    url = "https://www.amazon.com.br/dp/B07KLJDSLW?tag=garimpa-vinil-20"
+    url = "https://www.garimpavinil.com.br/disco/eyes-open-abc123"
     deal = dict(artista="Snow Patrol", titulo="Eyes Open", estilo="alternative, rock",
-                preco_brl=255.86, avg_30d=449.0, low_all_time=255.80, affiliate_url=url)
+                preco_brl=255.86, avg_30d=449.0, low_all_time=255.80, slug="eyes-open-abc123")
     text = build_text(deal)
-    assert "#publi" in text and "#alternative #rock" in text
+    assert "#alternative #rock #vinil" in text
     assert "43% abaixo da média de 30 dias" in text
     assert text.endswith(url)
 

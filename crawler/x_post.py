@@ -27,7 +27,7 @@ import psycopg2.extras
 import requests
 
 from bot import (
-    ATL_TOLERANCE, _brl, _clean_titulo, _hashtags,
+    ATL_TOLERANCE, SITE_URL, _brl, _clean_titulo, _hashtags,
     connect, within_send_window,
 )
 
@@ -64,11 +64,13 @@ def build_text(deal: dict) -> str:
     avg   = float(deal["avg_30d"])
     pct   = round((avg - price) / avg * 100)
     low   = deal.get("low_all_time")
-    url   = deal["affiliate_url"]
+    # Links to the album page on the site (price history + buy button), not
+    # straight to Amazon.
+    url   = f"{SITE_URL}/disco/{deal['slug']}"
 
     price_line = f"💿 R$ {_brl(price)} ({pct}% abaixo da média de 30 dias)"
     atl_line   = "🏆 Menor preço histórico\n" if low is not None and price <= float(low) * ATL_TOLERANCE else ""
-    tags       = " ".join(t for t in (_hashtags(deal.get("estilo")), "#vinil #publi") if t)
+    tags       = " ".join(t for t in (_hashtags(deal.get("estilo")), "#vinil") if t)
 
     def render(album: str) -> str:
         return (
@@ -123,6 +125,7 @@ def pick_deal(conn) -> dict | None:
             -- deal that's no longer active, with a frozen price.
             WHERE bp.synced_at > NOW() - make_interval(mins => %s)
               AND bp.img_url IS NOT NULL AND bp.img_url <> ''
+              AND bp.slug IS NOT NULL AND bp.slug <> ''
               AND bp.avg_30d > bp.preco_brl
               AND NOT EXISTS (
                   SELECT 1 FROM bot_x_sent x
