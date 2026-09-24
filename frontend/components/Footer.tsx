@@ -8,7 +8,7 @@ import {
   TOP_PAISES,
 } from "@/lib/browseLinks";
 
-function PixIcon({ className }: { className?: string }) {
+function XIcon({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -16,7 +16,7 @@ function PixIcon({ className }: { className?: string }) {
       className={className}
       aria-hidden="true"
     >
-      <path d="M5.283 18.36a3.505 3.505 0 0 0 2.493-1.032l3.6-3.6a.684.684 0 0 1 .946 0l3.613 3.613a3.504 3.504 0 0 0 2.493 1.032h.71l-4.56 4.56a3.647 3.647 0 0 1-5.156 0L4.85 18.36ZM18.428 5.627a3.505 3.505 0 0 0-2.493 1.032l-3.613 3.614a.67.67 0 0 1-.946 0l-3.6-3.6A3.505 3.505 0 0 0 5.283 5.64h-.434l4.573-4.572a3.646 3.646 0 0 1 5.156 0l4.559 4.559ZM1.068 9.422 3.79 6.699h1.492a2.483 2.483 0 0 1 1.744.722l3.6 3.6a1.73 1.73 0 0 0 2.443 0l3.614-3.613a2.482 2.482 0 0 1 1.744-.723h1.767l2.737 2.737a3.646 3.646 0 0 1 0 5.156l-2.736 2.736h-1.768a2.482 2.482 0 0 1-1.744-.722l-3.613-3.613a1.77 1.77 0 0 0-2.444 0l-3.6 3.6a2.483 2.483 0 0 1-1.744.722H3.791l-2.723-2.723a3.646 3.646 0 0 1 0-5.156" />
+      <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
     </svg>
   );
 }
@@ -35,6 +35,7 @@ function TelegramIcon({ className }: { className?: string }) {
 }
 
 const TELEGRAM_URL = "https://t.me/garimpavinil";
+const X_URL = "https://x.com/garimpa_vinil";
 
 const NAV_LINKS = [
   { label: "Início",                href: "/" },
@@ -111,12 +112,14 @@ export default function Footer() {
               </Link>
 
               <Link
-                href="/apoie"
+                href={X_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 self-start px-3 py-2 rounded-lg border border-groove hover:border-gold/50 bg-sleeve hover:bg-sleeve/80 transition-colors group"
-                aria-label="Apoie o site via Pix"
+                aria-label="Ofertas no X (@garimpa_vinil)"
               >
-                <PixIcon className="w-4 h-4 text-gold shrink-0" />
-                <span className="text-xs text-dust group-hover:text-cream transition-colors">Apoie o Site</span>
+                <XIcon className="w-4 h-4 text-cream shrink-0" />
+                <span className="text-xs text-dust group-hover:text-cream transition-colors">Siga no X</span>
               </Link>
             </div>
           </div>
