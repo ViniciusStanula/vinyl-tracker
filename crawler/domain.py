@@ -42,6 +42,14 @@ _VINYL_FIGURE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Jigsaw puzzles printed with an album cover ("Let's Dance 450 pc Picture Disc
+# Puzzle").  Must be checked BEFORE _VINYL_TITLE_RE: "picture disc" is a real
+# vinyl keyword there and would otherwise classify the puzzle as a record.
+_PUZZLE_TITLE_RE = re.compile(
+    r"\bpuzzle[s]?\b|\bjigsaw\b|quebra-?cabe[cç]a[s]?",
+    re.IGNORECASE,
+)
+
 # (?!-\d) on \blp\b: Amazon SKU codes like "(LP-0311)" on non-music listings
 # (e.g. paper clips "Clipes de papel ... (LP-0311)") otherwise false-match as
 # a vinyl "LP" mention. Real vinyl titles never use a hyphenated numeric code
@@ -111,7 +119,7 @@ def parse_price_br(text: str) -> float | None:
 
 
 def is_vinyl(title: str, card=None) -> bool:
-    if _VINYL_FIGURE_RE.search(title):
+    if _VINYL_FIGURE_RE.search(title) or _PUZZLE_TITLE_RE.search(title):
         return False
     if _VINYL_TITLE_RE.search(title):
         return True
@@ -178,7 +186,7 @@ def detect_format(title: str, soup=None, asin: str | None = None) -> str:
     swatch that links a DIFFERENT ASIN means the vinyl edition is its own
     product and this ASIN is a non-vinyl sibling (CD/MP3/...).
     """
-    if _VINYL_FIGURE_RE.search(title):
+    if _VINYL_FIGURE_RE.search(title) or _PUZZLE_TITLE_RE.search(title):
         return "other"
 
     # Books beat every title signal. Checked before _VINYL_TITLE_RE because a

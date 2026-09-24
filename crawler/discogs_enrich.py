@@ -649,14 +649,20 @@ def ensure_columns(conn) -> None:
     conn.commit()
 
 
-def fetch_candidates(conn, limit: int | None) -> list[tuple]:
+def fetch_candidates(conn, limit: int | None, marketplace: str | None = None) -> list[tuple]:
+    params: list = []
+    marketplace_clause = ""
+    if marketplace:
+        marketplace_clause = "AND marketplace = %s"
+        params.append(marketplace)
+    if limit:
+        params.append(limit)
     with conn.cursor() as cur:
         cur.execute(
             f"""
             SELECT slug, artista, titulo, ean
             FROM "Disco"
             WHERE ean ~ '^[0-9]{{13}}$'
-              AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
               AND (
                 discogs_checked_at IS NULL
@@ -671,15 +677,18 @@ def fetch_candidates(conn, limit: int | None) -> list[tuple]:
                     AND discogs_release_id IS NULL
                     AND discogs_community_checked_at IS NULL)
               )
+              {marketplace_clause}
             ORDER BY price_count DESC NULLS LAST
             {'LIMIT %s' if limit else ''}
             """,
-            (limit,) if limit else (),
+            params,
         )
         return cur.fetchall()
 
 
-def fetch_noBarcode_candidates(conn, limit: int | None) -> list[tuple]:
+def fetch_noBarcode_candidates(
+    conn, limit: int | None, marketplace: str | None = None
+) -> list[tuple]:
     """Records with no barcode, for the artist+title fallback.
 
     Amazon has no EAN for a large share of listings — Utada "One Last Kiss"
@@ -690,13 +699,19 @@ def fetch_noBarcode_candidates(conn, limit: int | None) -> list[tuple]:
     Unidentified-artist rows are excluded: without an artist the search has
     nothing to constrain it and would return whatever shares a title.
     """
+    params: list = []
+    marketplace_clause = ""
+    if marketplace:
+        marketplace_clause = "AND marketplace = %s"
+        params.append(marketplace)
+    if limit:
+        params.append(limit)
     with conn.cursor() as cur:
         cur.execute(
             f"""
             SELECT slug, artista, titulo
             FROM "Disco"
             WHERE (ean IS NULL OR ean !~ '^[0-9]{{13}}$')
-              AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
               AND artista !~* 'artista n[ãa]o identificad'
               AND (
@@ -707,10 +722,11 @@ def fetch_noBarcode_candidates(conn, limit: int | None) -> list[tuple]:
                     AND discogs_release_id IS NULL
                     AND discogs_community_checked_at IS NULL)
               )
+              {marketplace_clause}
             ORDER BY price_count DESC NULLS LAST
             {'LIMIT %s' if limit else ''}
             """,
-            (limit,) if limit else (),
+            params,
         )
         return cur.fetchall()
 
@@ -862,6 +878,11 @@ def main() -> None:
         help="fallback pass: match barcode-less records by artist+title and "
              "store only fields every vinyl pressing agrees on",
     )
+    ap.add_argument(
+        "--marketplace",
+        default=None,
+        help="Only enrich rows with this marketplace value (e.g. umusicstore)",
+    )
     args = ap.parse_args()
 
     conn = ResilientConn()
@@ -871,7 +892,7 @@ def main() -> None:
         run_no_barcode(conn, args)
         return
 
-    rows = fetch_candidates(conn, args.limit)
+    rows = fetch_candidates(conn, args.limit, marketplace=args.marketplace)
     dg = Discogs()
     print(
         f"candidates: {len(rows)} | mode: {'APPLY' if args.apply else 'DRY RUN'} | "
@@ -1110,7 +1131,7 @@ def run_no_barcode(conn, args) -> None:
     and tracklist stay NULL on purpose: artist+title identifies the album, not
     the disc, and those four differ between pressings of the same album.
     """
-    rows = fetch_noBarcode_candidates(conn, args.limit)
+    rows = fetch_noBarcode_candidates(conn, args.limit, marketplace=args.marketplace)
     dg = Discogs()
     print(
         f"barcode-less candidates: {len(rows)} | "

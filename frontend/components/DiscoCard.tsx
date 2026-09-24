@@ -4,6 +4,7 @@ import Link from "next/link";
 import { artistaHref } from "@/lib/utils/slugify";
 import { affiliateUrl } from "@/lib/affiliateUrl";
 import { resizeAmazonImage } from "@/lib/utils/amazonImage";
+import { lojaNome as lojaNomeFor, lojaComPrep as lojaComPrepFor } from "@/lib/marketplace";
 
 // NEXT_PUBLIC_HIDE_PRICE_HISTORY gates sparklines, deal badges, discount badges, and
 // struck-through avg prices on cards. Defaults to hidden (true) — fail-safe while
@@ -24,7 +25,7 @@ export interface DiscoCardProps {
   estilo?: string | null;
   imgUrl: string | null;
   url: string;
-  /** Price/link source: "amazon" or "mercadolivre" — drives buy-button label + affiliate tagging */
+  /** Price/link source: "amazon", "mercadolivre", or "umusicstore" — drives buy-button label + affiliate tagging */
   marketplace: string;
   rating: number | null;
   precoAtual: number;
@@ -101,10 +102,9 @@ export default memo(function DiscoCard({
   // Cards render at ~160-230px; the DB stores 1500px Amazon URLs (~200KB).
   // SL416 covers 2x DPR at ~30KB via Amazon's on-the-fly CDN resize.
   const imgUrl            = resizeAmazonImage(disco.imgUrl);
-  // Buy-link source: Amazon (default) or Mercado Livre. Drives label + tagging.
-  const isML              = disco.marketplace === "mercadolivre";
-  const lojaNome          = isML ? "Mercado Livre" : "Amazon";
-  const lojaComPrep       = isML ? "no Mercado Livre" : "na Amazon";  // pt-BR preposition
+  // Buy-link source: Amazon (default), Mercado Livre, or UMusic Store. Drives label + tagging.
+  const lojaNome          = lojaNomeFor(disco.marketplace);
+  const lojaComPrep       = lojaComPrepFor(disco.marketplace);  // pt-BR preposition
 
   // Score-3 gets a subtle gold ring — suppressed when price history is hidden
   const cardRing = (!HIDE_PRICE_HISTORY && dealScore === 3) ? " ring-1 ring-gold/40" : "";

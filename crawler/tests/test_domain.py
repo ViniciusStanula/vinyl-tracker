@@ -155,6 +155,16 @@ class TestDetectFormat:
         title = "League of Legends: How to loose LP like a pro"
         assert detect_format(title) == "vinyl"
 
+    # 2026-08-21: "David Bowie Let's Dance 450 pc Picture Disc Puzzle" entered
+    # the catalog as vinyl — "picture disc" is a _VINYL_TITLE_RE keyword.
+    def test_puzzle_beats_picture_disc_in_title(self):
+        title = "David Bowie Let's Dance 450 pc Picture Disc Puzzle"
+        assert detect_format(title) == "other"
+
+    def test_jigsaw_and_quebra_cabeca_are_other(self):
+        assert detect_format("Pink Floyd The Wall 1000 Piece Jigsaw") == "other"
+        assert detect_format("Quebra-cabeça 2000 peças Vinil Decorativo") == "other"
+
     def test_music_breadcrumb_does_not_trip_book_check(self):
         html = (
             '<div id="wayfinding-breadcrumbs_feature_div">'

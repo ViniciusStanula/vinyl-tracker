@@ -210,6 +210,8 @@ def parse_args():
                    help="Seconds between MB requests — keep >= 1.1 (default: 1.1)")
     p.add_argument("--max-chunks", type=int,   default=0,   metavar="N",
                    help="Stop after N chunks (0 = run until done; use for smoke tests)")
+    p.add_argument("--marketplace", default=None, metavar="NAME",
+                   help="Only enrich rows with this marketplace value (e.g. umusicstore)")
     return p.parse_args()
 
 
@@ -225,9 +227,11 @@ def main():
         # stopped after 2 — making a finished backfill look like a stalled one.
         cur.execute(
             """SELECT count(*) FROM "Disco"
-               WHERE mb_mbid IS NULL AND disponivel = TRUE
+               WHERE mb_mbid IS NULL
                  AND (format IS NULL OR format = 'vinyl')
                  AND artista !~* 'artista n[ãa]o identificad'"""
+            + (" AND marketplace = %s" if args.marketplace else ""),
+            (args.marketplace,) if args.marketplace else (),
         )
         start = cur.fetchone()[0]
     log.info("Starting MB enrichment: %d identified vinyl rows to search.", start)
@@ -236,7 +240,7 @@ def main():
     t_start = time.monotonic()
 
     while True:
-        rows = fetch_albums_needing_mb(conn, limit=args.chunk)
+        rows = fetch_albums_needing_mb(conn, limit=args.chunk, marketplace=args.marketplace)
         if not rows:
             log.info("No more rows — MB enrichment complete.")
             break

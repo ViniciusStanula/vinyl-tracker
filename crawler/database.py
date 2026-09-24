@@ -999,7 +999,9 @@ def upsert_category_associations(
     return len(rows)
 
 
-def fetch_untagged_discos(conn, limit: int | None = None) -> list[tuple[str, str, str]]:
+def fetch_untagged_discos(
+    conn, limit: int | None = None, marketplace: str | None = None
+) -> list[tuple[str, str, str]]:
     """
     Returns (slug, artista, titulo) for every Disco row with lastfm_tags IS
     NULL -- the per-RECORD candidate list for backfill_tags.py's album-level
@@ -1009,14 +1011,25 @@ def fetch_untagged_discos(conn, limit: int | None = None) -> list[tuple[str, str
     has, which is the exact mechanism that capped 21,373 records at an
     identical 3-tag artist-wide value (see genre_filter.py / PR #295).
     """
+    params: list = []
+    marketplace_clause = ""
+    if marketplace:
+        marketplace_clause = " AND marketplace = %s"
+        params.append(marketplace)
+    limit_clause = ""
+    if limit:
+        limit_clause = "LIMIT %s"
+        params.append(limit)
     with _cursor(conn) as cur:
         cur.execute(
-            """
+            f"""
             SELECT slug, artista, titulo FROM "Disco"
             WHERE lastfm_tags IS NULL
+            {marketplace_clause}
             ORDER BY "createdAt" DESC
-            """ + ("LIMIT %s" if limit else ""),
-            (limit,) if limit else (),
+            {limit_clause}
+            """,
+            params,
         )
         return [(r[0], r[1], r[2]) for r in cur.fetchall()]
 
@@ -1109,7 +1122,7 @@ def bulk_update_tags_by_slug(conn, slug_to_tags: dict[str, str]) -> int:
 
 
 def fetch_albums_needing_lastfm_enrichment(
-    conn, limit: int = 500, exclude_unidentified: bool = False
+    conn, limit: int = 500, exclude_unidentified: bool = False, marketplace: str | None = None
 ) -> list[dict]:
     """Albums where lastfm_listeners IS NULL — never enriched via album.getInfo.
 
@@ -1119,19 +1132,25 @@ def fetch_albums_needing_lastfm_enrichment(
     unident_clause = (
         "AND artista !~* 'artista n[ãa]o identificad'" if exclude_unidentified else ""
     )
+    params: list = []
+    marketplace_clause = ""
+    if marketplace:
+        marketplace_clause = "AND marketplace = %s"
+        params.append(marketplace)
+    params.append(limit)
     with _cursor(conn) as cur:
         cur.execute(
             f"""
             SELECT id, titulo, artista FROM "Disco"
             WHERE lastfm_listeners IS NULL
-              AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
               {NOT_A_BUNDLE_SQL}
               {unident_clause}
+              {marketplace_clause}
             ORDER BY price_count DESC
             LIMIT %s
             """,
-            (limit,),
+            params,
         )
         return [{"id": r[0], "titulo": r[1], "artista": r[2]} for r in cur.fetchall()]
 
@@ -1220,24 +1239,30 @@ def ensure_mb_columns(conn) -> None:
     log.debug("ensure_mb_columns: MusicBrainz columns created.")
 
 
-def fetch_albums_needing_mb(conn, limit: int = 200) -> list[dict]:
+def fetch_albums_needing_mb(conn, limit: int = 200, marketplace: str | None = None) -> list[dict]:
     """
     Identified, available albums not yet searched on MusicBrainz (mb_mbid IS NULL).
     Most-listened first so the highest-traffic disco pages get enriched earliest.
     """
+    params: list = []
+    marketplace_clause = ""
+    if marketplace:
+        marketplace_clause = "AND marketplace = %s"
+        params.append(marketplace)
+    params.append(limit)
     with _cursor(conn) as cur:
         cur.execute(
             f"""
             SELECT id, titulo, artista FROM "Disco"
             WHERE mb_mbid IS NULL
-              AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
               {NOT_A_BUNDLE_SQL}
               AND artista !~* 'artista n[ãa]o identificad'
+              {marketplace_clause}
             ORDER BY lastfm_listeners DESC NULLS LAST
             LIMIT %s
             """,
-            (limit,),
+            params,
         )
         return [{"id": r[0], "titulo": r[1], "artista": r[2]} for r in cur.fetchall()]
 
@@ -1270,23 +1295,31 @@ def bulk_update_mb(conn, updates: list[dict]) -> int:
     return len(updates)
 
 
-def fetch_albums_needing_tracklist(conn, limit: int = 200) -> list[dict]:
+def fetch_albums_needing_tracklist(
+    conn, limit: int = 200, marketplace: str | None = None
+) -> list[dict]:
     """
     Matched MB release-groups (mb_mbid set) without a tracklist yet.
     Most-listened first so popular pages get tracklists earliest.
     """
+    params: list = []
+    marketplace_clause = ""
+    if marketplace:
+        marketplace_clause = "AND marketplace = %s"
+        params.append(marketplace)
+    params.append(limit)
     with _cursor(conn) as cur:
         cur.execute(
-            """
+            f"""
             SELECT id, mb_mbid FROM "Disco"
             WHERE mb_mbid IS NOT NULL AND mb_mbid <> ''
               AND mb_tracklist IS NULL
-              AND disponivel = TRUE
               AND (format IS NULL OR format = 'vinyl')
+              {marketplace_clause}
             ORDER BY lastfm_listeners DESC NULLS LAST
             LIMIT %s
             """,
-            (limit,),
+            params,
         )
         return [{"id": r[0], "mbid": r[1]} for r in cur.fetchall()]
 

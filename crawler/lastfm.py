@@ -516,6 +516,7 @@ def enrich_album_infos(
     deadline: float | None = None,
     limit: int = 500,
     exclude_unidentified: bool = False,
+    marketplace: str | None = None,
 ) -> int:
     """
     Fetches Last.fm album.getInfo for albums where lastfm_listeners IS NULL.
@@ -527,7 +528,7 @@ def enrich_album_infos(
         return 0
 
     albums = fetch_albums_needing_lastfm_enrichment(
-        conn, limit=limit, exclude_unidentified=exclude_unidentified
+        conn, limit=limit, exclude_unidentified=exclude_unidentified, marketplace=marketplace
     )
     if not albums:
         log.debug("Album enrichment: all albums already enriched.")

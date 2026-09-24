@@ -97,6 +97,8 @@ def parse_args():
                    help="Seconds between MB requests — keep >= 1.1 (default: 1.1)")
     p.add_argument("--max-chunks", type=int,   default=0,   metavar="N",
                    help="Stop after N chunks (0 = run until done)")
+    p.add_argument("--marketplace", default=None, metavar="NAME",
+                   help="Only enrich rows with this marketplace value (e.g. umusicstore)")
     return p.parse_args()
 
 
@@ -108,7 +110,9 @@ def main():
         cur.execute(
             """SELECT count(*) FROM "Disco"
                WHERE mb_mbid IS NOT NULL AND mb_mbid <> ''
-                 AND mb_tracklist IS NULL AND disponivel = TRUE"""
+                 AND mb_tracklist IS NULL"""
+            + (" AND marketplace = %s" if args.marketplace else ""),
+            (args.marketplace,) if args.marketplace else (),
         )
         start = cur.fetchone()[0]
     log.info("Starting tracklist backfill: %d matched rows need a tracklist.", start)
@@ -117,7 +121,7 @@ def main():
     t_start = time.monotonic()
 
     while True:
-        rows = fetch_albums_needing_tracklist(conn, limit=args.chunk)
+        rows = fetch_albums_needing_tracklist(conn, limit=args.chunk, marketplace=args.marketplace)
         if not rows:
             log.info("No more rows — tracklist backfill complete.")
             break
