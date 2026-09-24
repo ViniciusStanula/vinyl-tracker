@@ -87,7 +87,7 @@ const organizationJsonLd = toJsonLd({
     contactType: "customer support",
     url: "https://t.me/garimpavinil",
   },
-  sameAs: ["https://t.me/garimpavinil"],
+  sameAs: ["https://t.me/garimpavinil", "https://x.com/garimpa_vinil"],
 });
 
 const webSiteJsonLd = toJsonLd({
