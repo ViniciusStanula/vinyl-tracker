@@ -104,6 +104,11 @@ def _tg(endpoint: str, payload: dict) -> dict | None:
         log.error("Telegram %s error: %s", endpoint, exc)
         return None
     if not resp.ok:
+        # Caption already identical (e.g. sold-out edit applied earlier but the
+        # status update was lost): the edit's goal is met, so report success
+        # instead of retrying the same message every run.
+        if resp.status_code == 400 and "message is not modified" in resp.text:
+            return {}
         log.error("Telegram %s failed (%s): %s", endpoint, resp.status_code, resp.text)
         return None
     return resp.json().get("result")
