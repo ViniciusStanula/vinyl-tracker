@@ -33,6 +33,7 @@ jobs:
       # bridge.py exits non-zero on Supabase connection failure,
       # which causes GHA to skip all subsequent steps automatically.
       - name: Sync deals from Supabase
+        id: bridge
         run: python crawler/bridge.py
         env:
           DATABASE_URL:    ${{ secrets.DATABASE_URL }}
@@ -44,3 +45,12 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+
+      # Runs even if the Telegram step failed (X posting is independent), but
+      # only after a successful bridge sync so prices are never stale.
+      - name: Post to X via Buffer
+        if: ${{ !cancelled() && steps.bridge.outcome == 'success' }}
+        run: python crawler/x_post.py
+        env:
+          DATABASE_URL:   ${{ secrets.DATABASE_URL }}
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}

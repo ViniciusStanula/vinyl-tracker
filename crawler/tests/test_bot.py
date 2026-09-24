@@ -60,3 +60,23 @@ def test_priority_bonuses():
     base = priority_for(_deal())
     assert priority_for(_deal(low_all_time=80)) == base + 10
     assert priority_for(_deal(deal_score=3)) == base + 5
+
+
+def _x_len(text: str, url: str) -> int:
+    return len(text) - len(url) + 23
+
+
+def test_x_text_fits_and_discloses():
+    from x_post import build_text
+    url = "https://www.amazon.com.br/dp/B07KLJDSLW?tag=garimpa-vinil-20"
+    deal = dict(artista="Snow Patrol", titulo="Eyes Open", estilo="alternative, rock",
+                preco_brl=255.86, avg_30d=449.0, low_all_time=255.80, affiliate_url=url)
+    text = build_text(deal)
+    assert "#publi" in text and "#alternative #rock" in text
+    assert "43% abaixo da média de 30 dias" in text
+    assert text.endswith(url)
+
+    long_deal = dict(deal, titulo="Very Long Title " * 30)
+    long_text = build_text(long_deal)
+    assert _x_len(long_text, url) <= 280
+    assert "…" in long_text

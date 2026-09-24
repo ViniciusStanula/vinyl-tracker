@@ -71,6 +71,9 @@ CREATE TABLE IF NOT EXISTS bot_state (
 _SCHEMA_EXTRAS = """
 ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS is_top_artist BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS slug TEXT;
+-- Set on every row this run refreshed. Rows not refreshed (e.g. old 'sent'
+-- deals no longer active) keep a stale preco_brl; x_post.py filters on this.
+ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS synced_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS bot_sent_asin_idx ON bot_sent (asin, sent_at DESC);
 CREATE INDEX IF NOT EXISTS bot_pending_status_idx ON bot_pending (status);
 """
@@ -307,7 +310,7 @@ def sync_pending(conn, active: dict, top_slugs: set) -> None:
             INSERT INTO bot_pending
                 (asin, titulo, artista, estilo, img_url, affiliate_url,
                  preco_brl, avg_30d, low_all_time, deal_score, priority_score,
-                 is_top_artist, first_seen_at, slug, status)
+                 is_top_artist, first_seen_at, slug, status, synced_at)
             VALUES %s
             ON CONFLICT (asin) DO UPDATE SET
                 titulo         = EXCLUDED.titulo,
@@ -322,11 +325,12 @@ def sync_pending(conn, active: dict, top_slugs: set) -> None:
                 priority_score = EXCLUDED.priority_score,
                 is_top_artist  = EXCLUDED.is_top_artist,
                 slug           = EXCLUDED.slug,
+                synced_at      = NOW(),
                 status = CASE
                     WHEN bot_pending.status = 'discarded' THEN 'pending'
                     ELSE bot_pending.status
                 END
-        """, rows, template="(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending')", page_size=500)
+        """, rows, template="(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',NOW())", page_size=500)
 
         # 2. Immediately discard pending deals no longer active in Supabase.
         active_asins = list(active.keys())
