@@ -27,6 +27,7 @@ import logging
 import os
 import re
 import time
+import unicodedata
 import urllib.parse
 import urllib.request
 
@@ -83,6 +84,54 @@ Retorne APENAS um JSON válido com exatamente duas chaves:
   "bio": "2-3 parágrafos separados por \\n\\n com a história e contexto"
 }\
 """
+
+
+# ── Slug / row helpers ───────────────────────────────────────────────────────
+
+_ARTIST_SLUG_CACHE: dict[str, str] | None = None
+
+
+def _slugify_artist(name: str) -> str:
+    """Port of frontend/lib/utils/slugify.ts slugifyArtist."""
+    if "," in name:
+        last, *rest = name.split(",")
+        first = ",".join(rest).strip()
+        name = f"{first} {last.strip()}" if first else name
+    name = unicodedata.normalize("NFD", name)
+    name = "".join(c for c in name if unicodedata.category(c) != "Mn")
+    name = name.lower()
+    name = re.sub(r"[^a-z0-9]+", "-", name)
+    return name.strip("-")[:60]
+
+
+def lookup_artista_by_slug(conn, slug: str) -> str | None:
+    """
+    Resolves an /artista/<slug> URL back to the Disco.artista it was built from.
+
+    Callers resolve slugs in a loop, so the whole artist list is slugified once
+    per process rather than scanned per call. First name wins on collision,
+    matching the frontend, which picks whichever name the grid linked first.
+    """
+    global _ARTIST_SLUG_CACHE
+    if _ARTIST_SLUG_CACHE is None:
+        with conn.cursor() as cur:
+            cur.execute('SELECT DISTINCT artista FROM "Disco" WHERE artista IS NOT NULL')
+            cache: dict[str, str] = {}
+            for (artista,) in cur.fetchall():
+                cache.setdefault(_slugify_artist(artista), artista)
+        _ARTIST_SLUG_CACHE = cache
+    return _ARTIST_SLUG_CACHE.get(slug)
+
+
+def ensure_artist_meta_row(conn, artista: str) -> None:
+    """Creates the ArtistMeta row when enrich_artist_meta.py never made one —
+    save_artist_bio only UPDATEs, so a missing row would silently save nothing."""
+    with conn.cursor() as cur:
+        cur.execute(
+            'INSERT INTO "ArtistMeta" (artista) VALUES (%s) ON CONFLICT (artista) DO NOTHING',
+            (artista,),
+        )
+    conn.commit()
 
 
 # ── Last.fm helpers ──────────────────────────────────────────────────────────

@@ -158,3 +158,33 @@ def test_blue_note_series_is_not_a_vinyl_color():
         "LP, Album, Reissue, Mono, 180g, Gatefold")
     assert cor is None
     assert "Azul" not in h1
+
+
+def test_self_titled_listing_that_is_all_packaging_copy():
+    # "Weezer - Exclusive Limited Edition Blue & White Marble Colored Vinyl LP"
+    # cleaned down to marketing words, and the page published those as the
+    # album name. The artist's own name is the only real content, so it is the
+    # title.
+    for artista, titulo in [
+        ("Weezer", "Weezer - Exclusive Limited Edition Blue & White Marble Colored Vinyl LP"),
+        ("Third Eye Blind", "Third Eye Blind - Exclusive Limited Edition Gilded Gold Colored Vinyl 2LP"),
+        ("Kids See Ghosts", "Kids See Ghosts - Exclusive Limited Edition Translucent Pink Colored Vinyl LP"),
+    ]:
+        assert base_title(artista, titulo, None, None) == artista
+
+
+def test_colour_word_titles_survive_the_packaging_rule():
+    # A one-word colour IS the album name here, and the artist is not in the
+    # título, so the self-titled fallback must not fire.
+    assert base_title("Joni Mitchell", "Blue [Disco de Vinil]", None, None) == "Blue"
+    assert base_title("Prince", "Purple Rain [Disco de Vinil]", None, None) == "Purple Rain"
+    assert base_title("AC/DC", "Back In Black [180 Gram Vinyl]", None, None) == "Back In Black"
+
+
+def test_album_named_after_a_word_in_the_band_name_is_not_swallowed():
+    # "Spice Girls Spice Crystal Clear ..." sells Spice. The repeated word is
+    # the album title, so the self-titled fallback must not replace it with the
+    # band's name.
+    got = base_title("Spice Girls",
+                     "Spice Girls Spice Crystal Clear Limited Edition Vinyl", None, None)
+    assert got != "Spice Girls"

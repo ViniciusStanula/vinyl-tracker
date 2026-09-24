@@ -12,6 +12,12 @@ Falls back to album.search when album.getInfo finds nothing.
 import os
 import logging
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from database import get_connection, reset_failed_lastfm_enrichments
 from lastfm import enrich_album_infos
 
@@ -32,6 +38,11 @@ if __name__ == "__main__":
         default=500,
         help="Max albums to process per run (default 500).",
     )
+    parser.add_argument(
+        "--marketplace",
+        default=None,
+        help="Only enrich rows with this marketplace value (e.g. umusicstore).",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -47,7 +58,9 @@ if __name__ == "__main__":
             if not args.reset_failed:
                 print("LASTFM_API_KEY not set — nothing to do.")
         else:
-            _updated = enrich_album_infos(_conn, api_key=_api_key, limit=args.limit)
+            _updated = enrich_album_infos(
+                _conn, api_key=_api_key, limit=args.limit, marketplace=args.marketplace
+            )
             print(f"Enriched {_updated} albums with Last.fm data.")
     finally:
         _conn.close()

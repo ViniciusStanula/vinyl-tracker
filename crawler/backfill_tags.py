@@ -59,6 +59,8 @@ def parse_args():
     p.add_argument("--limit",    type=int, default=None, metavar="N",
                    help="Cap the number of rows processed this run")
     p.add_argument("--verbose",  action="store_true")
+    p.add_argument("--marketplace", default=None, metavar="NAME",
+                   help="Only tag rows with this marketplace value (e.g. umusicstore)")
     return p.parse_args()
 
 
@@ -76,7 +78,7 @@ def main():
     conn = get_connection()
     ensure_schema_extras(conn)   # adds lastfm_tags column if it doesn't exist yet
 
-    rows = fetch_untagged_discos(conn, limit=args.limit)
+    rows = fetch_untagged_discos(conn, limit=args.limit, marketplace=args.marketplace)
     total = len(rows)
     log.info("Records to tag: %d%s", total, "  (dry-run — no writes)" if args.dry_run else "")
 

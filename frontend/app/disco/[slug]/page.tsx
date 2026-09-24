@@ -16,6 +16,7 @@ import Tracklist from "@/components/Tracklist";
 // Matches the flag in DiscoCard.tsx — see that file for full rationale.
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
 import { affiliateUrl } from "@/lib/affiliateUrl";
+import { lojaComPrep as marketplaceLojaComPrep, lojaComPrepPais, sellerName } from "@/lib/marketplace";
 import { artistaHref, slugifyArtist } from "@/lib/utils/slugify";
 import { parseStyleTags, slugifyStyle } from "@/lib/utils/styleUtils";
 import { truncateTitle, truncateDesc } from "@/lib/utils/seo";
@@ -123,7 +124,7 @@ export async function generateMetadata({
       : null;
 
   const fmtR = (v: number) => `R$ ${Math.round(v)}`;
-  const loja = disco.marketplace === "mercadolivre" ? "no Mercado Livre" : "na Amazon";
+  const loja = marketplaceLojaComPrep(disco.marketplace);
   let description: string;
   if (!precoAtual) {
     description = `${tituloLimpo} em vinil: acompanhe o preço ${loja} e veja o histórico de 12 meses antes de comprar.`;
@@ -678,7 +679,7 @@ export default async function DiscoPage({
     "@type": "Product",
     "@id": `${siteUrl}/disco/${slug}`,
     name: tituloSeo,
-    description: `Compre ${tituloSeo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}.`,
+    description: `Compre ${tituloSeo} de ${disco.artista} pelo menor preço. Veja o histórico de preços e as melhores ofertas disponíveis ${lojaComPrepPais(disco.marketplace)}.`,
     sku: disco.asin,
     ...gtinLd,
     image: disco.imgUrl ?? undefined,
@@ -716,7 +717,7 @@ export default async function DiscoPage({
       availability: disponivel
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
-      seller: { "@type": "Organization", name: disco.marketplace === "mercadolivre" ? "Mercado Livre Brasil" : "Amazon Brasil" },
+      seller: { "@type": "Organization", name: sellerName(disco.marketplace) },
     },
     ...(aggregateRatingLd ? { aggregateRating: aggregateRatingLd } : {}),
   });
@@ -1079,7 +1080,7 @@ export default async function DiscoPage({
             q: `Qual o menor preço já registrado de ${tituloLimpo} em vinil?`,
             a: disponivel
               ? `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. O preço atual é ${fmt(precoAtual)}.`
-              : `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. Este disco está indisponível ${disco.marketplace === "mercadolivre" ? "no Mercado Livre" : "na Amazon"} no momento.`,
+              : `O menor preço registrado foi ${fmt(precoMin)}${minRecord ? `, em ${fmtDate(minRecord.capturadoEm)}` : ""}. Este disco está indisponível ${marketplaceLojaComPrep(disco.marketplace)} no momento.`,
           },
           ...(disponivel
             ? [
@@ -1096,7 +1097,7 @@ export default async function DiscoPage({
                 },
                 {
                   q: `Com que frequência o preço de ${tituloLimpo} é verificado?`,
-                  a: `O preço é verificado automaticamente ${disco.marketplace === "mercadolivre" ? "no Mercado Livre Brasil" : "na Amazon Brasil"}. Já registramos ${valores.length} capturas de preço para este disco.`,
+                  a: `O preço é verificado automaticamente ${lojaComPrepPais(disco.marketplace)}. Já registramos ${valores.length} capturas de preço para este disco.`,
                 },
               ]
             : []),
@@ -1268,7 +1269,7 @@ export default async function DiscoPage({
                 imgUrl:    disco.imgUrl,
               };
 
-              const lojaComPrep = disco.marketplace === "mercadolivre" ? "no Mercado Livre" : "na Amazon";
+              const lojaComPrep = marketplaceLojaComPrep(disco.marketplace);
 
               return disponivel ? (
                 <>

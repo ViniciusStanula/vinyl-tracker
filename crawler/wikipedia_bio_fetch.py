@@ -3,6 +3,9 @@ wikipedia_bio_fetch.py — find + fetch English Wikipedia album extracts for
 Disco records that have no lastfm_wiki_pt/sobre_pt, as grounding source for
 Claude Code to write sobre_pt bios (test of an alternative source to Last.fm).
 
+Candidates are ranked by Googlebot crawl hits over the last --days (30 by
+default), so the worklist tracks what Google is actually recrawling.
+
 Usage:
     python wikipedia_bio_fetch.py --limit 50 --out wiki_candidates.json
 
@@ -280,10 +283,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=50)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--slugs-file",
+                     help="newline-separated slugs to process in that order, instead of "
+                          "the default Googlebot ranking. Slugs are still filtered by "
+                          "the same vinyl/disponivel/no-existing-bio conditions.")
     ap.add_argument("--apply-mb-fix", action="store_true",
                      help="write MB re-matches for candidates with a wrong/missing "
                           "match instead of just previewing them (default: dry run)")
     ap.add_argument("--mb-delay", type=float, default=1.1)
+    ap.add_argument("--days", type=int, default=30,
+                     help="Googlebot crawl window, in days, used to rank candidates "
+                          "(default 30). Ignored with --slugs-file.")
     args = ap.parse_args()
 
     conn = get_connection()
@@ -295,21 +305,50 @@ def main():
     # mb_verify.verify_and_fix_mb) each candidate's MB match before deciding
     # whether it has a usable tracklist -- fixing the tracklist as a
     # byproduct of processing the record for a bio, not a separate pass.
-    cur.execute(
-        """
-        SELECT d.slug, d.artista, d.titulo, count(b.id) AS hits,
-               d.mb_title, d.mb_mbid, d.mb_primary_type, d.mb_tracklist
-        FROM "Disco" d
-        JOIN bot_hits b ON b.path = '/disco/' || d.slug
-        WHERE d.disponivel = TRUE AND (d.format IS NULL OR d.format = 'vinyl')
-          AND d.sobre_pt IS NULL AND d.lastfm_wiki_pt IS NULL
-        GROUP BY d.slug, d.artista, d.titulo, d.mb_title, d.mb_mbid, d.mb_primary_type, d.mb_tracklist
-        ORDER BY hits DESC
-        LIMIT %s
-        """,
-        (args.limit,),
-    )
-    rows = cur.fetchall()
+    if args.slugs_file:
+        with open(args.slugs_file, encoding="utf-8") as f:
+            wanted = [ln.strip() for ln in f if ln.strip()]
+        cur.execute(
+            """
+            SELECT d.slug, d.artista, d.titulo, 0 AS hits,
+                   d.mb_title, d.mb_mbid, d.mb_primary_type, d.mb_tracklist
+            FROM "Disco" d
+            WHERE d.slug = ANY(%s)
+              AND d.disponivel = TRUE AND (d.format IS NULL OR d.format = 'vinyl')
+              AND d.sobre_pt IS NULL AND d.lastfm_wiki_pt IS NULL
+            """,
+            (wanted,),
+        )
+        by_slug = {r[0]: r for r in cur.fetchall()}
+        rows = [by_slug[s] for s in wanted[:args.limit] if s in by_slug]
+        dropped = len(wanted[:args.limit]) - len(rows)
+        if dropped:
+            print(f"{dropped} of the given slugs no longer qualify (not vinyl, "
+                  f"unavailable, or already have a bio) and were dropped.")
+    else:
+        # Googlebot only, and only recent hits. Was every bot over all of
+        # bot_hits, which ranked by meta-externalagent -- 756k hits in 30 days
+        # against Googlebot's 16k, so it decided the worklist outright and the
+        # "most crawled" pages this picked were not the ones Google cares
+        # about. An all-time count also keeps ranking pages by crawl traffic
+        # that stopped months ago.
+        cur.execute(
+            """
+            SELECT d.slug, d.artista, d.titulo, count(b.id) AS hits,
+                   d.mb_title, d.mb_mbid, d.mb_primary_type, d.mb_tracklist
+            FROM "Disco" d
+            JOIN bot_hits b ON b.path = '/disco/' || d.slug
+            WHERE b.bot_name = 'Googlebot'
+              AND b.created_at > now() - (%s || ' days')::interval
+              AND d.disponivel = TRUE AND (d.format IS NULL OR d.format = 'vinyl')
+              AND d.sobre_pt IS NULL AND d.lastfm_wiki_pt IS NULL
+            GROUP BY d.slug, d.artista, d.titulo, d.mb_title, d.mb_mbid, d.mb_primary_type, d.mb_tracklist
+            ORDER BY hits DESC
+            LIMIT %s
+            """,
+            (args.days, args.limit),
+        )
+        rows = cur.fetchall()
 
     matched = []
     skipped = 0

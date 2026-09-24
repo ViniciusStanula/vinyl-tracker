@@ -30,6 +30,25 @@ from discogs_enrich import _is_latin_comparable, _tokens
 # self-titled matches (Megadeth, Engineers) and fell back to raw junk text.
 SELF_TITLED_JUNK = {"limited", "special", "self", "titled", "title", "le", "exclusive", "edition", "album"}
 
+# Words that only ever describe the OBJECT -- its colour, finish or packaging --
+# and so cannot be part of an album's name. Used exclusively to decide whether a
+# cleaned título still carries real content: a listing like "Third Eye Blind -
+# Exclusive Limited Edition Gilded Gold Colored Vinyl 2LP" is all packaging once
+# the band's name is stripped, and published that marketing copy as the album
+# title. A one-word colour title such as Joni Mitchell's "Blue" is unaffected,
+# because the self-titled fallback also requires the artist's name to appear in
+# the listing.
+_PACKAGING_WORDS = {
+    "colored", "coloured", "color", "colour", "gilded", "marble", "marbled",
+    "splatter", "splattered", "translucent", "transparent", "opaque", "smoke",
+    "smoky", "swirl", "galaxy", "glitter", "neon", "clear", "bone", "cream",
+    "black", "white", "red", "blue", "green", "yellow", "pink", "purple",
+    "orange", "gold", "golden", "silver", "brown", "grey", "gray", "amber",
+    "magenta", "turquoise", "aqua", "tangerine", "olive", "ruby", "emerald",
+    "sapphire", "milky", "crystal", "picture", "disc", "gatefold", "sleeve",
+    "180g", "180", "gram", "anniversary", "reissue", "remastered", "deluxe",
+}
+
 # discogs_enrich._tokens() is built for coarse wrong-match detection and
 # strips words like "Original"/"Soundtrack"/"Motion"/"Picture" as noise for
 # THAT purpose. Reused for meaningful-content comparison, it erased exactly
@@ -43,6 +62,14 @@ _LIGHT_STOPWORDS = {"a", "an", "the", "of", "and", "or", "to", "in", "on", "from
 def _light_tokens(s):
     words = re.findall(r"[A-Za-zÀ-ÿ0-9]+", (s or "").lower())
     return {w for w in words if w not in _LIGHT_STOPWORDS and len(w) > 1}
+
+
+def _strip_artist_prefix(titulo, artista):
+    """Everything after the leading artist name, for the self-titled fallback."""
+    folded_t, folded_a = _fold(titulo or ""), _fold(artista or "")
+    if folded_a and folded_t.startswith(folded_a):
+        return (titulo or "")[len(artista):]
+    return titulo or ""
 
 
 COLOR_MAP = [
@@ -182,6 +209,16 @@ def base_title(artista, titulo, discogs_title, mb_title):
         _VINYL_WORDS.search(w) or w.lower() in artista_words or w.lower() in SELF_TITLED_JUNK
         for w in clean_words
     )
+    # Same test, plus the words that describe the physical object. Kept separate
+    # from all_junk on purpose: all_junk also loosens candidate matching below,
+    # and widening it there made "Anastasia (Original Broadway Cast Recording)"
+    # accept a candidate ending in "(Bn)". This one is used only by the
+    # self-titled fallback at the end.
+    only_packaging = (not clean_words) or all(
+        _VINYL_WORDS.search(w) or w.lower() in artista_words or w.lower() in SELF_TITLED_JUNK
+        or w.lower() in _PACKAGING_WORDS
+        for w in clean_words
+    )
     titulo_tokens = _tokens(titulo)
     meaningful = _light_tokens(clean) - _light_tokens(artista)
 
@@ -233,6 +270,29 @@ def base_title(artista, titulo, discogs_title, mb_title):
                 # shared words or a majority of the real content.
                 elif len(overlap) >= 2 or len(overlap) / max(len(meaningful), 1) >= 0.6:
                     return cand
+
+    # Self-titled records whose listing says nothing else. "Weezer - Exclusive
+    # Limited Edition Blue & White Marble Colored Vinyl LP" cleans down to
+    # marketing words only, and with no external candidate to fall back on the
+    # page showed "Exclusive Limited Edition Blue & White Marble Colored" as the
+    # album name. When the artist's own name is the only real content the
+    # listing carries, that IS the album title, so use it and drop the rest.
+    # Three guards, because this rule is only as good as `artista`, and plenty of
+    # rows carry junk there (one holds a whole sentence about train carriages,
+    # another "Anastasia (Original Broadway Cast Recording) (Bn)"). A genuine
+    # self-titled listing names the act FIRST and the packaging after it, so the
+    # título has to start with the artist, and the artist has to read like a name:
+    # no parentheses, at most five words.
+    if (only_packaging and artista and "(" not in artista
+            and len(artista.split()) <= 5
+            and _fold(re.sub(r"\W", "", titulo or "")).startswith(
+                _fold(re.sub(r"\W", "", artista)))
+            # A word of the band's name repeated AFTER the prefix is the album
+            # title, not an echo: "Spice Girls Spice Crystal Clear" sells Spice,
+            # so the fallback must stay out of its way.
+            and not (_light_tokens(_strip_artist_prefix(titulo, artista)) & _light_tokens(artista))):
+        return artista.strip()
+
     return clean
 
 
