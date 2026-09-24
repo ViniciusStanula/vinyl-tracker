@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS bot_state (
 
 _SCHEMA_EXTRAS = """
 ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS is_top_artist BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS slug TEXT;
 CREATE INDEX IF NOT EXISTS bot_sent_asin_idx ON bot_sent (asin, sent_at DESC);
 CREATE INDEX IF NOT EXISTS bot_pending_status_idx ON bot_pending (status);
 """
@@ -124,7 +125,14 @@ LASTFM_CACHE_DAYS = 30
 LASTFM_TOP_PAGES  = 20  # 20 pages × 500 = top 10,000 artists
 
 RESEND_THRESHOLD      = 0.90  # re-open if price drops ≥10% vs last send
-RESEND_SAMEPRICE_DAYS = 7     # re-open same-price deal after this many days
+RESEND_SAMEPRICE_DAYS = 30    # re-open same-price deal after this many days
+
+# Queue ranking: discount % weighted by artist popularity, plus bonuses for the
+# strongest signals. popularity_score is log-scaled (~0–6.5 across the catalog).
+POPULARITY_MAX   = 6.5
+ATL_BONUS        = 10.0  # at/below all-time low ≈ worth 10 extra points of discount
+ATL_TOLERANCE    = 1.005 # within 0.5% of the low counts (prices jitter by cents)
+BEST_TIER_BONUS  = 5.0   # deal_score = 3
 
 
 def _load_cached_slugs(conn) -> set | None:
@@ -229,9 +237,14 @@ def fetch_active_deals(conn) -> dict:
         cur.execute("""
             SELECT
                 d.asin,
-                d.titulo,
+                -- titulo_seo is the cleaned display title the site uses; raw
+                -- Amazon titles carry "(Clear Vinyl, 180 Gram, Gatefold...)" junk.
+                COALESCE(NULLIF(d.titulo_seo, ''), d.titulo) AS titulo,
                 d.artista,
-                d.estilo,
+                -- Disco.estilo is empty catalog-wide; genres live in lastfm_tags.
+                d.lastfm_tags AS estilo,
+                d.slug,
+                d.popularity_score,
                 d."imgUrl" AS img_url,
                 d.url      AS affiliate_url,
                 l.preco_brl,
@@ -259,6 +272,19 @@ def fetch_active_deals(conn) -> dict:
         return {row["asin"]: dict(row) for row in cur.fetchall()}
 
 
+def priority_for(d: dict) -> float:
+    avg   = float(d["avg_30d"])
+    price = float(d["preco_brl"])
+    pct   = (avg - price) / avg * 100
+    pop   = min(float(d.get("popularity_score") or 0), POPULARITY_MAX)
+    score = pct * (0.5 + pop / POPULARITY_MAX)
+    if d.get("low_all_time") is not None and price <= float(d["low_all_time"]) * ATL_TOLERANCE:
+        score += ATL_BONUS
+    if int(d["deal_score"]) == 3:
+        score += BEST_TIER_BONUS
+    return round(score, 2)
+
+
 def sync_pending(conn, active: dict, top_slugs: set) -> None:
     now = datetime.now(timezone.utc)
 
@@ -268,20 +294,20 @@ def sync_pending(conn, active: dict, top_slugs: set) -> None:
         for asin, d in active.items():
             avg   = float(d["avg_30d"])
             price = float(d["preco_brl"])
-            priority      = round((avg - price) / avg * 100, 2)
+            priority      = priority_for(d)
             is_top_artist = _slugify_artist(d["artista"]) in top_slugs
             rows.append((
                 asin, d["titulo"], d["artista"], d.get("estilo"),
                 d.get("img_url"), d["affiliate_url"],
                 price, avg, d.get("low_all_time"),
-                int(d["deal_score"]), priority, is_top_artist, now,
+                int(d["deal_score"]), priority, is_top_artist, now, d.get("slug"),
             ))
 
         psycopg2.extras.execute_values(cur, """
             INSERT INTO bot_pending
                 (asin, titulo, artista, estilo, img_url, affiliate_url,
                  preco_brl, avg_30d, low_all_time, deal_score, priority_score,
-                 is_top_artist, first_seen_at, status)
+                 is_top_artist, first_seen_at, slug, status)
             VALUES %s
             ON CONFLICT (asin) DO UPDATE SET
                 titulo         = EXCLUDED.titulo,
@@ -295,11 +321,12 @@ def sync_pending(conn, active: dict, top_slugs: set) -> None:
                 deal_score     = EXCLUDED.deal_score,
                 priority_score = EXCLUDED.priority_score,
                 is_top_artist  = EXCLUDED.is_top_artist,
+                slug           = EXCLUDED.slug,
                 status = CASE
                     WHEN bot_pending.status = 'discarded' THEN 'pending'
                     ELSE bot_pending.status
                 END
-        """, rows, template="(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending')", page_size=500)
+        """, rows, template="(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending')", page_size=500)
 
         # 2. Immediately discard pending deals no longer active in Supabase.
         active_asins = list(active.keys())

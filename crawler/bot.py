@@ -2,7 +2,9 @@
 """
 bot.py — Reads bot_pending from Supabase and dispatches deals to a Telegram channel.
 
-Drip strategy: at most one message per 30 minutes, within 08:00–22:00 Sao Paulo time.
+Drip strategy: at most one message per DRIP_MINUTES, within 08:00–22:00 Sao Paulo time.
+Runs are triggered every 15 min by cron-job.org (workflow_dispatch); the GHA
+schedule is only a backup, since GitHub fires it just a few times a day.
 Edit pass: silently updates captions for already-sent deals whose price dropped ≥5%.
 Send pass: picks the highest-priority pending deal and sends it as a new photo message.
 """
@@ -20,6 +22,7 @@ import psycopg2.extras
 import requests
 
 from database import pooler_saturated
+from genre_filter import is_genre
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,6 +43,10 @@ EDIT_THRESHOLD    = 0.95   # edit if current price < ref * 0.95 (≥5% drop)
 EDIT_BATCH_LIMIT  = 30     # max edits per run to stay within GHA timeout
 SOLDOUT_BATCH_LIMIT = 20  # max sold-out edits per run
 RESEND_THRESHOLD  = 0.90   # bridge re-opens at this level; bot just sends normally
+ATL_TOLERANCE     = 1.005  # within 0.5% of the all-time low counts (prices jitter by cents)
+MAX_HASHTAGS      = 2
+
+SITE_URL = os.environ.get("SITE_URL", "https://www.garimpavinil.com.br")
 
 TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
@@ -188,33 +195,62 @@ def build_soldout_caption(titulo: str, artista: str,
     )
 
 
+def _hashtags(tags: str | None) -> str:
+    """'hip-hop, rap, seen live' → '#hiphop #rap' (genres only, via genre_filter)."""
+    out: list[str] = []
+    for tag in (tags or "").split(","):
+        tag = tag.strip()
+        if not is_genre(tag):
+            continue
+        h = "#" + re.sub(r"[^0-9a-z]", "", tag.lower())
+        if len(h) > 1 and h not in out:
+            out.append(h)
+        if len(out) == MAX_HASHTAGS:
+            break
+    return " ".join(out)
+
+
 def build_caption(titulo: str, artista: str, estilo: str | None,
                   preco_brl: float, avg_30d: float | None,
-                  low_all_time: float | None, affiliate_url: str) -> str:
+                  low_all_time: float | None, affiliate_url: str,
+                  slug: str | None = None) -> str:
     album = _esc_html(_clean_titulo(titulo))
     artist = _esc_html(artista)
 
     atl_line = ""
-    if low_all_time is not None and preco_brl <= float(low_all_time):
+    if low_all_time is not None and preco_brl <= float(low_all_time) * ATL_TOLERANCE:
         atl_line = "🏆 Menor preço histórico\n"
 
     price_block = f"✅ Por: R$ {_brl(preco_brl)}\n"
     if avg_30d and avg_30d > preco_brl:
         pct      = round((avg_30d - preco_brl) / avg_30d * 100)
         savings  = avg_30d - preco_brl
+        # Labelled as the 30-day average, not "De:" — in Brazil "De/Por" reads
+        # as the previous actual price.
         price_block += (
-            f"De: R$ {_brl(avg_30d)}\n"
+            f"Média 30 dias: R$ {_brl(avg_30d)}\n"
             f"\nDesconto: {pct}% OFF\n"
             f"Economia: R$ {_brl(savings)}\n"
         )
 
     url = _esc_url(affiliate_url)
+    history_line = ""
+    if slug:
+        history_url = _esc_url(f"{SITE_URL}/disco/{slug}")
+        history_line = f"📈 <a href='{history_url}'>Histórico de preço</a>\n"
+
+    tags = _hashtags(estilo)
+    tags_line = f"\n{tags}\n" if tags else ""
+
     return (
         f"🔥 <b>OFERTA</b>\n"
         f"{artist} — {album}\n"
         f"{atl_line}"
         f"\n{price_block}"
-        f"\n🛒 <a href='{url}'>Comprar na Amazon</a> 👉"
+        f"\n🛒 <a href='{url}'>Comprar na Amazon</a> 👉\n"
+        f"{history_line}"
+        f"{tags_line}"
+        f"\n<i>Link de afiliado</i>"
     )
 
 
@@ -302,6 +338,7 @@ def run_edit_pass(conn) -> None:
                 bp.preco_brl,
                 bp.avg_30d,
                 bp.low_all_time,
+                bp.slug,
                 ls.sent_row_id,
                 ls.telegram_message_id,
                 ls.ref_price
@@ -331,6 +368,7 @@ def run_edit_pass(conn) -> None:
             float(row["avg_30d"]) if row["avg_30d"] else None,
             float(row["low_all_time"]) if row["low_all_time"] else None,
             row["affiliate_url"],
+            row["slug"],
         )
         if edit_caption(int(row["telegram_message_id"]), caption):
             now = datetime.now(timezone.utc)
@@ -395,6 +433,7 @@ def _send_one(conn, deal: dict) -> bool:
         float(deal["avg_30d"]) if deal["avg_30d"] else None,
         float(deal["low_all_time"]) if deal["low_all_time"] else None,
         deal["affiliate_url"],
+        deal.get("slug"),
     )
 
     img_url    = deal.get("img_url") or ""
@@ -419,7 +458,7 @@ def _send_one(conn, deal: dict) -> bool:
     return True
 
 
-def run_send_pass(conn, batch_size: int = 5) -> None:
+def run_send_pass(conn, batch_size: int = 1) -> None:
     """Send up to batch_size deals, prioritizing top artists then highest discount."""
     sent = 0
     # Track ASINs already processed this batch to avoid re-querying same row
@@ -497,6 +536,7 @@ def main() -> None:
             conn.rollback()
         except Exception:
             pass
+        sys.exit(1)  # fail the GHA run so errors are visible instead of green
     finally:
         conn.close()
 
