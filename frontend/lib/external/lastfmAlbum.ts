@@ -10,7 +10,7 @@ export interface LastfmAlbumInfo {
 // cleaner). Colours are only stripped INSIDE brackets/parens so real titles
 // ending in a colour word ("Back to Black", "Purple Rain") survive.
 const VINYL_WORDS =
-  /\b(vinyl|vinil|\d*x?lp|gram|\d+\s*g|colou?red|colorid[oa]|remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|150|200|220|clear|gold|green|silver|blue|red|black|white|orange|tangerine|purple|pink|yellow|translucent|opaque|marbled?|repress|anniversary|deluxe|edition|import(?:ad[oa])?|analog(?:ue)?|region|disc|disk|rpm|pressing|limited|special|expanded|extended|collector|numbered|bonus|box\s*set|explicit|blu.?ray|dvd|nacional|duplo|triplo|lacrado|selado|seminovo|promo|digipak|picture\s+disc)\b/i;
+  /\b(vinyl|vinil|\d*x?lps?|gram|\d+\s*g|colou?red|colorid[oa]|remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|150|200|220|clear|gold|green|silver|blue|red|black|white|orange|tangerine|purple|pink|yellow|translucent|opaque|marbled?|repress|anniversary|deluxe|edition|import(?:ad[oa])?|analog(?:ue)?|region|disc|disk|rpm|pressing|limited|special|expanded|extended|collector|numbered|bonus|box\s*set|explicit|blu.?ray|dvd|nacional|duplo|triplo|lacrado|selado|seminovo|promo|digipak|picture\s+disc)\b/i;
 
 // Bare trailing junk without brackets, e.g. "8 Letters vinyl", "posh LP",
 // "MELTDOWN 18cm". HARD format tokens only — never bare colours.
@@ -23,7 +23,7 @@ const TRAILING_ANNIVERSARY =
 
 // Leading format noise, e.g. "LP VINIL Foals - ..." or "- Vinil Disney - ...".
 const LEADING_FORMAT =
-  /^[\s-]*(?:(?:disco\s+de\s+vin(?:il|yl)|vinyl|vinil|\d*x?lp|cd)\b[\s-]*)+/i;
+  /^[\s-]*(?:(?:disco\s+de\s+vin(?:il|yl)|box(?=\s+vin(?:il|yl)\b)|vin(?:il|yl)(?:\s+(?:duplo|triplo))?|\d*x?lps?|cd)\b[\s-]*)+/i;
 
 export function cleanAlbumTitle(title: string, artist: string): string {
   let t = title;
@@ -41,6 +41,8 @@ export function cleanAlbumTitle(title: string, artist: string): string {
   t = t.replace(/\s*\[[^\]]*\]/g, "");
   // Amazon's bare "(X)" explicit/clean marker, e.g. "AWAKE (X) (2LP)".
   t = t.replace(/\s*\(x\)/gi, "");
+  // Bare disc-size marker with the inch sign dropped, e.g. UMusic's "Perhaps (7)".
+  t = t.replace(/\s*\(\s*(?:7|10|12)\s*"?\s*\)/g, "");
   // Remove parenthetical vinyl/format descriptors
   t = t.replace(/\s*\([^)]*\)/g, (match) => (VINYL_WORDS.test(match) ? "" : match));
   // Remove variant suffix after last " - " e.g. "Album - Clear Gold Splatter"

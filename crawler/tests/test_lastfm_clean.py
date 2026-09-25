@@ -28,6 +28,11 @@ STRIP_CASES = [
     ("Dominic Fike", "SUNBURN (150G)", "SUNBURN"),
     # leading format with dash
     ("Disney", "- Vinil Disney - The Little Mermaid", "The Little Mermaid"),
+    # UMusic Store prefixes; unstripped they sent MB to the self-titled album
+    ("Bon Jovi", "Vinil Duplo Bon Jovi - New Jersey (Remastered 2014 / 2LP) - Importado", "New Jersey"),
+    ("Genesis", "Vinil Triplo Genesis - BBC Broadcasts (3LPs) - Importado", "BBC Broadcasts"),
+    ("Aerosmith", "Box Vinil Aerosmith - Greatest Hits (Super Deluxe 4LP Limited Edition) - Importado", "Greatest Hits"),
+    ("Guns N' Roses", "Vinil Guns N' Roses - Perhaps (7) - Importado", "Perhaps"),
     # trailing "Limited" strips; " - Edition" caught by existing dash pass
     ("Blur", "Bustin' + Dronin' Limited", "Bustin' + Dronin'"),
     ("Nick Cave & the Bad Seeds", "The Good Son - Deluxe Edition", "The Good Son"),
@@ -39,6 +44,8 @@ STRIP_CASES = [
 # titles ending in colour/loaded words that MUST survive untouched
 PRESERVE_CASES = [
     ("Amy Winehouse", "Back to Black", "Back to Black"),
+    # "Box" only counts as a prefix before "Vinil"
+    ("Box Car Racer", "Box Car Racer", "Box Car Racer"),
     ("Prince", "Purple Rain", "Purple Rain"),
     ("New Order", "Blue Monday", "Blue Monday"),
     ("Metallica", "Fade to Black", "Fade to Black"),

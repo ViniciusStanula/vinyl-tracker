@@ -32,6 +32,15 @@ _META_PREFIXES = (
     "pronto para", "nao ha texto", "nao ha informac", "nao consigo", "nao recebi",
     "voce enviou", "voce forneceu", "voce compartilhou", "aguard", "por favor",
     "preciso do texto", "infelizmente",
+    # Seen live in 2026-09: English refusals, markdown headers and more
+    # Portuguese forms slipped past the list above (73 rows cleared).
+    "peco desculpa", "lamento", "parece que", "nao e possivel", "nao posso",
+    "saiba que", "nao ha contexto", "# ",
+    # Kept specific: "I Don't Want to Grow Up" and "I Need You" are albums.
+    "i appreciate", "i notice", "i need more", "i need the", "i need a more",
+    "i need clarification", "i don't see", "i don't have", "i do not see", "i see you've",
+    "i can see", "i can help", "i cannot", "i can't", "i'd be happy",
+    "i'm ready", "i'm unable", "i'm sorry",
 )
 _ACCENTS = str.maketrans("áàâãäéèêëíìîïóòôõöúùûüç", "aaaaaeeeeiiiiooooouuuuc")
 
