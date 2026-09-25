@@ -91,7 +91,7 @@ export type ProcessedDisco = {
   estilo?: string | null;
   imgUrl: string | null;
   url: string;
-  /** Price/link source: "amazon" or "mercadolivre" — drives the buy-button label + affiliate tagging */
+  /** Price/link source: "amazon", "mercadolivre", or "umusicstore" — drives the buy-button label + affiliate tagging */
   marketplace: string;
   rating: number | null;
   reviewCount: number | null;
@@ -108,7 +108,7 @@ export type ProcessedDisco = {
   historyDays?: number | null;
   /** Comma-separated Last.fm genre tags, e.g. "rock, classic rock, hard rock" */
   lastfmTags?: string | null;
-  /** When false, record is no longer listed on Amazon. Renders as greyed-out on artist page. */
+  /** When false, record is no longer listed at the store. Renders as greyed-out on artist page. */
   disponivel?: boolean;
 };
 

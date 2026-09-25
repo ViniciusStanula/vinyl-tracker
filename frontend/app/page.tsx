@@ -33,8 +33,8 @@ export async function generateMetadata() {
     // DB unavailable — fall back to generic description
   }
   const description = count > 0
-    ? `Acompanhe o preço de +${count.toLocaleString("pt-BR")} discos de vinil na Amazon Brasil. Histórico de 12 meses, alertas de queda e o melhor momento de comprar cada disco.`
-    : "Acompanhe os preços de discos de vinil na Amazon Brasil. Histórico de 12 meses, alertas de queda e o melhor momento de comprar cada disco.";
+    ? `Acompanhe o preço de +${count.toLocaleString("pt-BR")} discos de vinil em lojas online. Histórico de 12 meses, alertas de queda e o melhor momento de comprar cada disco.`
+    : "Acompanhe os preços de discos de vinil em lojas online. Histórico de 12 meses, alertas de queda e o melhor momento de comprar cada disco.";
   return {
     title: HOME_TITLE,
     description,
@@ -157,7 +157,7 @@ export default async function HomePage() {
         {/* Content */}
         <div className="relative z-10 px-6 py-8 sm:py-14 max-w-lg">
           <span className="font-mono text-gold text-[11px] font-medium uppercase tracking-[0.18em] block mb-4">
-            Amazon Brasil · Curadoria Especializada
+            Lojas Parceiras · Curadoria Especializada
           </span>
           <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-black leading-[0.95] mb-4 [text-wrap:balance]">
             <span className="italic text-cream">Histórico de Preços</span>
@@ -165,7 +165,7 @@ export default async function HomePage() {
             <span className="not-italic text-gold">de Discos de Vinil</span>
           </h1>
           <p className="text-cream text-sm sm:text-base max-w-md leading-relaxed mb-4">
-            Catálogo de discos de vinil na Amazon Brasil com preços atualizados. Encontre bons momentos para comprar.
+            Catálogo de discos de vinil com preços atualizados. Encontre bons momentos para comprar.
           </p>
           {count > 0 && (
             <p className="font-mono text-parchment text-[11px] font-medium tabular-nums mb-6 flex items-center gap-2 flex-wrap">

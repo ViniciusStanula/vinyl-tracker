@@ -39,10 +39,10 @@ export default function TermosDeUsoPage() {
         <section className="bg-sleeve border border-groove rounded-xl p-6">
           <h2 className="font-display text-lg font-bold text-cream mb-3">Objetivo do Site</h2>
           <p className="mb-3">
-            O Garimpa Vinil é um serviço de monitoramento de preços de discos de vinil na Amazon Brasil. As informações de preço são coletadas automaticamente e atualizadas a cada 2 horas.
+            O Garimpa Vinil é um serviço de monitoramento de preços de discos de vinil em lojas online (Amazon Brasil, UMusic Store e outras). As informações de preço são coletadas automaticamente e atualizadas a cada 2 horas.
           </p>
           <p>
-            Os preços exibidos são informativos e podem não refletir o valor exato no momento da compra. Sempre verifique o preço atual na página do produto na Amazon antes de finalizar qualquer transação.
+            Os preços exibidos são informativos e podem não refletir o valor exato no momento da compra. Sempre verifique o preço atual na página do produto na loja de destino antes de finalizar qualquer transação.
           </p>
         </section>
 
@@ -59,7 +59,7 @@ export default function TermosDeUsoPage() {
         <section className="bg-sleeve border border-groove rounded-xl p-6">
           <h2 className="font-display text-lg font-bold text-cream mb-3">Links de Afiliados</h2>
           <p>
-            Links para produtos na Amazon são links de afiliado do Programa de Associados Amazon. Ao clicar e realizar uma compra qualificada, recebemos uma comissão sem custo adicional para você. Os preços e a disponibilidade dos produtos são de responsabilidade exclusiva da Amazon.
+            Links para produtos na Amazon são links de afiliado do Programa de Associados Amazon. Ao clicar e realizar uma compra qualificada, recebemos uma comissão sem custo adicional para você. Links para outras lojas (como UMusic Store) não geram comissão para nós. Em todos os casos, os preços e a disponibilidade dos produtos são de responsabilidade exclusiva da loja de destino.
           </p>
         </section>
 

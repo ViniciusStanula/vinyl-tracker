@@ -131,9 +131,9 @@ Faça uma triagem visual: leve o disco até uma janela ou luminária forte e gir
 
 URL: ${SITE}/sobre
 
-Garimpa Vinil é um catálogo de discos de vinil disponíveis na Amazon Brasil, com preços atualizados regularmente. O site agrega dados de preços de fontes públicas e atualiza o catálogo para que os valores estejam sempre corretos. Cada listagem mostra o preço atual e direciona para a página oficial do produto na Amazon.
+Garimpa Vinil é um catálogo de discos de vinil disponíveis em lojas online (Amazon Brasil, UMusic Store e outras), com preços atualizados regularmente. O site agrega dados de preços de fontes públicas e atualiza o catálogo para que os valores estejam sempre corretos. Cada listagem mostra o preço atual e direciona para a página oficial do produto na loja parceira.
 
-Garimpa Vinil participa do Programa de Associados da Amazon. As comissões não têm custo adicional para o comprador.
+Garimpa Vinil participa do Programa de Associados da Amazon. As comissões da Amazon não têm custo adicional para o comprador.
 
 ---
 

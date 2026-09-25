@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { SITE_URL as SITE } from "@/lib/siteUrl";
+import { getDiscoCount } from "@/lib/db/home";
 
-function content() {
+function content(discoCount: number) {
+  const discoCountFmt = discoCount.toLocaleString("en-US");
   return `# Garimpa Vinil
 
-> Rastreador de preços de discos de vinil na Amazon Brasil. Monitora mais de 11.000 títulos com alertas de promoções e histórico de preços.
+> Rastreador de preços de discos de vinil em lojas online (Amazon Brasil, UMusic Store e outras). Monitora mais de ${discoCountFmt} títulos com alertas de promoções e histórico de preços.
 
-Garimpa Vinil is a price tracker for vinyl records sold on Amazon Brasil. An automated crawler checks prices multiple times daily and scores deals against a rolling 30-day price history. Data is publicly readable — no authentication required.
+Garimpa Vinil is a price tracker for vinyl records sold on Amazon Brasil, UMusic Store and other online stores. An automated crawler checks prices multiple times daily and scores deals against a rolling 30-day price history. Data is publicly readable — no authentication required.
 
 ## MCP Server
 
@@ -17,7 +19,7 @@ Endpoint: ${SITE}/api/mcp (HTTP POST, Content-Type: application/json)
 Protocol: Model Context Protocol 2024-11-05
 
 Available tools:
-- search_vinyl: full-text search across 11,000+ records by title or artist; supports price filter and sort
+- search_vinyl: full-text search across ${discoCountFmt}+ records by title or artist; supports price filter and sort
 - get_deals: current best deals sorted by deal tier (Melhor Preço > Ótima Oferta > Boa Oferta) then by discount %; optional genre and price filter
 - get_price_history: full 1-year price history for one record — current price, 30-day average, all-time low, timestamped price points
 - get_artist_albums: all records by an artist with current prices and deal scores
@@ -61,14 +63,15 @@ Full article text available at: ${SITE}/llms-full.txt
 
 Each record includes: slug (URL identifier), titulo (album name), artista (artist name), generos (Last.fm genre tags array), preco_atual_brl (current price in BRL), media_30d_brl (30-day average price in BRL), desconto_pct (discount % vs 30-day average), deal_score (1–3 or null), avaliacao_amazon (Amazon star rating), url_garimpa (page on this site), url_amazon (Amazon product link).
 
-Prices are from Amazon Brasil (amazon.com.br). Currency is BRL (Brazilian Real).
+Prices are from Amazon Brasil (amazon.com.br), UMusic Store (umusicstore.com.br) and other partner stores. Currency is BRL (Brazilian Real).
 `.trim();
 }
 
 export const revalidate = 3600;
 
-export function GET() {
-  return new NextResponse(content(), {
+export async function GET() {
+  const discoCount = await getDiscoCount();
+  return new NextResponse(content(discoCount), {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",

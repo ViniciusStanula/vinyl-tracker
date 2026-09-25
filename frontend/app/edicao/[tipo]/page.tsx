@@ -39,8 +39,8 @@ export async function generateMetadata({
   const title = truncateTitle(`Discos em Vinil ${label} — Ofertas | Garimpa Vinil`);
   const description = truncateDesc(
     total >= 4
-      ? `${total.toLocaleString("pt-BR")} edições ${label} em vinil na Amazon Brasil. Veja o histórico de 12 meses de cada uma e compre quando o preço cair de verdade.`
-      : `Discos em vinil ${label} com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
+      ? `${total.toLocaleString("pt-BR")} edições ${label} em vinil. Veja o histórico de 12 meses de cada uma e compre quando o preço cair de verdade.`
+      : `Discos em vinil ${label} com preço monitorado diariamente. Veja o histórico de 12 meses antes de comprar.`
   );
   const firstImage = data.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
   const canonicalUrl = `${SITE_URL}/edicao/${tipo}`;

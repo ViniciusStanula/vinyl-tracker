@@ -10,7 +10,7 @@ export const revalidate = 14400;
 export const metadata: Metadata = {
   title: "Edições Especiais de Vinil | Garimpa Vinil",
   description:
-    "Vinil por tipo de edição: picture disc, box set, Record Store Day, numerado e mais, cada um com histórico de preços de 12 meses na Amazon Brasil.",
+    "Vinil por tipo de edição: picture disc, box set, Record Store Day, numerado e mais, cada um com histórico de preços de 12 meses.",
   alternates: { canonical: "/edicao" },
   openGraph: {
     title: "Edições Especiais de Vinil | Garimpa Vinil",
@@ -81,8 +81,8 @@ export default async function EdicaoIndexPage() {
         title="Edições Especiais"
         description={
           edicoes.length > 0
-            ? `${edicoes.length} tipos de edição especial de vinil monitorados na Amazon Brasil, com histórico de preços de 12 meses.`
-            : "Discos de vinil agrupados pelo tipo de edição especial na Amazon Brasil."
+            ? `${edicoes.length} tipos de edição especial de vinil monitorados, com histórico de preços de 12 meses.`
+            : "Discos de vinil agrupados pelo tipo de edição especial."
         }
       />
 
@@ -140,8 +140,8 @@ export default async function EdicaoIndexPage() {
           </p>
           <p>
             A classificação vem da descrição do produto e da ficha do Discogs, não de
-            um campo declarado pela loja. Cada página lista o que está disponível na
-            Amazon Brasil agora, com o preço acompanhado todo dia e o gráfico de 12
+            um campo declarado pela loja. Cada página lista o que está disponível
+            agora, com o preço acompanhado todo dia e o gráfico de 12
             meses — útil justamente aqui, onde a tiragem fechada faz o preço subir
             depois do lançamento em vez de cair.
           </p>

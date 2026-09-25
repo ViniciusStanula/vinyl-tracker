@@ -1,8 +1,10 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
-import { artistaTag } from "@/lib/cacheTags";
+import { artistaTag, estiloTag, paisTag } from "@/lib/cacheTags";
 import { slugifyArtist } from "@/lib/utils/slugify";
+import { slugifyStyle } from "@/lib/utils/styleUtils";
+import { ISO2_TO_SLUG } from "@/lib/paises";
 
 // Fail closed: an unset REVALIDATE_SECRET must never authenticate
 // (`undefined !== undefined` would otherwise let every request through).
@@ -41,16 +43,17 @@ export async function POST(request: NextRequest) {
   // ~31,000 possible values). The prefix set is closed and the slug charset is
   // restricted, so a leaked secret still cannot purge an arbitrary tag.
   //
-  // `artistNames` carries raw artist names rather than slugs, and this handler
-  // runs slugifyArtist() on them itself. The slug rules (NFD accent folding,
-  // "LAST, FIRST" inversion, 60-char cut) live in TypeScript only; a Python
-  // reimplementation in the crawler could drift and leave an artist page stale
-  // forever. Sending the name keeps one copy of the rule. slugifyArtist output
-  // is always /^[a-z0-9-]{0,60}$/, so no separate validation is needed —
-  // an empty result (name was all punctuation) is dropped.
+  // `artistNames` / `styleTags` / `countryCodes` carry raw values rather than
+  // slugs, and this handler maps them to tags itself. The mapping rules
+  // (slugifyArtist's NFD folding + "LAST, FIRST" inversion, slugifyStyle's NFD
+  // folding, the ISO2->slug lookup table) live in TypeScript only; a Python
+  // reimplementation in the crawler could drift and leave a page stale
+  // forever. Sending the raw value keeps one copy of each rule.
   const hasTags = Array.isArray(body.tags) && body.tags.length > 0;
   const hasNames = Array.isArray(body.artistNames) && body.artistNames.length > 0;
-  if (hasTags || hasNames) {
+  const hasStyleTags = Array.isArray(body.styleTags) && body.styleTags.length > 0;
+  const hasCountryCodes = Array.isArray(body.countryCodes) && body.countryCodes.length > 0;
+  if (hasTags || hasNames || hasStyleTags || hasCountryCodes) {
     const ENTITY_TAG = /^(disco|artista|estilo|pais|decada)-[a-z0-9-]{1,120}$/;
     const rawTags = hasTags ? (body.tags as unknown[]) : [];
     const accepted = rawTags.filter(
@@ -67,10 +70,28 @@ export async function POST(request: NextRequest) {
     const artistSlugs = new Set(usableNames);
     for (const s of artistSlugs) revalidateTag(artistaTag(s), {});
 
+    const rawStyleTags = hasStyleTags ? (body.styleTags as unknown[]) : [];
+    const usableStyleSlugs = rawStyleTags
+      .filter((t): t is string => typeof t === "string" && t.length <= 300)
+      .map(slugifyStyle)
+      .filter((s) => s.length > 0);
+    const styleSlugs = new Set(usableStyleSlugs);
+    for (const s of styleSlugs) revalidateTag(estiloTag(s), {});
+
+    const rawCountryCodes = hasCountryCodes ? (body.countryCodes as unknown[]) : [];
+    const usablePaisSlugs = rawCountryCodes
+      .filter((c): c is string => typeof c === "string")
+      .map((c) => ISO2_TO_SLUG[c.toUpperCase()])
+      .filter((s): s is string => Boolean(s));
+    const paisSlugs = new Set(usablePaisSlugs);
+    for (const s of paisSlugs) revalidateTag(paisTag(s), {});
+
     return NextResponse.json({
       revalidated: true,
       tags: accepted.length,
       artists: artistSlugs.size,
+      estilos: styleSlugs.size,
+      paises: paisSlugs.size,
       rejected:
         rawTags.length - accepted.length + (rawNames.length - usableNames.length),
       at: new Date().toISOString(),

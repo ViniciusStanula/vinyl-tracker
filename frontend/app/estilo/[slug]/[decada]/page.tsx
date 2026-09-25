@@ -53,7 +53,7 @@ export async function generateMetadata({
 
   const title = truncateTitle(`${nome} dos ${anos} em Vinil — Ofertas | Garimpa Vinil`);
   const description = truncateDesc(
-    `${total.toLocaleString("pt-BR")} discos de ${nome.toLowerCase()} lançados nos ${anos} (${start}–${start + 9}) em vinil na Amazon, com preço acompanhado todo dia e histórico de 12 meses.`,
+    `${total.toLocaleString("pt-BR")} discos de ${nome.toLowerCase()} lançados nos ${anos} (${start}–${start + 9}) em vinil, com preço acompanhado todo dia e histórico de 12 meses.`,
   );
   const firstImage = discos.find((d) => d.imgUrl)?.imgUrl ?? null;
   const canonicalUrl = `${SITE_URL}/estilo/${slug}/${start}`;

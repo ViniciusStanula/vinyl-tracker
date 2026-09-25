@@ -424,8 +424,8 @@ export default function TocaDiscosIniciantesPage() {
             </p>
             <p>
               Ela deixa de fazer sentido no instante em que você começa a comprar disco com intenção.
-              Dos vinte e seis mil vinis que a gente monitora na Amazon Brasil, a mediana de preço está
-              em duzentos e noventa reais, e só catorze por cento saem por menos de duzentos. Dois discos
+              Dos trinta mil vinis que a gente monitora, a mediana de preço está
+              em duzentos e oitenta e cinco reais, e só dezenove por cento saem por menos de duzentos. Dois discos
               e você já gastou o preço de uma vitrola de maleta. Ela vai continuar comendo esses dois
               discos, e todos os próximos.
             </p>

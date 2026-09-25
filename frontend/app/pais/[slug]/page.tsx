@@ -51,8 +51,8 @@ export async function generateMetadata({
   ]);
   const description = truncateDesc(
     total >= 4
-      ? `${total.toLocaleString("pt-BR")} discos de vinil de artistas ${doPais} na Amazon, com preço monitorado diariamente e histórico de 12 meses.`
-      : `Discos de vinil de artistas ${doPais} com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
+      ? `${total.toLocaleString("pt-BR")} discos de vinil de artistas ${doPais}, com preço monitorado diariamente e histórico de 12 meses.`
+      : `Discos de vinil de artistas ${doPais} com preço monitorado diariamente. Veja o histórico de 12 meses antes de comprar.`
   );
   const firstImage = data?.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
   const canonicalUrl = `${SITE_URL}/pais/${slug}`;

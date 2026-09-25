@@ -10,12 +10,12 @@ export const revalidate = 14400;
 export const metadata: Metadata = {
   title: "Estilos Musicais em Vinil | Garimpa Vinil",
   description:
-    "Explore discos de vinil por estilo musical na Amazon Brasil. Rock, Jazz, MPB, Blues e muito mais — cada estilo com histórico de preços de 12 meses.",
+    "Explore discos de vinil por estilo musical. Rock, Jazz, MPB, Blues e muito mais — cada estilo com histórico de preços de 12 meses.",
   alternates: { canonical: "/estilos" },
   openGraph: {
     title: "Estilos Musicais em Vinil | Garimpa Vinil",
     description:
-      "Explore discos de vinil por estilo musical na Amazon Brasil.",
+      "Explore discos de vinil por estilo musical.",
     url: "/estilos",
     type: "website",
     images: ["/og-default.png"],

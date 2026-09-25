@@ -43,7 +43,7 @@ export async function generateMetadata(
   const title = `Artistas de Vinil — ${letra === "#" ? "Outros" : letra} | Garimpa Vinil`;
   return {
     title,
-    description: `Artistas com ${nome} e discos de vinil disponíveis na Amazon Brasil, com histórico de preços de 12 meses.`,
+    description: `Artistas com ${nome} e discos de vinil disponíveis, com histórico de preços de 12 meses.`,
     alternates: { canonical: `/artistas/${letterToParam(letra)}` },
     openGraph: { title, url: `/artistas/${letterToParam(letra)}`, type: "website" },
   };
@@ -99,7 +99,7 @@ export default async function ArtistasLetraPage(
         title={`Artistas — ${rotulo}`}
         description={`${artistas.length.toLocaleString("pt-BR")} ${
           artistas.length === 1 ? "artista" : "artistas"
-        } com discos de vinil disponíveis na Amazon Brasil, com histórico de preços de 12 meses.`}
+        } com discos de vinil disponíveis, com histórico de preços de 12 meses.`}
         aside={<ArtistasFilter total={artistas.length} />}
       />
 

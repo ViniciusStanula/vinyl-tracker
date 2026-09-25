@@ -24,9 +24,15 @@ Two things that look like optimisations and are not:
     /api/revalidate slugifies them with the real function. Disco is different
     because Disco.slug is stored, not derived, so the tag is safe to build here.
 
-    Aggregate surfaces (home, /disco, /ofertas, search, hub indexes) stay on
-    the broad "prices" tag, which is still purged once per run. That is a
-    handful of routes — the cost was never there.
+    Style tags and country codes follow the same rule: `estilo-<slug>` needs
+    slugifyStyle() and `pais-<slug>` needs the ISO2->slug lookup table, both
+    TypeScript-only, so this module sends raw style-tag strings and raw ISO2
+    codes and /api/revalidate maps them.
+
+    Aggregate surfaces (home, /disco, /ofertas, search, hub indexes, and the
+    per-decade record listing, which shares queryDiscosWithCache with those
+    other surfaces) stay on the broad "prices" tag, which is still purged once
+    per run.
 
 Mirrors lib/cacheTags.ts on the frontend.
 """
@@ -118,6 +124,83 @@ def observed_artist_names(conn, since_iso: str) -> list[str]:
         return [row[0] for row in cur.fetchall()]
 
 
+def observed_style_tags(conn, since_iso: str) -> list[str]:
+    """Raw style-tag strings (lastfm_tags + discogs_styles) for records
+    observed at or after `since_iso` — one entry per tag, not per record.
+
+    Raw strings, not slugs — see the module docstring. /estilo/[slug] treats
+    a record as a member of a style if EITHER column names it (lib/db/estilo.ts),
+    so both are sourced here to match. Same two-source (price row / went
+    out of stock) pattern as observed_disco_tags().
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            WITH touched AS (
+                SELECT DISTINCT d.id
+                FROM "HistoricoPreco" h
+                JOIN "Disco" d ON d.id = h."discoId"
+                WHERE h."capturadoEm" >= %s
+
+                UNION
+
+                SELECT DISTINCT d.id
+                FROM "Disco" d
+                WHERE d."updatedAt" >= %s
+                  AND d.disponivel = FALSE
+            )
+            SELECT DISTINCT tag
+            FROM (
+                SELECT unnest(string_to_array(d.lastfm_tags, ', ')) AS tag
+                FROM "Disco" d
+                JOIN touched t ON t.id = d.id
+                WHERE d.lastfm_tags IS NOT NULL AND d.lastfm_tags <> ''
+
+                UNION ALL
+
+                SELECT unnest(string_to_array(d.discogs_styles, ', ')) AS tag
+                FROM "Disco" d
+                JOIN touched t ON t.id = d.id
+                WHERE d.discogs_styles IS NOT NULL AND d.discogs_styles <> ''
+            ) tags
+            WHERE tag <> ''
+            """,
+            (since_iso, since_iso),
+        )
+        return [row[0] for row in cur.fetchall()]
+
+
+def observed_country_codes(conn, since_iso: str) -> list[str]:
+    """Raw ISO2 country codes (ArtistMeta.country) for artists of records
+    observed at or after `since_iso`.
+
+    /pais/[slug] membership is a JOIN on ArtistMeta.country, not a Disco
+    column (lib/db/pais.ts) — same two-source pattern as observed_disco_tags().
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT DISTINCT am.country
+            FROM "HistoricoPreco" h
+            JOIN "Disco" d ON d.id = h."discoId"
+            JOIN "ArtistMeta" am ON am.artista = d.artista
+            WHERE h."capturadoEm" >= %s
+              AND am.country IS NOT NULL AND am.country <> ''
+
+            UNION
+
+            SELECT DISTINCT am.country
+            FROM "Disco" d
+            JOIN "ArtistMeta" am ON am.artista = d.artista
+            WHERE d."updatedAt" >= %s
+              AND d.disponivel = FALSE
+              AND am.country IS NOT NULL AND am.country <> ''
+            """,
+            (since_iso, since_iso),
+        )
+        return [row[0] for row in cur.fetchall()]
+
+
 def tags_and_artists_for_ids(conn, disco_ids) -> tuple[list[str], list[str]]:
     """Same purge inputs, for the backfill scripts that work by Disco id.
 
@@ -152,7 +235,15 @@ def chunked(items: list[str], size: int = 200):
         yield items[i : i + size]
 
 
-def post_purge(url: str, secret: str, tags=(), artist_names=(), timeout: int = 20) -> int:
+def post_purge(
+    url: str,
+    secret: str,
+    tags=(),
+    artist_names=(),
+    style_tags=(),
+    country_codes=(),
+    timeout: int = 20,
+) -> int:
     """POST entity purges in batches. Returns how many entities were accepted.
 
     Best-effort by design: every caller still has the 4h ISR TTL underneath, so
@@ -162,7 +253,12 @@ def post_purge(url: str, secret: str, tags=(), artist_names=(), timeout: int = 2
     import requests as _requests
 
     sent = 0
-    for key, items in (("tags", list(tags)), ("artistNames", list(artist_names))):
+    for key, items in (
+        ("tags", list(tags)),
+        ("artistNames", list(artist_names)),
+        ("styleTags", list(style_tags)),
+        ("countryCodes", list(country_codes)),
+    ):
         for batch in chunked(items):
             try:
                 resp = _requests.post(

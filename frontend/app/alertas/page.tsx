@@ -9,7 +9,7 @@ import { SITE_URL } from "@/lib/siteUrl";
 
 const TITLE = "Alerta de Preço de Vinil | Garimpa Vinil";
 const DESCRIPTION =
-  "Receba um e-mail quando o preço de um disco de vinil cair na Amazon. " +
+  "Receba um e-mail quando o preço de um disco de vinil cair. " +
   "Escolha o disco, defina seu preço limite e a gente avisa. Grátis, sem criar conta.";
 
 export const metadata: Metadata = {
@@ -74,7 +74,7 @@ const FAQ = [
   },
   {
     q: "De onde vêm os preços?",
-    a: "Do nosso rastreador, que acompanha as páginas dos discos na Amazon Brasil e registra cada mudança de preço. É a mesma base que alimenta o gráfico de 12 meses de cada disco no site.",
+    a: "Do nosso rastreador, que acompanha as páginas dos discos nas lojas parceiras (Amazon Brasil, UMusic Store e outras) e registra cada mudança de preço. É a mesma base que alimenta o gráfico de 12 meses de cada disco no site.",
   },
 ];
 
@@ -165,7 +165,7 @@ export default async function AlertasPage() {
             Por que vale a pena esperar o preço cair
           </h2>
           <p className="text-dust text-sm leading-relaxed">
-            Preço de vinil na Amazon oscila bastante: o mesmo disco pode variar dezenas de reais ao
+            Preço de vinil oscila bastante: o mesmo disco pode variar dezenas de reais ao
             longo de um mês, sem aviso e sem virar promoção anunciada. Como o Garimpa Vinil registra
             o preço{count > 0 ? ` de mais de ${count.toLocaleString("pt-BR")} discos` : " dos discos"}{" "}
             ao longo do tempo, dá para ver qual é o valor normal de cada título e qual foi o menor

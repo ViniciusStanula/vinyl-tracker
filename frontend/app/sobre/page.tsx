@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { SITE_URL } from "@/lib/siteUrl";
 import { toJsonLd } from "@/lib/jsonld";
+import { getDiscoCount } from "@/lib/db/home";
 
 const personJsonLd = toJsonLd({
   "@context": "https://schema.org",
@@ -31,7 +32,7 @@ const faqJsonLd = toJsonLd({
       name: "O que é o Garimpa Vinil?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "O Garimpa Vinil é um catálogo de discos de vinil disponíveis na Amazon Brasil, com histórico de preços de até 12 meses por disco. O objetivo é ajudar colecionadores e compradores a identificar o melhor momento para comprar, comparando o preço atual com a média e o mínimo histórico registrado.",
+        text: "O Garimpa Vinil é um catálogo de discos de vinil disponíveis em lojas online (Amazon Brasil, UMusic Store e outras), com histórico de preços de até 12 meses por disco. O objetivo é ajudar colecionadores e compradores a identificar o melhor momento para comprar, comparando o preço atual com a média e o mínimo histórico registrado.",
       },
     },
     {
@@ -39,7 +40,7 @@ const faqJsonLd = toJsonLd({
       name: "Como o Garimpa Vinil obtém os preços?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Um crawler automatizado consulta a Amazon Brasil a cada 3 horas e registra o preço de cada disco em banco de dados próprio. Os dados são exclusivamente da Amazon Brasil. Ao clicar em 'Ver na Amazon', você é direcionado à página oficial do produto, onde o preço em tempo real é sempre o mais preciso.",
+        text: "Um crawler automatizado consulta as lojas parceiras a cada 3 horas e registra o preço de cada disco em banco de dados próprio. Ao clicar no botão de compra, você é direcionado à página oficial do produto na loja de destino, onde o preço em tempo real é sempre o mais preciso.",
       },
     },
     {
@@ -55,7 +56,7 @@ const faqJsonLd = toJsonLd({
       name: "O Garimpa Vinil vende discos?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Não. O Garimpa Vinil é um agregador de preços e não vende discos diretamente. Todos os links levam à Amazon Brasil, onde a compra é finalizada. O site participa do programa de Associados Amazon, recebendo comissão sobre compras qualificadas sem custo adicional para o comprador.",
+        text: "Não. O Garimpa Vinil é um agregador de preços e não vende discos diretamente. Todos os links levam à loja de destino, onde a compra é finalizada. O site participa do programa de Associados Amazon, recebendo comissão sobre compras qualificadas na Amazon sem custo adicional para o comprador; links para outras lojas não geram comissão.",
       },
     },
   ],
@@ -64,12 +65,12 @@ const faqJsonLd = toJsonLd({
 export const metadata = {
   title: "Sobre | Garimpa Vinil",
   description:
-    "Conheça o Garimpa Vinil: quem fez, como funciona o rastreamento de preços de vinil na Amazon Brasil e como usar o histórico para comprar na hora certa.",
+    "Conheça o Garimpa Vinil: quem fez, como funciona o rastreamento de preços de vinil em lojas online e como usar o histórico para comprar na hora certa.",
   alternates: { canonical: "/sobre" },
   openGraph: {
     title: "Sobre | Garimpa Vinil",
     description:
-      "Conheça o Garimpa Vinil: quem fez, como funciona o rastreamento de preços de vinil na Amazon Brasil e como usar o histórico para comprar na hora certa.",
+      "Conheça o Garimpa Vinil: quem fez, como funciona o rastreamento de preços de vinil em lojas online e como usar o histórico para comprar na hora certa.",
     url: "/sobre",
     type: "website",
     images: ["/og-default.png"],
@@ -78,11 +79,13 @@ export const metadata = {
     card: "summary",
     title: "Sobre | Garimpa Vinil",
     description:
-      "Conheça o Garimpa Vinil: quem fez, como funciona o rastreamento de preços de vinil na Amazon Brasil e como usar o histórico para comprar na hora certa.",
+      "Conheça o Garimpa Vinil: quem fez, como funciona o rastreamento de preços de vinil em lojas online e como usar o histórico para comprar na hora certa.",
   },
 };
 
-export default function SobrePage() {
+export default async function SobrePage() {
+  const discoCount = await getDiscoCount();
+  const discoCountFmt = discoCount.toLocaleString("pt-BR");
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       {/* eslint-disable-next-line react/no-danger */}
@@ -106,7 +109,7 @@ export default function SobrePage() {
           <span className="text-gold">Garimpa Vinil</span>
         </h1>
         <p className="mt-3 text-parchment text-sm max-w-lg leading-relaxed">
-          Um rastreador de preços de discos de vinil na Amazon Brasil. Mais de 33.000 títulos
+          Um rastreador de preços de discos de vinil em lojas online. Mais de {discoCountFmt} títulos
           monitorados para você comprar no momento certo.
         </p>
       </header>
@@ -123,8 +126,8 @@ export default function SobrePage() {
           e como ela não existia para o mercado brasileiro, construí.
         </p>
         <p className="text-parchment text-sm leading-relaxed">
-          O site existe desde 2026 e cresce junto com o catálogo de vinil disponível na Amazon
-          Brasil. Você pode me encontrar no{" "}
+          O site existe desde 2026 e cresce junto com o catálogo de vinil disponível nas lojas
+          parceiras. Você pode me encontrar no{" "}
           <a
             href="https://linkedin.com/in/vinicius-stanula"
             target="_blank"
@@ -143,7 +146,7 @@ export default function SobrePage() {
           Como funciona o rastreamento
         </h2>
         <p className="text-parchment text-sm leading-relaxed mb-3">
-          Um crawler automatizado consulta a Amazon Brasil a cada 3 horas e registra o preço
+          Um crawler automatizado consulta as lojas parceiras a cada 3 horas e registra o preço
           de cada disco em banco de dados próprio. O histórico começa na data em que cada disco
           foi adicionado ao catálogo — alguns têm meses de dados, outros têm menos se foram
           incluídos recentemente.
@@ -154,7 +157,7 @@ export default function SobrePage() {
         <ul className="text-parchment text-sm leading-relaxed space-y-2 mb-3 list-none">
           <li className="flex gap-2">
             <span className="text-gold font-bold shrink-0">Atual</span>
-            <span>— preço registrado na última consulta à Amazon.</span>
+            <span>— preço registrado na última consulta à loja.</span>
           </li>
           <li className="flex gap-2">
             <span className="text-gold font-bold shrink-0">Mínimo</span>
@@ -180,14 +183,14 @@ export default function SobrePage() {
           O que o site não faz
         </h2>
         <p className="text-parchment text-sm leading-relaxed mb-3">
-          O Garimpa Vinil não vende discos e não tem estoque. Todos os links levam à Amazon
-          Brasil, onde a compra é finalizada e o preço em tempo real é sempre o mais preciso.
-          O preço exibido aqui pode ter alguns minutos ou horas de defasagem em relação ao
-          valor exato da Amazon no momento da sua visita.
+          O Garimpa Vinil não vende discos e não tem estoque. Todos os links levam à loja de
+          destino (Amazon Brasil, UMusic Store e outras), onde a compra é finalizada e o preço
+          em tempo real é sempre o mais preciso. O preço exibido aqui pode ter alguns minutos
+          ou horas de defasagem em relação ao valor exato na loja no momento da sua visita.
         </p>
         <p className="text-parchment text-sm leading-relaxed">
-          O catálogo cobre apenas discos disponíveis na Amazon Brasil. Sebos, feiras e outras
-          lojas online não são rastreados.
+          O catálogo cobre apenas discos disponíveis nas lojas parceiras rastreadas. Sebos,
+          feiras e outras lojas online fora dessa lista não são rastreados.
         </p>
       </section>
 
@@ -232,9 +235,9 @@ export default function SobrePage() {
               Com que frequência os preços são atualizados?
             </p>
             <p className="text-parchment text-sm leading-relaxed">
-              O crawler roda a cada 3 horas. Promoções relâmpago da Amazon podem aparecer e
-              desaparecer entre uma consulta e outra. Ao clicar em "Ver na Amazon", o preço
-              exibido na Amazon é sempre o mais atual.
+              O crawler roda a cada 3 horas. Promoções relâmpago podem aparecer e
+              desaparecer entre uma consulta e outra. Ao clicar no botão de compra, o preço
+              exibido na loja de destino é sempre o mais atual.
             </p>
           </div>
           <div>
@@ -242,9 +245,10 @@ export default function SobrePage() {
               O site ganha comissão nas compras?
             </p>
             <p className="text-parchment text-sm leading-relaxed">
-              Sim. O Garimpa Vinil participa do Programa de Associados Amazon Brasil. Ao comprar
-              pela Amazon usando nossos links, recebemos uma pequena comissão sem custo adicional
-              para você. Isso financia a infraestrutura do site.
+              Nas compras pela Amazon, sim: o Garimpa Vinil participa do Programa de Associados
+              Amazon Brasil e recebe uma pequena comissão sem custo adicional para você. Isso
+              financia a infraestrutura do site. Links para outras lojas (como UMusic Store)
+              não geram comissão.
             </p>
           </div>
           <div>
@@ -252,10 +256,10 @@ export default function SobrePage() {
               Posso sugerir um disco para ser adicionado?
             </p>
             <p className="text-parchment text-sm leading-relaxed">
-              O catálogo é construído automaticamente a partir das categorias de vinil da Amazon
-              Brasil. Se um disco está disponível na Amazon e ainda não aparece aqui, é provável
-              que o crawler ainda não o tenha indexado. Entre em contato pelo Telegram se quiser
-              reportar ausências específicas.
+              O catálogo é construído automaticamente a partir das categorias de vinil das lojas
+              parceiras. Se um disco está disponível em alguma delas e ainda não aparece aqui, é
+              provável que o crawler ainda não o tenha indexado. Entre em contato pelo Telegram
+              se quiser reportar ausências específicas.
             </p>
           </div>
         </div>

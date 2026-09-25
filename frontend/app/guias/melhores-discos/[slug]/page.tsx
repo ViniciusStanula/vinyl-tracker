@@ -51,7 +51,7 @@ export async function generateMetadata({
   if (!artist) return {};
 
   const title = `Os Melhores Discos ${artist.article} ${artist.name} | Garimpa Vinil`;
-  const description = `Ranking dos melhores álbuns ${artist.article} ${artist.name} em vinil, com nota do MusicBrainz, popularidade no Last.fm e procura entre colecionadores do Discogs, vídeo de cada disco e preço monitorado na Amazon Brasil.`;
+  const description = `Ranking dos melhores álbuns ${artist.article} ${artist.name} em vinil, com nota do MusicBrainz, popularidade no Last.fm e procura entre colecionadores do Discogs, vídeo de cada disco e preço monitorado.`;
   const albums = await getBestAlbums(slug);
   const ogImage = albums[0]?.imgUrl ?? null;
 

@@ -5,6 +5,7 @@ import { unstable_cache } from "next/cache";
 import { slugifyStyle } from "@/lib/utils/styleUtils";
 import { slugifyArtist } from "@/lib/utils/slugify";
 import { COUNTRY_TAG_TO_PAIS_SLUG } from "@/lib/paises";
+import { estiloTag } from "@/lib/cacheTags";
 
 // Same accent-normalization constants as the artist page SQL slug matching
 const ACCENT_FROM = "àáâãäåçèéêëìíîïñòóôõöùúûüýÿāćčėńōşšūžḥẓọ";
@@ -361,18 +362,23 @@ export type SerializedEstiloData = {
 
 export type RelatedEstilo = { tag: string; slug: string };
 
-const _getEstiloPageData = unstable_cache(
-  async (
-    slug: string,
-    page: number,
-    sort: string,
-    precoMax: number | null,
-    // Page render passes a large pageSize to fetch the style's top records in
-    // one shot so sort/filter/pagination can run client-side (keeps the route
-    // ISR-cacheable — no server searchParams). Defaults to ESTILO_PAGE_SIZE for
-    // any legacy paginated caller.
-    pageSize: number = ESTILO_PAGE_SIZE,
-  ): Promise<SerializedEstiloData | null> => {
+// Tagged per style (estiloTag(slug)) rather than the broad "prices" tag, same
+// reasoning as disco.ts/artista.ts: a crawl only touches a few thousand of the
+// catalog's records, so a blanket purge marked every style page stale. The
+// unstable_cache wrapper is built fresh per slug (factory function) so its
+// tags option can depend on the slug — see lib/cacheTags.ts.
+const _getEstiloPageDataForSlug = (slug: string) =>
+  unstable_cache(
+    async (
+      page: number,
+      sort: string,
+      precoMax: number | null,
+      // Page render passes a large pageSize to fetch the style's top records in
+      // one shot so sort/filter/pagination can run client-side (keeps the route
+      // ISR-cacheable — no server searchParams). Defaults to ESTILO_PAGE_SIZE for
+      // any legacy paginated caller.
+      pageSize: number = ESTILO_PAGE_SIZE,
+    ): Promise<SerializedEstiloData | null> => {
     // A record belongs to a style when EITHER source says so — see the OR on
     // discogs_styles in the queries below.
     //
@@ -574,15 +580,24 @@ const _getEstiloPageData = unstable_cache(
       }),
     };
   },
-  ["estilo-page"],
-  { tags: ["prices"], revalidate: 14400 }
+    ["estilo-page", slug],
+    { tags: [estiloTag(slug)], revalidate: 14400 },
+  );
+
+export const getEstiloPageData = cache(
+  (
+    slug: string,
+    page: number,
+    sort: string,
+    precoMax: number | null,
+    pageSize?: number,
+  ) => _getEstiloPageDataForSlug(slug)(page, sort, precoMax, pageSize),
 );
 
-export const getEstiloPageData = cache(_getEstiloPageData);
-
-const _getRelatedEstilos = unstable_cache(
-  async (canonical: string): Promise<RelatedEstilo[]> => {
-    const rows = await prisma.$queryRaw<{ tag: string }[]>`
+const _getRelatedEstilosForCanonical = (canonical: string) =>
+  unstable_cache(
+    async (): Promise<RelatedEstilo[]> => {
+      const rows = await prisma.$queryRaw<{ tag: string }[]>`
       WITH current_discos AS (
         SELECT id FROM "Disco"
         WHERE disponivel = TRUE
@@ -621,20 +636,23 @@ const _getRelatedEstilos = unstable_cache(
       ORDER BY s.shared / (cs.cnt + a.total - s.shared) DESC
       LIMIT 10
     `;
-    return rows
-      .map((r) => ({ tag: r.tag, slug: slugifyStyle(r.tag) }))
-      .filter((r) => !REDIRECTED_ESTILO_SLUGS.has(r.slug) && !COUNTRY_TAG_TO_PAIS_SLUG[r.slug]);
-  },
-  ["estilo-related"],
-  { tags: ["prices"], revalidate: 14400 }
-);
+      return rows
+        .map((r) => ({ tag: r.tag, slug: slugifyStyle(r.tag) }))
+        .filter((r) => !REDIRECTED_ESTILO_SLUGS.has(r.slug) && !COUNTRY_TAG_TO_PAIS_SLUG[r.slug]);
+    },
+    ["estilo-related", canonical],
+    { tags: [estiloTag(slugifyStyle(canonical))], revalidate: 14400 },
+  );
 
-export const getRelatedEstilos = cache(_getRelatedEstilos);
+export const getRelatedEstilos = cache((canonical: string) =>
+  _getRelatedEstilosForCanonical(canonical)(),
+);
 
 export type TopArtistForEstilo = { artista: string; slug: string; discoCount: number };
 
-const _getTopArtistsForEstilo = unstable_cache(
-  async (canonical: string): Promise<TopArtistForEstilo[]> => {
+const _getTopArtistsForEstiloForCanonical = (canonical: string) =>
+  unstable_cache(
+    async (): Promise<TopArtistForEstilo[]> => {
     const rows = await prisma.$queryRaw<{ artista: string; disco_count: bigint }[]>`
       SELECT artista, COUNT(*) AS disco_count
       FROM "Disco"
@@ -652,12 +670,14 @@ const _getTopArtistsForEstilo = unstable_cache(
       slug: slugifyArtist(r.artista),
       discoCount: Number(r.disco_count),
     }));
-  },
-  ["estilo-top-artists"],
-  { tags: ["prices"], revalidate: 14400 }
-);
+    },
+    ["estilo-top-artists", canonical],
+    { tags: [estiloTag(slugifyStyle(canonical))], revalidate: 14400 },
+  );
 
-export const getTopArtistsForEstilo = cache(_getTopArtistsForEstilo);
+export const getTopArtistsForEstilo = cache((canonical: string) =>
+  _getTopArtistsForEstiloForCanonical(canonical)(),
+);
 
 export type EstiloListItem = { tag: string; slug: string; discoCount: number };
 

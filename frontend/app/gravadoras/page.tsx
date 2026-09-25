@@ -12,7 +12,7 @@ const FEATURED_COUNT = 5;
 export const metadata: Metadata = {
   title: "Discos de Vinil por Gravadora | Garimpa Vinil",
   description:
-    "Discos de vinil pelo selo que os lançou: Blue Note, Music On Vinyl, Columbia e mais, cada um com histórico de preços de 12 meses na Amazon Brasil.",
+    "Discos de vinil pelo selo que os lançou: Blue Note, Music On Vinyl, Columbia e mais, cada um com histórico de preços de 12 meses.",
   alternates: { canonical: "/gravadoras" },
   openGraph: {
     title: "Discos de Vinil por Gravadora | Garimpa Vinil",
@@ -86,8 +86,8 @@ export default async function GravadorasIndexPage() {
         title="Gravadoras"
         description={
           gravadoras.length > 0
-            ? `${gravadoras.length.toLocaleString("pt-BR")} selos com catálogo em vinil monitorado na Amazon Brasil, com histórico de preços de 12 meses.`
-            : "Discos de vinil pelo selo que os lançou na Amazon Brasil."
+            ? `${gravadoras.length.toLocaleString("pt-BR")} selos com catálogo em vinil monitorado, com histórico de preços de 12 meses.`
+            : "Discos de vinil pelo selo que os lançou."
         }
       />
 

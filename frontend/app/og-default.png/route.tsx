@@ -106,7 +106,7 @@ export async function GET() {
               lineHeight: 1.35,
             }}
           >
-            Melhores ofertas em discos de vinil na Amazon Brasil
+            Melhores ofertas em discos de vinil
           </div>
         </div>
       </div>

@@ -31,12 +31,12 @@ function isCompilationArtist(artista: string): boolean {
 export const metadata: Metadata = {
   title: "Artistas de Vinil — Catálogo Completo | Garimpa Vinil",
   description:
-    "Navegue todos os artistas com discos de vinil disponíveis na Amazon Brasil. Clique em qualquer artista para ver o catálogo com histórico de preços.",
+    "Navegue todos os artistas com discos de vinil disponíveis. Clique em qualquer artista para ver o catálogo com histórico de preços.",
   alternates: { canonical: "/artistas" },
   openGraph: {
     title: "Artistas de Vinil — Catálogo Completo | Garimpa Vinil",
     description:
-      "Navegue todos os artistas com discos de vinil disponíveis na Amazon Brasil.",
+      "Navegue todos os artistas com discos de vinil disponíveis.",
     url: "/artistas",
     type: "website",
     images: ["/og-default.png"],
@@ -90,8 +90,8 @@ export default async function ArtistasIndexPage() {
         title="Artistas de Vinil"
         description={
           artistas.length > 0
-            ? `${artistas.length.toLocaleString("pt-BR")} artistas com discos de vinil disponíveis na Amazon Brasil, com histórico de preços de 12 meses.`
-            : "Catálogo de artistas com discos de vinil na Amazon Brasil."
+            ? `${artistas.length.toLocaleString("pt-BR")} artistas com discos de vinil disponíveis, com histórico de preços de 12 meses.`
+            : "Catálogo de artistas com discos de vinil."
         }
       />
 
@@ -173,7 +173,7 @@ export default async function ArtistasIndexPage() {
             <div className="flex flex-col gap-4 text-parchment text-sm leading-relaxed">
               <p>
                 Um artista entra nesta lista quando tem pelo menos um vinil à venda
-                na Amazon Brasil com histórico de preço já acumulado. Discos que
+                com histórico de preço já acumulado. Discos que
                 acabaram de entrar no catálogo ficam de fora até juntarem
                 observações suficientes para o gráfico dizer alguma coisa — sem
                 isso, o preço apareceria sem nada com que compará-lo.

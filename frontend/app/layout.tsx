@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import NavigationProgress from "@/components/NavigationProgress";
 import WebMcpTools from "@/components/WebMcpTools";
 import { toJsonLd } from "@/lib/jsonld";
+import { getDiscoCount } from "@/lib/db/home";
 
 /* Fraunces — optical-size variable serif; editorial, distinctive */
 const fraunces = Fraunces({
@@ -34,7 +35,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 const DEFAULT_TITLE = "Garimpa Vinil — Histórico de Preços de Discos de Vinil";
 const DEFAULT_DESC  =
-  "Acompanhe o preço de discos de vinil na Amazon Brasil. Histórico de 12 meses, alertas de queda e o melhor momento de comprar cada disco.";
+  "Acompanhe o preço de discos de vinil em lojas online. Histórico de 12 meses, alertas de queda e o melhor momento de comprar cada disco.";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -63,7 +64,9 @@ export const metadata: Metadata = {
   },
 };
 
-const organizationJsonLd = toJsonLd({
+async function buildOrganizationJsonLd() {
+  const discoCount = await getDiscoCount();
+  return toJsonLd({
   "@context": "https://schema.org",
   "@type": "Organization",
   "@id": `${SITE_URL}/#organization`,
@@ -73,7 +76,7 @@ const organizationJsonLd = toJsonLd({
     "@type": "ImageObject",
     url: `${SITE_URL}/og-default.png`,
   },
-  description: "Rastreador de preços de discos de vinil na Amazon Brasil. Monitora mais de 33.000 títulos com alertas de promoções e histórico de preços.",
+  description: `Rastreador de preços de discos de vinil em lojas online. Monitora mais de ${discoCount.toLocaleString("pt-BR")} títulos com alertas de promoções e histórico de preços.`,
   foundingDate: "2026",
   founder: {
     "@type": "Person",
@@ -88,7 +91,8 @@ const organizationJsonLd = toJsonLd({
     url: "https://t.me/garimpavinil",
   },
   sameAs: ["https://t.me/garimpavinil", "https://x.com/garimpa_vinil"],
-});
+  });
+}
 
 const webSiteJsonLd = toJsonLd({
   "@context": "https://schema.org",
@@ -106,11 +110,12 @@ const webSiteJsonLd = toJsonLd({
   },
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const organizationJsonLd = await buildOrganizationJsonLd();
   return (
     <html lang="pt-BR" className={`${fraunces.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <head>

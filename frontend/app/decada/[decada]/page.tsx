@@ -30,7 +30,7 @@ export async function generateMetadata({
   const start = parseDecade(decada);
   if (start === null) return {};
   const title = `Discos de Vinil dos ${label(start)} — Ofertas | Garimpa Vinil`;
-  const description = `Discos de vinil lançados nos ${label(start)} (${start}–${start + 9}) na Amazon Brasil, com preço atual e histórico de 12 meses. Ordene pelo maior desconto.`;
+  const description = `Discos de vinil lançados nos ${label(start)} (${start}–${start + 9}), com preço atual e histórico de 12 meses. Ordene pelo maior desconto.`;
   return {
     title,
     description,

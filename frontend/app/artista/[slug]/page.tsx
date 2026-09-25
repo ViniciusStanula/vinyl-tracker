@@ -70,11 +70,11 @@ export async function generateMetadata({
         `${artista} em Vinil`,
       ]);
   const description = isUnknownArtist
-    ? truncateDesc("Discos de vinil de vários artistas na Amazon, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.")
+    ? truncateDesc("Discos de vinil de vários artistas, cada um com histórico de preço de 12 meses. Compare o preço de hoje com a média antes de fechar.")
     : truncateDesc(
         total === 1
-          ? `Vinil de ${artista} na Amazon Brasil com histórico de preço de 12 meses. Veja se está com desconto hoje antes de comprar.`
-          : `${total.toLocaleString("pt-BR")} vinis de ${artista} na Amazon Brasil, cada um com histórico de preço de 12 meses. Veja qual está com desconto hoje antes de comprar.`
+          ? `Vinil de ${artista} com histórico de preço de 12 meses. Veja se está com desconto hoje antes de comprar.`
+          : `${total.toLocaleString("pt-BR")} vinis de ${artista}, cada um com histórico de preço de 12 meses. Veja qual está com desconto hoje antes de comprar.`
       );
   const firstImage = items.find((d) => d.imgUrl)?.imgUrl ?? unavailableItems.find((d) => d.imgUrl)?.imgUrl ?? null;
   const canonicalUrl = `${SITE_URL}/artista/${slug}`;
@@ -227,8 +227,8 @@ export default async function ArtistaPage({
       ) : !isUnknownArtist && total > 0 ? (
         <p className="mb-5 text-dust text-sm">
           {total === 1
-            ? `1 disco de ${artista} disponível em vinil na Amazon Brasil com histórico de preços.`
-            : `${total} discos de ${artista} disponíveis em vinil na Amazon Brasil, cada um com histórico de preços de 12 meses.`}
+            ? `1 disco de ${artista} disponível em vinil com histórico de preços.`
+            : `${total} discos de ${artista} disponíveis em vinil, cada um com histórico de preços de 12 meses.`}
         </p>
       ) : null}
 

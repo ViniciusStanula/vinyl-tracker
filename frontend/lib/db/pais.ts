@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { PAIS_PT, ISO2_TO_SLUG } from "@/lib/paises";
+import { paisTag } from "@/lib/cacheTags";
 
 const PAIS_RECORDS_CAP = 240;
 
@@ -50,8 +51,14 @@ function paisWhere(iso2: string) {
   `;
 }
 
-const _getPaisPageData = unstable_cache(
-  async (iso2: string): Promise<SerializedPaisData | null> => {
+// Tagged per country (paisTag(slug)) rather than the broad "prices" tag, same
+// reasoning as disco.ts/artista.ts: a crawl only touches a few thousand of the
+// catalog's records, so a blanket purge marked every country page stale. The
+// unstable_cache wrapper is built fresh per iso2 (factory function) so its
+// tags option can depend on the country's slug — see lib/cacheTags.ts.
+const _getPaisPageDataForIso2 = (iso2: string) =>
+  unstable_cache(
+    async (): Promise<SerializedPaisData | null> => {
     if (!PAIS_PT[iso2]) return null;
 
     const where = paisWhere(iso2);
@@ -161,12 +168,14 @@ const _getPaisPageData = unstable_cache(
         };
       }),
     };
-  },
-  ["pais-page"],
-  { tags: ["prices"], revalidate: 14400 },
-);
+    },
+    ["pais-page", iso2],
+    { tags: [paisTag(ISO2_TO_SLUG[iso2] ?? iso2)], revalidate: 14400 },
+  );
 
-export const getPaisPageData = cache(_getPaisPageData);
+export const getPaisPageData = cache((iso2: string) =>
+  _getPaisPageDataForIso2(iso2)(),
+);
 
 export type PaisListItem = { iso2: string; nome: string; slug: string; discoCount: number };
 

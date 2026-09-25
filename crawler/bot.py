@@ -187,16 +187,31 @@ def _brl(value: float) -> str:
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+# pt-BR preposition + store name, e.g. "na Amazon" / "na UMusic Store".
+# Mirrors frontend/lib/marketplace.ts's PREP — keep in sync.
+_LOJA_PREP = {
+    "amazon": "na Amazon",
+    "mercadolivre": "no Mercado Livre",
+    "umusicstore": "na UMusic Store",
+}
+
+
+def _loja_com_prep(marketplace: str | None) -> str:
+    return _LOJA_PREP.get(marketplace or "amazon", _LOJA_PREP["amazon"])
+
+
 def build_soldout_caption(titulo: str, artista: str,
-                          preco_brl: float, affiliate_url: str) -> str:
+                          preco_brl: float, affiliate_url: str,
+                          marketplace: str | None = None) -> str:
     album  = _esc_html(_clean_titulo(titulo))
     artist = _esc_html(artista)
     url = _esc_url(affiliate_url)
+    loja = _loja_com_prep(marketplace)
     return (
         f"❌ <b>INDISPONÍVEL</b>\n"
         f"{artist} — {album}\n"
         f"\n<s>Último preço: R$ {_brl(preco_brl)}</s>\n"
-        f"\n🛒 <a href='{url}'>Ver na Amazon</a>"
+        f"\n🛒 <a href='{url}'>Ver {loja}</a>"
     )
 
 
@@ -218,7 +233,7 @@ def _hashtags(tags: str | None) -> str:
 def build_caption(titulo: str, artista: str, estilo: str | None,
                   preco_brl: float, avg_30d: float | None,
                   low_all_time: float | None, affiliate_url: str,
-                  slug: str | None = None) -> str:
+                  slug: str | None = None, marketplace: str | None = None) -> str:
     album = _esc_html(_clean_titulo(titulo))
     artist = _esc_html(artista)
 
@@ -246,16 +261,19 @@ def build_caption(titulo: str, artista: str, estilo: str | None,
 
     tags = _hashtags(estilo)
     tags_line = f"\n{tags}\n" if tags else ""
+    loja = _loja_com_prep(marketplace)
+    # umusicstore has no affiliate program — see umusicstore_crawler.py.
+    affiliate_line = "\n<i>Link de afiliado</i>" if (marketplace or "amazon") == "amazon" else ""
 
     return (
         f"🔥 <b>OFERTA</b>\n"
         f"{artist} — {album}\n"
         f"{atl_line}"
         f"\n{price_block}"
-        f"\n🛒 <a href='{url}'>Comprar na Amazon</a> 👉\n"
+        f"\n🛒 <a href='{url}'>Comprar {loja}</a> 👉\n"
         f"{history_line}"
         f"{tags_line}"
-        f"\n<i>Link de afiliado</i>"
+        f"{affiliate_line}"
     )
 
 
@@ -292,6 +310,7 @@ def run_soldout_pass(conn) -> None:
                 bp.artista,
                 bp.preco_brl,
                 bp.affiliate_url,
+                bp.marketplace,
                 bs.telegram_message_id,
                 bs.id AS sent_row_id
             FROM bot_pending bp
@@ -313,6 +332,7 @@ def run_soldout_pass(conn) -> None:
             row["titulo"], row["artista"],
             float(row["preco_brl"]),
             row["affiliate_url"],
+            row["marketplace"],
         )
         if edit_caption(int(row["telegram_message_id"]), caption):
             with conn.cursor() as cur:
@@ -344,6 +364,7 @@ def run_edit_pass(conn) -> None:
                 bp.avg_30d,
                 bp.low_all_time,
                 bp.slug,
+                bp.marketplace,
                 ls.sent_row_id,
                 ls.telegram_message_id,
                 ls.ref_price
@@ -374,6 +395,7 @@ def run_edit_pass(conn) -> None:
             float(row["low_all_time"]) if row["low_all_time"] else None,
             row["affiliate_url"],
             row["slug"],
+            row["marketplace"],
         )
         if edit_caption(int(row["telegram_message_id"]), caption):
             now = datetime.now(timezone.utc)
@@ -439,6 +461,7 @@ def _send_one(conn, deal: dict) -> bool:
         float(deal["low_all_time"]) if deal["low_all_time"] else None,
         deal["affiliate_url"],
         deal.get("slug"),
+        deal.get("marketplace"),
     )
 
     img_url    = deal.get("img_url") or ""

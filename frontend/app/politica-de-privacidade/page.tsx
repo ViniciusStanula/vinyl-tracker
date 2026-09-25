@@ -30,8 +30,8 @@ export default function PoliticaDePrivacidadePage() {
         <section className="bg-sleeve border border-groove rounded-xl p-6">
           <h2 className="font-display text-lg font-bold text-cream mb-3">Quem somos</h2>
           <p>
-            O <span className="text-cream font-medium">Garimpa Vinil</span> é um rastreador de preços de discos de vinil na Amazon Brasil,
-            operado de forma independente. Não somos afiliados à Amazon além do programa de associados (Amazon Associates).
+            O <span className="text-cream font-medium">Garimpa Vinil</span> é um rastreador de preços de discos de vinil em lojas online (Amazon Brasil, UMusic Store e outras),
+            operado de forma independente. Não somos afiliados a nenhuma dessas lojas além do programa de associados da Amazon (Amazon Associates).
           </p>
         </section>
 
@@ -106,14 +106,14 @@ export default function PoliticaDePrivacidadePage() {
             O site pode utilizar cookies técnicos essenciais para o funcionamento correto das páginas e cookies de analytics para medir o uso do site de forma anônima.
           </p>
           <p>
-            Links para a Amazon podem conter cookies de rastreamento de afiliados. Ao clicar nesses links, você estará sujeito à Política de Privacidade da Amazon.
+            Links para a Amazon podem conter cookies de rastreamento de afiliados. Ao clicar em links de produtos, você estará sujeito à Política de Privacidade da loja de destino.
           </p>
         </section>
 
         <section className="bg-sleeve border border-groove rounded-xl p-6">
           <h2 className="font-display text-lg font-bold text-cream mb-3">Programa de Associados Amazon</h2>
           <p>
-            O Garimpa Vinil participa do Programa de Associados da Amazon Brasil. Ao clicar em links de produtos e realizar uma compra qualificada, recebemos uma pequena comissão sem custo adicional para você. Essa comissão é como o site se sustenta.
+            O Garimpa Vinil participa do Programa de Associados da Amazon Brasil. Ao clicar em links de produtos da Amazon e realizar uma compra qualificada, recebemos uma pequena comissão sem custo adicional para você — essa comissão é como o site se sustenta. Links para outras lojas (como UMusic Store) não geram comissão para nós.
           </p>
         </section>
 

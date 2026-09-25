@@ -71,6 +71,9 @@ CREATE TABLE IF NOT EXISTS bot_state (
 _SCHEMA_EXTRAS = """
 ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS is_top_artist BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS slug TEXT;
+-- Drives the caption's store name ("Comprar na Amazon" / "na UMusic Store");
+-- see marketplace.py. Default 'amazon' matches Disco.marketplace's own default.
+ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS marketplace TEXT NOT NULL DEFAULT 'amazon';
 -- Set on every row this run refreshed. Rows not refreshed (e.g. old 'sent'
 -- deals no longer active) keep a stale preco_brl; x_post.py filters on this.
 ALTER TABLE bot_pending ADD COLUMN IF NOT EXISTS synced_at TIMESTAMPTZ;
@@ -247,6 +250,7 @@ def fetch_active_deals(conn) -> dict:
                 -- Disco.estilo is empty catalog-wide; genres live in lastfm_tags.
                 d.lastfm_tags AS estilo,
                 d.slug,
+                d.marketplace,
                 d.popularity_score,
                 d."imgUrl" AS img_url,
                 d.url      AS affiliate_url,
@@ -304,13 +308,14 @@ def sync_pending(conn, active: dict, top_slugs: set) -> None:
                 d.get("img_url"), d["affiliate_url"],
                 price, avg, d.get("low_all_time"),
                 int(d["deal_score"]), priority, is_top_artist, now, d.get("slug"),
+                d.get("marketplace") or "amazon",
             ))
 
         psycopg2.extras.execute_values(cur, """
             INSERT INTO bot_pending
                 (asin, titulo, artista, estilo, img_url, affiliate_url,
                  preco_brl, avg_30d, low_all_time, deal_score, priority_score,
-                 is_top_artist, first_seen_at, slug, status, synced_at)
+                 is_top_artist, first_seen_at, slug, marketplace, status, synced_at)
             VALUES %s
             ON CONFLICT (asin) DO UPDATE SET
                 titulo         = EXCLUDED.titulo,
@@ -325,12 +330,13 @@ def sync_pending(conn, active: dict, top_slugs: set) -> None:
                 priority_score = EXCLUDED.priority_score,
                 is_top_artist  = EXCLUDED.is_top_artist,
                 slug           = EXCLUDED.slug,
+                marketplace    = EXCLUDED.marketplace,
                 synced_at      = NOW(),
                 status = CASE
                     WHEN bot_pending.status = 'discarded' THEN 'pending'
                     ELSE bot_pending.status
                 END
-        """, rows, template="(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',NOW())", page_size=500)
+        """, rows, template="(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',NOW())", page_size=500)
 
         # 2. Immediately discard pending deals no longer active in Supabase.
         active_asins = list(active.keys())

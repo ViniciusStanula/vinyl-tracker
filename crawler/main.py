@@ -3180,19 +3180,26 @@ def _notify_revalidate(last_write_at: float | None = None, fatal: bool = True,
 def _notify_revalidate_tags(since_iso: str) -> int:
     """Purge the per-entity cache tags for everything observed since `since_iso`.
 
-    Replaces the blast radius of the broad "prices" purge for record AND artist
-    pages: a run observes ~4,200 of ~31,000 records belonging to a few hundred
-    artists, so the untouched ~27,000 records and ~10,000+ artist pages no
-    longer get marked stale and rebuilt. Only the aggregate surfaces still rely
+    Replaces the blast radius of the broad "prices" purge for record, artist,
+    style and country pages: a run observes ~4,200 of ~31,000 records, so the
+    untouched pages no longer get marked stale and rebuilt. Only the aggregate
+    surfaces (home, /disco, /ofertas, search, hub indexes, /decada) still rely
     on the broad purge that follows this call.
 
-    Artist names are posted raw — /api/revalidate runs slugifyArtist() on them,
-    so the slug rules stay in one language. See revalidate_tags.py.
+    Artist names, style tags and country codes are posted raw — /api/revalidate
+    runs the real TypeScript slug/lookup rules on them, so those rules stay in
+    one language. See revalidate_tags.py.
 
     Best-effort by design. A failure here leaves those pages on their 4h TTL,
     so the worst case is a delay, never an indefinitely stale page.
     """
-    from revalidate_tags import observed_artist_names, observed_disco_tags, post_purge
+    from revalidate_tags import (
+        observed_artist_names,
+        observed_country_codes,
+        observed_disco_tags,
+        observed_style_tags,
+        post_purge,
+    )
 
     url = os.environ.get("REVALIDATE_URL")
     secret = os.environ.get("REVALIDATE_SECRET")
@@ -3206,20 +3213,28 @@ def _notify_revalidate_tags(since_iso: str) -> int:
         try:
             tags = observed_disco_tags(_conn, since_iso)
             artists = observed_artist_names(_conn, since_iso)
+            styles = observed_style_tags(_conn, since_iso)
+            countries = observed_country_codes(_conn, since_iso)
         finally:
             _conn.close()
     except Exception as exc:
         log.warning("Per-entity tag lookup failed (non-fatal): %s", exc)
         return 0
 
-    if not tags and not artists:
+    if not tags and not artists and not styles and not countries:
         log.info("Revalidation [per-entity]: no records observed this run")
         return 0
 
-    sent = post_purge(url, secret, tags=tags, artist_names=artists)
+    sent = post_purge(
+        url, secret,
+        tags=tags, artist_names=artists,
+        style_tags=styles, country_codes=countries,
+    )
+    total = len(tags) + len(artists) + len(styles) + len(countries)
     log.info(
-        "Revalidation [per-entity]: purged %d/%d entities (%d records, %d artists)",
-        sent, len(tags) + len(artists), len(tags), len(artists),
+        "Revalidation [per-entity]: purged %d/%d entities "
+        "(%d records, %d artists, %d styles, %d countries)",
+        sent, total, len(tags), len(artists), len(styles), len(countries),
     )
     return sent
 

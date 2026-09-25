@@ -12,7 +12,7 @@ const FEATURED_COUNT = 5;
 export const metadata: Metadata = {
   title: "Discos de Vinil Colorido por Cor | Garimpa Vinil",
   description:
-    "Explore discos de vinil pela cor do disco. Vermelho, azul, translúcido, splatter e mais — cada cor com histórico de preços de 12 meses na Amazon Brasil.",
+    "Explore discos de vinil pela cor do disco. Vermelho, azul, translúcido, splatter e mais — cada cor com histórico de preços de 12 meses.",
   alternates: { canonical: "/vinil-colorido" },
   openGraph: {
     title: "Discos de Vinil Colorido por Cor | Garimpa Vinil",
@@ -87,8 +87,8 @@ export default async function VinilColoridoIndexPage() {
         title="Vinil Colorido"
         description={
           cores.length > 0
-            ? `${cores.length.toLocaleString("pt-BR")} cores de vinil monitoradas na Amazon Brasil, com histórico de preços de 12 meses.`
-            : "Discos de vinil agrupados pela cor do disco na Amazon Brasil."
+            ? `${cores.length.toLocaleString("pt-BR")} cores de vinil monitoradas, com histórico de preços de 12 meses.`
+            : "Discos de vinil agrupados pela cor do disco."
         }
       />
 

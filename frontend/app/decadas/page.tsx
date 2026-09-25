@@ -11,7 +11,7 @@ export const revalidate = 14400;
 export const metadata: Metadata = {
   title: "Discos de Vinil por Década | Garimpa Vinil",
   description:
-    "Explore discos de vinil por década de lançamento. Anos 50 a anos 2020 — cada década com histórico de preços de 12 meses na Amazon Brasil.",
+    "Explore discos de vinil por década de lançamento. Anos 50 a anos 2020 — cada década com histórico de preços de 12 meses.",
   alternates: { canonical: "/decadas" },
   openGraph: {
     title: "Discos de Vinil por Década | Garimpa Vinil",
@@ -86,7 +86,7 @@ export default async function DecadasIndexPage() {
         title="Discos por Década"
         description={`Discos de vinil agrupados pela década de lançamento${
           decadas.length > 0 ? `, das mais antigas às mais recentes — ${decadas.length} décadas monitoradas` : ""
-        } na Amazon Brasil.`}
+        }.`}
       />
 
       {/* Only eight decades, so the mosaic is the whole page — no filter or
@@ -124,7 +124,7 @@ export default async function DecadasIndexPage() {
             confiável ficam de fora destas páginas em vez de entrar na década errada.
           </p>
           <p>
-            Cada página de década lista os vinis disponíveis na Amazon Brasil com o
+            Cada página de década lista os vinis disponíveis com o
             preço acompanhado todo dia e o gráfico de 12 meses. Serve para duas
             buscas diferentes: garimpar um período inteiro sem ter um título em
             mente, e comparar quanto custa hoje uma reedição contra o que ela custava

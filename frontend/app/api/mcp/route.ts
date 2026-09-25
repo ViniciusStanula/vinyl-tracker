@@ -34,7 +34,7 @@ const TOOLS = [
   {
     name: "search_vinyl",
     description:
-      "Search vinyl records available on Amazon Brasil by title or artist name. Returns current price in BRL, 30-day average, discount %, deal score, and direct URLs.",
+      "Search vinyl records available across tracked online stores by title or artist name. Returns current price in BRL, 30-day average, discount %, deal score, and direct URLs.",
     inputSchema: {
       type: "object",
       properties: {
@@ -312,7 +312,7 @@ export async function POST(req: NextRequest) {
           capabilities: { tools: {} },
           serverInfo: { name: "garimpa-vinil-mcp", version: "1.0.0" },
           instructions:
-            "Garimpa Vinil tracks vinyl record prices on Amazon Brasil. " +
+            "Garimpa Vinil tracks vinyl record prices across online stores (Amazon Brasil, UMusic Store and others). " +
             "Use search_vinyl to find records by title/artist, get_deals for current promotions, " +
             "get_price_history for a specific album's price trend, and get_artist_albums for all " +
             "releases by an artist. All prices are in BRL (Brazilian Real).",

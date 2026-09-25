@@ -40,7 +40,7 @@ export async function generateMetadata({
   return {
     title,
     description:
-      "Discos de vinil em oferta na Amazon Brasil, separados por Melhor Preço, Ótima Oferta e Boa Oferta sobre a média histórica de preço.",
+      "Discos de vinil em oferta, separados por Melhor Preço, Ótima Oferta e Boa Oferta sobre a média histórica de preço.",
     // Deeper pages are follow-but-noindex, matching how /disco treats page > 1:
     // the offers on them are already linked from their own record pages, and
     // the set churns as deals expire, so indexing them adds nothing.

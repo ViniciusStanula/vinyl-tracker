@@ -12,7 +12,7 @@ const FEATURED_COUNT = 5;
 export const metadata: Metadata = {
   title: "Discos de Vinil por País de Origem | Garimpa Vinil",
   description:
-    "Discos de vinil pelo país de origem do artista: Estados Unidos, Reino Unido, Brasil e mais, cada um com histórico de preços de 12 meses na Amazon.",
+    "Discos de vinil pelo país de origem do artista: Estados Unidos, Reino Unido, Brasil e mais, cada um com histórico de preços de 12 meses.",
   alternates: { canonical: "/paises" },
   openGraph: {
     title: "Discos de Vinil por País de Origem | Garimpa Vinil",
@@ -87,8 +87,8 @@ export default async function PaisesIndexPage() {
         title="Países de Origem"
         description={
           paises.length > 0
-            ? `${paises.length.toLocaleString("pt-BR")} países de origem com discos de vinil monitorados na Amazon Brasil, com histórico de preços de 12 meses.`
-            : "Discos de vinil por país de origem do artista na Amazon Brasil."
+            ? `${paises.length.toLocaleString("pt-BR")} países de origem com discos de vinil monitorados, com histórico de preços de 12 meses.`
+            : "Discos de vinil por país de origem do artista."
         }
       />
 

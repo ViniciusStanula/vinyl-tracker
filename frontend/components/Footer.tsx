@@ -95,7 +95,7 @@ export default function Footer() {
             <div>
               <p className="font-display font-bold text-cream text-base mb-1">Garimpa Vinil</p>
               <p className="text-dust text-xs leading-relaxed">
-                Catálogo de discos de vinil na Amazon Brasil com preços atualizados regularmente.
+                Catálogo de discos de vinil em lojas online com preços atualizados regularmente.
               </p>
             </div>
 
@@ -222,7 +222,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-dust">
           <p>© {new Date().getFullYear()} Garimpa Vinil</p>
           <p className="sm:text-right sm:max-w-md">
-            Como Associado Amazon, ganhamos comissão nas compras qualificadas sem custo adicional para você.{" "}
+            Como Associado Amazon, ganhamos comissão nas compras qualificadas na Amazon, sem custo adicional para você.{" "}
             <Link href="/sobre" className="hover:text-parchment transition-colors underline underline-offset-2">
               Saiba mais
             </Link>

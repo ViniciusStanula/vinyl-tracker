@@ -41,8 +41,8 @@ export async function generateMetadata({
   const title = truncateTitle(`Discos em Vinil ${label} — Ofertas | Garimpa Vinil`);
   const description = truncateDesc(
     total >= 4
-      ? `${total.toLocaleString("pt-BR")} discos prensados em vinil ${label.toLowerCase()} na Amazon Brasil, com histórico de preço de 12 meses e o desconto real sobre a média.`
-      : `Discos em vinil ${label.toLowerCase()} com preço monitorado diariamente na Amazon. Veja o histórico de 12 meses antes de comprar.`
+      ? `${total.toLocaleString("pt-BR")} discos prensados em vinil ${label.toLowerCase()}, com histórico de preço de 12 meses e o desconto real sobre a média.`
+      : `Discos em vinil ${label.toLowerCase()} com preço monitorado diariamente. Veja o histórico de 12 meses antes de comprar.`
   );
   const firstImage = data.discos.find((d) => d.imgUrl)?.imgUrl ?? null;
   const canonicalUrl = `${SITE_URL}/vinil-colorido/${cor}`;

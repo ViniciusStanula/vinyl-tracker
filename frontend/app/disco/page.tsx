@@ -36,7 +36,7 @@ export async function generateMetadata({
     // DB unavailable — fall back to generic description
   }
   const description = count > 0
-    ? `Catálogo com +${count.toLocaleString("pt-BR")} discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.`
+    ? `Catálogo com +${count.toLocaleString("pt-BR")} discos de vinil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.`
     : metadata.description;
   return {
     ...metadata,
@@ -51,14 +51,14 @@ export async function generateMetadata({
 const metadata = {
   title: "Catálogo de Discos de Vinil | Garimpa Vinil",
   description:
-    "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
+    "Catálogo completo de discos de vinil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
   alternates: {
     canonical: "/disco",
   },
   openGraph: {
     title: "Catálogo de Discos de Vinil | Garimpa Vinil",
     description:
-      "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
+      "Catálogo completo de discos de vinil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
     url: "/disco",
     type: "website",
     images: ["/og-default.png"],
@@ -67,7 +67,7 @@ const metadata = {
     card: "summary",
     title: "Catálogo de Discos de Vinil | Garimpa Vinil",
     description:
-      "Catálogo completo de discos de vinil na Amazon Brasil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
+      "Catálogo completo de discos de vinil. Navegue todos os títulos e filtre por preço, artista, estilo e ordenação.",
   },
 };
 
@@ -102,8 +102,8 @@ export default async function DiscosPage({
       </h1>
 
       <p className="text-dust text-sm leading-relaxed mb-4 max-w-2xl">
-        Navegue o catálogo completo de discos de vinil disponíveis na Amazon
-        Brasil, com preços acompanhados regularmente. Use a busca e os filtros
+        Navegue o catálogo completo de discos de vinil disponíveis,
+        com preços acompanhados regularmente. Use a busca e os filtros
         para encontrar artistas, estilos e faixas de preço — ou explore os{" "}
         <Link href="/guias" className="text-parchment hover:text-gold underline underline-offset-2 transition-colors">
           guias de vinil
