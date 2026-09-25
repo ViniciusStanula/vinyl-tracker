@@ -4,7 +4,10 @@ import types
 
 import pytest
 
-sys.modules.setdefault("anthropic", types.ModuleType("anthropic"))
+# translate_wikis imports the SDK at module level; CI does not install it.
+_stub = types.ModuleType("anthropic")
+_stub.Anthropic = object
+sys.modules.setdefault("anthropic", _stub)
 from translate_wikis import _looks_like_meta  # noqa: E402
 
 REFUSALS = [
