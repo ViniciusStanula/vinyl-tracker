@@ -26,6 +26,7 @@ import sys
 import json
 import re
 import time
+import unicodedata
 import argparse
 import logging
 import urllib.parse
@@ -79,8 +80,20 @@ def _mb_get(path: str) -> dict | None:
 
 
 def _tokens(s: str) -> set[str]:
-    """Lowercase alphanumeric token set, for title-overlap validation."""
-    return set(re.sub(r"[^\w\s]", " ", s.lower()).split())
+    """Lowercase, accent-folded alphanumeric token set, for title-overlap validation."""
+    s = "".join(c for c in unicodedata.normalize("NFKD", s.lower())
+                if not unicodedata.combining(c))
+    return set(re.sub(r"[^\w\s]", " ", s).split())
+
+
+# Leftover words that do not make a listing a different album from the
+# artist's self-titled one ("Blind Faith (International Version)").
+_EDITION_TOKENS = {
+    "international", "version", "self", "titled", "album", "original",
+    "remaster", "remastered", "edition", "reissue", "vinyl", "vinil", "lp",
+    "mono", "stereo", "deluxe", "expanded", "anniversary", "picture", "disc",
+    "limited", "signed", "art", "card", "black", "color", "colored", "colour",
+}
 
 
 def title_matches_release(mb_title: str, album_clean: str, artist: str) -> bool:
@@ -100,7 +113,18 @@ def title_matches_release(mb_title: str, album_clean: str, artist: str) -> bool:
         return False
     qtok = _tokens(album_clean)
     atok = _tokens(artist)
-    return (_tokens(mb_title) - atok) <= qtok
+    mtok = _tokens(mb_title)
+    # Discount only a WHOLE artist name baked into the title. Discounting any
+    # artist token let "Big Stones" match "Big Hits" (The Rolling Stones) and
+    # "Perez" match anything by Gigi Perez.
+    if atok and atok <= mtok:
+        mtok -= atok
+        if not mtok:
+            # Self-titled release-group: only a self-titled product may take
+            # it. Otherwise "New Jersey" matched the album "Bon Jovi".
+            return not {t for t in qtok - atok
+                        if not t.isdigit() and t not in _EDITION_TOKENS}
+    return mtok <= qtok
 
 
 # Lucene special chars that break a MusicBrainz query if left unescaped.

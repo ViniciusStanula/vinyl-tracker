@@ -177,7 +177,7 @@ def _fold_pattern(artist: str) -> str:
 
 
 _VINYL_WORDS = re.compile(
-    r"\b(vinyl|vinil|\d*x?lp|gram|\d+\s*g|colored|colou?red|colorid[oa]|"
+    r"\b(vinyl|vinil|\d*x?lps?|gram|\d+\s*g|colored|colou?red|colorid[oa]|"
     r"remaster(?:ed)?|reissue|gatefold|splatter|exclusive|amazon|180|140|150|200|220|"
     r"clear|gold|green|silver|blue|red|black|white|orange|purple|pink|yellow|"
     r"translucent|opaque|marbled?|repress|anniversary|deluxe|edition|explicit|"
@@ -212,7 +212,9 @@ _TRAILING_ANNIVERSARY = re.compile(
 _LEADING_FORMAT = re.compile(
     # "de" is optional -- Amazon also lists as bare "Disco Vinil Lp ...", not
     # just "Disco de Vinil ...".
-    r"^[\s\-]*(?:(?:disco\s+(?:de\s+)?vin(?:il|yl)(?:\s+novo)?|vinyl|vinil|\d*x?lp|cd)\b[\s\-]*)+",
+    # UMusic Store prefixes "Vinil Duplo ..." / "Vinil Triplo ..." / "Box Vinil ...".
+    r"^[\s\-]*(?:(?:disco\s+(?:de\s+)?vin(?:il|yl)(?:\s+novo)?|box(?=\s+vin(?:il|yl)\b)|"
+    r"vin(?:il|yl)(?:\s+(?:duplo|triplo))?|\d*x?lps?|cd)\b[\s\-]*)+",
     re.IGNORECASE,
 )
 
@@ -260,6 +262,8 @@ def clean_album_title(title: str, artist: str) -> str:
     t = re.sub(r"\s*\[[^\]]*\]", "", t)
     # Amazon's bare "(X)" explicit/clean marker, e.g. "AWAKE (X) (2LP)".
     t = re.sub(r"\s*\(x\)", "", t, flags=re.IGNORECASE)
+    # Bare disc-size marker with the inch sign dropped, e.g. UMusic's "Perhaps (7)".
+    t = re.sub(r'\s*\(\s*(?:7|10|12)\s*"?\s*\)', "", t)
     t = re.sub(
         r"\s*\([^)]*\)",
         lambda m: "" if _VINYL_WORDS.search(m.group()) else m.group(),
