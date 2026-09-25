@@ -41,6 +41,10 @@ _META_PREFIXES = (
     "i need clarification", "i don't see", "i don't have", "i do not see", "i see you've",
     "i can see", "i can help", "i cannot", "i can't", "i'd be happy",
     "i'm ready", "i'm unable", "i'm sorry",
+    "aviso:", "pronto!", "ola!", "vejo que", "entendi", "sinto informar",
+    "nao tenho", "texto muito breve", "o texto que voce", "esse e um comentario",
+    "percebi que", "nao ha conteudo", "a resposta que voce", "voce esta certo",
+    "sem o texto",
 )
 _ACCENTS = str.maketrans("áàâãäéèêëíìîïóòôõöúùûüç", "aaaaaeeeeiiiiooooouuuuc")
 
