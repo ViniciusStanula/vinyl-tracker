@@ -57,6 +57,8 @@ const nextConfig: NextConfig = {
       // Mercado Livre product image CDN (marketplace='mercadolivre' records)
       { protocol: "https", hostname: "http2.mlstatic.com" },
       { protocol: "https", hostname: "*.mlstatic.com" },
+      // UMusic Store product image CDN (marketplace='umusicstore' records)
+      { protocol: "https", hostname: "universalmusic.vteximg.com.br" },
     ],
   },
   async rewrites() {
