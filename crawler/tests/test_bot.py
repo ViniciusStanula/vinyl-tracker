@@ -80,3 +80,36 @@ def test_x_text_fits_and_links_to_site():
     long_text = build_text(long_deal)
     assert _x_len(long_text, url) <= 280
     assert "…" in long_text
+
+
+def _roundup_deal(artista, titulo, preco, avg):
+    return dict(artista=artista, titulo=titulo, preco_brl=preco, avg_30d=avg)
+
+
+def test_x_roundup_fits_and_numbers_match_images():
+    from x_post import build_roundup_text, _x_len as x_len
+    deals = [
+        _roundup_deal("Tom Waits", "Nighthawks At The Diner", 246.74, 371.0),
+        _roundup_deal("Orla Gartland", "Woman On The Internet", 111.70, 162.0),
+        _roundup_deal("Aesop Rock", "Float (Vinil Verde)", 150.56, 209.0),
+        _roundup_deal("Yungblud", "Yungblud", 147.31, 199.0),
+    ]
+    text = build_roundup_text("top5", deals)
+    assert "1. Tom Waits — Nighthawks At The Diner: R$ 247 (-33%)" in text
+    assert "4. Yungblud" in text
+    assert text.endswith("https://www.garimpavinil.com.br/ofertas")
+    assert x_len(text) <= 280
+
+    question = build_roundup_text("question", deals)
+    assert "R$" not in question
+    assert "Todos em oferta:" in question
+
+    # Long titles get shortened, then dropped, but the post always fits.
+    long_deals = [dict(d, artista=d["artista"] * 2, titulo="Very Long Title " * 10) for d in deals]
+    assert x_len(build_roundup_text("atl", long_deals)) <= 280
+
+
+def test_x_len_counts_links_and_emoji_like_x():
+    from x_post import _x_len as x_len
+    assert x_len("abc https://example.com/" + "x" * 100) == 4 + 23
+    assert x_len("🔥 a\nb") == 2 + 1 + 1 + 1 + 1

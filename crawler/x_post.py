@@ -12,9 +12,14 @@ inside the same 08:00–22:00 window as the Telegram bot. Picks the highest
 priority_score deal (see bridge.priority_for) not posted to X in X_REPOST_DAYS.
 Tweets cannot be edited, so there is no edit / sold-out pass like bot.py has.
 
+On SPECIAL_DAYS the day's first post is a roundup of current deals instead of a
+single deal: top 5 (Sunday), records at their all-time low (Wednesday), or a
+"which one would you play first?" question meant to draw replies (Friday).
+
 Usage:
     python x_post.py            # post if one is due
     python x_post.py --dry-run  # print the next post's text, no Buffer call
+    python x_post.py --dry-run --kind top5|atl|question  # preview a roundup
 """
 
 import logging
@@ -27,7 +32,7 @@ import psycopg2.extras
 import requests
 
 from bot import (
-    ATL_TOLERANCE, SITE_URL, _brl, _clean_titulo, _hashtags,
+    ATL_TOLERANCE, SAO_PAULO, SITE_URL, _brl, _clean_titulo, _hashtags,
     connect, within_send_window,
 )
 
@@ -42,6 +47,11 @@ X_REPOST_DAYS   = 30
 X_MAX_CHARS     = 280
 X_URL_CHARS     = 23   # X counts every link as 23 chars (t.co)
 SYNC_MAX_AGE_MINUTES = 10  # bridge.py runs a few seconds earlier in the same job
+X_MAX_IMAGES    = 4   # also the roundup size, so list item N is image N
+ROUNDUP_REPEAT_DAYS = 6  # a record appears in at most one roundup per week
+
+# Sao Paulo weekday (Mon=0) -> roundup posted as that day's first post.
+SPECIAL_DAYS    = {6: "top5", 2: "atl", 4: "question"}
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS bot_x_sent (
@@ -52,6 +62,11 @@ CREATE TABLE IF NOT EXISTS bot_x_sent (
     buffer_post_id TEXT
 );
 CREATE INDEX IF NOT EXISTS bot_x_sent_asin_idx ON bot_x_sent (asin, sent_at DESC);
+-- Roundup posts cover several records, so they have no single asin/price.
+ALTER TABLE bot_x_sent ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'deal';
+ALTER TABLE bot_x_sent ALTER COLUMN asin DROP NOT NULL;
+ALTER TABLE bot_x_sent ALTER COLUMN preco_brl DROP NOT NULL;
+ALTER TABLE bot_x_sent ADD COLUMN IF NOT EXISTS roundup_asins TEXT[];
 """
 
 
@@ -87,6 +102,47 @@ def build_text(deal: dict) -> str:
     if overflow > 0:
         album = album[: max(len(album) - overflow - 1, 10)].rstrip() + "…"
     return render(album)
+
+
+def _x_len(text: str) -> int:
+    """Length as X counts it: links are 23 chars, emoji and CJK count double."""
+    n = 0
+    for line in text.split("\n"):
+        for w in line.split(" "):
+            if w.startswith("https://"):
+                n += X_URL_CHARS
+            else:
+                n += sum(2 if ord(ch) > 0x10FF else 1 for ch in w)
+        n += line.count(" ") + 1
+    return n - 1
+
+
+def build_roundup_text(kind: str, deals: list[dict]) -> str:
+    url = f"{SITE_URL}/ofertas"
+    header = {
+        "top5":     "🔥 As melhores ofertas de vinil da semana",
+        "atl":      "🏆 No menor preço histórico esta semana",
+        "question": "Qual desses você colocaria pra tocar primeiro? 👇",
+    }[kind]
+    footer = f"Todos em oferta: {url}" if kind == "question" else f"#vinil\n{url}"
+
+    def line(i: int, d: dict, cap: int) -> str:
+        album = _clean_titulo(d["titulo"])
+        if len(album) > cap:
+            album = album[: max(cap - 1, 0)].rstrip() + "…"
+        name = f"{d['artista']} — {album}" if cap else d["artista"]
+        if kind == "question":
+            return f"{i}. {name}"
+        price, avg = float(d["preco_brl"]), float(d["avg_30d"])
+        return f"{i}. {name}: R$ {round(price)} (-{round((avg - price) / avg * 100)}%)"
+
+    # Shorten album titles until the post fits; artist-only as the last resort.
+    for cap in (40, 30, 22, 15, 0):
+        lines = "\n".join(line(i, d, cap) for i, d in enumerate(deals, 1))
+        text = f"{header}\n\n{lines}\n\n{footer}"
+        if _x_len(text) <= X_MAX_CHARS:
+            break
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +193,42 @@ def pick_deal(conn) -> dict | None:
         """, (SYNC_MAX_AGE_MINUTES, X_REPOST_DAYS))
         row = cur.fetchone()
     return dict(row) if row else None
+
+
+def special_due(conn) -> str | None:
+    """Today's roundup kind, unless it already went out today."""
+    kind = SPECIAL_DAYS.get(datetime.now(SAO_PAULO).weekday())
+    if kind is None:
+        return None
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT 1 FROM bot_x_sent
+            WHERE kind = %s
+              AND (sent_at AT TIME ZONE 'America/Sao_Paulo')::date
+                = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date
+        """, (kind,))
+        return None if cur.fetchone() else kind
+
+
+def pick_roundup(conn, kind: str) -> list[dict]:
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("""
+            SELECT bp.*
+            FROM bot_pending bp
+            WHERE bp.synced_at > NOW() - make_interval(mins => %s)
+              AND bp.img_url IS NOT NULL AND bp.img_url <> ''
+              AND bp.avg_30d > bp.preco_brl
+              AND (NOT %s OR bp.preco_brl <= bp.low_all_time * %s)
+              AND NOT EXISTS (
+                  SELECT 1 FROM bot_x_sent x
+                  WHERE bp.asin = ANY(x.roundup_asins)
+                    AND x.sent_at > NOW() - make_interval(days => %s)
+              )
+            ORDER BY bp.priority_score DESC NULLS LAST
+            LIMIT %s
+        """, (SYNC_MAX_AGE_MINUTES, kind == "atl", ATL_TOLERANCE,
+              ROUNDUP_REPEAT_DAYS, X_MAX_IMAGES))
+        return [dict(r) for r in cur.fetchall()]
 
 
 def _state(conn, key: str) -> str | None:
@@ -194,7 +286,7 @@ def x_channel_id(conn) -> str:
     raise RuntimeError("No X channel connected in Buffer")
 
 
-def create_post(channel_id: str, text: str, img_url: str) -> str:
+def create_post(channel_id: str, text: str, img_urls: list[str]) -> str:
     data = _gql("""
         mutation($input: CreatePostInput!) {
             createPost(input: $input) {
@@ -207,7 +299,7 @@ def create_post(channel_id: str, text: str, img_url: str) -> str:
         "text":           text,
         "schedulingType": "automatic",
         "mode":           "shareNow",
-        "assets":         [{"image": {"url": img_url}}],
+        "assets":         [{"image": {"url": u}} for u in img_urls[:X_MAX_IMAGES]],
     }})
     result = data["createPost"]
     if "post" not in result:
@@ -226,6 +318,7 @@ def main() -> None:
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
     dry_run = "--dry-run" in sys.argv
+    forced_kind = sys.argv[sys.argv.index("--kind") + 1] if "--kind" in sys.argv else None
 
     if not dry_run and not BUFFER_API_KEY:
         log.error("BUFFER_API_KEY is required")
@@ -243,6 +336,29 @@ def main() -> None:
         if not dry_run and not post_is_due(conn):
             return
 
+        kind = forced_kind or special_due(conn)
+        if kind:
+            deals = pick_roundup(conn, kind)
+            # Too few records for a list (e.g. no all-time lows this week):
+            # fall back to a normal single-deal post.
+            if len(deals) < 3:
+                log.info("X: only %d records for %s roundup, posting a single deal", len(deals), kind)
+                kind = None
+        if kind:
+            text = build_roundup_text(kind, deals)
+            if dry_run:
+                print(text)
+                return
+            post_id = create_post(x_channel_id(conn), text, [d["img_url"] for d in deals])
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO bot_x_sent (kind, roundup_asins, buffer_post_id) VALUES (%s, %s, %s)",
+                    (kind, [d["asin"] for d in deals], post_id),
+                )
+            conn.commit()
+            log.info("X: posted %s roundup (%d records) — buffer post %s", kind, len(deals), post_id)
+            return
+
         deal = pick_deal(conn)
         if not deal:
             log.info("X: no eligible deal")
@@ -253,7 +369,7 @@ def main() -> None:
             print(text)
             return
 
-        post_id = create_post(x_channel_id(conn), text, deal["img_url"])
+        post_id = create_post(x_channel_id(conn), text, [deal["img_url"]])
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO bot_x_sent (asin, preco_brl, buffer_post_id) VALUES (%s, %s, %s)",
