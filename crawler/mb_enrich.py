@@ -127,6 +127,53 @@ def title_matches_release(mb_title: str, album_clean: str, artist: str) -> bool:
     return mtok <= qtok
 
 
+_CREDIT_STOP = {"the", "and", "a", "an", "e", "y", "feat", "featuring", "with"}
+
+
+def _credit_tokens(s: str) -> set[str]:
+    # Dots and apostrophes are dropped rather than split on, so "J.I.D" and
+    # "JID" (or "Guns N' Roses" / "Guns N Roses") compare equal.
+    s = unicodedata.normalize("NFKD", (s or "").lower())
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = re.sub(r"[.'’]", "", s.replace("&", " and "))
+    return {t for t in re.split(r"[^\w]+", s) if t and t not in _CREDIT_STOP}
+
+
+def artist_credit_matches(artist: str, group: dict) -> bool:
+    """
+    True if a release-group's artist credit plausibly names `artist`.
+
+    The search query carries artist:"..." but Lucene only uses it for scoring,
+    so a release-group with a perfect title by someone else still clears the
+    score threshold. That is how "February" (by Febuary) landed on Joy
+    Division, Ramones and Papoose bootlegs, Pearl Jam's "Ten" on the band Ten,
+    and five soundtracks on a compilation literally titled "Original
+    Soundtrack". One side's tokens must contain the other's, checked against
+    the credited name, the artist's canonical name and its sort-name.
+    """
+    credits = group.get("artist-credit") or []
+    if not credits:
+        return True  # nothing to compare against; keep the old behaviour
+    atok = _credit_tokens(artist)
+    if not atok:
+        return True
+    joined = "".join((c.get("name") or "") + (c.get("joinphrase") or "") for c in credits)
+    names = [joined]
+    for c in credits:
+        a = c.get("artist") or {}
+        names += [c.get("name") or "", a.get("name") or "", a.get("sort-name") or ""]
+    if "various" in atok:
+        # A compilation must be credited to Various Artists on MusicBrainz
+        # too. Otherwise "Halloween Garage Blues (Various Artists)" matched a
+        # release literally titled "Various Artists" by one artist.
+        return any("various" in _credit_tokens(n) for n in names)
+    for name in names:
+        ctok = _credit_tokens(name)
+        if ctok and (atok <= ctok or ctok <= atok):
+            return True
+    return False
+
+
 # Lucene special chars that break a MusicBrainz query if left unescaped.
 _LUCENE_SPECIALS = re.compile(r'[+\-&|!(){}\[\]^"~*?:\\/]')
 
@@ -163,7 +210,8 @@ def search_release_group(artist: str, album: str) -> dict | None:
     # Amazon listing just calls "Plastic Ono Band"), which would otherwise fail
     # the subset test and lose a correct match.
     def _title_ok(g: dict) -> bool:
-        return title_matches_release(g.get("title", ""), album, artist)
+        return (title_matches_release(g.get("title", ""), album, artist)
+                and artist_credit_matches(artist, g))
 
     groups = [g for g in _mb_search_groups(artist, album, quoted=True)
               if int(g.get("score", 0)) >= MB_SCORE_THRESHOLD and _title_ok(g)]
