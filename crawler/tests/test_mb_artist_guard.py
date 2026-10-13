@@ -25,8 +25,10 @@ CASES = [
     ("Abel Tesfaye, Daniel Lopatin",
      group(("Abel Tesfaye", "Tesfaye, Abel", " & "), ("Daniel Lopatin", "Lopatin, Daniel", "")), True),
     ("Françoise Hardy", group(("Francoise Hardy", "Hardy, Françoise", "")), True),
-    # placeholders and missing data keep the old behaviour
-    ("Various Artists", group(("Original Soundtrack", "Original Soundtrack", "")), True),
+    # a compilation needs a Various Artists credit on MusicBrainz too
+    ("Various Artists", group(("Various Artists", "Various Artists", "")), True),
+    ("Various Artists", group(("Headplate", "Headplate", "")), False),
+    # missing data keeps the old behaviour
     ("Pearl Jam", {}, True),
 ]
 

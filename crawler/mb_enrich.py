@@ -157,13 +157,16 @@ def artist_credit_matches(artist: str, group: dict) -> bool:
     atok = _credit_tokens(artist)
     if not atok:
         return True
-    if "various" in atok:
-        return True  # compilations: the product artist is a placeholder
     joined = "".join((c.get("name") or "") + (c.get("joinphrase") or "") for c in credits)
     names = [joined]
     for c in credits:
         a = c.get("artist") or {}
         names += [c.get("name") or "", a.get("name") or "", a.get("sort-name") or ""]
+    if "various" in atok:
+        # A compilation must be credited to Various Artists on MusicBrainz
+        # too. Otherwise "Halloween Garage Blues (Various Artists)" matched a
+        # release literally titled "Various Artists" by one artist.
+        return any("various" in _credit_tokens(n) for n in names)
     for name in names:
         ctok = _credit_tokens(name)
         if ctok and (atok <= ctok or ctok <= atok):
