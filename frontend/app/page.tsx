@@ -11,6 +11,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import DealLegend from "@/components/DealLegend";
+import { bfSeason } from "@/lib/blackFriday";
 
 const HIDE_PRICE_HISTORY = process.env.NEXT_PUBLIC_HIDE_PRICE_HISTORY !== "false";
 
@@ -135,8 +136,24 @@ export default async function HomePage() {
     // DB unavailable — render hero without count, empty carousel
   }
 
+  const bf = bfSeason();
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+
+      {/* ── Black Friday strip — November through Cyber Monday ── */}
+      {bf.phase === "agora" && (
+        <Link
+          href="/black-friday"
+          className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-gold/40 bg-sleeve px-5 py-3 text-sm text-cream hover:border-gold transition-colors"
+        >
+          <span>
+            <span className="font-bold text-gold">Black Friday {bf.year}:</span>{" "}
+            discos mais baratos do que em setembro e outubro
+          </span>
+          <span aria-hidden="true" className="text-gold">→</span>
+        </Link>
+      )}
 
       {/* ── Hero — removable via HIDE_HERO=1 (reversible LCP test). ── */}
       {SHOW_HERO && (

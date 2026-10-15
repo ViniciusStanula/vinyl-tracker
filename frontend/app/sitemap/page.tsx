@@ -38,6 +38,7 @@ const STATIC_PAGES = [
   { nome: "Todos os Discos",         href: "/disco" },
   { nome: "Ofertas",                 href: "/ofertas" },
   { nome: "Discos Abaixo de R$200",  href: "/discos-abaixo-de-200" },
+  { nome: "Black Friday",            href: "/black-friday" },
   { nome: "Estilos Musicais",        href: "/estilos" },
   { nome: "Países de Origem",        href: "/paises" },
   { nome: "Discos por Década",       href: "/decadas" },

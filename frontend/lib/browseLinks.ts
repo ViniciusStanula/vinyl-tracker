@@ -23,6 +23,7 @@ export const BROWSE_LINKS = [
   { label: "Vinil Colorido",    href: "/vinil-colorido" },
   { label: "Edições Especiais", href: "/edicao" },
   { label: "Discos até R$200",  href: "/discos-abaixo-de-200" },
+  { label: "Black Friday",      href: "/black-friday" },
 ];
 
 /**

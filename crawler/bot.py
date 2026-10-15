@@ -7,6 +7,8 @@ Runs are triggered every 15 min by cron-job.org (workflow_dispatch); the GHA
 schedule is only a backup, since GitHub fires it just a few times a day.
 Edit pass: silently updates captions for already-sent deals whose price dropped ≥5%.
 Send pass: picks the highest-priority pending deal and sends it as a new photo message.
+Black Friday week: the day's first send is a roundup of the biggest discounts
+against the pre-Black-Friday price, linking to /black-friday (see bf_baseline.py).
 """
 
 import logging
@@ -21,6 +23,7 @@ import psycopg2
 import psycopg2.extras
 import requests
 
+from bf_baseline import in_bf_week, pick_bf_deals
 from database import pooler_saturated
 from genre_filter import is_genre
 
@@ -275,6 +278,63 @@ def build_caption(titulo: str, artista: str, estilo: str | None,
         f"{tags_line}"
         f"{affiliate_line}"
     )
+
+
+BF_ROUNDUP_SIZE = 5
+
+
+def build_bf_caption(deals: list[dict]) -> str:
+    lines = []
+    for i, d in enumerate(deals, 1):
+        price, base = float(d["preco_brl"]), float(d["avg_30d"])
+        lines.append(
+            f"{i}. {_esc_html(d['artista'])} — {_esc_html(_clean_titulo(d['titulo']))}: "
+            f"R$ {_brl(price)} (-{round((base - price) / base * 100)}%)"
+        )
+    url = _esc_url(f"{SITE_URL}/black-friday")
+    return (
+        "🖤 <b>BLACK FRIDAY</b>\n"
+        "Maiores descontos de hoje sobre o preço de setembro e outubro:\n\n"
+        + "\n".join(lines)
+        + f"\n\n👉 <a href='{url}'>Lista completa</a>"
+    )
+
+
+def run_bf_roundup(conn) -> bool:
+    """Send today's Black Friday roundup if it is BF week and none went out yet.
+
+    Records already in an earlier roundup this week are skipped, so each day
+    shows different discs.
+    """
+    today = datetime.now(SAO_PAULO).date()
+    if not in_bf_week(today):
+        return False
+    with conn.cursor() as cur:
+        cur.execute("SELECT key, value FROM bot_state WHERE key IN ('bf_roundup_date', 'bf_roundup_asins')")
+        state = dict(cur.fetchall())
+    if state.get("bf_roundup_date") == today.isoformat():
+        return False
+    # The list is per-edition: drop asins left over from last year's week.
+    sent_asins = state.get("bf_roundup_asins", "")
+    year, _, asins = sent_asins.partition(":")
+    sent = asins.split(",") if year == str(today.year) and asins else []
+
+    deals = pick_bf_deals(conn, today.year, BF_ROUNDUP_SIZE, sent)
+    if len(deals) < 3:
+        log.info("BF roundup: only %d records, skipping", len(deals))
+        return False
+    if send_photo(deals[0]["img_url"], build_bf_caption(deals)) is None:
+        return False
+    sent += [d["asin"] for d in deals]
+    with conn.cursor() as cur:
+        cur.execute("""
+            INSERT INTO bot_state (key, value) VALUES
+                ('bf_roundup_date', %s), ('bf_roundup_asins', %s)
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+        """, (today.isoformat(), f"{today.year}:{','.join(sent)}"))
+    conn.commit()
+    log.info("BF roundup sent (%d records)", len(deals))
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -554,6 +614,10 @@ def main() -> None:
         if mins < DRIP_MINUTES:
             log.info("%.1f min since last send (need %d min), skipping send pass",
                      mins, DRIP_MINUTES)
+            return
+
+        if run_bf_roundup(conn):
+            set_last_sent_at(conn)
             return
 
         run_send_pass(conn)

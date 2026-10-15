@@ -44,6 +44,7 @@ deal_score field:
 - [Home — current deals](${SITE}/)
 - [Browse all vinyl](${SITE}/disco)
 - [Best deals under R$200](${SITE}/discos-abaixo-de-200)
+- [Black Friday vinyl deals, measured against each record's pre-Black-Friday median price](${SITE}/black-friday)
 - [Top listened artists](${SITE}/artistas-mais-ouvidos)
 - [Sitemap index](${SITE}/sitemap.xml)
 
