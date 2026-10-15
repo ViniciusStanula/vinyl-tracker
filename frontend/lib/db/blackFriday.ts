@@ -71,7 +71,7 @@ export async function queryBlackFriday(year: number): Promise<ProcessedDisco[]> 
         AND  hp_latest."precoBrl" >= 30
         AND  hp_latest."precoBrl" <= b.baseline * ${1 - MIN_DESCONTO}
       ORDER  BY (b.baseline - hp_latest."precoBrl") / b.baseline DESC, d.id
-      LIMIT  1500
+      LIMIT  1000
     `;
 
     return rows.map((row) => {
