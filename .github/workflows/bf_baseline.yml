@@ -1,0 +1,33 @@
+name: Black Friday Baseline
+
+# Refreshes the /black-friday reference prices (median 1 Sep – 15 Oct) into
+# bf_baseline. The script skips itself outside that window, so the rows freeze
+# once it closes; the cron can stay on all year.
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 06:00 São Paulo
+  workflow_dispatch:
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: crawler/bot_requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r crawler/bot_requirements.txt
+
+      - name: Refresh baseline
+        run: python crawler/bf_baseline.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

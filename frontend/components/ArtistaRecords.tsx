@@ -26,6 +26,18 @@ const PRICE_CHIPS = [
 
 const PAGE_SIZE = 24;
 
+/**
+ * Extra single-choice chip rows a page can add (e.g. style on /black-friday).
+ * Each group filters before the price chips; none selected = no filtering.
+ * Options with no matching item are hidden.
+ */
+const NO_GROUPS: FilterGroup[] = [];
+
+export type FilterGroup = {
+  label: string;
+  options: { label: string; test: (d: ProcessedDisco) => boolean }[];
+};
+
 function comparator(sort: string): (a: ProcessedDisco, b: ProcessedDisco) => number {
   switch (sort) {
     case "menor-preco": return (a, b) => a.precoAtual - b.precoAtual;
@@ -41,27 +53,36 @@ export default function ArtistaRecords({
   items,
   slug,
   basePath = "/artista",
+  filterGroups = NO_GROUPS,
 }: {
   items: ProcessedDisco[];
   slug: string;
   /** Route prefix for the no-JS fallback link — "/artista" (default) or "/estilo". */
   basePath?: string;
+  filterGroups?: FilterGroup[];
 }) {
   const [sort, setSort] = useState<string>("desconto");
   const [precoMax, setPrecoMax] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+  // Selected option label per group label.
+  const [groupSel, setGroupSel] = useState<Record<string, string>>({});
   const gridRef = useRef<HTMLUListElement>(null);
 
   const filtered = useMemo(() => {
-    const base = precoMax !== null ? items.filter((i) => i.precoAtual <= precoMax) : items;
+    let base = items;
+    for (const group of filterGroups) {
+      const opt = group.options.find((o) => o.label === groupSel[group.label]);
+      if (opt) base = base.filter(opt.test);
+    }
+    if (precoMax !== null) base = base.filter((i) => i.precoAtual <= precoMax);
     return [...base].sort(comparator(sort));
-  }, [items, sort, precoMax]);
+  }, [items, sort, precoMax, filterGroups, groupSel]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const hasFilters = sort !== "desconto" || precoMax !== null;
+  const hasFilters = sort !== "desconto" || precoMax !== null || Object.keys(groupSel).length > 0;
 
   function changeSort(value: string) {
     setSort(value);
@@ -69,6 +90,15 @@ export default function ArtistaRecords({
   }
   function changePrice(value: number | null) {
     setPrecoMax(value);
+    setPage(1);
+  }
+  function changeGroup(group: string, option: string | null) {
+    setGroupSel((prev) => {
+      const next = { ...prev };
+      if (option === null) delete next[group];
+      else next[group] = option;
+      return next;
+    });
     setPage(1);
   }
   // Pagination sits below the grid, so without this the next page renders with
@@ -82,8 +112,43 @@ export default function ArtistaRecords({
     grid.focus({ preventScroll: true });
   }
 
+  const chipClass = (isActive: boolean) =>
+    `text-xs px-3 py-2.5 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/20 shrink-0 ${
+      isActive
+        ? "bg-gold text-record border-gold font-bold"
+        : "bg-groove text-parchment border-wax/60 hover:border-wax hover:text-cream"
+    }`;
+
   return (
     <>
+      {/* Page-specific groups sit above the sticky bar, not in it: on a phone
+          every extra sticky row permanently eats ~45px of the viewport. */}
+      {filterGroups.map((group) => {
+        const options = group.options.filter((o) => items.some(o.test));
+        if (options.length === 0) return null;
+        const selected = groupSel[group.label] ?? null;
+        return (
+          <div key={group.label} className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-3">
+            <span className="text-[11px] font-bold text-dust uppercase tracking-widest shrink-0">
+              {group.label}
+            </span>
+            <button onClick={() => changeGroup(group.label, null)} aria-pressed={selected === null} className={chipClass(selected === null)}>
+              Todos
+            </button>
+            {options.map((opt) => (
+              <button
+                key={opt.label}
+                onClick={() => changeGroup(group.label, opt.label)}
+                aria-pressed={selected === opt.label}
+                className={chipClass(selected === opt.label)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        );
+      })}
+
       <div className="sticky top-[62px] z-40 mb-3 bg-record/95 backdrop-blur-md -mx-4 px-4 pt-2 pb-2">
         <div className="bg-sleeve border border-groove rounded-xl px-5 py-3.5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5 sm:flex-wrap">
@@ -188,7 +253,7 @@ export default function ArtistaRecords({
           <p className="text-dust text-sm mb-4">Tente ajustar os filtros.</p>
           {hasFilters && (
             <button
-              onClick={() => { changeSort("desconto"); changePrice(null); }}
+              onClick={() => { changeSort("desconto"); changePrice(null); setGroupSel({}); }}
               className="inline-flex items-center gap-2 bg-groove hover:bg-wax text-parchment text-sm px-5 py-2 rounded-full transition-colors border border-wax/60"
             >
               Limpar filtros

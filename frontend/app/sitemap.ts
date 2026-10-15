@@ -53,6 +53,7 @@ const BEST_OF_DATE = new Date("2026-09-08");
       { url: `${SITEMAP_BASE}/disco`,                                   lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.8 },
       { url: `${SITEMAP_BASE}/ofertas`,                                 lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.8 },
       { url: `${SITEMAP_BASE}/discos-abaixo-de-200`,                    lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.7 },
+      { url: `${SITEMAP_BASE}/black-friday`,                            lastModified: latestUpdate,       changeFrequency: "daily",   priority: 0.7 },
       { url: `${SITEMAP_BASE}/artistas-mais-ouvidos`,                   lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },
       { url: `${SITEMAP_BASE}/estilos`,                                 lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.7 },
       { url: `${SITEMAP_BASE}/paises`,                                  lastModified: latestUpdate,       changeFrequency: "weekly",  priority: 0.6 },

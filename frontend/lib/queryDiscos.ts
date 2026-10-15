@@ -108,6 +108,8 @@ export type ProcessedDisco = {
   historyDays?: number | null;
   /** Comma-separated Last.fm genre tags, e.g. "rock, classic rock, hard rock" */
   lastfmTags?: string | null;
+  /** At (within 0.5% of) the lowest price ever recorded. Only /black-friday sets it. */
+  menorPreco?: boolean;
   /** When false, record is no longer listed at the store. Renders as greyed-out on artist page. */
   disponivel?: boolean;
 };

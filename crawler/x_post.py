@@ -15,11 +15,13 @@ Tweets cannot be edited, so there is no edit / sold-out pass like bot.py has.
 On SPECIAL_DAYS the day's first post is a roundup of current deals instead of a
 single deal: top 5 (Sunday), records at their all-time low (Wednesday), or a
 "which one would you play first?" question meant to draw replies (Friday).
+During Black Friday week every day's first post is instead a roundup of the
+biggest discounts against the pre-Black-Friday price (see bf_baseline.py).
 
 Usage:
     python x_post.py            # post if one is due
     python x_post.py --dry-run  # print the next post's text, no Buffer call
-    python x_post.py --dry-run --kind top5|atl|question  # preview a roundup
+    python x_post.py --dry-run --kind top5|atl|question|blackfriday  # preview a roundup
 """
 
 import logging
@@ -35,6 +37,7 @@ from bot import (
     ATL_TOLERANCE, SAO_PAULO, SITE_URL, _brl, _clean_titulo, _hashtags,
     connect, within_send_window,
 )
+from bf_baseline import in_bf_week, pick_bf_deals
 
 log = logging.getLogger(__name__)
 
@@ -118,11 +121,12 @@ def _x_len(text: str) -> int:
 
 
 def build_roundup_text(kind: str, deals: list[dict]) -> str:
-    url = f"{SITE_URL}/ofertas"
+    url = f"{SITE_URL}/black-friday" if kind == "blackfriday" else f"{SITE_URL}/ofertas"
     header = {
-        "top5":     "🔥 As melhores ofertas de vinil da semana",
-        "atl":      "🏆 No menor preço histórico esta semana",
-        "question": "Qual desses você colocaria pra tocar primeiro? 👇",
+        "top5":        "🔥 As melhores ofertas de vinil da semana",
+        "atl":         "🏆 No menor preço histórico esta semana",
+        "question":    "Qual desses você colocaria pra tocar primeiro? 👇",
+        "blackfriday": "🖤 Black Friday: desconto real no vinil",
     }[kind]
     footer = f"Todos em oferta: {url}" if kind == "question" else f"#vinil\n{url}"
 
@@ -197,7 +201,8 @@ def pick_deal(conn) -> dict | None:
 
 def special_due(conn) -> str | None:
     """Today's roundup kind, unless it already went out today."""
-    kind = SPECIAL_DAYS.get(datetime.now(SAO_PAULO).weekday())
+    today = datetime.now(SAO_PAULO).date()
+    kind = "blackfriday" if in_bf_week(today) else SPECIAL_DAYS.get(today.weekday())
     if kind is None:
         return None
     with conn.cursor() as cur:
@@ -211,6 +216,15 @@ def special_due(conn) -> str | None:
 
 
 def pick_roundup(conn, kind: str) -> list[dict]:
+    if kind == "blackfriday":
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT COALESCE(array_agg(DISTINCT a), '{}')
+                FROM bot_x_sent, unnest(roundup_asins) a
+                WHERE sent_at > NOW() - make_interval(days => %s)
+            """, (ROUNDUP_REPEAT_DAYS,))
+            recent = cur.fetchone()[0]
+        return pick_bf_deals(conn, datetime.now(SAO_PAULO).year, X_MAX_IMAGES, recent)
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT bp.*
